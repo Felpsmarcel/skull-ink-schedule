@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import "@/i18n";
 
@@ -43,6 +43,12 @@ function Index() {
         >
           {t("actions.comingSoon")}
         </button>
+        <Link
+          to="/ghl-test"
+          className="mt-2 text-xs uppercase tracking-widest text-muted-foreground underline"
+        >
+          GHL test
+        </Link>
       </div>
     </main>
   );
