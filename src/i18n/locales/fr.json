@@ -1,0 +1,11 @@
+{
+  "common": {
+    "app": {
+      "name": "GF Tattoo Studio",
+      "tagline": "Studio de tatouage — réservation en ligne"
+    },
+    "actions": {
+      "comingSoon": "Bientôt disponible"
+    }
+  }
+}

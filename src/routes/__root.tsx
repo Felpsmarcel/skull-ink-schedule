@@ -76,20 +76,23 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
+      { name: "theme-color", content: "#000000" },
+      { title: "GF Tattoo Studio" },
+      { name: "description", content: "Estúdio de tatuagem — agendamento online" },
+      { property: "og:title", content: "GF Tattoo Studio" },
+      { property: "og:description", content: "Estúdio de tatuagem — agendamento online" },
       { property: "og:type", content: "website" },
+      { property: "og:site_name", content: "GF Tattoo Studio" },
       { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
     ],
     links: [
+      { rel: "stylesheet", href: appCss },
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: appCss,
+        href: "https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap",
       },
     ],
   }),
@@ -101,11 +104,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="pt" className="dark">
       <head>
         <HeadContent />
       </head>
-      <body>
+      <body className="min-h-dvh bg-background text-foreground font-sans antialiased overflow-x-hidden">
         {children}
         <Scripts />
       </body>
@@ -118,8 +121,10 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      {/* Mobile-first shell: trava largura em telas grandes */}
+      <div className="mx-auto w-full max-w-md min-h-dvh">
+        <Outlet />
+      </div>
     </QueryClientProvider>
   );
 }
