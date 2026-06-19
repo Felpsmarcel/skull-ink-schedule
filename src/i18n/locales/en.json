@@ -1,0 +1,11 @@
+{
+  "common": {
+    "app": {
+      "name": "GF Tattoo Studio",
+      "tagline": "Tattoo studio — online booking"
+    },
+    "actions": {
+      "comingSoon": "Coming soon"
+    }
+  }
+}
