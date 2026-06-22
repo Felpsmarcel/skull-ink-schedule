@@ -54,7 +54,7 @@ function CheckoutPage() {
         >
           <ArrowLeft className="h-5 w-5" />
         </Link>
-        <h1 className="text-base font-semibold">{t("appt.checkoutTitle")}</h1>
+        <h1 className="font-display text-lg uppercase tracking-wide">{t("appt.checkoutTitle")}</h1>
       </header>
 
       <main className="flex-1 space-y-4 p-4">
