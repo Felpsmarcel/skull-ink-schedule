@@ -90,7 +90,7 @@ export function useStaffDayAgenda(date: Date) {
   });
 
   const result: StaffAgenda[] = staffList.map((staff, i) => {
-    const q = queries[i] as (typeof queries)[number] | undefined;
+    const q = queries[i]!;
     if (q.isLoading || !q.data) {
       return {
         staff,
