@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as GhlTestRouteImport } from './routes/ghl-test'
 import { Route as AgendaRouteImport } from './routes/agenda'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppointmentsNewRouteImport } from './routes/appointments.new'
 
 const GhlTestRoute = GhlTestRouteImport.update({
   id: '/ghl-test',
@@ -28,35 +29,44 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppointmentsNewRoute = AppointmentsNewRouteImport.update({
+  id: '/appointments/new',
+  path: '/appointments/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
   '/ghl-test': typeof GhlTestRoute
+  '/appointments/new': typeof AppointmentsNewRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
   '/ghl-test': typeof GhlTestRoute
+  '/appointments/new': typeof AppointmentsNewRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
   '/ghl-test': typeof GhlTestRoute
+  '/appointments/new': typeof AppointmentsNewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/agenda' | '/ghl-test'
+  fullPaths: '/' | '/agenda' | '/ghl-test' | '/appointments/new'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/agenda' | '/ghl-test'
-  id: '__root__' | '/' | '/agenda' | '/ghl-test'
+  to: '/' | '/agenda' | '/ghl-test' | '/appointments/new'
+  id: '__root__' | '/' | '/agenda' | '/ghl-test' | '/appointments/new'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AgendaRoute: typeof AgendaRoute
   GhlTestRoute: typeof GhlTestRoute
+  AppointmentsNewRoute: typeof AppointmentsNewRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -82,6 +92,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/appointments/new': {
+      id: '/appointments/new'
+      path: '/appointments/new'
+      fullPath: '/appointments/new'
+      preLoaderRoute: typeof AppointmentsNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -89,6 +106,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AgendaRoute: AgendaRoute,
   GhlTestRoute: GhlTestRoute,
+  AppointmentsNewRoute: AppointmentsNewRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
