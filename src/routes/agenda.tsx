@@ -20,7 +20,6 @@ import { toast } from "sonner";
 import "@/i18n";
 
 import { useStaffDayAgenda } from "@/hooks/use-agenda";
-import { STAFF } from "@/config/staff";
 import { DEFAULT_START_HOUR, DEFAULT_END_HOUR, SLOT_MINUTES } from "@/lib/agenda-grid";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
