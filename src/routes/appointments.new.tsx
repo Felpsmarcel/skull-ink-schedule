@@ -68,6 +68,8 @@ function AppointmentNewPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const artistsQuery = useArtists();
+  const artists = artistsQuery.data ?? [];
 
   const draft = useAppointmentDraft();
   const [dateObj, setDateObj] = useState<Date>(() =>
@@ -192,7 +194,7 @@ function AppointmentNewPage() {
               <SelectValue placeholder={t("appt.staffPlaceholder")} />
             </SelectTrigger>
             <SelectContent>
-              {STAFF.map((s) => (
+              {artists.map((s) => (
                 <SelectItem key={s.id} value={s.calendarId}>
                   {s.name}
                 </SelectItem>
