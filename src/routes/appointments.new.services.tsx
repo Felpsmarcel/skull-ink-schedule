@@ -7,7 +7,7 @@ import "@/i18n";
 
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { fetchActiveServices, formatPrice, type Service } from "@/lib/services";
+import { fetchActiveServices, formatPriceRange, type Service } from "@/lib/services";
 import { useAppointmentDraft } from "@/stores/appointment-draft";
 
 export const Route = createFileRoute("/appointments/new/services")({
@@ -115,12 +115,17 @@ function ServicesPage() {
                         <span className="truncate text-sm font-medium">{s.name}</span>
                         {selected ? <Check className="h-3.5 w-3.5 text-primary" /> : null}
                       </div>
+                      {s.description_short ? (
+                        <div className="mt-0.5 text-[11px] text-muted-foreground/90">
+                          {s.description_short}
+                        </div>
+                      ) : null}
                       <div className="text-[11px] text-muted-foreground">
                         {s.duration_min} min · {s.modality}
                       </div>
                     </div>
-                    <span className="text-sm font-semibold">
-                      {formatPrice(s.price_eur)}
+                    <span className="whitespace-nowrap text-sm font-semibold">
+                      {formatPriceRange(s.price_eur, s.price_max_eur)}
                     </span>
                   </button>
                 );

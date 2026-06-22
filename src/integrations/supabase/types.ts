@@ -475,11 +475,13 @@ export type Database = {
           category: string
           created_at: string
           description: string | null
+          description_short: string | null
           duration_min: number
           id: string
           modality: Database["public"]["Enums"]["service_modality"]
           name: string
           price_eur: number
+          price_max_eur: number | null
           sort_order: number | null
         }
         Insert: {
@@ -487,11 +489,13 @@ export type Database = {
           category: string
           created_at?: string
           description?: string | null
+          description_short?: string | null
           duration_min: number
           id?: string
           modality?: Database["public"]["Enums"]["service_modality"]
           name: string
           price_eur: number
+          price_max_eur?: number | null
           sort_order?: number | null
         }
         Update: {
@@ -499,11 +503,13 @@ export type Database = {
           category?: string
           created_at?: string
           description?: string | null
+          description_short?: string | null
           duration_min?: number
           id?: string
           modality?: Database["public"]["Enums"]["service_modality"]
           name?: string
           price_eur?: number
+          price_max_eur?: number | null
           sort_order?: number | null
         }
         Relationships: []

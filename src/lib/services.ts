@@ -10,7 +10,10 @@ export interface Service {
   modality: ServiceModality;
   /** Euros as a decimal number (e.g. 150 or 12.5). */
   price_eur: number;
+  /** Upper bound of the price range; null or equal to price_eur when fixed. */
+  price_max_eur: number | null;
   description: string | null;
+  description_short: string | null;
   sort_order: number;
   active: boolean;
 }
@@ -22,7 +25,9 @@ interface RawServiceRow {
   duration_min: number;
   modality: ServiceModality;
   price_eur: string | number;
+  price_max_eur: string | number | null;
   description: string | null;
+  description_short: string | null;
   sort_order: number | null;
   active: boolean;
 }
@@ -46,7 +51,9 @@ export async function fetchActiveServices(): Promise<Service[]> {
     };
   })
     .from("services")
-    .select("id,name,category,duration_min,modality,price_eur,description,sort_order,active")
+    .select(
+      "id,name,category,duration_min,modality,price_eur,price_max_eur,description,description_short,sort_order,active",
+    )
     .eq("active", true)
     .order("category", { ascending: true })
     .order("sort_order");
@@ -59,7 +66,14 @@ export async function fetchActiveServices(): Promise<Service[]> {
     modality: r.modality,
     // numeric(8,2) often comes back as a string from PostgREST
     price_eur: typeof r.price_eur === "string" ? Number(r.price_eur) : r.price_eur,
+    price_max_eur:
+      r.price_max_eur == null
+        ? null
+        : typeof r.price_max_eur === "string"
+          ? Number(r.price_max_eur)
+          : r.price_max_eur,
     description: r.description,
+    description_short: r.description_short,
     sort_order: r.sort_order ?? 0,
     active: r.active,
   }));
@@ -69,6 +83,12 @@ const eurFmt = new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EU
 
 export function formatPrice(eur: number): string {
   return eurFmt.format(Number.isFinite(eur) ? eur : 0);
+}
+
+/** Returns "€X" if fixed, "€X – €Y" if a range. */
+export function formatPriceRange(min: number, max: number | null): string {
+  if (max == null || max === min) return formatPrice(min);
+  return `${formatPrice(min)} – ${formatPrice(max)}`;
 }
 
 const MODALITY_LABELS: Record<ServiceModality, string> = {
