@@ -60,7 +60,7 @@ function CheckoutPage() {
       <main className="flex-1 space-y-4 p-4">
         {/* Contact header */}
         <section className="flex items-center gap-3 rounded-lg border border-border bg-card p-3">
-          <div className="grid h-12 w-12 place-items-center rounded-full bg-primary/20 text-base font-semibold text-primary">
+          <div className="grid h-12 w-12 place-items-center rounded-full bg-muted text-base font-semibold text-foreground">
             {(draft.contact?.contactName ?? draft.contact?.firstName ?? "?")
               .slice(0, 1)
               .toUpperCase()}

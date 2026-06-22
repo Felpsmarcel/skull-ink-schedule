@@ -375,7 +375,7 @@ function ContactPicker({
   if (selected) {
     return (
       <div className="flex items-center gap-3 rounded border border-border bg-background p-2">
-        <div className="grid h-9 w-9 place-items-center rounded-full bg-primary/20 text-sm font-semibold text-primary">
+        <div className="grid h-9 w-9 place-items-center rounded-full bg-muted text-sm font-semibold text-foreground">
           {(selected.contactName ?? selected.firstName ?? "?").slice(0, 1).toUpperCase()}
         </div>
         <div className="min-w-0 flex-1">
