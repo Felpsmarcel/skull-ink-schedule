@@ -34,7 +34,8 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
-import { STAFF, LOCATION_ID } from "@/config/staff";
+import { LOCATION_ID } from "@/config/staff";
+import { useArtists } from "@/hooks/use-artists";
 import {
   brusselsDayStartMs,
   brusselsDayEndMs,
@@ -49,11 +50,11 @@ import {
   searchContacts,
   type GhlContact,
 } from "@/lib/ghl";
-import { formatPrice } from "@/lib/services";
+import { formatPrice, modalityLabel } from "@/lib/services";
 import {
   useAppointmentDraft,
   totalDurationMin,
-  totalFinalCents,
+  totalFinalEur,
 } from "@/stores/appointment-draft";
 
 export const Route = createFileRoute("/appointments/new")({
