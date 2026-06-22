@@ -302,12 +302,12 @@ function AppointmentNewPage() {
                   <div className="min-w-0">
                     <div className="truncate text-sm">{l.service.name}</div>
                     <div className="text-[10px] text-muted-foreground">
-                      {l.service.duration_min} min · {l.service.modality}
+                      {l.service.duration_min} min · {modalityLabel(l.service.modality)}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm">
-                      {formatPrice(l.service.price_cents, l.service.currency)}
+                      {formatPrice(l.service.price_eur)}
                     </span>
                     <button
                       type="button"
@@ -343,9 +343,9 @@ function AppointmentNewPage() {
           onClick={() => navigate({ to: "/appointments/new/checkout" })}
         >
           {t("appt.checkout")}
-          {totalFinalCents(draft) > 0 ? (
+          {totalFinalEur(draft) > 0 ? (
             <span className="ml-2 text-xs text-muted-foreground">
-              {formatPrice(totalFinalCents(draft))}
+              {formatPrice(totalFinalEur(draft))}
             </span>
           ) : null}
         </Button>
