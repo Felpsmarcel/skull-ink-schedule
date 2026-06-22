@@ -3,7 +3,6 @@ import { useState } from "react";
 import { ghlFetch, type GhlFetchResult } from "@/lib/ghl";
 
 const CALENDAR_ID = "NzAYeRNJnvfpu7ynyoEK";
-const LOCATION_ID = "9iqrKUVPDddINb9S4Iwd";
 
 export const Route = createFileRoute("/ghl-test")({
   head: () => ({ meta: [{ title: "GHL Test — GF Tattoo Studio" }] }),
@@ -35,7 +34,6 @@ function GhlTest() {
           startDate: start.getTime(),
           endDate: end.getTime(),
           timezone: "Europe/Brussels",
-          locationId: LOCATION_ID,
         },
       });
       setResult(res);
