@@ -1,122 +1,61 @@
-## RAIO-X do app — estado real (sem implementar nada)
 
-### 1. Arquitetura real — de onde cada tela lê
+# Reskin GF Tattoo — Tema claro preto/branco
 
-| Tela / dado | Fonte real | Como |
-|---|---|---|
-| **Lista de artistas** (agenda + novo agendamento + checkout) | **Supabase** tabela `artists` | `useArtists()` → `supabase.from("artists").select(...).eq("active",true).not("ghl_calendar_id","is",null)` |
-| **Lista de serviços** (`/appointments/new/services`) | **Supabase** tabela `services` | `fetchActiveServices()` em `src/lib/services.ts` |
-| **Slots livres** | **GHL Calendar API** | `getFreeSlots(calendarId,…)` → edge function `ghl-proxy` → `GET /calendars/{id}/free-slots` |
-| **Busca de contactos** | **GHL Contacts API** | `searchContacts(locationId, q)` → `POST /contacts/search` |
-| **Criar contacto** | **GHL Contacts API** | `createContact(...)` → `POST /contacts/` |
-| **Criar agendamento** | **GHL Calendar Events API** | `createAppointment(...)` → `POST /calendars/events/appointments` |
-| **Eventos do dia (agenda)** | **GHL Calendar Events API** | `getEvents(calendarId, loc, start, end)` → `GET /calendars/events` |
+Reskin puramente visual. Nenhum layout, fluxo, rota ou lógica muda. Só tokens de design, fontes, logo e cores de componentes específicos.
 
-Resumindo: **só `artists` e `services` saíram para o Supabase. Tudo o resto (slots, contactos, eventos) continua 100% GHL via edge function `ghl-proxy`.**
+## Escopo
 
----
+- Trocar tema dark → tema claro (branco) como padrão em toda a app.
+- Substituir todo roxo/azul/vermelho de destaque por preto `#0A0A0A`.
+- Aplicar tipografia: títulos `Archivo Black`, corpo `Inter`.
+- Logo caveira GF Tattoo no header e na tela de login/splash.
+- Tela de login/splash é a única com fundo preto.
 
-### 2. Supabase — uso real hoje
+## Mudanças por arquivo
 
-**Tabelas consultadas pelo app:**
-- `artists` — leitura (hook `use-artists`)
-- `services` — leitura (`fetchActiveServices`)
+### 1. `src/styles.css` — tokens de design
+Reescrever `:root` (e `.dark` espelhando o mesmo, já que a app vive no claro):
+- `--background: #FFFFFF`
+- `--foreground: #0A0A0A`
+- `--card: #FFFFFF`, `--card-foreground: #0A0A0A`
+- `--muted: #F5F5F5`, `--muted-foreground: #8A8A8A`
+- `--border: #E5E5E5`, `--input: #E5E5E5`
+- `--primary: #0A0A0A`, `--primary-foreground: #FFFFFF`
+- `--secondary: #F5F5F5`, `--secondary-foreground: #0A0A0A`
+- `--accent: #0A0A0A`, `--accent-foreground: #FFFFFF`
+- `--ring: #0A0A0A`
+- `--destructive`: manter cinza escuro neutro (sem vermelho real na UI; só usado em estados de erro de form — manter discreto)
+- `--radius: 1rem` (16px nos cards)
+- `--font-display: "Archivo Black", "Anton", sans-serif`
+- `--font-sans: "Inter", system-ui, sans-serif`
+- Sidebar tokens: claros (branco/cinza), com primary preto
 
-**Tabelas que existem no schema mas NÃO são tocadas por nenhum código do frontend:**
-`app_users`, `appointments`, `appointment_services`, `availability_blocks`, `contacts`, `payments`, `portfolio`, `quotes`.
+### 2. `src/routes/__root.tsx` — fontes
+Adicionar `<link>` para Google Fonts: Archivo Black (400) + Inter (400, 500, 600, 700). Sem `@import` em CSS.
 
-Não há nenhuma chamada às tabelas `compromissos` / `contatos` (que ficaram adiadas — `appointments`/`contacts` no schema novo) — confirmado.
+### 3. Logo da caveira
+- Gerar/usar imagem da caveira GF Tattoo (PNG transparente) via assets, em duas variantes: preta (para header em fundo branco) e branca (para login/splash em fundo preto).
+- Substituir o atual lockup textual/placeholder do header pela logo preta.
 
-**Cliente Supabase:** `anon key` (client-side), via `VITE_SUPABASE_PUBLISHABLE_KEY`. Não há uso de service role no frontend. A edge function `ghl-proxy` só lê o secret `GHL_TOKEN`, não usa nada do Supabase.
+### 4. Tela de login/splash
+- Localizar a rota atual (provavelmente `src/routes/index.tsx` ou rota de auth). Aplicar **localmente** fundo `#0A0A0A` e a logo branca centralizada, mantendo a mesma estrutura/posicionamento dos elementos existentes. Sem mudar o resto do app.
 
-**RLS:** ativo nas 10 tabelas, mas em **modo dev permissivo para `anon`** (foi o que combinamos). As funções `current_user_role()` / `current_artist_id()` existem mas o app ainda não usa o conceito de "usuário logado" (ver §3).
+### 5. Componentes que precisam de ajuste fino (apenas tokens, sem mexer em estrutura)
+- **Agenda (`src/routes/agenda.tsx`, `src/lib/agenda-grid.ts`)**: blocos reservados → fundo `bg-muted` (#F5F5F5) + `border-l-4 border-foreground` preta + texto preto. "Sem reserva" → `border border-dashed border-border` cinza, fundo branco. Remover qualquer cor de destaque (roxo/azul).
+- **Selecionar serviço (`src/routes/appointments.new.services.tsx`)**: header de categoria sticky em tom de cinza escuro/preto; estado selecionado `bg-muted` em vez de `bg-primary/5` colorido.
+- **FAB "+"** e ícones ativos na bottom nav: preto sólido. Verificar bottom nav (componente compartilhado nas rotas) e ajustar classe do estado ativo para `text-foreground` e do FAB para `bg-primary text-primary-foreground` (que agora é preto/branco).
+- **Avatares**: círculo `bg-muted` com iniciais `text-foreground`.
+- **Botões principais**: variant `default` já fica preto pílula via tokens; garantir `rounded-full` onde for CTA principal (revisão pontual, sem refazer).
 
----
+### 6. i18n / formato
+Já estão configurados PT-PT, EUR, Europe/Brussels (`src/lib/format.ts`). Sem mudanças.
 
-### 3. Autenticação
+## Fora do escopo (não tocar)
 
-- **Não existe login no app.** Nenhuma rota usa `_authenticated/`, nenhum componente chama `supabase.auth.getUser()`, nenhum guarda de rota.
-- **Não há integração GHL postMessage / iframe SSO.** O app não sabe quem está usando — qualquer pessoa que abre a URL tem acesso total.
-- Tabela `app_users` está vazia (nunca foi inserida nenhuma linha; não há fluxo de signup nem seed).
-- O acesso a dados sensíveis depende inteiramente do `GHL_TOKEN` no backend e das policies permissivas do Supabase.
+- Lógica de GHL, Supabase, server functions, stores.
+- Estrutura de rotas, navegação, fluxos de agendamento.
+- Conteúdo de texto (a não ser correção de cor inline hardcoded, se existir).
 
-→ **Este é o maior gap de segurança hoje.** Em produção é obrigatório fechar isso antes de expor publicamente.
+## Verificação
 
----
-
-### 4. Fluxo de agendamento — estado real
-
-| Etapa | Funciona? | Observação |
-|---|---|---|
-| Botão "+" na agenda → `/appointments/new` | ✅ | `navigate({ to: "/appointments/new" })` |
-| Busca de contacto (2+ letras) → GHL | ⚠️ provavelmente sim | `POST /contacts/search` está cabeado. Não vi um teste real recente nos logs de rede capturados. |
-| Criar novo contacto → GHL | ⚠️ idem | `POST /contacts/` cabeado; sem confirmação visual de teste recente. |
-| Seleção de artista | ✅ | Lista os 4 artistas do Supabase (Andre, Gabriel, Maciel, Neto). |
-| Slots livres do artista escolhido | ⚠️ **parcial** | A chamada `free-slots` retorna **200 OK mas com `data: { traceId }` e sem nenhum dia/slot** — provavelmente porque o calendário GHL daqueles 4 IDs não tem disponibilidade configurada para essas datas, ou o token não tem o scope completo de slots por calendário. Resultado: usuário vê "sem slots". |
-| Seleção de serviço (`/appointments/new/services`) | ✅ | 24 serviços em 6 categorias, agrupados, com faixa de preço e `description_short`. |
-| Salvar → cria no GHL Calendar | ❓ não confirmado em produção | O código está pronto (`createAppointment` + revalidação do slot). Não há evidência nos logs de uma chamada `POST /calendars/events/appointments` bem-sucedida ainda. |
-| Botões "Pay now" / "Finalize" no `/checkout` | ❌ stubs | Mostram `toast("comingSoon")`. |
-
----
-
-### 5. O que está quebrado / incompleto
-
-**Erros conhecidos confirmados nos logs de rede capturados:**
-
-- **`GET /calendars/events` → 401 "The token is not authorized for this scope"** — para os 4 calendários, em todas as chamadas. Isso significa que **a agenda principal (`/agenda`) NÃO consegue mostrar eventos já agendados**. Mostra só free-slots vs. "sem booking", nunca "ocupado". É um problema de permissões do token GHL (falta o scope `calendars/events.readonly` no PIT/OAuth).
-- **`free-slots` retorna `{ traceId }` sem slots** — para todos os 4 calendários nas datas testadas. Pode ser: (a) calendário sem horário configurado no GHL, (b) data fora da janela de disponibilidade, (c) o mesmo problema de scope. Resultado visível: agenda mostra todos os horários como "sem booking" mas sem confiança de que isso é real.
-
-**Incompleto / stub:**
-- Todo o bottom-nav exceto "Agenda" e "+": Services, Reviews, Menu → `toast(comingSoon)`.
-- Header da agenda: Chat, Notificações, Perfil → `comingSoon`.
-- Recorrência no novo agendamento: desabilitada (`disabled`, só "no repeat").
-- Pay now / Finalize no checkout → `comingSoon`.
-- Editar/cancelar agendamento existente: não existe.
-- Bloquear horário (availability block): não existe (tabela criada, sem UI).
-- Quotes/orçamentos: tabela criada, sem UI.
-- Pagamentos: tabela criada, sem UI nem integração de gateway.
-- Portfolio: tabela criada, sem UI nem upload (sem bucket de storage).
-- Painel admin/perfil: inexistente.
-- i18n: chaves criadas em PT/EN/FR mas sem seletor de idioma na UI.
-
-**Telas que não existem como rota:**
-`/services` (catálogo standalone), `/contacts`, `/clients/:id`, `/settings`, `/portfolio`, `/quotes`, `/login`, `/auth`.
-
----
-
-### 6. Os 24 produtos GHL
-
-**Não estão a ser usados em nenhum lugar do app.**
-- Não há nenhuma chamada para `/products/*` da GHL.
-- Não há mapeamento entre `services.id` do Supabase e qualquer `productId` do GHL (nem coluna `ghl_product_id` na tabela).
-- O título do agendamento criado no GHL é a concatenação `service.name + " + " + ...`, não um `productId`.
-
-→ Os 24 produtos no GHL servem hoje **apenas para faturação/orçamentos no CRM nativo**. O app trabalha com a sua própria cópia em `public.services` e ignora os products do GHL.
-
-Se quiseres que o agendamento criado no GHL fique vinculado aos products (para puxar preço/IVA no invoice nativo), é um trabalho extra: adicionar `ghl_product_id` em `services`, popular a coluna, e passar isso ao criar o appointment ou ao gerar invoice.
-
----
-
-### Conclusão honesta — o que está sólido, o que é maquete
-
-**Sólido (ponta a ponta funcional):**
-- Catálogo de artistas (Supabase)
-- Catálogo de serviços com 24 itens, agrupados, com faixas de preço (Supabase)
-- Edge function `ghl-proxy` com `GHL_TOKEN` seguro
-- Fluxo de UI completo para criar um agendamento
-
-**Maquete / não-funcional / bloqueado:**
-- **Eventos da agenda (booked slots)** — bloqueado por scope do token GHL
-- Free-slots retornando vazio nas datas testadas — investigar config dos calendários GHL
-- Pagamentos, recorrência, edição, cancelamento, bloqueio de horário
-- Auth (não existe)
-- Toda a aba inferior fora de Agenda+Novo
-
-**Próximos passos sugeridos (em ordem de impacto, para tu decidires):**
-1. **Resolver o 401 do `/calendars/events`** — sem isso a agenda principal está cega.
-2. Investigar por que `free-slots` retorna vazio (config dos calendários no GHL).
-3. Decidir sobre auth: ficar admin-fixo + RLS aberta (rápido, inseguro) **ou** implementar login Supabase + roles agora.
-4. Decidir se os 24 products GHL devem ficar amarrados aos `services` (para faturação).
-5. Só depois: editar/cancelar appointment, bloqueio de horário, pagamentos.
-
-Me diz por onde queres atacar e eu volto com um plano focado.
+Após aplicar, abrir via Playwright as telas: `/`, `/agenda`, `/appointments/new`, `/appointments/new/services`, login. Conferir screenshots: fundo branco em todas exceto login (preto), zero roxo/azul, fontes carregadas, logo visível.
