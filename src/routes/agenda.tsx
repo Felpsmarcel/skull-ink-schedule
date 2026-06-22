@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -55,6 +55,7 @@ function defaultTimeLabels(): string[] {
 
 function AgendaPage() {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const { debug } = Route.useSearch();
   const [date, setDate] = useState<Date>(() => new Date());
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -221,7 +222,7 @@ function AgendaPage() {
         <NavItem icon={<Scissors className="h-5 w-5" />} label={t("nav.services")} onClick={() => toast(t("actions.comingSoon"))} />
         <button
           type="button"
-          onClick={() => toast(t("actions.comingSoon"))}
+          onClick={() => navigate({ to: "/appointments/new" })}
           aria-label={t("nav.new")}
           className="-mt-6 grid h-14 w-14 place-items-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 ring-4 ring-background"
         >
