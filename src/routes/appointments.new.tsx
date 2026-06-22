@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -581,10 +581,9 @@ function CreateContactPanel({ onCreated }: { onCreated: (c: GhlContact) => void 
 
 function useDebounce<T>(value: T, delayMs: number): T {
   const [v, setV] = useState(value);
-  useMemo(() => {
+  useEffect(() => {
     const id = setTimeout(() => setV(value), delayMs);
     return () => clearTimeout(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value]);
+  }, [value, delayMs]);
   return v;
 }
