@@ -183,19 +183,34 @@ export function buildDayGrid(opts: {
 export function extractFreeSlotStarts(resp: unknown): number[] {
   if (!resp || typeof resp !== "object") return [];
   const out: number[] = [];
-  for (const [k, v] of Object.entries(resp as Record<string, unknown>)) {
-    if (k === "traceId") continue;
-    if (v && typeof v === "object" && "slots" in (v as object)) {
-      const slots = (v as { slots?: unknown }).slots;
-      if (Array.isArray(slots)) {
-        for (const s of slots) {
-          if (typeof s === "string") {
-            const ms = new Date(s).getTime();
-            if (Number.isFinite(ms)) out.push(ms);
-          }
+
+  const pushIso = (s: unknown) => {
+    if (typeof s !== "string") return;
+    const ms = new Date(s).getTime();
+    if (Number.isFinite(ms)) out.push(ms);
+  };
+
+  const visit = (node: unknown) => {
+    if (!node) return;
+    if (Array.isArray(node)) {
+      for (const item of node) {
+        if (typeof item === "string") pushIso(item);
+        else visit(item);
+      }
+      return;
+    }
+    if (typeof node === "object") {
+      for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
+        if (k === "traceId" || k === "_dates_") continue;
+        if (k === "slots" && Array.isArray(v)) {
+          for (const s of v) pushIso(s);
+          continue;
         }
+        visit(v);
       }
     }
-  }
+  };
+
+  visit(resp);
   return out;
 }

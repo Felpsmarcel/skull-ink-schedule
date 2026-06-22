@@ -1,74 +1,42 @@
-## Tela de Agenda — visão diária por profissional (dados reais GHL) — v2
+## Diagnóstico do screenshot
 
-Modo ADMIN fixo (sem login ainda). Frontend nunca chama GHL direto — tudo via `ghl-proxy`.
+Olhando o snapshot do preview:
 
-### Decisões das 4 perguntas
+- **i18n**: "AGENDA.TODAY", "NAV.AGENDA", "NAV.SE...", "NAV.MENU" aparecem em maiúscula = `t()` está retornando a própria chave. Os JSONs (pt/fr/en) estão corretos, então é cache do Vite/i18n: `src/i18n/index.ts` tem `if (!i18n.isInitialized)` que segura a re-init mesmo quando os recursos mudam. Hard-refresh do browser não invalida o módulo i18n do bundle Vite — precisa restart do dev server OU init idempotente.
+- **Grade vazia**: 5 colunas mostram `0● 0○` e a coluna de horários `--:--`. Você confirmou que há agendamentos hoje → **as queries resolveram com 0 free + 0 booked**, OU o parser não reconhece o shape da resposta do GHL. O snapshot não tem nenhum request `ghl-proxy` capturado nem console.log, então não consigo confirmar qual. Preciso de logs.
 
-1. **free-slots + events combinados**: free-slots dá horários LIVRES (já desconta ocupados). Para mostrar quem reservou e qual serviço, busco `/calendars/events` em paralelo. Reconciliação: a grade é gerada a partir do horário de funcionamento (free-slots cobre os livres); os "buracos" entre free-slots são marcados ocupados; cada event do `/calendars/events` que cair em um buraco preenche `contactName` + `serviceName`. Um mesmo slot NUNCA aparece como livre e ocupado — fonte da verdade para "livre" é o free-slots.
-2. **Version header**: `2021-04-15` para AMBOS endpoints (confirmado na doc oficial GHL).
-3. **timezone**: vai como query param `timezone=Europe/Brussels` (URL-encoded). O proxy já faz `searchParams.set`.
-4. **Janela horária dinâmica**: default 08:00–22:00, mas expande automaticamente se algum event/free-slot do dia cair fora dessa faixa (arredonda para a meia-hora mais próxima). Nada some.
+## O que vou fazer
 
-### Arquivos
+### 1. Consertar i18n (definitivo)
+- Reescrever `src/i18n/index.ts`: em vez do guard `!isInitialized`, sempre chamar `i18n.addResourceBundle(lng, "common", bundle.common, true, true)` para cada idioma. Isso funciona mesmo após HMR sem precisar restart.
+- Restart do dev server para garantir bundle limpo.
 
-**Novo** `src/config/staff.ts` — array tipado com 5 calendários (Gabriel, Joyce, Andre, Augusto, Randevu): `{ id, name, calendarId, initials, color }`. Avatares = iniciais sobre cor.
+### 2. Tornar a agenda observável (para encontrar o bug dos dados)
+- **Edge function `ghl-proxy`**: adicionar `console.log` com `{ upstreamUrl, status, sample: text.slice(0, 300) }` em cada chamada → vai aparecer em `supabase--edge_function_logs ghl-proxy` e me permite ver o shape exato.
+- **Painel debug colapsável** no topo da agenda (ícone "bug" no header, visível só quando `?debug=1` está na URL): mostra para cada staff o `freeStarts.length`, `events.length`, primeiros 200 chars do JSON cru de free-slots e events. Sem isso continuamos no escuro.
+- **Parser `extractFreeSlotStarts` mais tolerante**: aceitar também shape plano `{ slots: ["ISO", ...] }` e `{ _dates_: {...} }` além do `{ "YYYY-MM-DD": { slots: [...] } }`.
 
-**Editar** `src/lib/ghl.ts` — adicionar:
-- `getFreeSlots(calendarId, startMs, endMs, tz="Europe/Brussels")` → GET `/calendars/{id}/free-slots?startDate&endDate&timezone`
-- `getEvents(calendarId, startIso, endIso, locationId)` → GET `/calendars/events?calendarId&startTime&endTime&locationId`
-- Ambos com `version: "2021-04-15"`.
+### 3. Grade 08–22 sempre visível
+- Mesmo quando o GHL devolve 0 free + 0 events, renderizar a grade default 08:00–22:00 com todos os slots em `outside` (cinza). Hoje, sem dados, a coluna de horário cai num fallback "--:--" feio. A nova versão mostra labels reais (`08:00`, `08:30`, …) o tempo todo.
 
-**Novo** `src/hooks/use-agenda.ts` — `useStaffDayAgenda(date)`:
-- Para cada staff, `Promise.allSettled([freeSlots, events])` do dia (00:00→23:59 Brussels).
-- `refetchInterval: 120_000`, `staleTime: 60_000`, `refetchIntervalInBackground: false`.
-- Normaliza para `{ staffId, freeSlots: TimeRange[], events: Event[], error?: string }`.
-- Erro num staff vira `error` no objeto dele, não derruba os outros.
+### 4. Preview em mobile
+- Trocar o viewport do preview para mobile (a tela é mobile-first, no canvas desktop fica espremida e confunde o diagnóstico visual).
 
-**Novo** `src/lib/agenda-grid.ts` — função pura que recebe `freeSlots + events + dayStart` e devolve:
-- `gridStart`, `gridEnd` (default 08:00–22:00, expande se algo cair fora).
-- `slots: { time, status: "free" | "booked" | "outside", contactName?, serviceName? }[]` em granularidade de 30 min.
-- Regra: slot livre se cair dentro de algum free-slot range; ocupado se um event o cobrir; "outside" se fora do funcionamento (cinza apagado, não clicável).
+## O que NÃO vou mexer
 
-**Novo** `src/routes/agenda.tsx` (rota `/agenda`). `src/routes/index.tsx` redireciona para `/agenda` (sem SSR auth, rota pública por enquanto).
+- Edge function continua igual em arquitetura (proxy puro), só ganha logs.
+- Sem alterar config de staff, sem alterar lógica de timezone (já está em Europe/Brussels), sem alterar refresh de 2 min, sem alterar UI da grade além do default 08–22.
 
-UI mobile-first, fundo `#000`/`#1A1A1A`, acento `#E11D2A`:
+## Como vai funcionar o teste depois da implementação
 
-```
-┌─────────────────────────────────────────┐
-│ [<]  ter, 24 jun 2026  [>]  💬 🔔 👤   │ header sticky
-├─────────────────────────────────────────┤
-│        GAB JOY AND AUG RDV              │ headers das colunas
-│ 09:00│ ░░░│    │    │███ │    │        │
-│ 09:30│ ░░░│███ │    │███ │    │        │ ░ livre / ███ ocupado
-│ 10:00│    │███ │    │    │░░░ │        │
-├─────────────────────────────────────────┤
-│  📅    ✂️     ➕     ⭐    ☰           │ bottom nav fixa
-└─────────────────────────────────────────┘
-```
+1. Recarregar `/agenda` — header e bottom nav devem mostrar texto traduzido ("Hoje", "Agenda", "Serviços", "Avaliações", "Menu").
+2. Mesmo sem dados, grade mostra `08:00` → `22:00` com slots cinza.
+3. Abrir `/agenda?debug=1` → painel mostra contagens e amostra crua das respostas. Você me manda o conteúdo (ou eu leio via `supabase--edge_function_logs ghl-proxy`) e a partir do shape real eu ajusto o parser num próximo passo, sem chutar.
 
-- Seletor de data: setas + popover `<Calendar>` shadcn + chip "Hoje".
-- Grid: coluna esquerda fixa com horários, colunas dos staffs com `overflow-x-auto`, largura mínima ~96px por coluna.
-- Livre: borda tracejada vermelha, label "Sem reserva", clicável → toast "em breve".
-- Ocupado: card vermelho-escuro com horário + nome + serviço, `cursor-not-allowed`.
-- Outside: cinza apagado.
-- Erro por coluna: badge vermelho no header da coluna + tooltip com mensagem bruta do GHL (status + body).
-- Loading: skeleton por coluna.
-- Bottom nav: 5 itens, "+" central elevado vermelho, só Agenda ativo.
+## Arquivos afetados
 
-**Editar** `src/i18n/locales/{pt,fr,en}.json` — chaves: `agenda.title/today/noBooking/client/service/errorLoading/outside`, `nav.agenda/services/new/reviews/menu`.
-
-### Fora de escopo
-
-Criar/editar/cancelar agendamentos. Login e papéis reais. Telas Serviços/Avaliações/Menu/Chat/Notificações. Drag-to-create. Visão semana/mês.
-
-### Como testar
-
-1. Liberar scope `calendars/events.readonly` no `GHL_TOKEN` (você disse que vai fazer).
-2. Abrir `/agenda` no preview.
-3. Ver 5 colunas (Gabriel, Joyce, Andre, Augusto, Randevu) com horários do dia atual.
-4. Confirmar blocos livres onde o GHL tem disponibilidade.
-5. Confirmar blocos ocupados com nome do cliente + serviço.
-6. Navegar dia ±1 com as setas, escolher data no popover.
-7. Aguardar 2 min sem interagir → ver dados re-buscarem (Network tab mostra POST para `ghl-proxy`).
-8. Se algum staff der erro → badge vermelho na coluna, demais funcionam.
-9. Se um agendamento existir às 7:00, a grade começa em 7:00 automaticamente.
+- `src/i18n/index.ts` — init idempotente.
+- `supabase/functions/ghl-proxy/index.ts` — logs estruturados.
+- `src/lib/agenda-grid.ts` — parser de free-slots mais tolerante + grade default sempre 08–22.
+- `src/routes/agenda.tsx` — painel debug condicional, coluna de horários sempre com labels reais.
+- Preview viewport → mobile.

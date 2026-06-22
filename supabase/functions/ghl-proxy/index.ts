@@ -78,6 +78,14 @@ Deno.serve(async (req) => {
     } catch (_e) {
       // não-JSON — devolve como string
     }
+    console.log(JSON.stringify({
+      tag: "ghl-proxy",
+      method,
+      upstreamUrl: url.toString(),
+      status: upstream.status,
+      ok: upstream.ok,
+      sample: text.slice(0, 400),
+    }));
     return new Response(
       JSON.stringify({ status: upstream.status, ok: upstream.ok, data, url: url.toString() }),
       {
@@ -86,6 +94,7 @@ Deno.serve(async (req) => {
       },
     );
   } catch (err) {
+    console.error("ghl-proxy upstream_fetch_failed", err);
     return json(502, {
       error: "upstream_fetch_failed",
       detail: err instanceof Error ? err.message : String(err),

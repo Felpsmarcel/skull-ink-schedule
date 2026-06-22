@@ -14,12 +14,14 @@ import {
   Star,
   Menu as MenuIcon,
   AlertTriangle,
+  Bug,
 } from "lucide-react";
 import { toast } from "sonner";
 import "@/i18n";
 
 import { useStaffDayAgenda } from "@/hooks/use-agenda";
 import { STAFF } from "@/config/staff";
+import { DEFAULT_START_HOUR, DEFAULT_END_HOUR, SLOT_MINUTES } from "@/lib/agenda-grid";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Toaster } from "@/components/ui/sonner";
@@ -32,14 +34,28 @@ export const Route = createFileRoute("/agenda")({
       { name: "description", content: "Agenda diária dos tatuadores" },
     ],
   }),
+  validateSearch: (s: Record<string, unknown>) => ({
+    debug: s.debug === "1" || s.debug === 1 || s.debug === true,
+  }),
   component: AgendaPage,
 });
 
 const COL_WIDTH = "min-w-[110px] w-[110px]";
 const ROW_HEIGHT = "h-14";
 
+function defaultTimeLabels(): string[] {
+  const out: string[] = [];
+  for (let min = DEFAULT_START_HOUR * 60; min < DEFAULT_END_HOUR * 60; min += SLOT_MINUTES) {
+    out.push(
+      `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`,
+    );
+  }
+  return out;
+}
+
 function AgendaPage() {
   const { t, i18n } = useTranslation();
+  const { debug } = Route.useSearch();
   const [date, setDate] = useState<Date>(() => new Date());
   const [pickerOpen, setPickerOpen] = useState(false);
 
@@ -63,11 +79,12 @@ function AgendaPage() {
     setDate(d);
   }
 
-  // Use longest slot list across staff so rows align
+  // Use longest slot list across staff so rows align; fall back to default 08–22.
   const rowCount = agendas.reduce((m, a) => Math.max(m, a.slots.length), 0);
-  const timeColumn = (agendas.find((a) => a.slots.length === rowCount)?.slots ?? []).map(
-    (s) => s.label,
-  );
+  const timeColumn =
+    rowCount > 0
+      ? (agendas.find((a) => a.slots.length === rowCount)?.slots ?? []).map((s) => s.label)
+      : defaultTimeLabels();
 
   return (
     <div className="flex min-h-dvh flex-col bg-background pb-20">
@@ -147,29 +164,46 @@ function AgendaPage() {
         </div>
       </header>
 
+      {debug ? (
+        <div className="border-b border-border bg-card/50 p-2 text-[10px] text-muted-foreground">
+          <div className="mb-1 flex items-center gap-1 font-bold text-primary">
+            <Bug className="h-3 w-3" /> DEBUG (?debug=1)
+          </div>
+          {agendas.map((a) => (
+            <details key={a.staff.id} className="mb-1 rounded border border-border/50 p-1">
+              <summary className="cursor-pointer">
+                {a.staff.shortName} — free:{a.debug?.freeStartsCount ?? "?"} ev:
+                {a.debug?.eventsCount ?? "?"} {a.error ? "· ERR" : ""}
+              </summary>
+              {a.error ? <div className="text-destructive">{a.error}</div> : null}
+              <div className="mt-1">
+                <div className="font-semibold">slots raw:</div>
+                <pre className="whitespace-pre-wrap break-all">{a.debug?.slotsSample}</pre>
+                <div className="mt-1 font-semibold">events raw:</div>
+                <pre className="whitespace-pre-wrap break-all">{a.debug?.eventsSample}</pre>
+              </div>
+            </details>
+          ))}
+        </div>
+      ) : null}
+
       {/* Grid */}
       <div className="flex-1 overflow-auto">
         <div className="flex min-w-full">
           {/* time column */}
           <div className="sticky left-0 z-10 shrink-0 bg-background">
             <div className="h-16 border-b border-border" />
-            {timeColumn.length === 0
-              ? Array.from({ length: 20 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className={cn("flex w-14 items-start justify-center border-b border-border/40 pt-1 text-[10px] text-muted-foreground", ROW_HEIGHT)}
-                  >
-                    --:--
-                  </div>
-                ))
-              : timeColumn.map((label) => (
-                  <div
-                    key={label}
-                    className={cn("flex w-14 items-start justify-center border-b border-border/40 pt-1 text-[10px] text-muted-foreground", ROW_HEIGHT)}
-                  >
-                    {label}
-                  </div>
-                ))}
+            {timeColumn.map((label) => (
+              <div
+                key={label}
+                className={cn(
+                  "flex w-14 items-start justify-center border-b border-border/40 pt-1 text-[10px] text-muted-foreground",
+                  ROW_HEIGHT,
+                )}
+              >
+                {label}
+              </div>
+            ))}
           </div>
 
           {/* staff columns */}
