@@ -120,7 +120,7 @@ function ServicesPage() {
                       </div>
                     </div>
                     <span className="text-sm font-semibold">
-                      {formatPrice(s.price_cents, s.currency)}
+                      {formatPrice(s.price_eur)}
                     </span>
                   </button>
                 );
