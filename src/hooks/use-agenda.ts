@@ -1,5 +1,6 @@
 import { useQueries } from "@tanstack/react-query";
-import { STAFF, LOCATION_ID, type StaffMember } from "@/config/staff";
+import { LOCATION_ID, type StaffMember } from "@/config/staff";
+import { useArtists } from "@/hooks/use-artists";
 import { getFreeSlots, getEvents, type GhlEvent } from "@/lib/ghl";
 import {
   brusselsDayStartMs,
@@ -30,8 +31,11 @@ export function useStaffDayAgenda(date: Date) {
   const dayStartMs = brusselsDayStartMs(date);
   const dayEndMs = brusselsDayEndMs(date);
 
+  const artistsQuery = useArtists();
+  const staffList: StaffMember[] = artistsQuery.data ?? [];
+
   const queries = useQueries({
-    queries: STAFF.map((staff) => ({
+    queries: staffList.map((staff) => ({
       queryKey: ["agenda", staff.id, dayKey],
       queryFn: async () => {
         const [slotsRes, eventsRes] = await Promise.allSettled([
@@ -85,8 +89,8 @@ export function useStaffDayAgenda(date: Date) {
     })),
   });
 
-  const result: StaffAgenda[] = STAFF.map((staff, i) => {
-    const q = queries[i];
+  const result: StaffAgenda[] = staffList.map((staff, i) => {
+    const q = queries[i] as (typeof queries)[number] | undefined;
     if (q.isLoading || !q.data) {
       return {
         staff,
@@ -134,6 +138,6 @@ export function useStaffDayAgenda(date: Date) {
     agendas: result,
     dayStartMs,
     dayEndMs,
-    isFetching: queries.some((q) => q.isFetching),
+    isFetching: artistsQuery.isLoading || queries.some((q) => q.isFetching),
   };
 }
