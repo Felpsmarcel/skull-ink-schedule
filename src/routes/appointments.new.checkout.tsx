@@ -11,12 +11,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
-import { STAFF } from "@/config/staff";
-import { formatPrice } from "@/lib/services";
+import { useArtists } from "@/hooks/use-artists";
+import { formatPrice, modalityLabel } from "@/lib/services";
 import {
   useAppointmentDraft,
-  totalFinalCents,
-  totalOriginalCents,
+  totalFinalEur,
+  totalOriginalEur,
 } from "@/stores/appointment-draft";
 
 export const Route = createFileRoute("/appointments/new/checkout")({
@@ -27,8 +27,8 @@ export const Route = createFileRoute("/appointments/new/checkout")({
 function CheckoutPage() {
   const { t } = useTranslation();
   const draft = useAppointmentDraft();
-
-  const staff = STAFF.find((s) => s.calendarId === draft.calendarId) ?? null;
+  const { data: artists = [] } = useArtists();
+  const staff = artists.find((s) => s.calendarId === draft.calendarId) ?? null;
   const startLabel = useMemo(() => {
     if (!draft.startISO) return "—";
     return new Intl.DateTimeFormat("pt-PT", {
@@ -41,8 +41,8 @@ function CheckoutPage() {
     }).format(new Date(draft.startISO));
   }, [draft.startISO]);
 
-  const original = totalOriginalCents(draft);
-  const final = totalFinalCents(draft);
+  const original = totalOriginalEur(draft);
+  const final = totalFinalEur(draft);
   const hasDiscount = final < original;
 
   return (
@@ -127,9 +127,7 @@ function CheckoutPage() {
           ) : (
             <ul className="space-y-2">
               {draft.services.map((l) => {
-                const finalCents = Math.round(
-                  l.service.price_cents * (1 - l.discountPct / 100),
-                );
+                const lineFinal = l.service.price_eur * (1 - l.discountPct / 100);
                 const hasDisc = l.discountPct > 0;
                 return (
                   <li
@@ -140,18 +138,16 @@ function CheckoutPage() {
                       <div className="min-w-0">
                         <div className="truncate text-sm font-medium">{l.service.name}</div>
                         <div className="text-[10px] text-muted-foreground">
-                          {l.service.duration_min} min · {l.service.modality}
+                          {l.service.duration_min} min · {modalityLabel(l.service.modality)}
                         </div>
                       </div>
                       <div className="text-right">
                         {hasDisc ? (
                           <div className="text-[10px] text-muted-foreground line-through">
-                            {formatPrice(l.service.price_cents, l.service.currency)}
+                            {formatPrice(l.service.price_eur)}
                           </div>
                         ) : null}
-                        <div className="text-sm font-semibold">
-                          {formatPrice(finalCents, l.service.currency)}
-                        </div>
+                        <div className="text-sm font-semibold">{formatPrice(lineFinal)}</div>
                       </div>
                     </div>
                     <div className="mt-2 flex items-center gap-2">

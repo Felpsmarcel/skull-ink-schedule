@@ -1,139 +1,113 @@
-## Decisões fixadas
+## Decisões fixadas pelas suas respostas
 
-- **Serviços**: tabela `public.services` no Supabase. **Bloqueante:** você ainda precisa me mandar a lista real no formato `Nome | Categoria | Duração min | Modalidade | Preço €`. Sem isso a tela "Selecionar serviço" fica vazia (não vou inventar mock).
-- **Criar contato**: sim, formulário cria contato real no GHL via `POST /contacts/`. Requer scope `contacts.write` no `GHL_TOKEN` — se faltar, o backend retorna 401 e o app mostra o erro.
-- **Header Version GHL (confirmado na doc atual)**:
-  - `POST /contacts/` → `Version: 2021-07-28`
-  - `POST /calendars/events/appointments` → `Version: 2021-04-15`
-  - `GET /contacts/search` → `Version: 2021-07-28`
-- **Recorrência**: só "Não se repete" nesta etapa.
-- **Pagar agora / Finalizar**: só visual nesta etapa (sem efeito).
+- **Auth**: continua admin fixo. RLS fica ENABLED em tudo (como mandou), mas adiciono policies **permissivas para `anon`** nas tabelas que o app realmente lê HOJE (`services`, `artists`). As policies admin/artist do schema v1.0 ficam criadas mas só passam a valer quando login existir.
+- **Artists**: semeio Gabriel, Andre, Neto, Maciel com os IDs reais que mandou. Joyce fica de fora (sem IDs).
+- **Serviços**: aguardo a lista (você disse que vai colar). Migration de schema roda agora; INSERT de services roda depois numa segunda migration.
+- **Mirror GHL**: appointments/contacts/payments/quotes ficam **dormentes** nesta etapa. Crio as tabelas (estão no schema v1.0), mas a tela de novo agendamento continua escrevendo **só no GHL** via proxy. Sem dual-write agora.
 
-## Migration (Supabase)
+## Conflito com schema atual — precisa resolver
 
-Tabela `public.services`:
-- `id` uuid PK
-- `name` text NOT NULL
-- `category` text NOT NULL
-- `duration_min` int NOT NULL CHECK (`duration_min` > 0)
-- `modality` text NOT NULL (presencial/online/etc.)
-- `price_cents` int NOT NULL CHECK (`price_cents` >= 0)
-- `currency` text NOT NULL default `'EUR'`
-- `active` boolean NOT NULL default true
-- `created_at` / `updated_at` timestamps + trigger
-- GRANTs: `SELECT` para `anon` + `authenticated` (catálogo público em modo admin fixo); `ALL` para `service_role`
-- RLS ON: policy `SELECT` aberta enquanto não há auth real
+Hoje existe `public.services` com `price_cents int`. O schema novo usa `price_eur numeric(8,2)` + coluna nova `description` + `sort_order` + enum `service_modality`. **Não dá pra alterar in-place sem perder/converter dados.** Como a tabela está vazia (sem seed ainda), vou:
 
-Sem seed agora — quando você mandar a lista, abro 1 migration de INSERT.
+1. `DROP TABLE public.services CASCADE`
+2. Recriar com o shape novo do schema v1.0
 
-## Edge function `ghl-proxy`
+Se você já tivesse inserido linhas, eu faria `ALTER` preservando, mas como está vazia, drop+recreate é mais limpo.
 
-Já existe e é genérica (path + method + query + body + version). NÃO precisa mudar. Os 3 endpoints novos passam por ela:
+## Migration 1 — Schema v1.0 (tudo de uma vez)
 
-- `GET /contacts/search?locationId=...&query=...` (Version 2021-07-28)
-- `POST /contacts/` body `{ locationId, firstName, lastName, phone, email }` (Version 2021-07-28)
-- `POST /calendars/events/appointments` body `{ calendarId, locationId, contactId, startTime, endTime, title, appointmentStatus: "confirmed", ignoreFreeSlotValidation: false }` (Version 2021-04-15)
+Rodo exatamente o SQL que você mandou, com 3 ajustes obrigatórios pro Supabase:
 
-## Camada cliente (`src/lib/ghl.ts`)
+1. **`DROP TABLE public.services CASCADE`** no topo (antes do `create type`), porque a tabela já existe com shape antigo.
+2. **GRANTs explícitos** em todas as 10 tabelas (Supabase Data API não dá grant default em `public`):
+   - `services`, `artists` → `GRANT SELECT ON ... TO anon, authenticated` + `GRANT ALL ... TO service_role` (catálogo público enquanto não há login)
+   - `app_users`, `contacts`, `appointments`, `appointment_services`, `quotes`, `payments`, `portfolio`, `availability_blocks` → `GRANT SELECT, INSERT, UPDATE, DELETE TO authenticated` + `GRANT ALL TO service_role`. Sem `anon` (essas dependem de login).
+3. **Policy permissiva temporária pra `anon`** em `services` e `artists` (`USING (true)` no SELECT). As policies admin/artist do v1.0 entram como você mandou, mas como `current_user_role()` retorna NULL sem `app_users` populado, elas só vão valer pós-login.
 
-Adicionar:
-- `searchContacts(query: string)` → `GET /contacts/search`
-- `createContact(input)` → `POST /contacts/`
-- `createAppointment(input)` → `POST /calendars/events/appointments` + retorna `{ id, startTime, endTime, ... }` ou erro tipado
-- Reutiliza `getFreeSlots` para validar slot livre antes do `createAppointment`
+Sem outras mudanças no SQL — enums, tabelas, índices, triggers `set_updated_at`, funções `current_user_role()` / `current_artist_id()` e todas as policies ficam exatamente como você escreveu.
 
-## Rotas novas (3 telas)
+## Migration 2 — Seed de artists
 
-```text
-src/routes/
-  appointments.new.tsx            → /appointments/new        Tela "Novo agendamento"
-  appointments.new.services.tsx   → /appointments/new/services  Tela "Selecionar serviço"
-  appointments.new.checkout.tsx   → /appointments/new/checkout Tela "Detalhe / Checkout"
+Idêntico ao que você mandou, **sem Joyce**:
+
+```sql
+insert into artists (ghl_user_id, ghl_calendar_id, name, email, phone, specialties, active) values
+  ('bFfSIHXorhaCUvcM0UIU', '9PS3KanirlXnDSO63ZYY', 'Gabriel Fernandes', 'contatodegabriel@gmail.com', '+5571992036764', '{"Cover-up","Blackwork"}', true),
+  ('FMju5MHBXiXOzLXtBrA2', 'suBooHKzS7WTsdHOIiHJ', 'Andre Pareyn', 'andrepareyn7508@gmail.com', '+32465271070', '{}', true),
+  ('FZBsfiRSCzfviKR3fEVh', '8YftfNNqLrONHHP2RQkd', 'Neto Mendes', null, null, '{}', true),
+  ('MmNZUW7IedFpLJ3SYNLQ', 'BMolaQM8M3kQDiKxFNxZ', 'Maciel Tattoo', null, null, '{}', true);
 ```
 
-Estado compartilhado entre as 3 telas via **Zustand store** `useAppointmentDraft` (cliente, calendarId, start ISO, slots de serviços com preços finais/desconto, notas). Persistido em `sessionStorage` para sobreviver a refresh entre telas. Limpa ao finalizar / cancelar.
+Joyce: assim que me mandar os 2 IDs, abro migration de 1 linha.
 
-### Tela 1 — `/appointments/new`
-- Card "Adicionar cliente": botão abre `<Drawer>` com:
-  - input de busca → debounce 300ms → `searchContacts(query)` → lista com avatar inicial + nome + telefone.
-  - aba "Criar novo": form Zod (nome*, telefone*, e-mail) → `createContact` → seleciona o contato criado.
-- Select obrigatório do tatuador (lê `STAFF` do `src/config/staff.ts`).
-- DatePicker (shadcn) + lista de horários livres do calendário escolhido na data escolhida (reusa `getFreeSlots`).
-- Select recorrência (só "Não se repete" disabled-locked nas demais).
-- Seção "Serviços" lista os já adicionados (do store) + botão "Adicionar serviço" → navega para `/appointments/new/services`.
-- Footer fixo: menu (kebab desabilitado), "Checkout" (navega `/appointments/new/checkout`), "Salvar" (primary).
-- **"Salvar"**: valida (cliente, calendar, start), revalida slot via `getFreeSlots` filtrando o `start` selecionado, chama `createAppointment`. Em sucesso: `queryClient.invalidateQueries({ queryKey: ["agenda"] })`, limpa store, toast "Agendamento criado", navega para `/agenda` na data do appointment.
+## Migration 3 — Seed de services (DEPOIS que você colar a lista)
 
-### Tela 2 — `/appointments/new/services`
-- Header com back + input de busca.
-- Query `useServices()` → `SELECT * FROM services WHERE active ORDER BY category, name`.
-- Lista agrupada por `category` com contador `(n)` no header.
-- Cada item: nome, `duration_min`, `modality`, preço formatado em € (`Intl.NumberFormat('pt-PT', { style:'currency', currency:'EUR' })`).
-- Toque adiciona ao draft (pode adicionar vários, podendo aplicar desconto manual depois no checkout) e volta para tela 1.
+Vou converter `Nome | Categoria | Duração | Modalidade | Preço €` em `INSERT INTO services (name, category, duration_min, modality, price_eur, sort_order) VALUES ...`. Sem isso, a tela "Selecionar serviço" continua vazia.
 
-### Tela 3 — `/appointments/new/checkout`
-- Header: avatar + nome + telefone do cliente + ações `tel:` e `mailto:`.
-- Linha resumo data/horário + tatuador.
-- Lista de serviços: nome, preço original riscado quando houver desconto, preço final em destaque. Campo numérico opcional "desconto %" por serviço (atualiza preço final no store).
-- Textarea "Notas internas" (max 1000) → vai como `notes` no `createAppointment`.
-- Totais: original riscado + final em destaque.
-- Botões "Pagar agora" e "Finalizar" → ambos só disparam `toast("Em breve — próxima etapa")` por enquanto.
+## Refactor de código
 
-## Validação real de slot
+### `src/config/staff.ts` → vira hook
 
-Antes de `createAppointment`:
-1. `getFreeSlots(calendarId, dayStartMs, dayEndMs)` da data.
-2. Confere se `startISO` selecionado está na lista de starts livres.
-3. Se não estiver → toast "Slot já ocupado, escolha outro" + recarrega horários.
-4. Se estiver → `createAppointment`. Em caso de 409/422 do GHL → mesmo tratamento.
+Hoje é um array hardcoded `STAFF` com 5 tatuadores. Substituo por:
 
-## Atualização da agenda
+- **Novo `src/hooks/use-artists.ts`** com `useQuery(["artists"], fetchActiveArtists)` lendo `SELECT id, ghl_user_id, ghl_calendar_id, name, avatar_url, specialties FROM artists WHERE active = true ORDER BY name`.
+- Mantenho `src/config/staff.ts` como **shim retrocompatível** exportando o tipo `Staff` mapeado a partir do row do Supabase (`calendarId` ← `ghl_calendar_id`, `userId` ← `ghl_user_id`), ou removo de vez e atualizo os 3 imports atuais. Decido pelo segundo (menos código morto).
 
-`createAppointment` em sucesso → `queryClient.invalidateQueries({ queryKey: ["agenda"] })`. O refetch automático de 2 min já existe; a invalidação força refetch imediato.
+### Arquivos afetados pelo refactor de staff
+- `src/config/staff.ts` → deletado
+- `src/hooks/use-agenda.ts` → recebe lista de artists do hook em vez de importar `STAFF`
+- `src/routes/agenda.tsx` → idem
+- `src/routes/appointments.new.tsx` → idem (select de tatuador)
 
-## Bottom nav "+"
-- O botão `+` central da agenda já existe (hoje mostra toast "em breve"). Vou conectar ele a `navigate({ to: "/appointments/new" })`.
+### `src/lib/services.ts` → adaptar shape novo
 
-## Fora de escopo desta etapa
+Mudanças:
+- Tipo `Service`: `price_cents` → `price_eur: number`, adicionar `description?: string`, `sort_order: number`, `modality: "presencial" | "consulta_online" | "hibrido"` (enum, não string livre).
+- `fetchActiveServices`: `ORDER BY sort_order, category, name`, select inclui `description, sort_order`.
+- `formatPrice(eur: number)`: passa a receber euros direto (`Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(eur)`), sem `/100`.
 
-- Recorrência além de "não se repete"
-- Pagamento real / funil de checkout
-- Cancelar / editar appointment existente
-- Login real / perfis (continua admin fixo)
-- Categorias/serviços CRUD no app (gerencia por SQL/migrations)
+### Store de draft (`src/stores/appointment-draft.ts`)
 
-## Como testar (depois de eu implementar + você me mandar a lista de serviços e eu rodar o seed)
+`DraftServiceLine.service` agora referencia o novo shape. Cálculos de total mudam de centavos para euros (multiplicação em ponto flutuante com `toFixed(2)` na exibição). Como persist está em `sessionStorage`, **adiciono `version: 2` no persist** pra invalidar drafts antigos automaticamente em quem já abriu o app.
 
-1. **Pré-requisito de scope**: garantir que `GHL_TOKEN` tem `contacts.readonly`, `contacts.write`, e `calendars/events.write`. Se faltar, o app mostra o erro bruto do GHL — me avise que peço update do secret.
-2. **Mandar lista de serviços** → eu rodo migration de INSERT.
-3. Abrir `/agenda`, tocar no botão `+` → cai em `/appointments/new`.
-4. **Adicionar cliente**:
-   - Buscar por nome conhecido no GHL → confirmar que aparece.
-   - Aba "Criar novo": preencher nome/telefone/e-mail → confirmar que cria. **Conferir no painel do GHL** que o contato apareceu em Contacts.
-5. Selecionar tatuador, escolher data, escolher horário livre.
-6. "Adicionar serviço" → cai em `/appointments/new/services`. Buscar/filtrar/escolher.
-7. (Opcional) Ir em "Checkout", aplicar desconto, anotar nota.
-8. Voltar e tocar **Salvar** → toast de sucesso → cai na `/agenda` na data escolhida.
-9. **Conferir no GHL** que o appointment aparece em `Calendars → Appointments` no calendário do tatuador.
-10. **Conferir na agenda do app**: o slot deve aparecer ocupado com nome do cliente. Refazer um novo agendamento no mesmo slot deve dar "Slot já ocupado".
+### Telas
 
-## Arquivos afetados
+- **`/appointments/new/services`**: usa `price_eur` direto + mostra `description` em cinza pequeno abaixo do nome quando existir.
+- **`/appointments/new/checkout`**: cálculo de desconto em euros (não em centavos). `discount_eur` no draft passa a refletir a coluna nova do schema (mesmo nome).
+- **`/appointments/new`** (tela 1): select de tatuador alimentado pelo `useArtists()`. Avatar usa `avatar_url` quando existir, senão inicial do nome.
 
-- `supabase/migrations/<ts>_services.sql` (nova tabela)
-- `src/lib/ghl.ts` (3 funções novas)
-- `src/lib/services.ts` (query Supabase do catálogo)
-- `src/stores/appointment-draft.ts` (Zustand)
-- `src/routes/appointments.new.tsx`
-- `src/routes/appointments.new.services.tsx`
-- `src/routes/appointments.new.checkout.tsx`
-- `src/routes/agenda.tsx` (conectar botão `+`)
-- `src/i18n/locales/{pt,fr,en}.json` (chaves de appointment)
-- `src/routeTree.gen.ts` (auto)
+### i18n
+Sem chaves novas — só ajusto a chave de "modalidade" se quiser mostrar label localizada (`presencial` / `consulta_online` / `hibrido` → `Presencial` / `Consulta online` / `Híbrido`).
 
-## Dependência bloqueante
+## Fora de escopo desta etapa (confirmado por você)
 
-Para terminar de verdade preciso de duas coisas suas:
-1. Lista real de serviços no formato pedido.
-2. Confirmação de que o `GHL_TOKEN` tem os scopes `contacts.readonly`, `contacts.write`, `calendars/events.write` (ou liberar agora).
+- Auth real (`app_users`, login, Google) — fica dormente, schema pronto pra ativar depois.
+- Dual-write Supabase ↔ GHL — appointment continua escrevendo só no GHL via proxy.
+- CRUD admin de artists/services dentro do app — gerencia via migration por enquanto.
+- Joyce no seed — aguarda IDs.
+- Portfolio, payments, quotes, availability_blocks — tabelas existem mas nenhuma tela consome.
 
-Posso implementar TUDO menos o seed de serviços sem essas duas — me diga se prefere que eu já comece e você manda a lista em paralelo, ou se prefere mandar primeiro.
+## Pendências bloqueantes (de você)
+
+1. **Lista de serviços** no formato `Nome | Categoria | Duração min | Modalidade | Preço €` — sem isso, tela de serviços fica vazia.
+2. **IDs do GHL pra Joyce** (`ghl_user_id` + `ghl_calendar_id`) se quiser ela no app agora.
+3. **Confirmar drop+recreate da `services`** — a tabela atual está vazia, mas quero seu OK explícito antes de DROP CASCADE.
+
+## Como testar depois de tudo aplicado
+
+1. **Migration 1** rodada → confere no painel do backend que existem as 10 tabelas + enums.
+2. **Migration 2** rodada → abrir `/agenda` → o select de tatuador deve mostrar Gabriel, Andre, Neto, Maciel (sem Joyce). Cada um carrega os events do calendário GHL correto.
+3. **Migration 3** rodada (depois da lista) → tocar `+` → adicionar cliente → escolher tatuador/slot → "Adicionar serviço" → lista agrupada por categoria com preços em €.
+4. **Salvar agendamento** → confere no GHL que o evento aparece no calendário do tatuador.
+5. **RLS sanity check**: rodar no SQL editor `SET ROLE anon; SELECT * FROM services;` → deve retornar linhas. `SELECT * FROM appointments;` → deve retornar zero linhas (sem grant pra anon), confirmando que dados sensíveis ficam fechados.
+
+## Ordem de execução (proposta)
+
+1. Migration 1 (schema + drop services antigo + grants + policies)
+2. Migration 2 (seed artists)
+3. Refactor de código (staff hook, services lib, store, telas) — não depende de Migration 3
+4. **PAUSA** esperando lista de serviços
+5. Migration 3 (seed services)
+6. Teste end-to-end
+
+Posso começar 1→2→3 em sequência assim que você aprovar este plano e confirmar o drop da `services`. Migration 3 fica em pé até você colar a lista.

@@ -34,7 +34,8 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
-import { STAFF, LOCATION_ID } from "@/config/staff";
+import { LOCATION_ID } from "@/config/staff";
+import { useArtists } from "@/hooks/use-artists";
 import {
   brusselsDayStartMs,
   brusselsDayEndMs,
@@ -49,11 +50,11 @@ import {
   searchContacts,
   type GhlContact,
 } from "@/lib/ghl";
-import { formatPrice } from "@/lib/services";
+import { formatPrice, modalityLabel } from "@/lib/services";
 import {
   useAppointmentDraft,
   totalDurationMin,
-  totalFinalCents,
+  totalFinalEur,
 } from "@/stores/appointment-draft";
 
 export const Route = createFileRoute("/appointments/new")({
@@ -67,6 +68,8 @@ function AppointmentNewPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const artistsQuery = useArtists();
+  const artists = artistsQuery.data ?? [];
 
   const draft = useAppointmentDraft();
   const [dateObj, setDateObj] = useState<Date>(() =>
@@ -191,7 +194,7 @@ function AppointmentNewPage() {
               <SelectValue placeholder={t("appt.staffPlaceholder")} />
             </SelectTrigger>
             <SelectContent>
-              {STAFF.map((s) => (
+              {artists.map((s) => (
                 <SelectItem key={s.id} value={s.calendarId}>
                   {s.name}
                 </SelectItem>
@@ -299,12 +302,12 @@ function AppointmentNewPage() {
                   <div className="min-w-0">
                     <div className="truncate text-sm">{l.service.name}</div>
                     <div className="text-[10px] text-muted-foreground">
-                      {l.service.duration_min} min · {l.service.modality}
+                      {l.service.duration_min} min · {modalityLabel(l.service.modality)}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm">
-                      {formatPrice(l.service.price_cents, l.service.currency)}
+                      {formatPrice(l.service.price_eur)}
                     </span>
                     <button
                       type="button"
@@ -340,9 +343,9 @@ function AppointmentNewPage() {
           onClick={() => navigate({ to: "/appointments/new/checkout" })}
         >
           {t("appt.checkout")}
-          {totalFinalCents(draft) > 0 ? (
+          {totalFinalEur(draft) > 0 ? (
             <span className="ml-2 text-xs text-muted-foreground">
-              {formatPrice(totalFinalCents(draft))}
+              {formatPrice(totalFinalEur(draft))}
             </span>
           ) : null}
         </Button>

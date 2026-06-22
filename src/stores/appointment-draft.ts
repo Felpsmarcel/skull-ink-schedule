@@ -65,6 +65,7 @@ export const useAppointmentDraft = create<State>()(
     }),
     {
       name: "gf-appointment-draft",
+      version: 2,
       storage: createJSONStorage(() =>
         typeof window !== "undefined" ? sessionStorage : (undefined as unknown as Storage),
       ),
@@ -76,13 +77,21 @@ export function totalDurationMin(draft: AppointmentDraft): number {
   return draft.services.reduce((acc, l) => acc + l.service.duration_min, 0);
 }
 
-export function totalOriginalCents(draft: AppointmentDraft): number {
-  return draft.services.reduce((acc, l) => acc + l.service.price_cents, 0);
+export function totalOriginalEur(draft: AppointmentDraft): number {
+  return round2(
+    draft.services.reduce((acc, l) => acc + l.service.price_eur, 0),
+  );
 }
 
-export function totalFinalCents(draft: AppointmentDraft): number {
-  return draft.services.reduce(
-    (acc, l) => acc + Math.round(l.service.price_cents * (1 - l.discountPct / 100)),
-    0,
+export function totalFinalEur(draft: AppointmentDraft): number {
+  return round2(
+    draft.services.reduce(
+      (acc, l) => acc + l.service.price_eur * (1 - l.discountPct / 100),
+      0,
+    ),
   );
+}
+
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
 }
