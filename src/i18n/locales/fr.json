@@ -6,6 +6,24 @@
     },
     "actions": {
       "comingSoon": "Bientôt disponible"
+    },
+    "agenda": {
+      "title": "Agenda",
+      "today": "Aujourd'hui",
+      "noBooking": "Sans réservation",
+      "client": "Client",
+      "service": "Service",
+      "booked": "Réservé",
+      "outside": "Fermé",
+      "errorLoading": "Erreur de chargement",
+      "lastUpdate": "Mis à jour"
+    },
+    "nav": {
+      "agenda": "Agenda",
+      "services": "Services",
+      "new": "Nouveau",
+      "reviews": "Avis",
+      "menu": "Menu"
     }
   }
 }

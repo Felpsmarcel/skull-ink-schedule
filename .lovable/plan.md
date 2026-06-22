@@ -1,59 +1,74 @@
+## Tela de Agenda — visão diária por profissional (dados reais GHL) — v2
 
-# Proxy GHL — Edge Function `ghl-proxy` + teste de free-slots
+Modo ADMIN fixo (sem login ainda). Frontend nunca chama GHL direto — tudo via `ghl-proxy`.
 
-## O que vou construir
+### Decisões das 4 perguntas
 
-### 1. Edge Function `ghl-proxy` (Supabase / Lovable Cloud)
+1. **free-slots + events combinados**: free-slots dá horários LIVRES (já desconta ocupados). Para mostrar quem reservou e qual serviço, busco `/calendars/events` em paralelo. Reconciliação: a grade é gerada a partir do horário de funcionamento (free-slots cobre os livres); os "buracos" entre free-slots são marcados ocupados; cada event do `/calendars/events` que cair em um buraco preenche `contactName` + `serviceName`. Um mesmo slot NUNCA aparece como livre e ocupado — fonte da verdade para "livre" é o free-slots.
+2. **Version header**: `2021-04-15` para AMBOS endpoints (confirmado na doc oficial GHL).
+3. **timezone**: vai como query param `timezone=Europe/Brussels` (URL-encoded). O proxy já faz `searchParams.set`.
+4. **Janela horária dinâmica**: default 08:00–22:00, mas expande automaticamente se algum event/free-slot do dia cair fora dessa faixa (arredonda para a meia-hora mais próxima). Nada some.
 
-Arquivo: `supabase/functions/ghl-proxy/index.ts`
+### Arquivos
 
-Comportamento:
-- Recebe `POST` do frontend com JSON `{ path, method?, query?, body?, version? }`.
-- Lê `GHL_TOKEN` de `Deno.env`.
-- Faz `fetch` para `https://services.leadconnectorhq.com{path}` com:
-  - `Authorization: Bearer ${GHL_TOKEN}`
-  - `Version: <version || "2021-04-15">` (header obrigatório da API do GHL; usaremos `2021-04-15` para Calendars)
-  - `Accept: application/json`
-  - `Content-Type: application/json` quando houver body
-- Repassa `query` como querystring e devolve `status + body` exatamente como o GHL respondeu.
-- Headers CORS abertos (`*`) com `OPTIONS` handler — necessário porque o navegador chama a function.
-- Em erro de rede/falta de token: retorna `{ error, detail }` com status apropriado.
-- Sem auth obrigatória no proxy nesta fase de teste (será adicionada depois junto com login). Anotado como TODO para a próxima etapa.
+**Novo** `src/config/staff.ts` — array tipado com 5 calendários (Gabriel, Joyce, Andre, Augusto, Randevu): `{ id, name, calendarId, initials, color }`. Avatares = iniciais sobre cor.
 
-### 2. Cliente no frontend
+**Editar** `src/lib/ghl.ts` — adicionar:
+- `getFreeSlots(calendarId, startMs, endMs, tz="Europe/Brussels")` → GET `/calendars/{id}/free-slots?startDate&endDate&timezone`
+- `getEvents(calendarId, startIso, endIso, locationId)` → GET `/calendars/events?calendarId&startTime&endTime&locationId`
+- Ambos com `version: "2021-04-15"`.
 
-Arquivo novo: `src/lib/ghl.ts`
-- `ghlFetch({ path, method, query, body, version })` → chama `supabase.functions.invoke("ghl-proxy", { body: ... })` e devolve `{ status, data }`.
+**Novo** `src/hooks/use-agenda.ts` — `useStaffDayAgenda(date)`:
+- Para cada staff, `Promise.allSettled([freeSlots, events])` do dia (00:00→23:59 Brussels).
+- `refetchInterval: 120_000`, `staleTime: 60_000`, `refetchIntervalInBackground: false`.
+- Normaliza para `{ staffId, freeSlots: TimeRange[], events: Event[], error?: string }`.
+- Erro num staff vira `error` no objeto dele, não derruba os outros.
 
-### 3. Tela de teste
+**Novo** `src/lib/agenda-grid.ts` — função pura que recebe `freeSlots + events + dayStart` e devolve:
+- `gridStart`, `gridEnd` (default 08:00–22:00, expande se algo cair fora).
+- `slots: { time, status: "free" | "booked" | "outside", contactName?, serviceName? }[]` em granularidade de 30 min.
+- Regra: slot livre se cair dentro de algum free-slot range; ocupado se um event o cobrir; "outside" se fora do funcionamento (cinza apagado, não clicável).
 
-Rota nova: `src/routes/ghl-test.tsx` (link na home temporário)
-- Botão "Buscar free-slots — Randevu (hoje → +7 dias)".
-- Ao clicar, chama:
-  - `path`: `/calendars/NzAYeRNJnvfpu7ynyoEK/free-slots`
-  - `query`:
-    - `startDate`: timestamp em ms de hoje 00:00 (Europe/Brussels)
-    - `endDate`: timestamp em ms de hoje + 7 dias 23:59 (Europe/Brussels)
-    - `timezone`: `Europe/Brussels`
-    - `locationId`: `9iqrKUVPDddINb9S4Iwd`
-  - `version`: `2021-04-15`
-- Mostra `status` + JSON bruto em um `<pre>` com `JSON.stringify(data, null, 2)` para você confirmar o dado real.
-- Mostra mensagem de erro se vier 4xx/5xx, incluindo o corpo retornado pelo GHL.
+**Novo** `src/routes/agenda.tsx` (rota `/agenda`). `src/routes/index.tsx` redireciona para `/agenda` (sem SSR auth, rota pública por enquanto).
 
-## O que preciso de você
+UI mobile-first, fundo `#000`/`#1A1A1A`, acento `#E11D2A`:
 
-**Apenas o `GHL_TOKEN`.**
+```
+┌─────────────────────────────────────────┐
+│ [<]  ter, 24 jun 2026  [>]  💬 🔔 👤   │ header sticky
+├─────────────────────────────────────────┤
+│        GAB JOY AND AUG RDV              │ headers das colunas
+│ 09:00│ ░░░│    │    │███ │    │        │
+│ 09:30│ ░░░│███ │    │███ │    │        │ ░ livre / ███ ocupado
+│ 10:00│    │███ │    │    │░░░ │        │
+├─────────────────────────────────────────┤
+│  📅    ✂️     ➕     ⭐    ☰           │ bottom nav fixa
+└─────────────────────────────────────────┘
+```
 
-Depois que você aprovar este plano, vou pedir o token via formulário seguro do Lovable (tool `add_secret`). Você vai ver um campo para colar o token — **não cole o token aqui no chat**. O token fica guardado no backend como variável de ambiente, acessível só pela edge function. Nunca toca o frontend.
+- Seletor de data: setas + popover `<Calendar>` shadcn + chip "Hoje".
+- Grid: coluna esquerda fixa com horários, colunas dos staffs com `overflow-x-auto`, largura mínima ~96px por coluna.
+- Livre: borda tracejada vermelha, label "Sem reserva", clicável → toast "em breve".
+- Ocupado: card vermelho-escuro com horário + nome + serviço, `cursor-not-allowed`.
+- Outside: cinza apagado.
+- Erro por coluna: badge vermelho no header da coluna + tooltip com mensagem bruta do GHL (status + body).
+- Loading: skeleton por coluna.
+- Bottom nav: 5 itens, "+" central elevado vermelho, só Agenda ativo.
 
-Onde pegar o token no GHL: Settings → Private Integrations → criar token com o scope `calendars.readonly` (mínimo para este teste; podemos ampliar depois para agendamentos, contatos, etc.).
+**Editar** `src/i18n/locales/{pt,fr,en}.json` — chaves: `agenda.title/today/noBooking/client/service/errorLoading/outside`, `nav.agenda/services/new/reviews/menu`.
 
-## Fora de escopo desta etapa
+### Fora de escopo
 
-- Autenticação no proxy (vem junto com o login do app).
-- Cache, retry, rate limiting.
-- Endpoints além do free-slots — só o teste pedido.
+Criar/editar/cancelar agendamentos. Login e papéis reais. Telas Serviços/Avaliações/Menu/Chat/Notificações. Drag-to-create. Visão semana/mês.
 
-## Nota técnica
+### Como testar
 
-Este projeto é TanStack Start; normalmente o padrão recomendado seria um server route/function do TanStack. Mas, como você pediu explicitamente edge function do Supabase, vou nesse caminho — funciona igualmente bem, mantém o token só no servidor e elimina o CORS. Se preferir o padrão TanStack depois, é trivial migrar.
+1. Liberar scope `calendars/events.readonly` no `GHL_TOKEN` (você disse que vai fazer).
+2. Abrir `/agenda` no preview.
+3. Ver 5 colunas (Gabriel, Joyce, Andre, Augusto, Randevu) com horários do dia atual.
+4. Confirmar blocos livres onde o GHL tem disponibilidade.
+5. Confirmar blocos ocupados com nome do cliente + serviço.
+6. Navegar dia ±1 com as setas, escolher data no popover.
+7. Aguardar 2 min sem interagir → ver dados re-buscarem (Network tab mostra POST para `ghl-proxy`).
+8. Se algum staff der erro → badge vermelho na coluna, demais funcionam.
+9. Se um agendamento existir às 7:00, a grade começa em 7:00 automaticamente.
