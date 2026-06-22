@@ -79,3 +79,124 @@ export async function getEvents(
     },
   });
 }
+
+/* --------------------- Contacts --------------------- */
+
+const CONTACTS_VERSION = "2021-07-28";
+
+export interface GhlContact {
+  id: string;
+  contactName?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+  locationId?: string;
+}
+
+export interface ContactsSearchResponse {
+  contacts?: GhlContact[];
+  total?: number;
+  traceId?: string;
+}
+
+export async function searchContacts(locationId: string, query: string) {
+  return ghlFetch<ContactsSearchResponse>({
+    path: "/contacts/search",
+    method: "POST",
+    version: CONTACTS_VERSION,
+    body: {
+      locationId,
+      pageLimit: 25,
+      filters: query
+        ? [
+            {
+              field: "searchAfter",
+              operator: "contains",
+              value: query,
+            },
+          ]
+        : [],
+      // Fallback simple search if filter shape isn't supported
+      query,
+    },
+  });
+}
+
+export interface CreateContactInput {
+  locationId: string;
+  firstName: string;
+  lastName?: string;
+  phone?: string;
+  email?: string;
+}
+
+export interface CreateContactResponse {
+  contact?: GhlContact;
+  traceId?: string;
+}
+
+export async function createContact(input: CreateContactInput) {
+  return ghlFetch<CreateContactResponse>({
+    path: "/contacts/",
+    method: "POST",
+    version: CONTACTS_VERSION,
+    body: input,
+  });
+}
+
+/* --------------------- Appointments --------------------- */
+
+export interface CreateAppointmentInput {
+  calendarId: string;
+  locationId: string;
+  contactId: string;
+  startTime: string; // ISO
+  endTime: string; // ISO
+  title?: string;
+  appointmentStatus?: "confirmed" | "new" | "showed" | "noshow" | "cancelled" | "invalid";
+  notes?: string;
+  ignoreFreeSlotValidation?: boolean;
+}
+
+export interface CreateAppointmentResponse {
+  id?: string;
+  calendarId?: string;
+  contactId?: string;
+  startTime?: string;
+  endTime?: string;
+  title?: string;
+  appointmentStatus?: string;
+  traceId?: string;
+  message?: string;
+}
+
+export async function createAppointment(input: CreateAppointmentInput) {
+  const {
+    calendarId,
+    locationId,
+    contactId,
+    startTime,
+    endTime,
+    title,
+    appointmentStatus = "confirmed",
+    notes,
+    ignoreFreeSlotValidation = false,
+  } = input;
+  return ghlFetch<CreateAppointmentResponse>({
+    path: "/calendars/events/appointments",
+    method: "POST",
+    version: GHL_VERSION,
+    body: {
+      calendarId,
+      locationId,
+      contactId,
+      startTime,
+      endTime,
+      title,
+      appointmentStatus,
+      notes,
+      ignoreFreeSlotValidation,
+    },
+  });
+}
