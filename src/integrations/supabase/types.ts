@@ -14,7 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      services: {
+        Row: {
+          active: boolean
+          category: string
+          created_at: string
+          currency: string
+          duration_min: number
+          id: string
+          modality: string
+          name: string
+          price_cents: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          category: string
+          created_at?: string
+          currency?: string
+          duration_min: number
+          id?: string
+          modality?: string
+          name: string
+          price_cents: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          category?: string
+          created_at?: string
+          currency?: string
+          duration_min?: number
+          id?: string
+          modality?: string
+          name?: string
+          price_cents?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
