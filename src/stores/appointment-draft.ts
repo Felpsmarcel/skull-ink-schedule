@@ -65,6 +65,7 @@ export const useAppointmentDraft = create<State>()(
     }),
     {
       name: "gf-appointment-draft",
+      version: 2,
       storage: createJSONStorage(() =>
         typeof window !== "undefined" ? sessionStorage : (undefined as unknown as Storage),
       ),
