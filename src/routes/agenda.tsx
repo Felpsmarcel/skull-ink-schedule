@@ -1,0 +1,340 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Calendar as CalendarIcon,
+  MessageCircle,
+  Bell,
+  User,
+  CalendarDays,
+  Scissors,
+  Plus,
+  Star,
+  Menu as MenuIcon,
+  AlertTriangle,
+} from "lucide-react";
+import { toast } from "sonner";
+import "@/i18n";
+
+import { useStaffDayAgenda } from "@/hooks/use-agenda";
+import { STAFF } from "@/config/staff";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Toaster } from "@/components/ui/sonner";
+import { cn } from "@/lib/utils";
+
+export const Route = createFileRoute("/agenda")({
+  head: () => ({
+    meta: [
+      { title: "Agenda — GF Tattoo Studio" },
+      { name: "description", content: "Agenda diária dos tatuadores" },
+    ],
+  }),
+  component: AgendaPage,
+});
+
+const COL_WIDTH = "min-w-[110px] w-[110px]";
+const ROW_HEIGHT = "h-14";
+
+function AgendaPage() {
+  const { t, i18n } = useTranslation();
+  const [date, setDate] = useState<Date>(() => new Date());
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  const { agendas, isFetching } = useStaffDayAgenda(date);
+
+  const dateLabel = useMemo(
+    () =>
+      new Intl.DateTimeFormat(i18n.language === "pt" ? "pt-PT" : i18n.language, {
+        timeZone: "Europe/Brussels",
+        weekday: "short",
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      }).format(date),
+    [date, i18n.language],
+  );
+
+  function shiftDay(delta: number) {
+    const d = new Date(date);
+    d.setDate(d.getDate() + delta);
+    setDate(d);
+  }
+
+  // Use longest slot list across staff so rows align
+  const rowCount = agendas.reduce((m, a) => Math.max(m, a.slots.length), 0);
+  const timeColumn = (agendas.find((a) => a.slots.length === rowCount)?.slots ?? []).map(
+    (s) => s.label,
+  );
+
+  return (
+    <div className="flex min-h-dvh flex-col bg-background pb-20">
+      <Toaster theme="dark" position="top-center" />
+
+      {/* Header */}
+      <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur">
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => shiftDay(-1)}
+              className="grid h-9 w-9 place-items-center rounded-md hover:bg-muted"
+              aria-label="Dia anterior"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+
+            <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-semibold uppercase tracking-wide hover:bg-muted"
+                >
+                  <CalendarIcon className="h-4 w-4 text-primary" />
+                  {dateLabel}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="center" className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={date}
+                  onSelect={(d) => {
+                    if (d) {
+                      setDate(d);
+                      setPickerOpen(false);
+                    }
+                  }}
+                />
+              </PopoverContent>
+            </Popover>
+
+            <button
+              type="button"
+              onClick={() => shiftDay(1)}
+              className="grid h-9 w-9 place-items-center rounded-md hover:bg-muted"
+              aria-label="Próximo dia"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </div>
+
+          <div className="flex items-center gap-1">
+            <IconBtn onClick={() => toast(t("actions.comingSoon"))} ariaLabel="Chat">
+              <MessageCircle className="h-5 w-5" />
+            </IconBtn>
+            <IconBtn onClick={() => toast(t("actions.comingSoon"))} ariaLabel="Notificações">
+              <Bell className="h-5 w-5" />
+            </IconBtn>
+            <IconBtn onClick={() => toast(t("actions.comingSoon"))} ariaLabel="Perfil">
+              <User className="h-5 w-5" />
+            </IconBtn>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between px-4 pb-2 text-xs text-muted-foreground">
+          <button
+            type="button"
+            onClick={() => setDate(new Date())}
+            className="rounded-full border border-border bg-card px-3 py-1 text-[11px] uppercase tracking-wider hover:border-primary hover:text-primary"
+          >
+            {t("agenda.today")}
+          </button>
+          <span className="text-[11px]">
+            {isFetching ? "…" : t("agenda.lastUpdate")}
+          </span>
+        </div>
+      </header>
+
+      {/* Grid */}
+      <div className="flex-1 overflow-auto">
+        <div className="flex min-w-full">
+          {/* time column */}
+          <div className="sticky left-0 z-10 shrink-0 bg-background">
+            <div className="h-16 border-b border-border" />
+            {timeColumn.length === 0
+              ? Array.from({ length: 20 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className={cn("flex w-14 items-start justify-center border-b border-border/40 pt-1 text-[10px] text-muted-foreground", ROW_HEIGHT)}
+                  >
+                    --:--
+                  </div>
+                ))
+              : timeColumn.map((label) => (
+                  <div
+                    key={label}
+                    className={cn("flex w-14 items-start justify-center border-b border-border/40 pt-1 text-[10px] text-muted-foreground", ROW_HEIGHT)}
+                  >
+                    {label}
+                  </div>
+                ))}
+          </div>
+
+          {/* staff columns */}
+          <div className="flex flex-1">
+            {agendas.map((a) => (
+              <StaffColumn key={a.staff.id} agenda={a} />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom Nav */}
+      <nav className="fixed inset-x-0 bottom-0 z-40 mx-auto flex max-w-md items-end justify-around border-t border-border bg-background/95 px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur">
+        <NavItem icon={<CalendarDays className="h-5 w-5" />} label={t("nav.agenda")} active />
+        <NavItem icon={<Scissors className="h-5 w-5" />} label={t("nav.services")} onClick={() => toast(t("actions.comingSoon"))} />
+        <button
+          type="button"
+          onClick={() => toast(t("actions.comingSoon"))}
+          aria-label={t("nav.new")}
+          className="-mt-6 grid h-14 w-14 place-items-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 ring-4 ring-background"
+        >
+          <Plus className="h-7 w-7" />
+        </button>
+        <NavItem icon={<Star className="h-5 w-5" />} label={t("nav.reviews")} onClick={() => toast(t("actions.comingSoon"))} />
+        <NavItem icon={<MenuIcon className="h-5 w-5" />} label={t("nav.menu")} onClick={() => toast(t("actions.comingSoon"))} />
+      </nav>
+    </div>
+  );
+}
+
+function IconBtn({
+  children,
+  onClick,
+  ariaLabel,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  ariaLabel: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={ariaLabel}
+      className="grid h-9 w-9 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+    >
+      {children}
+    </button>
+  );
+}
+
+function NavItem({
+  icon,
+  label,
+  active,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  active?: boolean;
+  onClick?: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "flex flex-1 flex-col items-center gap-0.5 py-1 text-[10px] uppercase tracking-wider",
+        active ? "text-primary" : "text-muted-foreground hover:text-foreground",
+      )}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+}
+
+function StaffColumn({ agenda }: { agenda: ReturnType<typeof useStaffDayAgenda>["agendas"][number] }) {
+  const { t } = useTranslation();
+  const { staff, slots, isLoading, error } = agenda;
+
+  return (
+    <div className={cn("flex shrink-0 flex-col border-l border-border", COL_WIDTH)}>
+      {/* Column header */}
+      <div className="sticky top-0 z-10 flex h-16 flex-col items-center justify-center gap-1 border-b border-border bg-card px-1 py-2">
+        <div className="flex items-center gap-1.5">
+          <div
+            className={cn(
+              "grid h-7 w-7 place-items-center rounded-full text-[10px] font-bold text-white",
+              staff.color,
+            )}
+          >
+            {staff.initials}
+          </div>
+          <span className="truncate text-xs font-semibold">{staff.shortName}</span>
+        </div>
+        {error && agenda.slots.length === 0 ? (
+          <span
+            title={error}
+            className="flex items-center gap-1 rounded-full bg-destructive/20 px-1.5 py-0.5 text-[9px] text-destructive"
+          >
+            <AlertTriangle className="h-3 w-3" /> {t("agenda.errorLoading")}
+          </span>
+        ) : (
+          <span className="text-[9px] text-muted-foreground">
+            {agenda.bookedCount}● {agenda.freeCount}○
+          </span>
+        )}
+      </div>
+
+      {/* Slots */}
+      <div className="flex-1">
+        {isLoading ? (
+          Array.from({ length: 20 }).map((_, i) => (
+            <div key={i} className={cn("border-b border-border/30 p-1", ROW_HEIGHT)}>
+              <div className="h-full w-full animate-pulse rounded bg-muted/40" />
+            </div>
+          ))
+        ) : error && slots.length === 0 ? (
+          <div className="p-2 text-[10px] text-destructive">
+            <pre className="whitespace-pre-wrap break-all">{error}</pre>
+          </div>
+        ) : (
+          slots.map((slot) => <SlotCell key={slot.startMs} slot={slot} />)
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SlotCell({ slot }: { slot: import("@/lib/agenda-grid").GridSlot }) {
+  const { t } = useTranslation();
+
+  if (slot.status === "outside") {
+    return <div className={cn("border-b border-border/30 bg-background/40", ROW_HEIGHT)} />;
+  }
+
+  if (slot.status === "free") {
+    return (
+      <div className={cn("border-b border-border/30 p-0.5", ROW_HEIGHT)}>
+        <button
+          type="button"
+          onClick={() => toast(t("actions.comingSoon"))}
+          className="flex h-full w-full flex-col items-center justify-center rounded border border-dashed border-primary/40 bg-primary/5 text-[10px] uppercase tracking-wider text-primary/70 hover:border-primary hover:bg-primary/10"
+        >
+          {t("agenda.noBooking")}
+        </button>
+      </div>
+    );
+  }
+
+  // booked
+  return (
+    <div className={cn("border-b border-border/30 p-0.5", ROW_HEIGHT)}>
+      <div
+        title={`${slot.contactName ?? t("agenda.client")} — ${slot.serviceName ?? t("agenda.booked")}`}
+        className="flex h-full w-full cursor-not-allowed flex-col justify-center rounded bg-destructive/80 px-1.5 py-1 text-white opacity-95"
+      >
+        <div className="truncate text-[10px] font-semibold">
+          {slot.contactName ?? t("agenda.booked")}
+        </div>
+        {slot.serviceName ? (
+          <div className="truncate text-[9px] opacity-80">{slot.serviceName}</div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
