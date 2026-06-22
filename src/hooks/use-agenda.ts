@@ -17,6 +17,12 @@ export interface StaffAgenda {
   error?: string;
   freeCount: number;
   bookedCount: number;
+  debug?: {
+    freeStartsCount: number;
+    eventsCount: number;
+    slotsSample: string;
+    eventsSample: string;
+  };
 }
 
 export function useStaffDayAgenda(date: Date) {
@@ -69,6 +75,8 @@ export function useStaffDayAgenda(date: Date) {
           events,
           error: fatal ? errorParts.join(" | ") : undefined,
           partialError: !fatal && errorParts.length > 0 ? errorParts.join(" | ") : undefined,
+          slotsRaw: slotsRes.status === "fulfilled" ? slotsRes.value.data : null,
+          eventsRaw: eventsRes.status === "fulfilled" ? eventsRes.value.data : null,
         };
       },
       refetchInterval: 120_000,
@@ -89,6 +97,12 @@ export function useStaffDayAgenda(date: Date) {
         error: q.error instanceof Error ? q.error.message : undefined,
       };
     }
+    const debug = {
+      freeStartsCount: q.data.freeStarts.length,
+      eventsCount: q.data.events.length,
+      slotsSample: JSON.stringify(q.data.slotsRaw).slice(0, 240),
+      eventsSample: JSON.stringify(q.data.eventsRaw).slice(0, 240),
+    };
     if (q.data.error) {
       return {
         staff,
@@ -97,6 +111,7 @@ export function useStaffDayAgenda(date: Date) {
         freeCount: 0,
         bookedCount: 0,
         error: q.data.error,
+        debug,
       };
     }
     const slots = buildDayGrid({
@@ -111,6 +126,7 @@ export function useStaffDayAgenda(date: Date) {
       error: q.data.partialError,
       freeCount: slots.filter((s) => s.status === "free").length,
       bookedCount: slots.filter((s) => s.status === "booked").length,
+      debug,
     };
   });
 
