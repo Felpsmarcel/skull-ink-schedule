@@ -14,12 +14,14 @@ import {
   Star,
   Menu as MenuIcon,
   AlertTriangle,
+  Bug,
 } from "lucide-react";
 import { toast } from "sonner";
 import "@/i18n";
 
 import { useStaffDayAgenda } from "@/hooks/use-agenda";
 import { STAFF } from "@/config/staff";
+import { DEFAULT_START_HOUR, DEFAULT_END_HOUR, SLOT_MINUTES } from "@/lib/agenda-grid";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Toaster } from "@/components/ui/sonner";
@@ -32,14 +34,28 @@ export const Route = createFileRoute("/agenda")({
       { name: "description", content: "Agenda diária dos tatuadores" },
     ],
   }),
+  validateSearch: (s: Record<string, unknown>) => ({
+    debug: s.debug === "1" || s.debug === 1 || s.debug === true,
+  }),
   component: AgendaPage,
 });
 
 const COL_WIDTH = "min-w-[110px] w-[110px]";
 const ROW_HEIGHT = "h-14";
 
+function defaultTimeLabels(): string[] {
+  const out: string[] = [];
+  for (let min = DEFAULT_START_HOUR * 60; min < DEFAULT_END_HOUR * 60; min += SLOT_MINUTES) {
+    out.push(
+      `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`,
+    );
+  }
+  return out;
+}
+
 function AgendaPage() {
   const { t, i18n } = useTranslation();
+  const { debug } = Route.useSearch();
   const [date, setDate] = useState<Date>(() => new Date());
   const [pickerOpen, setPickerOpen] = useState(false);
 
