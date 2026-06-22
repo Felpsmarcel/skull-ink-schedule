@@ -59,7 +59,7 @@ function ServicesPage() {
         >
           <ArrowLeft className="h-5 w-5" />
         </Link>
-        <h1 className="text-base font-semibold">{t("appt.pickService")}</h1>
+        <h1 className="font-display text-lg uppercase tracking-wide">{t("appt.pickService")}</h1>
       </header>
 
       <div className="border-b border-border bg-background p-3">

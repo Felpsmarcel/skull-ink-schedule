@@ -162,7 +162,7 @@ function AppointmentNewPage() {
         <Link to="/agenda" className="grid h-9 w-9 place-items-center rounded-md hover:bg-muted">
           <ArrowLeft className="h-5 w-5" />
         </Link>
-        <h1 className="text-base font-semibold">{t("appt.title")}</h1>
+        <h1 className="font-display text-lg uppercase tracking-wide">{t("appt.title")}</h1>
       </header>
 
       <main className="flex-1 space-y-4 p-4">
@@ -375,7 +375,7 @@ function ContactPicker({
   if (selected) {
     return (
       <div className="flex items-center gap-3 rounded border border-border bg-background p-2">
-        <div className="grid h-9 w-9 place-items-center rounded-full bg-primary/20 text-sm font-semibold text-primary">
+        <div className="grid h-9 w-9 place-items-center rounded-full bg-muted text-sm font-semibold text-foreground">
           {(selected.contactName ?? selected.firstName ?? "?").slice(0, 1).toUpperCase()}
         </div>
         <div className="min-w-0 flex-1">

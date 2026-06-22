@@ -25,6 +25,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
+import gfSkull from "@/assets/gf-skull.png";
 
 export const Route = createFileRoute("/agenda")({
   head: () => ({
@@ -88,12 +89,19 @@ function AgendaPage() {
 
   return (
     <div className="flex min-h-dvh flex-col bg-background pb-20">
-      <Toaster theme="dark" position="top-center" />
+      <Toaster theme="light" position="top-center" />
 
       {/* Header */}
       <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-1">
+            <img
+              src={gfSkull}
+              alt="GF Tattoo Studio"
+              width={28}
+              height={28}
+              className="mr-1 h-7 w-7 object-contain"
+            />
             <button
               type="button"
               onClick={() => shiftDay(-1)}
@@ -109,7 +117,7 @@ function AgendaPage() {
                   type="button"
                   className="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-semibold uppercase tracking-wide hover:bg-muted"
                 >
-                  <CalendarIcon className="h-4 w-4 text-primary" />
+                  <CalendarIcon className="h-4 w-4 text-foreground" />
                   {dateLabel}
                 </button>
               </PopoverTrigger>
@@ -154,7 +162,7 @@ function AgendaPage() {
           <button
             type="button"
             onClick={() => setDate(new Date())}
-            className="rounded-full border border-border bg-card px-3 py-1 text-[11px] uppercase tracking-wider hover:border-primary hover:text-primary"
+            className="rounded-full border border-border bg-card px-3 py-1 text-[11px] uppercase tracking-wider hover:border-foreground hover:text-foreground"
           >
             {t("agenda.today")}
           </button>
@@ -166,7 +174,7 @@ function AgendaPage() {
 
       {debug ? (
         <div className="border-b border-border bg-card/50 p-2 text-[10px] text-muted-foreground">
-          <div className="mb-1 flex items-center gap-1 font-bold text-primary">
+          <div className="mb-1 flex items-center gap-1 font-bold text-foreground">
             <Bug className="h-3 w-3" /> DEBUG (?debug=1)
           </div>
           {agendas.map((a) => (
@@ -290,12 +298,7 @@ function StaffColumn({ agenda }: { agenda: ReturnType<typeof useStaffDayAgenda>[
       {/* Column header */}
       <div className="sticky top-0 z-10 flex h-16 flex-col items-center justify-center gap-1 border-b border-border bg-card px-1 py-2">
         <div className="flex items-center gap-1.5">
-          <div
-            className={cn(
-              "grid h-7 w-7 place-items-center rounded-full text-[10px] font-bold text-white",
-              staff.color,
-            )}
-          >
+          <div className="grid h-7 w-7 place-items-center rounded-full bg-muted text-[10px] font-bold text-foreground">
             {staff.initials}
           </div>
           <span className="truncate text-xs font-semibold">{staff.shortName}</span>
@@ -303,7 +306,7 @@ function StaffColumn({ agenda }: { agenda: ReturnType<typeof useStaffDayAgenda>[
         {error && agenda.slots.length === 0 ? (
           <span
             title={error}
-            className="flex items-center gap-1 rounded-full bg-destructive/20 px-1.5 py-0.5 text-[9px] text-destructive"
+            className="flex items-center gap-1 rounded-full bg-muted px-1.5 py-0.5 text-[9px] text-foreground"
           >
             <AlertTriangle className="h-3 w-3" /> {t("agenda.errorLoading")}
           </span>
@@ -323,7 +326,7 @@ function StaffColumn({ agenda }: { agenda: ReturnType<typeof useStaffDayAgenda>[
             </div>
           ))
         ) : error && slots.length === 0 ? (
-          <div className="p-2 text-[10px] text-destructive">
+          <div className="p-2 text-[10px] text-muted-foreground">
             <pre className="whitespace-pre-wrap break-all">{error}</pre>
           </div>
         ) : (
@@ -347,7 +350,7 @@ function SlotCell({ slot }: { slot: import("@/lib/agenda-grid").GridSlot }) {
         <button
           type="button"
           onClick={() => toast(t("actions.comingSoon"))}
-          className="flex h-full w-full flex-col items-center justify-center rounded border border-dashed border-primary/40 bg-primary/5 text-[10px] uppercase tracking-wider text-primary/70 hover:border-primary hover:bg-primary/10"
+          className="flex h-full w-full flex-col items-center justify-center rounded border border-dashed border-border bg-background text-[10px] uppercase tracking-wider text-muted-foreground hover:border-foreground hover:text-foreground"
         >
           {t("agenda.noBooking")}
         </button>
@@ -360,13 +363,13 @@ function SlotCell({ slot }: { slot: import("@/lib/agenda-grid").GridSlot }) {
     <div className={cn("border-b border-border/30 p-0.5", ROW_HEIGHT)}>
       <div
         title={`${slot.contactName ?? t("agenda.client")} — ${slot.serviceName ?? t("agenda.booked")}`}
-        className="flex h-full w-full cursor-not-allowed flex-col justify-center rounded bg-destructive/80 px-1.5 py-1 text-white opacity-95"
+        className="flex h-full w-full cursor-not-allowed flex-col justify-center rounded border-l-4 border-foreground bg-muted px-1.5 py-1 text-foreground"
       >
-        <div className="truncate text-[10px] font-semibold">
+        <div className="truncate text-[10px] font-semibold text-foreground">
           {slot.contactName ?? t("agenda.booked")}
         </div>
         {slot.serviceName ? (
-          <div className="truncate text-[9px] opacity-80">{slot.serviceName}</div>
+          <div className="truncate text-[9px] text-muted-foreground">{slot.serviceName}</div>
         ) : null}
       </div>
     </div>
