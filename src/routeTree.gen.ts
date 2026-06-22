@@ -13,6 +13,8 @@ import { Route as GhlTestRouteImport } from './routes/ghl-test'
 import { Route as AgendaRouteImport } from './routes/agenda'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppointmentsNewRouteImport } from './routes/appointments.new'
+import { Route as AppointmentsNewServicesRouteImport } from './routes/appointments.new.services'
+import { Route as AppointmentsNewCheckoutRouteImport } from './routes/appointments.new.checkout'
 
 const GhlTestRoute = GhlTestRouteImport.update({
   id: '/ghl-test',
@@ -34,39 +36,74 @@ const AppointmentsNewRoute = AppointmentsNewRouteImport.update({
   path: '/appointments/new',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppointmentsNewServicesRoute = AppointmentsNewServicesRouteImport.update({
+  id: '/services',
+  path: '/services',
+  getParentRoute: () => AppointmentsNewRoute,
+} as any)
+const AppointmentsNewCheckoutRoute = AppointmentsNewCheckoutRouteImport.update({
+  id: '/checkout',
+  path: '/checkout',
+  getParentRoute: () => AppointmentsNewRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
   '/ghl-test': typeof GhlTestRoute
-  '/appointments/new': typeof AppointmentsNewRoute
+  '/appointments/new': typeof AppointmentsNewRouteWithChildren
+  '/appointments/new/checkout': typeof AppointmentsNewCheckoutRoute
+  '/appointments/new/services': typeof AppointmentsNewServicesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
   '/ghl-test': typeof GhlTestRoute
-  '/appointments/new': typeof AppointmentsNewRoute
+  '/appointments/new': typeof AppointmentsNewRouteWithChildren
+  '/appointments/new/checkout': typeof AppointmentsNewCheckoutRoute
+  '/appointments/new/services': typeof AppointmentsNewServicesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
   '/ghl-test': typeof GhlTestRoute
-  '/appointments/new': typeof AppointmentsNewRoute
+  '/appointments/new': typeof AppointmentsNewRouteWithChildren
+  '/appointments/new/checkout': typeof AppointmentsNewCheckoutRoute
+  '/appointments/new/services': typeof AppointmentsNewServicesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/agenda' | '/ghl-test' | '/appointments/new'
+  fullPaths:
+    | '/'
+    | '/agenda'
+    | '/ghl-test'
+    | '/appointments/new'
+    | '/appointments/new/checkout'
+    | '/appointments/new/services'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/agenda' | '/ghl-test' | '/appointments/new'
-  id: '__root__' | '/' | '/agenda' | '/ghl-test' | '/appointments/new'
+  to:
+    | '/'
+    | '/agenda'
+    | '/ghl-test'
+    | '/appointments/new'
+    | '/appointments/new/checkout'
+    | '/appointments/new/services'
+  id:
+    | '__root__'
+    | '/'
+    | '/agenda'
+    | '/ghl-test'
+    | '/appointments/new'
+    | '/appointments/new/checkout'
+    | '/appointments/new/services'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AgendaRoute: typeof AgendaRoute
   GhlTestRoute: typeof GhlTestRoute
-  AppointmentsNewRoute: typeof AppointmentsNewRoute
+  AppointmentsNewRoute: typeof AppointmentsNewRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -99,14 +136,42 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppointmentsNewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/appointments/new/services': {
+      id: '/appointments/new/services'
+      path: '/services'
+      fullPath: '/appointments/new/services'
+      preLoaderRoute: typeof AppointmentsNewServicesRouteImport
+      parentRoute: typeof AppointmentsNewRoute
+    }
+    '/appointments/new/checkout': {
+      id: '/appointments/new/checkout'
+      path: '/checkout'
+      fullPath: '/appointments/new/checkout'
+      preLoaderRoute: typeof AppointmentsNewCheckoutRouteImport
+      parentRoute: typeof AppointmentsNewRoute
+    }
   }
 }
+
+interface AppointmentsNewRouteChildren {
+  AppointmentsNewCheckoutRoute: typeof AppointmentsNewCheckoutRoute
+  AppointmentsNewServicesRoute: typeof AppointmentsNewServicesRoute
+}
+
+const AppointmentsNewRouteChildren: AppointmentsNewRouteChildren = {
+  AppointmentsNewCheckoutRoute: AppointmentsNewCheckoutRoute,
+  AppointmentsNewServicesRoute: AppointmentsNewServicesRoute,
+}
+
+const AppointmentsNewRouteWithChildren = AppointmentsNewRoute._addFileChildren(
+  AppointmentsNewRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AgendaRoute: AgendaRoute,
   GhlTestRoute: GhlTestRoute,
-  AppointmentsNewRoute: AppointmentsNewRoute,
+  AppointmentsNewRoute: AppointmentsNewRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
