@@ -56,7 +56,9 @@ import {
   useAppointmentDraft,
   totalDurationMin,
   totalFinalEur,
+  totalOriginalEur,
 } from "@/stores/appointment-draft";
+import { finalizeAppointment } from "@/lib/appointments";
 
 export const Route = createFileRoute("/_authenticated/appointments/new")({
   head: () => ({
@@ -145,20 +147,25 @@ function AppointmentNewPage() {
           ? draft.services.map((l) => l.service.name).join(" + ")
           : draft.contact.contactName || draft.contact.firstName || "Agendamento";
 
-      const res = await createAppointment({
-        calendarId: draft.calendarId,
-        locationId: LOCATION_ID,
-        contactId: draft.contact.id,
-        startTime: new Date(startMs).toISOString(),
-        endTime: new Date(endMs).toISOString(),
-        title,
-        notes: draft.notes || undefined,
-        appointmentStatus: "confirmed",
-      });
-      if (!res.ok) {
-        toast.error(`${res.status}: ${(res.data as { message?: string })?.message ?? "Erro GHL"}`);
+      const staff = artists.find((a) => a.calendarId === draft.calendarId);
+      if (!staff) {
+        toast.error(t("appt.errors.noCalendar"));
         return;
       }
+      await finalizeAppointment({
+        artistId: staff.id,
+        calendarId: draft.calendarId,
+        locationId: LOCATION_ID,
+        contact: draft.contact,
+        startISO: new Date(startMs).toISOString(),
+        endISO: new Date(endMs).toISOString(),
+        title,
+        notes: draft.notes || undefined,
+        status: "confirmed",
+        services: draft.services,
+        totalEur: totalFinalEur(draft),
+        originalEur: totalOriginalEur(draft),
+      });
 
       await queryClient.invalidateQueries({ queryKey: ["agenda"] });
       toast.success(t("appt.created"));
