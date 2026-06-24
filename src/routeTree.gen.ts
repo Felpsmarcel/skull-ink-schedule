@@ -16,6 +16,7 @@ import { Route as AuthenticatedAgendaRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/_admin/route'
 import { Route as AuthenticatedAppointmentsNewRouteImport } from './routes/_authenticated/appointments.new'
 import { Route as AuthenticatedAdminGhlTestRouteImport } from './routes/_authenticated/_admin/ghl-test'
+import { Route as ApiPublicHooksSeedTestUsersRouteImport } from './routes/api/public/hooks/seed-test-users'
 import { Route as AuthenticatedAppointmentsNewServicesRouteImport } from './routes/_authenticated/appointments.new.services'
 import { Route as AuthenticatedAppointmentsNewCheckoutRouteImport } from './routes/_authenticated/appointments.new.checkout'
 
@@ -54,6 +55,12 @@ const AuthenticatedAdminGhlTestRoute =
     path: '/ghl-test',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
+const ApiPublicHooksSeedTestUsersRoute =
+  ApiPublicHooksSeedTestUsersRouteImport.update({
+    id: '/api/public/hooks/seed-test-users',
+    path: '/api/public/hooks/seed-test-users',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AuthenticatedAppointmentsNewServicesRoute =
   AuthenticatedAppointmentsNewServicesRouteImport.update({
     id: '/services',
@@ -75,6 +82,7 @@ export interface FileRoutesByFullPath {
   '/appointments/new': typeof AuthenticatedAppointmentsNewRouteWithChildren
   '/appointments/new/checkout': typeof AuthenticatedAppointmentsNewCheckoutRoute
   '/appointments/new/services': typeof AuthenticatedAppointmentsNewServicesRoute
+  '/api/public/hooks/seed-test-users': typeof ApiPublicHooksSeedTestUsersRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -84,6 +92,7 @@ export interface FileRoutesByTo {
   '/appointments/new': typeof AuthenticatedAppointmentsNewRouteWithChildren
   '/appointments/new/checkout': typeof AuthenticatedAppointmentsNewCheckoutRoute
   '/appointments/new/services': typeof AuthenticatedAppointmentsNewServicesRoute
+  '/api/public/hooks/seed-test-users': typeof ApiPublicHooksSeedTestUsersRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -96,6 +105,7 @@ export interface FileRoutesById {
   '/_authenticated/appointments/new': typeof AuthenticatedAppointmentsNewRouteWithChildren
   '/_authenticated/appointments/new/checkout': typeof AuthenticatedAppointmentsNewCheckoutRoute
   '/_authenticated/appointments/new/services': typeof AuthenticatedAppointmentsNewServicesRoute
+  '/api/public/hooks/seed-test-users': typeof ApiPublicHooksSeedTestUsersRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -107,6 +117,7 @@ export interface FileRouteTypes {
     | '/appointments/new'
     | '/appointments/new/checkout'
     | '/appointments/new/services'
+    | '/api/public/hooks/seed-test-users'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -116,6 +127,7 @@ export interface FileRouteTypes {
     | '/appointments/new'
     | '/appointments/new/checkout'
     | '/appointments/new/services'
+    | '/api/public/hooks/seed-test-users'
   id:
     | '__root__'
     | '/'
@@ -127,12 +139,14 @@ export interface FileRouteTypes {
     | '/_authenticated/appointments/new'
     | '/_authenticated/appointments/new/checkout'
     | '/_authenticated/appointments/new/services'
+    | '/api/public/hooks/seed-test-users'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiPublicHooksSeedTestUsersRoute: typeof ApiPublicHooksSeedTestUsersRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -185,6 +199,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/ghl-test'
       preLoaderRoute: typeof AuthenticatedAdminGhlTestRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/api/public/hooks/seed-test-users': {
+      id: '/api/public/hooks/seed-test-users'
+      path: '/api/public/hooks/seed-test-users'
+      fullPath: '/api/public/hooks/seed-test-users'
+      preLoaderRoute: typeof ApiPublicHooksSeedTestUsersRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/appointments/new/services': {
       id: '/_authenticated/appointments/new/services'
@@ -255,6 +276,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiPublicHooksSeedTestUsersRoute: ApiPublicHooksSeedTestUsersRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
