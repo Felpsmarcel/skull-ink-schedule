@@ -88,47 +88,74 @@ export type Database = {
       appointments: {
         Row: {
           artist_id: string
-          contact_id: string
+          calendar_id: string | null
+          commission_pct: number
+          contact_email: string | null
+          contact_id: string | null
+          contact_name: string | null
+          contact_phone: string | null
           created_at: string
           created_by: string | null
           discount_eur: number | null
           end_at: string
           ghl_appointment_id: string | null
+          ghl_contact_id: string | null
           id: string
           internal_note: string | null
           notes: string | null
+          original_eur: number
+          services: Json
           start_at: string
           status: Database["public"]["Enums"]["appt_status"]
+          total_eur: number
           updated_at: string
         }
         Insert: {
           artist_id: string
-          contact_id: string
+          calendar_id?: string | null
+          commission_pct?: number
+          contact_email?: string | null
+          contact_id?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
           created_at?: string
           created_by?: string | null
           discount_eur?: number | null
           end_at: string
           ghl_appointment_id?: string | null
+          ghl_contact_id?: string | null
           id?: string
           internal_note?: string | null
           notes?: string | null
+          original_eur?: number
+          services?: Json
           start_at: string
           status?: Database["public"]["Enums"]["appt_status"]
+          total_eur?: number
           updated_at?: string
         }
         Update: {
           artist_id?: string
-          contact_id?: string
+          calendar_id?: string | null
+          commission_pct?: number
+          contact_email?: string | null
+          contact_id?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
           created_at?: string
           created_by?: string | null
           discount_eur?: number | null
           end_at?: string
           ghl_appointment_id?: string | null
+          ghl_contact_id?: string | null
           id?: string
           internal_note?: string | null
           notes?: string | null
+          original_eur?: number
+          services?: Json
           start_at?: string
           status?: Database["public"]["Enums"]["appt_status"]
+          total_eur?: number
           updated_at?: string
         }
         Relationships: [
@@ -137,13 +164,6 @@ export type Database = {
             columns: ["artist_id"]
             isOneToOne: false
             referencedRelation: "artists"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "appointments_contact_id_fkey"
-            columns: ["contact_id"]
-            isOneToOne: false
-            referencedRelation: "contacts"
             referencedColumns: ["id"]
           },
           {
