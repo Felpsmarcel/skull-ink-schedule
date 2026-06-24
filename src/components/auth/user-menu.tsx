@@ -1,6 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { LogOut, ShieldCheck, User as UserIcon } from "lucide-react";
+import { LogOut, ShieldCheck, User as UserIcon, Wallet } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import {
@@ -48,6 +48,10 @@ export function UserMenu() {
             {roleLabel}
           </div>
         </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => navigate({ to: "/financeiro" })}>
+          <Wallet className="mr-2 h-4 w-4" /> Financeiro
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleSignOut}>
           <LogOut className="mr-2 h-4 w-4" /> Sair
