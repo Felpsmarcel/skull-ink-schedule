@@ -26,17 +26,26 @@ export interface StaffAgenda {
   };
 }
 
-export function useStaffDayAgenda(date: Date) {
+export interface UseStaffDayAgendaOptions {
+  artistId?: string | null;
+  enabled?: boolean;
+}
+
+export function useStaffDayAgenda(date: Date, options: UseStaffDayAgendaOptions = {}) {
   const dayKey = brusselsDayKey(date);
   const dayStartMs = brusselsDayStartMs(date);
   const dayEndMs = brusselsDayEndMs(date);
+  const enabled = options.enabled ?? true;
 
   const artistsQuery = useArtists();
-  const staffList: StaffMember[] = artistsQuery.data ?? [];
+  const staffList: StaffMember[] = (artistsQuery.data ?? []).filter((staff) =>
+    options.artistId ? staff.id === options.artistId : true,
+  );
 
   const queries = useQueries({
     queries: staffList.map((staff) => ({
       queryKey: ["agenda", staff.id, dayKey],
+      enabled: enabled && !artistsQuery.isLoading,
       queryFn: async () => {
         const [slotsRes, eventsRes] = await Promise.allSettled([
           getFreeSlots(staff.calendarId, dayStartMs, dayEndMs),

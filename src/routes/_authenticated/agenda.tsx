@@ -63,10 +63,10 @@ function AgendaPage() {
 
   const { data: me } = useCurrentUser();
   const restrictArtistId = me?.role === "artist" ? me.artistId : null;
-  const { agendas: allAgendas, isFetching } = useStaffDayAgenda(date);
-  const agendas = restrictArtistId
-    ? allAgendas.filter((a) => a.staff.id === restrictArtistId)
-    : allAgendas;
+  const { agendas, isFetching } = useStaffDayAgenda(date, {
+    artistId: restrictArtistId,
+    enabled: Boolean(me),
+  });
 
   const dateLabel = useMemo(
     () =>
