@@ -77,6 +77,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "appointment_services_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments_artist_view"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "appointment_services_service_id_fkey"
             columns: ["service_id"]
             isOneToOne: false
@@ -430,6 +437,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "payments_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments_artist_view"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "payments_contact_id_fkey"
             columns: ["contact_id"]
             isOneToOne: false
@@ -647,7 +661,68 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      appointments_artist_view: {
+        Row: {
+          artist_id: string | null
+          calendar_id: string | null
+          commission_eur: number | null
+          commission_pct: number | null
+          contact_id: string | null
+          contact_name: string | null
+          created_at: string | null
+          end_at: string | null
+          ghl_appointment_id: string | null
+          id: string | null
+          notes: string | null
+          services_summary: string | null
+          start_at: string | null
+          status: Database["public"]["Enums"]["appt_status"] | null
+          updated_at: string | null
+        }
+        Insert: {
+          artist_id?: string | null
+          calendar_id?: string | null
+          commission_eur?: never
+          commission_pct?: number | null
+          contact_id?: string | null
+          contact_name?: string | null
+          created_at?: string | null
+          end_at?: string | null
+          ghl_appointment_id?: string | null
+          id?: string | null
+          notes?: string | null
+          services_summary?: never
+          start_at?: string | null
+          status?: Database["public"]["Enums"]["appt_status"] | null
+          updated_at?: string | null
+        }
+        Update: {
+          artist_id?: string | null
+          calendar_id?: string | null
+          commission_eur?: never
+          commission_pct?: number | null
+          contact_id?: string | null
+          contact_name?: string | null
+          created_at?: string | null
+          end_at?: string | null
+          ghl_appointment_id?: string | null
+          id?: string | null
+          notes?: string | null
+          services_summary?: never
+          start_at?: string | null
+          status?: Database["public"]["Enums"]["appt_status"] | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_artist_id_fkey"
+            columns: ["artist_id"]
+            isOneToOne: false
+            referencedRelation: "artists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       current_artist_id: { Args: never; Returns: string }
