@@ -1,7 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import {
   createAppointment,
-  extractCalendarIds,
   type CreateAppointmentResponse,
   type GhlContact,
 } from "@/lib/ghl";
@@ -60,8 +59,7 @@ export async function finalizeAppointment(input: FinalizeInput): Promise<Finaliz
     calendar_id: input.calendarId,
     contact_name:
       input.contact.contactName ??
-      [input.contact.firstName, input.contact.lastName].filter(Boolean).join(" ") ||
-      null,
+      ([input.contact.firstName, input.contact.lastName].filter(Boolean).join(" ") || null),
     contact_phone: input.contact.phone ?? null,
     contact_email: input.contact.email ?? null,
     start_at: input.startISO,
@@ -109,6 +107,3 @@ export async function finalizeAppointment(input: FinalizeInput): Promise<Finaliz
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
-
-// Re-export so consumers can keep importing from one place if needed.
-export { extractCalendarIds };
