@@ -57,7 +57,7 @@ import {
   totalFinalEur,
 } from "@/stores/appointment-draft";
 
-export const Route = createFileRoute("/appointments/new")({
+export const Route = createFileRoute("/_authenticated/appointments/new")({
   head: () => ({
     meta: [{ title: "Novo agendamento — GF Tattoo Studio" }],
   }),

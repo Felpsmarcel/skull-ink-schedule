@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { fetchActiveServices, formatPriceRange, type Service } from "@/lib/services";
 import { useAppointmentDraft } from "@/stores/appointment-draft";
 
-export const Route = createFileRoute("/appointments/new/services")({
+export const Route = createFileRoute("/_authenticated/appointments/new/services")({
   head: () => ({ meta: [{ title: "Selecionar serviço — GF Tattoo Studio" }] }),
   component: ServicesPage,
 });

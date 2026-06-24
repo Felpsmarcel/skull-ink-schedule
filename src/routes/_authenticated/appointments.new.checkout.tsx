@@ -19,7 +19,7 @@ import {
   totalOriginalEur,
 } from "@/stores/appointment-draft";
 
-export const Route = createFileRoute("/appointments/new/checkout")({
+export const Route = createFileRoute("/_authenticated/appointments/new/checkout")({
   head: () => ({ meta: [{ title: "Checkout — GF Tattoo Studio" }] }),
   component: CheckoutPage,
 });

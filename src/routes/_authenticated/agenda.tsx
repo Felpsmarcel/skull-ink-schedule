@@ -27,7 +27,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
 import gfSkull from "@/assets/gf-skull.png";
 
-export const Route = createFileRoute("/agenda")({
+export const Route = createFileRoute("/_authenticated/agenda")({
   head: () => ({
     meta: [
       { title: "Agenda — GF Tattoo Studio" },
