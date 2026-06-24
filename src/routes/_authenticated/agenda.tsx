@@ -7,7 +7,6 @@ import {
   Calendar as CalendarIcon,
   MessageCircle,
   Bell,
-  User,
   CalendarDays,
   Scissors,
   Plus,
@@ -26,8 +25,10 @@ import { Calendar } from "@/components/ui/calendar";
 import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
 import gfSkull from "@/assets/gf-skull.png";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { UserMenu } from "@/components/auth/user-menu";
 
-export const Route = createFileRoute("/agenda")({
+export const Route = createFileRoute("/_authenticated/agenda")({
   head: () => ({
     meta: [
       { title: "Agenda — GF Tattoo Studio" },
@@ -60,7 +61,12 @@ function AgendaPage() {
   const [date, setDate] = useState<Date>(() => new Date());
   const [pickerOpen, setPickerOpen] = useState(false);
 
-  const { agendas, isFetching } = useStaffDayAgenda(date);
+  const { data: me } = useCurrentUser();
+  const restrictArtistId = me?.role === "artist" ? me.artistId : null;
+  const { agendas: allAgendas, isFetching } = useStaffDayAgenda(date);
+  const agendas = restrictArtistId
+    ? allAgendas.filter((a) => a.staff.id === restrictArtistId)
+    : allAgendas;
 
   const dateLabel = useMemo(
     () =>
@@ -152,9 +158,7 @@ function AgendaPage() {
             <IconBtn onClick={() => toast(t("actions.comingSoon"))} ariaLabel="Notificações">
               <Bell className="h-5 w-5" />
             </IconBtn>
-            <IconBtn onClick={() => toast(t("actions.comingSoon"))} ariaLabel="Perfil">
-              <User className="h-5 w-5" />
-            </IconBtn>
+            <UserMenu />
           </div>
         </div>
 

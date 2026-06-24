@@ -4,7 +4,7 @@ import { ghlFetch, type GhlFetchResult } from "@/lib/ghl";
 
 const CALENDAR_ID = "NzAYeRNJnvfpu7ynyoEK";
 
-export const Route = createFileRoute("/ghl-test")({
+export const Route = createFileRoute("/_authenticated/_admin/ghl-test")({
   head: () => ({ meta: [{ title: "GHL Test — GF Tattoo Studio" }] }),
   component: GhlTest,
 });

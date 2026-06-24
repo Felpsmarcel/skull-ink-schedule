@@ -36,6 +36,7 @@ import { cn } from "@/lib/utils";
 
 import { LOCATION_ID } from "@/config/staff";
 import { useArtists } from "@/hooks/use-artists";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import {
   brusselsDayStartMs,
   brusselsDayEndMs,
@@ -57,7 +58,7 @@ import {
   totalFinalEur,
 } from "@/stores/appointment-draft";
 
-export const Route = createFileRoute("/appointments/new")({
+export const Route = createFileRoute("/_authenticated/appointments/new")({
   head: () => ({
     meta: [{ title: "Novo agendamento — GF Tattoo Studio" }],
   }),
@@ -69,9 +70,23 @@ function AppointmentNewPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const artistsQuery = useArtists();
-  const artists = artistsQuery.data ?? [];
+  const allArtists = artistsQuery.data ?? [];
+  const { data: me } = useCurrentUser();
+  const artists =
+    me?.role === "artist" && me.artistId
+      ? allArtists.filter((a) => a.id === me.artistId)
+      : allArtists;
 
   const draft = useAppointmentDraft();
+
+  // Force tatuador's own calendar
+  useEffect(() => {
+    if (me?.role === "artist" && artists.length === 1) {
+      const cal = artists[0]!.calendarId;
+      if (draft.calendarId !== cal) draft.setCalendar(cal);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [me?.role, artists.length]);
   const [dateObj, setDateObj] = useState<Date>(() =>
     draft.startISO ? new Date(draft.startISO) : new Date(),
   );

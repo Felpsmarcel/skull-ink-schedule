@@ -9,21 +9,24 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as GhlTestRouteImport } from './routes/ghl-test'
-import { Route as AgendaRouteImport } from './routes/agenda'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AppointmentsNewRouteImport } from './routes/appointments.new'
-import { Route as AppointmentsNewServicesRouteImport } from './routes/appointments.new.services'
-import { Route as AppointmentsNewCheckoutRouteImport } from './routes/appointments.new.checkout'
+import { Route as AuthenticatedAgendaRouteImport } from './routes/_authenticated/agenda'
+import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/_admin/route'
+import { Route as AuthenticatedAppointmentsNewRouteImport } from './routes/_authenticated/appointments.new'
+import { Route as AuthenticatedAdminGhlTestRouteImport } from './routes/_authenticated/_admin/ghl-test'
+import { Route as ApiPublicHooksSeedTestUsersRouteImport } from './routes/api/public/hooks/seed-test-users'
+import { Route as AuthenticatedAppointmentsNewServicesRouteImport } from './routes/_authenticated/appointments.new.services'
+import { Route as AuthenticatedAppointmentsNewCheckoutRouteImport } from './routes/_authenticated/appointments.new.checkout'
 
-const GhlTestRoute = GhlTestRouteImport.update({
-  id: '/ghl-test',
-  path: '/ghl-test',
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AgendaRoute = AgendaRouteImport.update({
-  id: '/agenda',
-  path: '/agenda',
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -31,95 +34,135 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppointmentsNewRoute = AppointmentsNewRouteImport.update({
-  id: '/appointments/new',
-  path: '/appointments/new',
-  getParentRoute: () => rootRouteImport,
+const AuthenticatedAgendaRoute = AuthenticatedAgendaRouteImport.update({
+  id: '/agenda',
+  path: '/agenda',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AppointmentsNewServicesRoute = AppointmentsNewServicesRouteImport.update({
-  id: '/services',
-  path: '/services',
-  getParentRoute: () => AppointmentsNewRoute,
+const AuthenticatedAdminRouteRoute = AuthenticatedAdminRouteRouteImport.update({
+  id: '/_admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AppointmentsNewCheckoutRoute = AppointmentsNewCheckoutRouteImport.update({
-  id: '/checkout',
-  path: '/checkout',
-  getParentRoute: () => AppointmentsNewRoute,
-} as any)
+const AuthenticatedAppointmentsNewRoute =
+  AuthenticatedAppointmentsNewRouteImport.update({
+    id: '/appointments/new',
+    path: '/appointments/new',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminGhlTestRoute =
+  AuthenticatedAdminGhlTestRouteImport.update({
+    id: '/ghl-test',
+    path: '/ghl-test',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
+const ApiPublicHooksSeedTestUsersRoute =
+  ApiPublicHooksSeedTestUsersRouteImport.update({
+    id: '/api/public/hooks/seed-test-users',
+    path: '/api/public/hooks/seed-test-users',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AuthenticatedAppointmentsNewServicesRoute =
+  AuthenticatedAppointmentsNewServicesRouteImport.update({
+    id: '/services',
+    path: '/services',
+    getParentRoute: () => AuthenticatedAppointmentsNewRoute,
+  } as any)
+const AuthenticatedAppointmentsNewCheckoutRoute =
+  AuthenticatedAppointmentsNewCheckoutRouteImport.update({
+    id: '/checkout',
+    path: '/checkout',
+    getParentRoute: () => AuthenticatedAppointmentsNewRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/agenda': typeof AgendaRoute
-  '/ghl-test': typeof GhlTestRoute
-  '/appointments/new': typeof AppointmentsNewRouteWithChildren
-  '/appointments/new/checkout': typeof AppointmentsNewCheckoutRoute
-  '/appointments/new/services': typeof AppointmentsNewServicesRoute
+  '/auth': typeof AuthRoute
+  '/agenda': typeof AuthenticatedAgendaRoute
+  '/ghl-test': typeof AuthenticatedAdminGhlTestRoute
+  '/appointments/new': typeof AuthenticatedAppointmentsNewRouteWithChildren
+  '/appointments/new/checkout': typeof AuthenticatedAppointmentsNewCheckoutRoute
+  '/appointments/new/services': typeof AuthenticatedAppointmentsNewServicesRoute
+  '/api/public/hooks/seed-test-users': typeof ApiPublicHooksSeedTestUsersRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/agenda': typeof AgendaRoute
-  '/ghl-test': typeof GhlTestRoute
-  '/appointments/new': typeof AppointmentsNewRouteWithChildren
-  '/appointments/new/checkout': typeof AppointmentsNewCheckoutRoute
-  '/appointments/new/services': typeof AppointmentsNewServicesRoute
+  '/auth': typeof AuthRoute
+  '/agenda': typeof AuthenticatedAgendaRoute
+  '/ghl-test': typeof AuthenticatedAdminGhlTestRoute
+  '/appointments/new': typeof AuthenticatedAppointmentsNewRouteWithChildren
+  '/appointments/new/checkout': typeof AuthenticatedAppointmentsNewCheckoutRoute
+  '/appointments/new/services': typeof AuthenticatedAppointmentsNewServicesRoute
+  '/api/public/hooks/seed-test-users': typeof ApiPublicHooksSeedTestUsersRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/agenda': typeof AgendaRoute
-  '/ghl-test': typeof GhlTestRoute
-  '/appointments/new': typeof AppointmentsNewRouteWithChildren
-  '/appointments/new/checkout': typeof AppointmentsNewCheckoutRoute
-  '/appointments/new/services': typeof AppointmentsNewServicesRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/_authenticated/_admin': typeof AuthenticatedAdminRouteRouteWithChildren
+  '/_authenticated/agenda': typeof AuthenticatedAgendaRoute
+  '/_authenticated/_admin/ghl-test': typeof AuthenticatedAdminGhlTestRoute
+  '/_authenticated/appointments/new': typeof AuthenticatedAppointmentsNewRouteWithChildren
+  '/_authenticated/appointments/new/checkout': typeof AuthenticatedAppointmentsNewCheckoutRoute
+  '/_authenticated/appointments/new/services': typeof AuthenticatedAppointmentsNewServicesRoute
+  '/api/public/hooks/seed-test-users': typeof ApiPublicHooksSeedTestUsersRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/auth'
     | '/agenda'
     | '/ghl-test'
     | '/appointments/new'
     | '/appointments/new/checkout'
     | '/appointments/new/services'
+    | '/api/public/hooks/seed-test-users'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/auth'
     | '/agenda'
     | '/ghl-test'
     | '/appointments/new'
     | '/appointments/new/checkout'
     | '/appointments/new/services'
+    | '/api/public/hooks/seed-test-users'
   id:
     | '__root__'
     | '/'
-    | '/agenda'
-    | '/ghl-test'
-    | '/appointments/new'
-    | '/appointments/new/checkout'
-    | '/appointments/new/services'
+    | '/_authenticated'
+    | '/auth'
+    | '/_authenticated/_admin'
+    | '/_authenticated/agenda'
+    | '/_authenticated/_admin/ghl-test'
+    | '/_authenticated/appointments/new'
+    | '/_authenticated/appointments/new/checkout'
+    | '/_authenticated/appointments/new/services'
+    | '/api/public/hooks/seed-test-users'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AgendaRoute: typeof AgendaRoute
-  GhlTestRoute: typeof GhlTestRoute
-  AppointmentsNewRoute: typeof AppointmentsNewRouteWithChildren
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AuthRoute: typeof AuthRoute
+  ApiPublicHooksSeedTestUsersRoute: typeof ApiPublicHooksSeedTestUsersRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/ghl-test': {
-      id: '/ghl-test'
-      path: '/ghl-test'
-      fullPath: '/ghl-test'
-      preLoaderRoute: typeof GhlTestRouteImport
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/agenda': {
-      id: '/agenda'
-      path: '/agenda'
-      fullPath: '/agenda'
-      preLoaderRoute: typeof AgendaRouteImport
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -129,49 +172,111 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/appointments/new': {
-      id: '/appointments/new'
+    '/_authenticated/agenda': {
+      id: '/_authenticated/agenda'
+      path: '/agenda'
+      fullPath: '/agenda'
+      preLoaderRoute: typeof AuthenticatedAgendaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/_admin': {
+      id: '/_authenticated/_admin'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedAdminRouteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/appointments/new': {
+      id: '/_authenticated/appointments/new'
       path: '/appointments/new'
       fullPath: '/appointments/new'
-      preLoaderRoute: typeof AppointmentsNewRouteImport
+      preLoaderRoute: typeof AuthenticatedAppointmentsNewRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/_admin/ghl-test': {
+      id: '/_authenticated/_admin/ghl-test'
+      path: '/ghl-test'
+      fullPath: '/ghl-test'
+      preLoaderRoute: typeof AuthenticatedAdminGhlTestRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/api/public/hooks/seed-test-users': {
+      id: '/api/public/hooks/seed-test-users'
+      path: '/api/public/hooks/seed-test-users'
+      fullPath: '/api/public/hooks/seed-test-users'
+      preLoaderRoute: typeof ApiPublicHooksSeedTestUsersRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/appointments/new/services': {
-      id: '/appointments/new/services'
+    '/_authenticated/appointments/new/services': {
+      id: '/_authenticated/appointments/new/services'
       path: '/services'
       fullPath: '/appointments/new/services'
-      preLoaderRoute: typeof AppointmentsNewServicesRouteImport
-      parentRoute: typeof AppointmentsNewRoute
+      preLoaderRoute: typeof AuthenticatedAppointmentsNewServicesRouteImport
+      parentRoute: typeof AuthenticatedAppointmentsNewRoute
     }
-    '/appointments/new/checkout': {
-      id: '/appointments/new/checkout'
+    '/_authenticated/appointments/new/checkout': {
+      id: '/_authenticated/appointments/new/checkout'
       path: '/checkout'
       fullPath: '/appointments/new/checkout'
-      preLoaderRoute: typeof AppointmentsNewCheckoutRouteImport
-      parentRoute: typeof AppointmentsNewRoute
+      preLoaderRoute: typeof AuthenticatedAppointmentsNewCheckoutRouteImport
+      parentRoute: typeof AuthenticatedAppointmentsNewRoute
     }
   }
 }
 
-interface AppointmentsNewRouteChildren {
-  AppointmentsNewCheckoutRoute: typeof AppointmentsNewCheckoutRoute
-  AppointmentsNewServicesRoute: typeof AppointmentsNewServicesRoute
+interface AuthenticatedAdminRouteRouteChildren {
+  AuthenticatedAdminGhlTestRoute: typeof AuthenticatedAdminGhlTestRoute
 }
 
-const AppointmentsNewRouteChildren: AppointmentsNewRouteChildren = {
-  AppointmentsNewCheckoutRoute: AppointmentsNewCheckoutRoute,
-  AppointmentsNewServicesRoute: AppointmentsNewServicesRoute,
+const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren =
+  {
+    AuthenticatedAdminGhlTestRoute: AuthenticatedAdminGhlTestRoute,
+  }
+
+const AuthenticatedAdminRouteRouteWithChildren =
+  AuthenticatedAdminRouteRoute._addFileChildren(
+    AuthenticatedAdminRouteRouteChildren,
+  )
+
+interface AuthenticatedAppointmentsNewRouteChildren {
+  AuthenticatedAppointmentsNewCheckoutRoute: typeof AuthenticatedAppointmentsNewCheckoutRoute
+  AuthenticatedAppointmentsNewServicesRoute: typeof AuthenticatedAppointmentsNewServicesRoute
 }
 
-const AppointmentsNewRouteWithChildren = AppointmentsNewRoute._addFileChildren(
-  AppointmentsNewRouteChildren,
-)
+const AuthenticatedAppointmentsNewRouteChildren: AuthenticatedAppointmentsNewRouteChildren =
+  {
+    AuthenticatedAppointmentsNewCheckoutRoute:
+      AuthenticatedAppointmentsNewCheckoutRoute,
+    AuthenticatedAppointmentsNewServicesRoute:
+      AuthenticatedAppointmentsNewServicesRoute,
+  }
+
+const AuthenticatedAppointmentsNewRouteWithChildren =
+  AuthenticatedAppointmentsNewRoute._addFileChildren(
+    AuthenticatedAppointmentsNewRouteChildren,
+  )
+
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAdminRouteRoute: typeof AuthenticatedAdminRouteRouteWithChildren
+  AuthenticatedAgendaRoute: typeof AuthenticatedAgendaRoute
+  AuthenticatedAppointmentsNewRoute: typeof AuthenticatedAppointmentsNewRouteWithChildren
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAdminRouteRoute: AuthenticatedAdminRouteRouteWithChildren,
+  AuthenticatedAgendaRoute: AuthenticatedAgendaRoute,
+  AuthenticatedAppointmentsNewRoute:
+    AuthenticatedAppointmentsNewRouteWithChildren,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AgendaRoute: AgendaRoute,
-  GhlTestRoute: GhlTestRoute,
-  AppointmentsNewRoute: AppointmentsNewRouteWithChildren,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AuthRoute: AuthRoute,
+  ApiPublicHooksSeedTestUsersRoute: ApiPublicHooksSeedTestUsersRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
