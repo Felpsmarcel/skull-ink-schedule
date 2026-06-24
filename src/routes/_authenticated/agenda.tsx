@@ -7,7 +7,6 @@ import {
   Calendar as CalendarIcon,
   MessageCircle,
   Bell,
-  User,
   CalendarDays,
   Scissors,
   Plus,
