@@ -1,61 +1,46 @@
+## Objetivo
+Validar que o novo `GHL_TOKEN` (com todos os scopes) destrava as 4 chamadas que retornavam 401, e fazer um teste real de ponta a ponta criando um agendamento na agenda Randevu.
 
-# Reskin GF Tattoo — Tema claro preto/branco
+## Passos
 
-Reskin puramente visual. Nenhum layout, fluxo, rota ou lógica muda. Só tokens de design, fontes, logo e cores de componentes específicos.
+### 1. Redeploy do `ghl-proxy`
+Reimplantar a edge function para garantir que o novo valor do segredo `GHL_TOKEN` seja carregado pelo runtime.
+- Ferramenta: `supabase--deploy_edge_functions` com `["ghl-proxy"]`.
 
-## Escopo
+### 2. Testes individuais via `supabase--curl_edge_functions`
+Disparar uma chamada por endpoint, no calendário Randevu (`NzAYeRNJnvfpu7ynyoEK`) ou no location `9iqrKUVPDddINb9S4Iwd`, e reportar status HTTP literal + versão do header `Version` usado.
 
-- Trocar tema dark → tema claro (branco) como padrão em toda a app.
-- Substituir todo roxo/azul/vermelho de destaque por preto `#0A0A0A`.
-- Aplicar tipografia: títulos `Archivo Black`, corpo `Inter`.
-- Logo caveira GF Tattoo no header e na tela de login/splash.
-- Tela de login/splash é a única com fundo preto.
+| # | Função | Path GHL | Method | Version |
+|---|--------|----------|--------|---------|
+| a | getFreeSlots (controle) | `/calendars/NzAYeRNJnvfpu7ynyoEK/free-slots` | GET | `2021-04-15` |
+| b | getEvents | `/calendars/events` | GET | `2021-04-15` |
+| c | searchContacts | `/contacts/search` | POST | `2021-07-28` |
+| d | createContact | `/contacts/` | POST | `2021-07-28` |
+| e | createAppointment | `/calendars/events/appointments` | POST | `2021-04-15` |
 
-## Mudanças por arquivo
+Para cada uma:
+- Reportar status HTTP real (200 ou erro).
+- Se ≠ 200 → colar o **body completo literal** da resposta GHL (sem resumir) e o header `Version` enviado.
 
-### 1. `src/styles.css` — tokens de design
-Reescrever `:root` (e `.dark` espelhando o mesmo, já que a app vive no claro):
-- `--background: #FFFFFF`
-- `--foreground: #0A0A0A`
-- `--card: #FFFFFF`, `--card-foreground: #0A0A0A`
-- `--muted: #F5F5F5`, `--muted-foreground: #8A8A8A`
-- `--border: #E5E5E5`, `--input: #E5E5E5`
-- `--primary: #0A0A0A`, `--primary-foreground: #FFFFFF`
-- `--secondary: #F5F5F5`, `--secondary-foreground: #0A0A0A`
-- `--accent: #0A0A0A`, `--accent-foreground: #FFFFFF`
-- `--ring: #0A0A0A`
-- `--destructive`: manter cinza escuro neutro (sem vermelho real na UI; só usado em estados de erro de form — manter discreto)
-- `--radius: 1rem` (16px nos cards)
-- `--font-display: "Archivo Black", "Anton", sans-serif`
-- `--font-sans: "Inter", system-ui, sans-serif`
-- Sidebar tokens: claros (branco/cinza), com primary preto
+### 3. Teste E2E real na agenda Randevu
+Sequência:
+1. `searchContacts` por um telefone/email de teste (ex.: `+32499000000` / `lovable-test@gf.local`).
+2. Se não existir, `createContact` com nome "Lovable Test", telefone e email acima → guardar `contactId`.
+3. `getFreeSlots` no Randevu para os próximos 7 dias → escolher o primeiro slot disponível.
+4. `createAppointment` no `calendarId NzAYeRNJnvfpu7ynyoEK` com `locationId 9iqrKUVPDddINb9S4Iwd`, `contactId` do passo 2, `startTime`/`endTime` do slot, `title: "Teste Lovable — pode apagar"`, `appointmentStatus: "confirmed"`.
+5. Confirmar via `getEvents` no mesmo intervalo que o evento aparece com o `id` retornado.
 
-### 2. `src/routes/__root.tsx` — fontes
-Adicionar `<link>` para Google Fonts: Archivo Black (400) + Inter (400, 500, 600, 700). Sem `@import` em CSS.
+### 4. Relatório final
+Item por item, somente o que realmente retornou 200:
+- [ ] Redeploy OK
+- [ ] getFreeSlots → status
+- [ ] getEvents → status
+- [ ] searchContacts → status
+- [ ] createContact → status (+ contactId se 200)
+- [ ] createAppointment → status (+ appointmentId se 200)
+- [ ] Confirmação via getEvents → evento visível? sim/não
+- Erros completos colados literalmente quando houver
 
-### 3. Logo da caveira
-- Gerar/usar imagem da caveira GF Tattoo (PNG transparente) via assets, em duas variantes: preta (para header em fundo branco) e branca (para login/splash em fundo preto).
-- Substituir o atual lockup textual/placeholder do header pela logo preta.
-
-### 4. Tela de login/splash
-- Localizar a rota atual (provavelmente `src/routes/index.tsx` ou rota de auth). Aplicar **localmente** fundo `#0A0A0A` e a logo branca centralizada, mantendo a mesma estrutura/posicionamento dos elementos existentes. Sem mudar o resto do app.
-
-### 5. Componentes que precisam de ajuste fino (apenas tokens, sem mexer em estrutura)
-- **Agenda (`src/routes/agenda.tsx`, `src/lib/agenda-grid.ts`)**: blocos reservados → fundo `bg-muted` (#F5F5F5) + `border-l-4 border-foreground` preta + texto preto. "Sem reserva" → `border border-dashed border-border` cinza, fundo branco. Remover qualquer cor de destaque (roxo/azul).
-- **Selecionar serviço (`src/routes/appointments.new.services.tsx`)**: header de categoria sticky em tom de cinza escuro/preto; estado selecionado `bg-muted` em vez de `bg-primary/5` colorido.
-- **FAB "+"** e ícones ativos na bottom nav: preto sólido. Verificar bottom nav (componente compartilhado nas rotas) e ajustar classe do estado ativo para `text-foreground` e do FAB para `bg-primary text-primary-foreground` (que agora é preto/branco).
-- **Avatares**: círculo `bg-muted` com iniciais `text-foreground`.
-- **Botões principais**: variant `default` já fica preto pílula via tokens; garantir `rounded-full` onde for CTA principal (revisão pontual, sem refazer).
-
-### 6. i18n / formato
-Já estão configurados PT-PT, EUR, Europe/Brussels (`src/lib/format.ts`). Sem mudanças.
-
-## Fora do escopo (não tocar)
-
-- Lógica de GHL, Supabase, server functions, stores.
-- Estrutura de rotas, navegação, fluxos de agendamento.
-- Conteúdo de texto (a não ser correção de cor inline hardcoded, se existir).
-
-## Verificação
-
-Após aplicar, abrir via Playwright as telas: `/`, `/agenda`, `/appointments/new`, `/appointments/new/services`, login. Conferir screenshots: fundo branco em todas exceto login (preto), zero roxo/azul, fontes carregadas, logo visível.
+## Observações
+- Nenhum código de aplicação é alterado nesta fase — só deploy + chamadas de teste via tooling.
+- O contato/agendamento de teste fica no GHL; você pode apagar depois (vou indicar os IDs).
