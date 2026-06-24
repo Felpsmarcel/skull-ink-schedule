@@ -77,6 +77,8 @@ function AppointmentNewPage() {
       ? allArtists.filter((a) => a.id === me.artistId)
       : allArtists;
 
+  const draft = useAppointmentDraft();
+
   // Force tatuador's own calendar
   useEffect(() => {
     if (me?.role === "artist" && artists.length === 1) {
@@ -85,8 +87,6 @@ function AppointmentNewPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [me?.role, artists.length]);
-
-  const draft = useAppointmentDraft();
   const [dateObj, setDateObj] = useState<Date>(() =>
     draft.startISO ? new Date(draft.startISO) : new Date(),
   );
