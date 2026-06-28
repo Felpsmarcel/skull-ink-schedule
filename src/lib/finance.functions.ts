@@ -78,12 +78,9 @@ export const getFinanceSummary = createServerFn({ method: "GET" })
     );
 
     if (me.role === "artist") {
-      const { data, error } = await supabase
-        .from("appointments_artist_view" as never)
-        .select(
-          "id,start_at,end_at,status,contact_name,services_summary,commission_eur",
-        )
-        .order("start_at", { ascending: false });
+      const { data, error } = await supabase.rpc(
+        "get_my_artist_appointments" as never,
+      );
       if (error) throw new Error(error.message);
       const rows: ArtistAppointmentRow[] = (
         (data ?? []) as Array<{
