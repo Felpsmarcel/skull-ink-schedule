@@ -32,11 +32,11 @@ if (!i18n.isInitialized) {
 }
 
 // Always (re)inject resources — survives HMR and JSON edits without restart.
+// Each bundle has shape `{ common: {...} }`; register the inner object under
+// the `common` namespace so `t("agenda.today")` resolves correctly.
 for (const [lng, bundle] of Object.entries(BUNDLES)) {
-  // bundle has shape { common: {...} }
-  for (const [ns, res] of Object.entries(bundle as Record<string, unknown>)) {
-    i18n.addResourceBundle(lng, ns, res, true, true);
-  }
+  const inner = (bundle as Record<string, unknown>).common ?? bundle;
+  i18n.addResourceBundle(lng, "common", inner, true, true);
 }
 
 export default i18n;
