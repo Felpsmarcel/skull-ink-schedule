@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useRouter, ClientOnly } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -13,8 +13,12 @@ export const Route = createFileRoute("/auth")({
     redirect: typeof s.redirect === "string" ? s.redirect : undefined,
   }),
   head: () => ({ meta: [{ title: "Entrar — GF Tattoo Studio" }] }),
-  component: AuthPage,
+  component: AuthRoute,
 });
+
+function AuthRoute() {
+  return <ClientOnly fallback={null}><AuthPage /></ClientOnly>;
+}
 
 function AuthPage() {
   const navigate = useNavigate();

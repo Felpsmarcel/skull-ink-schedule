@@ -60,7 +60,7 @@ import {
 } from "@/stores/appointment-draft";
 import { finalizeAppointment } from "@/lib/appointments";
 
-export const Route = createFileRoute("/_authenticated/appointments/new")({
+export const Route = createFileRoute("/_authenticated/appointments/new/")({
   head: () => ({
     meta: [{ title: "Novo agendamento — GF Tattoo Studio" }],
   }),

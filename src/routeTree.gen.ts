@@ -15,8 +15,8 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedFinanceiroRouteImport } from './routes/_authenticated/financeiro'
 import { Route as AuthenticatedAgendaRouteImport } from './routes/_authenticated/agenda'
 import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/_admin/route'
-import { Route as AuthenticatedAppointmentsNewRouteImport } from './routes/_authenticated/appointments.new'
 import { Route as AuthenticatedAdminGhlTestRouteImport } from './routes/_authenticated/_admin/ghl-test'
+import { Route as AuthenticatedAppointmentsNewIndexRouteImport } from './routes/_authenticated/appointments.new.index'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
@@ -52,17 +52,17 @@ const AuthenticatedAdminRouteRoute = AuthenticatedAdminRouteRouteImport.update({
   id: '/_admin',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedAppointmentsNewRoute =
-  AuthenticatedAppointmentsNewRouteImport.update({
-    id: '/appointments/new',
-    path: '/appointments/new',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
 const AuthenticatedAdminGhlTestRoute =
   AuthenticatedAdminGhlTestRouteImport.update({
     id: '/ghl-test',
     path: '/ghl-test',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
+const AuthenticatedAppointmentsNewIndexRoute =
+  AuthenticatedAppointmentsNewIndexRouteImport.update({
+    id: '/appointments/new/',
+    path: '/appointments/new/',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const LovableEmailQueueProcessRoute =
   LovableEmailQueueProcessRouteImport.update({
@@ -88,15 +88,15 @@ const ApiPublicHooksSeedTestUsersRoute =
   } as any)
 const AuthenticatedAppointmentsNewServicesRoute =
   AuthenticatedAppointmentsNewServicesRouteImport.update({
-    id: '/services',
-    path: '/services',
-    getParentRoute: () => AuthenticatedAppointmentsNewRoute,
+    id: '/appointments/new/services',
+    path: '/appointments/new/services',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedAppointmentsNewCheckoutRoute =
   AuthenticatedAppointmentsNewCheckoutRouteImport.update({
-    id: '/checkout',
-    path: '/checkout',
-    getParentRoute: () => AuthenticatedAppointmentsNewRoute,
+    id: '/appointments/new/checkout',
+    path: '/appointments/new/checkout',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -105,13 +105,13 @@ export interface FileRoutesByFullPath {
   '/agenda': typeof AuthenticatedAgendaRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/ghl-test': typeof AuthenticatedAdminGhlTestRoute
-  '/appointments/new': typeof AuthenticatedAppointmentsNewRouteWithChildren
   '/appointments/new/checkout': typeof AuthenticatedAppointmentsNewCheckoutRoute
   '/appointments/new/services': typeof AuthenticatedAppointmentsNewServicesRoute
   '/api/public/hooks/seed-test-users': typeof ApiPublicHooksSeedTestUsersRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
+  '/appointments/new/': typeof AuthenticatedAppointmentsNewIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -119,13 +119,13 @@ export interface FileRoutesByTo {
   '/agenda': typeof AuthenticatedAgendaRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/ghl-test': typeof AuthenticatedAdminGhlTestRoute
-  '/appointments/new': typeof AuthenticatedAppointmentsNewRouteWithChildren
   '/appointments/new/checkout': typeof AuthenticatedAppointmentsNewCheckoutRoute
   '/appointments/new/services': typeof AuthenticatedAppointmentsNewServicesRoute
   '/api/public/hooks/seed-test-users': typeof ApiPublicHooksSeedTestUsersRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
+  '/appointments/new': typeof AuthenticatedAppointmentsNewIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -136,13 +136,13 @@ export interface FileRoutesById {
   '/_authenticated/agenda': typeof AuthenticatedAgendaRoute
   '/_authenticated/financeiro': typeof AuthenticatedFinanceiroRoute
   '/_authenticated/_admin/ghl-test': typeof AuthenticatedAdminGhlTestRoute
-  '/_authenticated/appointments/new': typeof AuthenticatedAppointmentsNewRouteWithChildren
   '/_authenticated/appointments/new/checkout': typeof AuthenticatedAppointmentsNewCheckoutRoute
   '/_authenticated/appointments/new/services': typeof AuthenticatedAppointmentsNewServicesRoute
   '/api/public/hooks/seed-test-users': typeof ApiPublicHooksSeedTestUsersRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
+  '/_authenticated/appointments/new/': typeof AuthenticatedAppointmentsNewIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -152,13 +152,13 @@ export interface FileRouteTypes {
     | '/agenda'
     | '/financeiro'
     | '/ghl-test'
-    | '/appointments/new'
     | '/appointments/new/checkout'
     | '/appointments/new/services'
     | '/api/public/hooks/seed-test-users'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
+    | '/appointments/new/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -166,13 +166,13 @@ export interface FileRouteTypes {
     | '/agenda'
     | '/financeiro'
     | '/ghl-test'
-    | '/appointments/new'
     | '/appointments/new/checkout'
     | '/appointments/new/services'
     | '/api/public/hooks/seed-test-users'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
+    | '/appointments/new'
   id:
     | '__root__'
     | '/'
@@ -182,13 +182,13 @@ export interface FileRouteTypes {
     | '/_authenticated/agenda'
     | '/_authenticated/financeiro'
     | '/_authenticated/_admin/ghl-test'
-    | '/_authenticated/appointments/new'
     | '/_authenticated/appointments/new/checkout'
     | '/_authenticated/appointments/new/services'
     | '/api/public/hooks/seed-test-users'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
+    | '/_authenticated/appointments/new/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -245,19 +245,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRouteRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/appointments/new': {
-      id: '/_authenticated/appointments/new'
-      path: '/appointments/new'
-      fullPath: '/appointments/new'
-      preLoaderRoute: typeof AuthenticatedAppointmentsNewRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/_admin/ghl-test': {
       id: '/_authenticated/_admin/ghl-test'
       path: '/ghl-test'
       fullPath: '/ghl-test'
       preLoaderRoute: typeof AuthenticatedAdminGhlTestRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/appointments/new/': {
+      id: '/_authenticated/appointments/new/'
+      path: '/appointments/new'
+      fullPath: '/appointments/new/'
+      preLoaderRoute: typeof AuthenticatedAppointmentsNewIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/lovable/email/queue/process': {
       id: '/lovable/email/queue/process'
@@ -289,17 +289,17 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/appointments/new/services': {
       id: '/_authenticated/appointments/new/services'
-      path: '/services'
+      path: '/appointments/new/services'
       fullPath: '/appointments/new/services'
       preLoaderRoute: typeof AuthenticatedAppointmentsNewServicesRouteImport
-      parentRoute: typeof AuthenticatedAppointmentsNewRoute
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/appointments/new/checkout': {
       id: '/_authenticated/appointments/new/checkout'
-      path: '/checkout'
+      path: '/appointments/new/checkout'
       fullPath: '/appointments/new/checkout'
       preLoaderRoute: typeof AuthenticatedAppointmentsNewCheckoutRouteImport
-      parentRoute: typeof AuthenticatedAppointmentsNewRoute
+      parentRoute: typeof AuthenticatedRouteRoute
     }
   }
 }
@@ -318,37 +318,25 @@ const AuthenticatedAdminRouteRouteWithChildren =
     AuthenticatedAdminRouteRouteChildren,
   )
 
-interface AuthenticatedAppointmentsNewRouteChildren {
-  AuthenticatedAppointmentsNewCheckoutRoute: typeof AuthenticatedAppointmentsNewCheckoutRoute
-  AuthenticatedAppointmentsNewServicesRoute: typeof AuthenticatedAppointmentsNewServicesRoute
-}
-
-const AuthenticatedAppointmentsNewRouteChildren: AuthenticatedAppointmentsNewRouteChildren =
-  {
-    AuthenticatedAppointmentsNewCheckoutRoute:
-      AuthenticatedAppointmentsNewCheckoutRoute,
-    AuthenticatedAppointmentsNewServicesRoute:
-      AuthenticatedAppointmentsNewServicesRoute,
-  }
-
-const AuthenticatedAppointmentsNewRouteWithChildren =
-  AuthenticatedAppointmentsNewRoute._addFileChildren(
-    AuthenticatedAppointmentsNewRouteChildren,
-  )
-
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRouteRoute: typeof AuthenticatedAdminRouteRouteWithChildren
   AuthenticatedAgendaRoute: typeof AuthenticatedAgendaRoute
   AuthenticatedFinanceiroRoute: typeof AuthenticatedFinanceiroRoute
-  AuthenticatedAppointmentsNewRoute: typeof AuthenticatedAppointmentsNewRouteWithChildren
+  AuthenticatedAppointmentsNewCheckoutRoute: typeof AuthenticatedAppointmentsNewCheckoutRoute
+  AuthenticatedAppointmentsNewServicesRoute: typeof AuthenticatedAppointmentsNewServicesRoute
+  AuthenticatedAppointmentsNewIndexRoute: typeof AuthenticatedAppointmentsNewIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRouteRoute: AuthenticatedAdminRouteRouteWithChildren,
   AuthenticatedAgendaRoute: AuthenticatedAgendaRoute,
   AuthenticatedFinanceiroRoute: AuthenticatedFinanceiroRoute,
-  AuthenticatedAppointmentsNewRoute:
-    AuthenticatedAppointmentsNewRouteWithChildren,
+  AuthenticatedAppointmentsNewCheckoutRoute:
+    AuthenticatedAppointmentsNewCheckoutRoute,
+  AuthenticatedAppointmentsNewServicesRoute:
+    AuthenticatedAppointmentsNewServicesRoute,
+  AuthenticatedAppointmentsNewIndexRoute:
+    AuthenticatedAppointmentsNewIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
