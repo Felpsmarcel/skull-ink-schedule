@@ -15,6 +15,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedFinanceiroRouteImport } from './routes/_authenticated/financeiro'
 import { Route as AuthenticatedAgendaRouteImport } from './routes/_authenticated/agenda'
 import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/_admin/route'
+import { Route as AuthenticatedAppointmentsNewRouteImport } from './routes/_authenticated/appointments.new'
 import { Route as AuthenticatedAdminGhlTestRouteImport } from './routes/_authenticated/_admin/ghl-test'
 import { Route as AuthenticatedAppointmentsNewIndexRouteImport } from './routes/_authenticated/appointments.new.index'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
@@ -52,6 +53,12 @@ const AuthenticatedAdminRouteRoute = AuthenticatedAdminRouteRouteImport.update({
   id: '/_admin',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAppointmentsNewRoute =
+  AuthenticatedAppointmentsNewRouteImport.update({
+    id: '/appointments/new',
+    path: '/appointments/new',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAdminGhlTestRoute =
   AuthenticatedAdminGhlTestRouteImport.update({
     id: '/ghl-test',
@@ -60,9 +67,9 @@ const AuthenticatedAdminGhlTestRoute =
   } as any)
 const AuthenticatedAppointmentsNewIndexRoute =
   AuthenticatedAppointmentsNewIndexRouteImport.update({
-    id: '/appointments/new/',
-    path: '/appointments/new/',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedAppointmentsNewRoute,
   } as any)
 const LovableEmailQueueProcessRoute =
   LovableEmailQueueProcessRouteImport.update({
@@ -88,15 +95,15 @@ const ApiPublicHooksSeedTestUsersRoute =
   } as any)
 const AuthenticatedAppointmentsNewServicesRoute =
   AuthenticatedAppointmentsNewServicesRouteImport.update({
-    id: '/appointments/new/services',
-    path: '/appointments/new/services',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/services',
+    path: '/services',
+    getParentRoute: () => AuthenticatedAppointmentsNewRoute,
   } as any)
 const AuthenticatedAppointmentsNewCheckoutRoute =
   AuthenticatedAppointmentsNewCheckoutRouteImport.update({
-    id: '/appointments/new/checkout',
-    path: '/appointments/new/checkout',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/checkout',
+    path: '/checkout',
+    getParentRoute: () => AuthenticatedAppointmentsNewRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -105,6 +112,7 @@ export interface FileRoutesByFullPath {
   '/agenda': typeof AuthenticatedAgendaRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/ghl-test': typeof AuthenticatedAdminGhlTestRoute
+  '/appointments/new': typeof AuthenticatedAppointmentsNewRouteWithChildren
   '/appointments/new/checkout': typeof AuthenticatedAppointmentsNewCheckoutRoute
   '/appointments/new/services': typeof AuthenticatedAppointmentsNewServicesRoute
   '/api/public/hooks/seed-test-users': typeof ApiPublicHooksSeedTestUsersRoute
@@ -136,6 +144,7 @@ export interface FileRoutesById {
   '/_authenticated/agenda': typeof AuthenticatedAgendaRoute
   '/_authenticated/financeiro': typeof AuthenticatedFinanceiroRoute
   '/_authenticated/_admin/ghl-test': typeof AuthenticatedAdminGhlTestRoute
+  '/_authenticated/appointments/new': typeof AuthenticatedAppointmentsNewRouteWithChildren
   '/_authenticated/appointments/new/checkout': typeof AuthenticatedAppointmentsNewCheckoutRoute
   '/_authenticated/appointments/new/services': typeof AuthenticatedAppointmentsNewServicesRoute
   '/api/public/hooks/seed-test-users': typeof ApiPublicHooksSeedTestUsersRoute
@@ -152,6 +161,7 @@ export interface FileRouteTypes {
     | '/agenda'
     | '/financeiro'
     | '/ghl-test'
+    | '/appointments/new'
     | '/appointments/new/checkout'
     | '/appointments/new/services'
     | '/api/public/hooks/seed-test-users'
@@ -182,6 +192,7 @@ export interface FileRouteTypes {
     | '/_authenticated/agenda'
     | '/_authenticated/financeiro'
     | '/_authenticated/_admin/ghl-test'
+    | '/_authenticated/appointments/new'
     | '/_authenticated/appointments/new/checkout'
     | '/_authenticated/appointments/new/services'
     | '/api/public/hooks/seed-test-users'
@@ -245,6 +256,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRouteRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/appointments/new': {
+      id: '/_authenticated/appointments/new'
+      path: '/appointments/new'
+      fullPath: '/appointments/new'
+      preLoaderRoute: typeof AuthenticatedAppointmentsNewRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/_admin/ghl-test': {
       id: '/_authenticated/_admin/ghl-test'
       path: '/ghl-test'
@@ -254,10 +272,10 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/appointments/new/': {
       id: '/_authenticated/appointments/new/'
-      path: '/appointments/new'
+      path: '/'
       fullPath: '/appointments/new/'
       preLoaderRoute: typeof AuthenticatedAppointmentsNewIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedAppointmentsNewRoute
     }
     '/lovable/email/queue/process': {
       id: '/lovable/email/queue/process'
@@ -289,17 +307,17 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/appointments/new/services': {
       id: '/_authenticated/appointments/new/services'
-      path: '/appointments/new/services'
+      path: '/services'
       fullPath: '/appointments/new/services'
       preLoaderRoute: typeof AuthenticatedAppointmentsNewServicesRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedAppointmentsNewRoute
     }
     '/_authenticated/appointments/new/checkout': {
       id: '/_authenticated/appointments/new/checkout'
-      path: '/appointments/new/checkout'
+      path: '/checkout'
       fullPath: '/appointments/new/checkout'
       preLoaderRoute: typeof AuthenticatedAppointmentsNewCheckoutRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedAppointmentsNewRoute
     }
   }
 }
@@ -318,25 +336,40 @@ const AuthenticatedAdminRouteRouteWithChildren =
     AuthenticatedAdminRouteRouteChildren,
   )
 
+interface AuthenticatedAppointmentsNewRouteChildren {
+  AuthenticatedAppointmentsNewCheckoutRoute: typeof AuthenticatedAppointmentsNewCheckoutRoute
+  AuthenticatedAppointmentsNewServicesRoute: typeof AuthenticatedAppointmentsNewServicesRoute
+  AuthenticatedAppointmentsNewIndexRoute: typeof AuthenticatedAppointmentsNewIndexRoute
+}
+
+const AuthenticatedAppointmentsNewRouteChildren: AuthenticatedAppointmentsNewRouteChildren =
+  {
+    AuthenticatedAppointmentsNewCheckoutRoute:
+      AuthenticatedAppointmentsNewCheckoutRoute,
+    AuthenticatedAppointmentsNewServicesRoute:
+      AuthenticatedAppointmentsNewServicesRoute,
+    AuthenticatedAppointmentsNewIndexRoute:
+      AuthenticatedAppointmentsNewIndexRoute,
+  }
+
+const AuthenticatedAppointmentsNewRouteWithChildren =
+  AuthenticatedAppointmentsNewRoute._addFileChildren(
+    AuthenticatedAppointmentsNewRouteChildren,
+  )
+
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRouteRoute: typeof AuthenticatedAdminRouteRouteWithChildren
   AuthenticatedAgendaRoute: typeof AuthenticatedAgendaRoute
   AuthenticatedFinanceiroRoute: typeof AuthenticatedFinanceiroRoute
-  AuthenticatedAppointmentsNewCheckoutRoute: typeof AuthenticatedAppointmentsNewCheckoutRoute
-  AuthenticatedAppointmentsNewServicesRoute: typeof AuthenticatedAppointmentsNewServicesRoute
-  AuthenticatedAppointmentsNewIndexRoute: typeof AuthenticatedAppointmentsNewIndexRoute
+  AuthenticatedAppointmentsNewRoute: typeof AuthenticatedAppointmentsNewRouteWithChildren
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRouteRoute: AuthenticatedAdminRouteRouteWithChildren,
   AuthenticatedAgendaRoute: AuthenticatedAgendaRoute,
   AuthenticatedFinanceiroRoute: AuthenticatedFinanceiroRoute,
-  AuthenticatedAppointmentsNewCheckoutRoute:
-    AuthenticatedAppointmentsNewCheckoutRoute,
-  AuthenticatedAppointmentsNewServicesRoute:
-    AuthenticatedAppointmentsNewServicesRoute,
-  AuthenticatedAppointmentsNewIndexRoute:
-    AuthenticatedAppointmentsNewIndexRoute,
+  AuthenticatedAppointmentsNewRoute:
+    AuthenticatedAppointmentsNewRouteWithChildren,
 }
 
 const AuthenticatedRouteRouteWithChildren =
