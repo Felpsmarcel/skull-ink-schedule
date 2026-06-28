@@ -51,6 +51,13 @@ function CheckoutPage() {
   const original = totalOriginalEur(draft);
   const final = totalFinalEur(draft);
   const hasDiscount = final < original;
+  const canFinalize = Boolean(
+    draft.contact &&
+      draft.calendarId &&
+      staff &&
+      draft.startISO &&
+      draft.services.length > 0,
+  );
 
   async function handleFinalize() {
     if (!draft.contact) return toast.error(t("appt.errors.noContact"));
@@ -266,7 +273,7 @@ function CheckoutPage() {
         >
           {t("appt.payNow")}
         </Button>
-        <Button className="flex-1" onClick={handleFinalize} disabled={saving}>
+        <Button className="flex-1" onClick={handleFinalize} disabled={saving || !canFinalize}>
           {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
           {t("appt.finalize")}
           {final > 0 ? (

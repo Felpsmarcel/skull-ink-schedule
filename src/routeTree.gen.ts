@@ -17,6 +17,7 @@ import { Route as AuthenticatedAgendaRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/_admin/route'
 import { Route as AuthenticatedAppointmentsNewRouteImport } from './routes/_authenticated/appointments.new'
 import { Route as AuthenticatedAdminGhlTestRouteImport } from './routes/_authenticated/_admin/ghl-test'
+import { Route as AuthenticatedAppointmentsNewIndexRouteImport } from './routes/_authenticated/appointments.new.index'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
@@ -63,6 +64,12 @@ const AuthenticatedAdminGhlTestRoute =
     id: '/ghl-test',
     path: '/ghl-test',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
+const AuthenticatedAppointmentsNewIndexRoute =
+  AuthenticatedAppointmentsNewIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedAppointmentsNewRoute,
   } as any)
 const LovableEmailQueueProcessRoute =
   LovableEmailQueueProcessRouteImport.update({
@@ -112,6 +119,7 @@ export interface FileRoutesByFullPath {
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
+  '/appointments/new/': typeof AuthenticatedAppointmentsNewIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -119,13 +127,13 @@ export interface FileRoutesByTo {
   '/agenda': typeof AuthenticatedAgendaRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/ghl-test': typeof AuthenticatedAdminGhlTestRoute
-  '/appointments/new': typeof AuthenticatedAppointmentsNewRouteWithChildren
   '/appointments/new/checkout': typeof AuthenticatedAppointmentsNewCheckoutRoute
   '/appointments/new/services': typeof AuthenticatedAppointmentsNewServicesRoute
   '/api/public/hooks/seed-test-users': typeof ApiPublicHooksSeedTestUsersRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
+  '/appointments/new': typeof AuthenticatedAppointmentsNewIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -143,6 +151,7 @@ export interface FileRoutesById {
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
+  '/_authenticated/appointments/new/': typeof AuthenticatedAppointmentsNewIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -159,6 +168,7 @@ export interface FileRouteTypes {
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
+    | '/appointments/new/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -166,13 +176,13 @@ export interface FileRouteTypes {
     | '/agenda'
     | '/financeiro'
     | '/ghl-test'
-    | '/appointments/new'
     | '/appointments/new/checkout'
     | '/appointments/new/services'
     | '/api/public/hooks/seed-test-users'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
+    | '/appointments/new'
   id:
     | '__root__'
     | '/'
@@ -189,6 +199,7 @@ export interface FileRouteTypes {
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
+    | '/_authenticated/appointments/new/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -259,6 +270,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminGhlTestRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
+    '/_authenticated/appointments/new/': {
+      id: '/_authenticated/appointments/new/'
+      path: '/'
+      fullPath: '/appointments/new/'
+      preLoaderRoute: typeof AuthenticatedAppointmentsNewIndexRouteImport
+      parentRoute: typeof AuthenticatedAppointmentsNewRoute
+    }
     '/lovable/email/queue/process': {
       id: '/lovable/email/queue/process'
       path: '/lovable/email/queue/process'
@@ -321,6 +339,7 @@ const AuthenticatedAdminRouteRouteWithChildren =
 interface AuthenticatedAppointmentsNewRouteChildren {
   AuthenticatedAppointmentsNewCheckoutRoute: typeof AuthenticatedAppointmentsNewCheckoutRoute
   AuthenticatedAppointmentsNewServicesRoute: typeof AuthenticatedAppointmentsNewServicesRoute
+  AuthenticatedAppointmentsNewIndexRoute: typeof AuthenticatedAppointmentsNewIndexRoute
 }
 
 const AuthenticatedAppointmentsNewRouteChildren: AuthenticatedAppointmentsNewRouteChildren =
@@ -329,6 +348,8 @@ const AuthenticatedAppointmentsNewRouteChildren: AuthenticatedAppointmentsNewRou
       AuthenticatedAppointmentsNewCheckoutRoute,
     AuthenticatedAppointmentsNewServicesRoute:
       AuthenticatedAppointmentsNewServicesRoute,
+    AuthenticatedAppointmentsNewIndexRoute:
+      AuthenticatedAppointmentsNewIndexRoute,
   }
 
 const AuthenticatedAppointmentsNewRouteWithChildren =
@@ -366,13 +387,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
