@@ -99,6 +99,11 @@ function AppointmentNewPage() {
   const dayStartMs = brusselsDayStartMs(dateObj);
   const dayEndMs = brusselsDayEndMs(dateObj);
 
+  const canSave = Boolean(
+    draft.contact && draft.calendarId && draft.startISO,
+  );
+  const canCheckout = canSave && draft.services.length > 0;
+
   const slotsQuery = useQuery({
     enabled: Boolean(draft.calendarId),
     queryKey: ["appt-free-slots", draft.calendarId, dayKey],
@@ -363,6 +368,7 @@ function AppointmentNewPage() {
           variant="outline"
           className="flex-1"
           onClick={() => navigate({ to: "/appointments/new/checkout" })}
+          disabled={!canCheckout}
         >
           {t("appt.checkout")}
           {totalFinalEur(draft) > 0 ? (
@@ -371,7 +377,7 @@ function AppointmentNewPage() {
             </span>
           ) : null}
         </Button>
-        <Button className="flex-1" onClick={handleSave} disabled={saving}>
+        <Button className="flex-1" onClick={handleSave} disabled={saving || !canSave}>
           {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
           {t("appt.save")}
         </Button>
