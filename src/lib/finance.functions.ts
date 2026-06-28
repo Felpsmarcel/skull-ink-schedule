@@ -92,7 +92,9 @@ export const getFinanceSummary = createServerFn({ method: "GET" })
           services_summary: string | null;
           commission_eur: number | string;
         }>
-      ).map((r) => {
+      )
+        .sort((a, b) => (a.start_at < b.start_at ? 1 : -1))
+        .map((r) => {
         const commission = Number(r.commission_eur);
         return {
           id: r.id,
