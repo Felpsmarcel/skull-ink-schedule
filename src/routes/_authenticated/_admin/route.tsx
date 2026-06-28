@@ -1,4 +1,5 @@
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { useCurrentUser } from "@/hooks/use-current-user";
 
 export const Route = createFileRoute("/_authenticated/_admin")({
@@ -7,9 +8,15 @@ export const Route = createFileRoute("/_authenticated/_admin")({
 
 function AdminGate() {
   const { data, isLoading, isError } = useCurrentUser();
-  if (isLoading) return null;
-  if (isError || data?.role !== "admin") {
-    throw redirect({ to: "/agenda" });
-  }
+  const navigate = useNavigate();
+  const isAdmin = data?.role === "admin";
+
+  useEffect(() => {
+    if (!isLoading && (isError || !isAdmin)) {
+      navigate({ to: "/agenda", replace: true });
+    }
+  }, [isLoading, isError, isAdmin, navigate]);
+
+  if (isLoading || !isAdmin) return null;
   return <Outlet />;
 }
