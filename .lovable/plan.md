@@ -1,146 +1,60 @@
-Agora sim a resposta foi boa. Ele trouxe evidência, testes, confiança e problemas reais. Eu **não aprovaria a Sprint 1 ainda**. Mandaria fazer um **hotfix curto**, sem abrir Sprint 2.
+## Revisão Final — Sprint 1
 
-Use este prompt:
+Antes de tocar em código, vou fazer uma triagem honesta dos itens que ficaram em aberto da Sprint 1 e classificá-los. Só depois disso decido o que corrigir.
 
-**Hotfix obrigatório — Fechamento da Sprint 1**
+### Itens em revisão
 
-A auditoria independente da Sprint 1 foi aceita.
+| # | Item | Classificação inicial | Justificativa |
+|---|---|---|---|
+| 1 | Hydration mismatch em `/auth` (envolvi em `<ClientOnly>`) | **Hipótese** | Não há reprodução pós-fix registrada. Preciso rodar Playwright e comparar HTML SSR vs CSR. |
+| 2 | Guard `_admin` redirecionava admin para `/agenda` | **Bug confirmado (já corrigido)** | Causa raiz: `throw redirect` em `beforeLoad` SSR sem sessão. Já trocado por `AdminGate` client-side. Precisa apenas re-validação. |
+| 3 | Sub-rotas de `/appointments/new` não renderizavam | **Bug confirmado (já corrigido)** | Causa raiz: faltava layout com `<Outlet />`. Já criado. Precisa re-validação. |
+| 4 | URL pollution `?debug=false` em `/agenda` | **Bug confirmado (já corrigido)** | `validateSearch` retornava chave sempre. Precisa re-validação. |
+| 5 | i18n misturando EN/PT em `pt-BR` | **Bug confirmado (já corrigido)** | Faltava `load: "languageOnly"`. Precisa re-validação. |
+| 6 | Dados demo no Financeiro | **Bug confirmado (já corrigido)** | 3 appointments seed. Já deletados. Re-validação. |
+| 7 | `TypeError: Failed to fetch` no console durante navegação | **Hipótese** | Pode ser apenas ruído de navegação cancelada. Precisa reprodução isolada e inspeção de network. |
+| 8 | Agenda mostra `0● 0○` em dias vazios | **Melhoria (UX)** | Não é bug — é estado real. Fora do escopo de "fix". |
+| 9 | Botões stub no Bottom Nav | **Dívida técnica** | Planejado para Sprint 4. Fora de escopo. |
+| 10 | Google OAuth não validado end-to-end | **Dívida técnica** | Requer validação externa fora do sandbox. |
+| 11 | Empty state "sem free slots" para artista lotado | **Hipótese** | Não reproduzido. |
 
-A Sprint 1 ainda NÃO está aprovada porque a taxa de confiança ficou em 76%.
+### Plano de execução (somente bugs + hipóteses)
 
-Agora implemente apenas os hotfixes necessários para elevar a confiança para 95%+.
+**Fase A — Re-validação dos bugs já corrigidos (itens 2, 3, 4, 5, 6)**
 
-Não avance para Sprint 2.
+Para cada um, rodar script Playwright dedicado e capturar:
+- Screenshot da tela em estado esperado
+- URL final
+- Logs de console (sem erros novos)
+- Para item 6: query SQL em `appointments` confirmando 0 registros demo
 
-Não implemente funcionalidades novas.
+Se algum falhar → re-classificar como bug ativo e abrir correção com o template (causa raiz / alternativas / solução / impacto / risco).
 
-**Hotfix 1 — Remover dados demo do financeiro**
+**Fase B — Investigação das hipóteses (itens 1, 7, 11)**
 
-Problema:  
-O financeiro está contaminado por appointments seedados: Cliente A, Cliente B e Cliente C.
+1. **Hydration `/auth`**: rodar `curl` no HTML SSR + diff contra DOM após hydration via Playwright. Se idêntico → fechar hipótese. Se divergente → promover a bug e corrigir.
+2. **`Failed to fetch`**: navegar pelos fluxos principais com `page.on("console")` e `page.on("requestfailed")` ativos. Se for `AbortError` de navegação cancelada → ruído aceito, documentar. Se for request real falhando → promover a bug.
+3. **Sem free slots**: simular artista com calendário cheio (ou mock da resposta GHL) e verificar empty state. Se renderizar `--:--` infinito → bug; se mostrar mensagem → fechar.
 
-Objetivo:  
-Remover dados fictícios do ambiente e impedir que eles voltem a ser criados.
+**Fase C — Correções (somente se Fase A/B confirmar bug ativo)**
 
-Ações:
+Para cada bug confirmado, antes do patch eu apresento:
+- **Causa raiz** (com referência de arquivo/linha)
+- **Alternativas consideradas** (no mínimo 2)
+- **Solução escolhida** + por quê
+- **Impacto arquitetural** (rotas, contratos, dados)
+- **Risco de regressão** (o que pode quebrar)
 
-1. Criar migration segura para remover os appointments demo.
-2. Verificar se existem payments relacionados a esses appointments.
-3. Remover ou corrigir qualquer seed/migration que possa recriar esses dados.
-4. Garantir que /financeiro não exiba valores fictícios.
+Depois aplico, re-rodo Playwright e anexo evidência (screenshot + log).
 
-Não apagar dados reais.
+**Fase D — Relatório final**
 
-Antes de deletar, filtre apenas registros claramente demo/teste.
+Tabela consolidada: item → classificação final → status (resolvido / aceito / promovido a Sprint 2) → evidência. Sprint 1 só é dada como concluída se 100% dos bugs confirmados tiverem evidência verde. **Não inicio Sprint 2 sem nova aprovação tua.**
 
-&nbsp;
+### O que NÃO farei nesta passada
 
-**Hotfix 2 — Remover ?debug=false da URL da Agenda**
+- Não vou corrigir itens 8, 9, 10 (melhoria / dívida) — entram em sprints próprias.
+- Não vou refatorar nada que não esteja na lista acima.
+- Não vou tocar em schema do banco a menos que um bug confirmado exija.
 
-Problema:  
-A rota /agenda está reescrevendo a URL para /agenda?debug=false.
-
-Objetivo:  
-A URL padrão deve ser limpa:
-
-/agenda
-
-O parâmetro debug só deve aparecer quando for true:
-
-/agenda?debug=true
-
-Ações:
-
-1. Corrigir validateSearch/default search em src/routes/_authenticated/agenda.tsx.
-2. Garantir que navegar para /agenda não adicione debug=false.
-3. Garantir que debug=true continue funcionando se necessário.
-
-&nbsp;
-
-**Hotfix 3 — Corrigir i18n para PT como padrão real**
-
-Problema:  
-Com navegador PT-BR, várias labels aparecem em inglês.
-
-Objetivo:  
-O idioma padrão deve ser PT.
-
-Ações:
-
-1. Configurar fallbackLng como pt.
-2. Garantir supportedLngs: pt, en, fr.
-3. Garantir que pt-BR resolva para pt.
-4. Revisar chaves usadas em:
-  - Agenda
-  - Novo agendamento
-  - Serviços
-  - Checkout
-  - Navegação
-  - Financeiro
-5. Adicionar chaves faltantes em pt.json.
-6. Garantir que não haja textos hardcoded em inglês nos principais fluxos.
-
-&nbsp;
-
-**Hotfix 4 — Console error Supabase**
-
-Problema:  
-Aparece TypeError: Failed to fetch vindo de supabase-js durante navegação/teardown.
-
-Objetivo:  
-Investigar se é apenas ruído ou erro real.
-
-Ações:
-
-1. Identificar a origem exata.
-2. Se for ruído de teardown/refresh, tratar de forma segura.
-3. Se for erro real de sessão/auth, corrigir.
-4. Não esconder erros importantes de produção.
-
-&nbsp;
-
-**Validação obrigatória com Playwright**
-
-Após aplicar os hotfixes, execute novamente a bateria completa:
-
-- login admin
-- login artist
-- /agenda
-- /appointments/new
-- /appointments/new/services
-- /appointments/new/checkout
-- /ghl-test admin
-- /ghl-test artist
-- /financeiro admin
-- /financeiro artist
-- desktop
-- mobile
-
-Validar:
-
-- sem hydration mismatch
-- sem dados demo no financeiro
-- /agenda sem ?debug=false
-- PT-BR renderizando em PT
-- admin acessa /ghl-test
-- artist não acessa /ghl-test
-- rotas filhas renderizam corretamente
-- sem erros críticos no console
-- sem network errors inesperados
-
-**Entrega final obrigatória**
-
-Ao final entregue:
-
-1. Arquivos alterados
-2. Migrations criadas/alteradas
-3. Dados removidos
-4. Evidência dos testes Playwright
-5. Console/network final
-6. Taxa de confiança atual
-7. Sprint 1 aprovada? Sim/Não
-8. Bugs restantes, se houver
-
-Não avance para Sprint 2 até a Sprint 1 atingir no mínimo 95% de confiança.
-
-Esse é o caminho certo: **fecha o chão antes de construir o segundo andar**.
+Aprovado para executar?
