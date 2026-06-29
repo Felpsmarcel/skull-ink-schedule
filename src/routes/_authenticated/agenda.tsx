@@ -35,9 +35,10 @@ export const Route = createFileRoute("/_authenticated/agenda")({
       { name: "description", content: "Agenda diária dos tatuadores" },
     ],
   }),
-  validateSearch: (s: Record<string, unknown>) => ({
-    debug: s.debug === "1" || s.debug === 1 || s.debug === true,
-  }),
+  validateSearch: (s: Record<string, unknown>) => {
+    const on = s.debug === "1" || s.debug === 1 || s.debug === true || s.debug === "true";
+    return on ? { debug: true as const } : {};
+  },
   component: AgendaPage,
 });
 
@@ -57,7 +58,8 @@ function defaultTimeLabels(): string[] {
 function AgendaPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  const { debug } = Route.useSearch();
+  const search = Route.useSearch() as { debug?: boolean };
+  const debug = search.debug === true;
   const [date, setDate] = useState<Date>(() => new Date());
   const [pickerOpen, setPickerOpen] = useState(false);
 
