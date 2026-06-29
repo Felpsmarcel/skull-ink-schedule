@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 import gfSkull from "@/assets/gf-skull.png";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { UserMenu } from "@/components/auth/user-menu";
+import { resolveIntlLocale } from "@/lib/locale";
 
 export const Route = createFileRoute("/_authenticated/agenda")({
   head: () => ({
@@ -72,7 +73,7 @@ function AgendaPage() {
 
   const dateLabel = useMemo(
     () =>
-      new Intl.DateTimeFormat(i18n.language === "pt" ? "pt-PT" : i18n.language, {
+      new Intl.DateTimeFormat(resolveIntlLocale(i18n.language), {
         timeZone: "Europe/Brussels",
         weekday: "short",
         day: "2-digit",
