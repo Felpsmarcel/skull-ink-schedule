@@ -1,125 +1,146 @@
+Agora sim a resposta foi boa. Ele trouxe evidência, testes, confiança e problemas reais. Eu **não aprovaria a Sprint 1 ainda**. Mandaria fazer um **hotfix curto**, sem abrir Sprint 2.
 
-# Validação Sprint 1 — Relatório Real (Playwright + localhost:8080)
+Use este prompt:
 
-Credenciais usadas: `admin@gftattoo.test / Admin#2026` e `gabriel@gftattoo.test / Artist#2026`. Viewport mobile 430×900.
+**Hotfix obrigatório — Fechamento da Sprint 1**
 
-## 1. Rotas de novo agendamento
+A auditoria independente da Sprint 1 foi aceita.
 
-Todas renderizam o componente correto, sem console error, sem network failed, sem pageerror.
+A Sprint 1 ainda NÃO está aprovada porque a taxa de confiança ficou em 76%.
 
-| Rota | Arquivo | Estado esperado | Resultado real |
-|---|---|---|---|
-| `/appointments/new` | `src/routes/_authenticated/appointments.new.index.tsx` | Form completo (cliente, tatuador, data, slots, serviços, footer) | ✅ h1 "NEW APPOINTMENT", footer com 3 botões, 8 botões no total, sem erros |
-| `/appointments/new/services` | `src/routes/_authenticated/appointments.new.services.tsx` | Catálogo agrupado por categoria | ✅ h1 "PICK SERVICE", 3062 chars no body, sem erros |
-| `/appointments/new/checkout` | `src/routes/_authenticated/appointments.new.checkout.tsx` | Contato + data + serviços + total + footer | ✅ h1 "DETAIL / CHECKOUT", footer com "Pay now" + "Finalize", sem erros |
+Agora implemente apenas os hotfixes necessários para elevar a confiança para 95%+.
 
-Layout wrapper `appointments.new.tsx` (apenas `<Outlet />`) está plugado corretamente — confirmado pelo fato de as 3 telas renderizarem.
+Não avance para Sprint 2.
 
-Observação lateral (não-bloqueante): i18n está caindo no namespace `en` mesmo com `<html lang="pt">`. Pré-existente; não regressão da Sprint 1.
+Não implemente funcionalidades novas.
 
-## 2. Guard Admin — REGRESSÃO
+**Hotfix 1 — Remover dados demo do financeiro**
 
-| Pergunta | Resposta |
-|---|---|
-| Admin acessou `/ghl-test`? | ✅ Sim — URL `/ghl-test`, h1 "GHL — TESTE" |
-| Artist redirecionado? | ❌ **NÃO** — URL ficou em `/ghl-test` e a página mostra **"This page didn't load — Something went wrong on our end"** (error boundary). |
-| Race condition após login? | Não detectada |
-| Erro de auth? | Não — login do Gabriel funcionou (`/agenda?debug=false`) |
+Problema:  
+O financeiro está contaminado por appointments seedados: Cliente A, Cliente B e Cliente C.
 
-Console mostra: `Error in route match: __root__/` e `The above error occurred in the <AdminGate> component. React will try to recreate this component tree from scratch using the error boundary you provided, CatchBoundaryImpl.`
+Objetivo:  
+Remover dados fictícios do ambiente e impedir que eles voltem a ser criados.
 
-Causa raiz: `throw redirect(...)` chamado **dentro do render** de um componente é tratado pelo TanStack Router como erro normal (a redirect-as-throw só é interceptada em `beforeLoad` / `loader`). Resultado: o usuário Artist vê a página de erro do app, em vez de ir limpo para `/agenda`.
+Ações:
 
-## 3. Hydration em `/auth`
+1. Criar migration segura para remover os appointments demo.
+2. Verificar se existem payments relacionados a esses appointments.
+3. Remover ou corrigir qualquer seed/migration que possa recriar esses dados.
+4. Garantir que /financeiro não exiba valores fictícios.
 
-| Cenário | Resultado |
-|---|---|
-| Abrir `/auth` | ✅ Sem pageerror, sem console.error, sem hydration mismatch (carregamento via `<ClientOnly>`/`ssr:false` funcionando) |
-| Senha errada | ✅ Mostra "Invalid login credentials" inline, sem redirect |
-| Senha correta (admin) | ✅ Vai para `/agenda?debug=false`, sem flash |
-| Logout (limpar `sb-*` + voltar) | ✅ Cai em `/auth` |
+Não apagar dados reais.
 
-A hydration mismatch antiga (`__gcrremoteframetoken`) que aparece nos logs do navegador da preview vem de uma extensão/serviço externo injetado na preview hospedada — **não reproduz** no localhost. Considerado resolvido para o app.
+Antes de deletar, filtre apenas registros claramente demo/teste.
 
-## 4. Validação do rascunho (botões disabled)
+&nbsp;
 
-Draft vazio em `/appointments/new`:
+**Hotfix 2 — Remover ?debug=false da URL da Agenda**
 
-| Botão | Estado | Esperado | Correto? |
-|---|---|---|---|
-| Add client | enabled | enabled | ✅ |
-| Pick an artist | enabled | enabled | ✅ |
-| Data picker | enabled | enabled | ✅ |
-| Add service | enabled | enabled | ✅ |
-| **Checkout** | **disabled** | disabled | ✅ |
-| **Save** | **disabled** | disabled | ✅ |
+Problema:  
+A rota /agenda está reescrevendo a URL para /agenda?debug=false.
 
-Em `/appointments/new/checkout` com draft vazio:
+Objetivo:  
+A URL padrão deve ser limpa:
 
-| Botão | Estado | Esperado | Correto? |
-|---|---|---|---|
-| **Finalize** | **disabled** | disabled | ✅ |
-| Pay now | enabled | — (é só stub `toast(comingSoon)`) | Aceitável |
+/agenda
 
-Campos obrigatórios efetivos hoje:
+O parâmetro debug só deve aparecer quando for true:
 
-- `Save` exige: `contact` + `calendarId` + `startISO` (não exige serviço — salva agendamento sem serviço com duração 60 min default).
-- `Checkout` exige: tudo do Save + pelo menos 1 serviço.
-- `Finalize` exige: contact + calendarId + staff resolvido + startISO + ≥1 serviço.
+/agenda?debug=true
 
-⚠️ Decisão pendente: o `Save` permitir agendamento sem serviço foi intencional na Sprint anterior. Se a regra for "serviço sempre obrigatório", precisa apertar `canSave`.
+Ações:
 
-## 5. Arquivos alterados na Sprint 1
+1. Corrigir validateSearch/default search em src/routes/_authenticated/agenda.tsx.
+2. Garantir que navegar para /agenda não adicione debug=false.
+3. Garantir que debug=true continue funcionando se necessário.
 
-| Arquivo | O que mudou | Por quê | Impacto | Risco regressão |
-|---|---|---|---|---|
-| `src/routes/_authenticated/appointments.new.tsx` | Reduzido a layout wrapper (`<Outlet />`) | Sem Outlet, `/services` e `/checkout` não renderizavam | Sub-rotas voltam a montar | Baixo |
-| `src/routes/_authenticated/appointments.new.index.tsx` | Novo leaf com o form (movido do antigo `.tsx`) + `canSave`/`canCheckout` + `disabled` nos botões | Separar layout do leaf; impedir submit com draft inválido | URL `/appointments/new` mantém-se | Baixo — testado |
-| `src/routes/_authenticated/appointments.new.checkout.tsx` | `canFinalize` + `disabled={saving || !canFinalize}` | Impedir Finalize com draft inválido | Bloqueia chamada inválida ao GHL | Baixo |
-| `src/routes/_authenticated/_admin/route.tsx` | Trocou guard server-side por `AdminGate` client (`useCurrentUser` + `throw redirect`) | Evitar race 401/403 que bloqueava Admin | **Admin ok, mas Artist agora cai em error boundary em vez de redirect** | **ALTO — regressão confirmada** |
-| `src/routes/auth.tsx` | `ssr:false` + `<ClientOnly>` ao redor de `AuthPage` | Eliminar hydration mismatch | Login funciona, sem flash | Baixo |
+&nbsp;
 
-## 6. Resultado final
+**Hotfix 3 — Corrigir i18n para PT como padrão real**
 
-- Sprint 1 aprovada? **Não.**
-- Confiança: **70%** (4 de 5 itens OK; AdminGate quebrou o caso "não-admin").
-- Bugs remanescentes:
-  1. **CRÍTICO** — `AdminGate` lança `redirect()` dentro de render; TanStack trata como erro e mostra "This page didn't load" para Artist em `/ghl-test`. Precisa hotfix antes da Sprint 2.
-  2. **Médio** — i18n carregando inglês em vez de pt-BR (pré-existente, fora do escopo da Sprint 1, mas degrada UX).
-  3. **Baixo/decisão** — `Save` em `/appointments/new` aceita agendamento sem serviço. Confirmar regra.
+Problema:  
+Com navegador PT-BR, várias labels aparecem em inglês.
 
-## Hotfix proposto (a executar em build mode antes da Sprint 2)
+Objetivo:  
+O idioma padrão deve ser PT.
 
-Trocar o render-time `throw redirect` por um gate baseado em `beforeLoad` que consulta a sessão Supabase + perfil, ou um padrão `useEffect`+`navigate` com fallback null:
+Ações:
 
-```tsx
-// src/routes/_authenticated/_admin/route.tsx
-import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
-import { useCurrentUser } from "@/hooks/use-current-user";
+1. Configurar fallbackLng como pt.
+2. Garantir supportedLngs: pt, en, fr.
+3. Garantir que pt-BR resolva para pt.
+4. Revisar chaves usadas em:
+  - Agenda
+  - Novo agendamento
+  - Serviços
+  - Checkout
+  - Navegação
+  - Financeiro
+5. Adicionar chaves faltantes em pt.json.
+6. Garantir que não haja textos hardcoded em inglês nos principais fluxos.
 
-export const Route = createFileRoute("/_authenticated/_admin")({
-  component: AdminGate,
-});
+&nbsp;
 
-function AdminGate() {
-  const { data, isLoading, isError } = useCurrentUser();
-  const navigate = useNavigate();
-  const isAdmin = data?.role === "admin";
+**Hotfix 4 — Console error Supabase**
 
-  useEffect(() => {
-    if (!isLoading && (isError || !isAdmin)) {
-      navigate({ to: "/agenda", replace: true });
-    }
-  }, [isLoading, isError, isAdmin, navigate]);
+Problema:  
+Aparece TypeError: Failed to fetch vindo de supabase-js durante navegação/teardown.
 
-  if (isLoading || !isAdmin) return null; // sem flash de conteúdo admin
-  return <Outlet />;
-}
-```
+Objetivo:  
+Investigar se é apenas ruído ou erro real.
 
-Alternativa mais limpa (preferida se aprovada): mover a checagem para `beforeLoad` do route `_admin` consumindo a sessão + perfil via `context.queryClient.ensureQueryData(...)` — isso devolve o comportamento server-friendly de redirect, sem render boundary. Custo: precisa expor `getMyProfile` como queryOptions reutilizável.
+Ações:
 
-Após o hotfix, re-rodar exatamente os mesmos 4 blocos de Playwright (rotas, guard, hydration, botões) e só então abrir Sprint 2.
+1. Identificar a origem exata.
+2. Se for ruído de teardown/refresh, tratar de forma segura.
+3. Se for erro real de sessão/auth, corrigir.
+4. Não esconder erros importantes de produção.
 
-Nenhuma outra alteração será feita nesta etapa.
+&nbsp;
+
+**Validação obrigatória com Playwright**
+
+Após aplicar os hotfixes, execute novamente a bateria completa:
+
+- login admin
+- login artist
+- /agenda
+- /appointments/new
+- /appointments/new/services
+- /appointments/new/checkout
+- /ghl-test admin
+- /ghl-test artist
+- /financeiro admin
+- /financeiro artist
+- desktop
+- mobile
+
+Validar:
+
+- sem hydration mismatch
+- sem dados demo no financeiro
+- /agenda sem ?debug=false
+- PT-BR renderizando em PT
+- admin acessa /ghl-test
+- artist não acessa /ghl-test
+- rotas filhas renderizam corretamente
+- sem erros críticos no console
+- sem network errors inesperados
+
+**Entrega final obrigatória**
+
+Ao final entregue:
+
+1. Arquivos alterados
+2. Migrations criadas/alteradas
+3. Dados removidos
+4. Evidência dos testes Playwright
+5. Console/network final
+6. Taxa de confiança atual
+7. Sprint 1 aprovada? Sim/Não
+8. Bugs restantes, se houver
+
+Não avance para Sprint 2 até a Sprint 1 atingir no mínimo 95% de confiança.
+
+Esse é o caminho certo: **fecha o chão antes de construir o segundo andar**.
