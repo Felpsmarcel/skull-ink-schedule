@@ -287,8 +287,9 @@ function StaffColumn({ agenda }: { agenda: ReturnType<typeof useStaffDayAgenda>[
             </div>
           ))
         ) : error && slots.length === 0 ? (
-          <div className="p-2 text-[10px] text-muted-foreground">
-            <pre className="whitespace-pre-wrap break-all">{error}</pre>
+          <div className="p-2 text-center text-[10px] text-muted-foreground" title={error}>
+            <AlertTriangle className="mx-auto mb-1 h-3 w-3 text-destructive" />
+            <p>{t("agenda.errorLoading")}</p>
           </div>
         ) : (
           slots.map((slot) => (
