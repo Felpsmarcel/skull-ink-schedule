@@ -123,7 +123,35 @@ function ArtistView({ data }: { data: Extract<ReturnType<typeof useFinanceSummar
         Valores exibidos são a sua comissão (40%).
       </p>
 
-      <section className="overflow-hidden rounded-lg border border-border">
+      {data.rows.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground sm:hidden">
+          Sem agendamentos.
+        </div>
+      ) : (
+        <section className="space-y-2 sm:hidden">
+          {data.rows.map((r) => (
+            <article key={r.id} className="rounded-lg border border-border bg-card p-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-medium">
+                    {r.servicesSummary || r.contactName || "—"}
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">{formatDateTime(r.startAt)}</div>
+                </div>
+                <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+                  {r.bucket}
+                </span>
+              </div>
+              <div className="mt-2 flex items-baseline justify-between">
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Comissão</span>
+                <span className="text-sm font-semibold">{formatCurrency(r.commissionEur)}</span>
+              </div>
+            </article>
+          ))}
+        </section>
+      )}
+
+      <section className="hidden overflow-hidden rounded-lg border border-border sm:block">
         <table className="w-full text-sm">
           <thead className="bg-muted/50 text-[10px] uppercase tracking-wider text-muted-foreground">
             <tr>
@@ -175,7 +203,44 @@ function AdminView({ data }: { data: Extract<ReturnType<typeof useFinanceSummary
         <StatCard label="A receber" value={formatCurrency(data.aReceber)} />
       </section>
 
-      <section className="overflow-hidden rounded-lg border border-border">
+      {data.rows.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground sm:hidden">
+          Sem agendamentos.
+        </div>
+      ) : (
+        <section className="space-y-2 sm:hidden">
+          {data.rows.map((r) => (
+            <article key={r.id} className="space-y-2 rounded-lg border border-border bg-card p-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-medium">{r.contactName ?? "—"}</div>
+                  <div className="truncate text-[11px] text-muted-foreground">{r.servicesSummary}</div>
+                  <div className="text-[11px] text-muted-foreground">{formatDateTime(r.startAt)}</div>
+                </div>
+                <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+                  {r.bucket}
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-2 border-t border-border pt-2 text-right">
+                <div>
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Total</div>
+                  <div className="text-sm font-semibold">{formatCurrency(r.totalEur)}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Comissão</div>
+                  <div className="text-sm font-semibold text-amber-600">{formatCurrency(r.commissionEur)}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Estúdio</div>
+                  <div className="text-sm font-semibold text-emerald-600">{formatCurrency(r.studioEur)}</div>
+                </div>
+              </div>
+            </article>
+          ))}
+        </section>
+      )}
+
+      <section className="hidden overflow-hidden rounded-lg border border-border sm:block">
         <table className="w-full text-sm">
           <thead className="bg-muted/50 text-[10px] uppercase tracking-wider text-muted-foreground">
             <tr>
