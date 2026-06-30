@@ -157,7 +157,7 @@ function MonthlyReportPage() {
       {isLoading ? (
         <LoadingState label="Carregando relatório..." />
       ) : error ? (
-        <ErrorState message={(error as Error).message} onRetry={() => refetch()} />
+        <ErrorState description={(error as Error).message} onRetry={() => refetch()} />
       ) : !rows || rows.length === 0 ? (
         <EmptyState
           icon={<FileText className="h-6 w-6" />}
@@ -274,7 +274,7 @@ function GhlContactSheet({
           {isLoading ? (
             <LoadingState label="Buscando..." />
           ) : error ? (
-            <ErrorState message={(error as Error).message} />
+            <ErrorState description={(error as Error).message} />
           ) : !data ? (
             <p className="text-muted-foreground">Sem dados.</p>
           ) : (
