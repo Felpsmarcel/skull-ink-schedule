@@ -2,10 +2,12 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Search, Loader2, Check } from "lucide-react";
+import { ArrowLeft, Search, Check } from "lucide-react";
 import "@/i18n";
 
 import { Input } from "@/components/ui/input";
+import { LoadingState } from "@/components/ui/loading-state";
+import { ErrorState } from "@/components/ui/error-state";
 import { cn } from "@/lib/utils";
 import { fetchActiveServices, formatPriceRange, type Service } from "@/lib/services";
 import { useAppointmentDraft } from "@/stores/appointment-draft";
@@ -76,11 +78,17 @@ function ServicesPage() {
 
       <main className="flex-1 overflow-auto pb-6">
         {query.isLoading ? (
-          <div className="flex items-center gap-2 p-4 text-xs text-muted-foreground">
-            <Loader2 className="h-3 w-3 animate-spin" /> …
+          <div className="p-4">
+            <LoadingState inline size="sm" />
           </div>
         ) : query.error ? (
-          <p className="p-4 text-xs text-destructive">{(query.error as Error).message}</p>
+          <div className="p-4">
+            <ErrorState
+              description="Não foi possível carregar os serviços."
+              details={(query.error as Error).message}
+              onRetry={() => query.refetch()}
+            />
+          </div>
         ) : (query.data ?? []).length === 0 ? (
           <div className="p-4 text-sm text-muted-foreground">
             <p>{t("appt.noServicesCatalog")}</p>

@@ -254,11 +254,13 @@ function AppointmentNewPage() {
             {!draft.calendarId ? (
               <p className="text-xs text-muted-foreground">{t("appt.pickStaffFirst")}</p>
             ) : slotsQuery.isLoading ? (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Loader2 className="h-3 w-3 animate-spin" /> {t("appt.loadingSlots")}
-              </div>
+              <LoadingState inline size="sm" label={t("appt.loadingSlots")} />
             ) : slotsQuery.error ? (
-              <p className="text-xs text-destructive">{(slotsQuery.error as Error).message}</p>
+              <ErrorState
+                description="Não foi possível carregar os horários."
+                details={(slotsQuery.error as Error).message}
+                onRetry={() => slotsQuery.refetch()}
+              />
             ) : (slotsQuery.data ?? []).length === 0 ? (
               <p className="text-xs text-muted-foreground">{t("appt.noSlots")}</p>
             ) : (
@@ -474,11 +476,17 @@ function SearchContactsPanel({ onPick }: { onPick: (c: GhlContact) => void }) {
         />
       </div>
       {query.isLoading ? (
-        <div className="flex items-center gap-2 p-3 text-xs text-muted-foreground">
-          <Loader2 className="h-3 w-3 animate-spin" /> …
+        <div className="p-3">
+          <LoadingState inline size="sm" />
         </div>
       ) : query.error ? (
-        <p className="p-3 text-xs text-destructive">{(query.error as Error).message}</p>
+        <div className="p-3">
+          <ErrorState
+            description="Não foi possível carregar os contactos."
+            details={(query.error as Error).message}
+            onRetry={() => query.refetch()}
+          />
+        </div>
       ) : debounced.length < 2 ? (
         <p className="p-3 text-xs text-muted-foreground">{t("appt.searchHint")}</p>
       ) : (query.data ?? []).length === 0 ? (
