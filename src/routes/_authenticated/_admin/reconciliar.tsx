@@ -20,6 +20,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
+import { StatusBadge } from "@/components/ui/status-badge";
 import {
   Collapsible,
   CollapsibleContent,
@@ -189,7 +190,12 @@ function FailureCard({
     <li className="rounded-lg border border-border bg-card p-4 text-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1 space-y-2">
-          <div className="font-medium leading-snug">{failure.reason}</div>
+          <div className="flex items-start gap-2">
+            <StatusBadge variant="warning" className="mt-0.5 shrink-0">
+              Pendente
+            </StatusBadge>
+            <div className="font-medium leading-snug">{failure.reason}</div>
+          </div>
           <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
             <span className="inline-flex items-center gap-1">
               <Calendar className="h-3 w-3" />

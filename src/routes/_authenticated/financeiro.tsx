@@ -10,6 +10,7 @@ import { formatCurrency, formatDateTime } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { LoadingState } from "@/components/ui/loading-state";
 import { ErrorState } from "@/components/ui/error-state";
+import { StatusBadge, bucketToVariant, bucketLabel } from "@/components/ui/status-badge";
 import { runGhlSync } from "@/lib/sync.functions";
 import type { PaymentBucket } from "@/lib/finance.functions";
 
@@ -264,9 +265,9 @@ function ArtistView({
                   </div>
                   <div className="text-[11px] text-muted-foreground">{formatDateTime(r.startAt)}</div>
                 </div>
-                <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
-                  {r.bucket}
-                </span>
+                <StatusBadge variant={bucketToVariant(r.bucket)} className="shrink-0">
+                  {bucketLabel(r.bucket)}
+                </StatusBadge>
               </div>
               <div className="mt-2 flex items-baseline justify-between">
                 <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Comissão</span>
@@ -302,8 +303,10 @@ function ArtistView({
                   <td className="px-3 py-2 text-right font-semibold">
                     {formatCurrency(r.commissionEur)}
                   </td>
-                  <td className="px-3 py-2 text-right text-[10px] uppercase tracking-wider">
-                    {r.bucket}
+                  <td className="px-3 py-2 text-right">
+                    <StatusBadge variant={bucketToVariant(r.bucket)}>
+                      {bucketLabel(r.bucket)}
+                    </StatusBadge>
                   </td>
                 </tr>
               ))
@@ -351,9 +354,9 @@ function AdminView({
                   <div className="truncate text-[11px] text-muted-foreground">{r.servicesSummary}</div>
                   <div className="text-[11px] text-muted-foreground">{formatDateTime(r.startAt)}</div>
                 </div>
-                <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
-                  {r.bucket}
-                </span>
+                <StatusBadge variant={bucketToVariant(r.bucket)} className="shrink-0">
+                  {bucketLabel(r.bucket)}
+                </StatusBadge>
               </div>
               <div className="grid grid-cols-3 gap-2 border-t border-border pt-2 text-right">
                 <div>
@@ -408,8 +411,10 @@ function AdminView({
                   <td className="px-3 py-2 text-right text-emerald-600">
                     {formatCurrency(r.studioEur)}
                   </td>
-                  <td className="px-3 py-2 text-right text-[10px] uppercase tracking-wider">
-                    {r.bucket}
+                  <td className="px-3 py-2 text-right">
+                    <StatusBadge variant={bucketToVariant(r.bucket)}>
+                      {bucketLabel(r.bucket)}
+                    </StatusBadge>
                   </td>
                 </tr>
               ))
