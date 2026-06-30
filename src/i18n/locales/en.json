@@ -80,7 +80,7 @@
       "notesPlaceholder": "Notes for the studio…",
       "total": "Total",
       "payNow": "Pay now",
-      "finalize": "Finalize",
+      "finalize": "Confirm appointment",
       "errors": {
         "noContact": "Pick a client.",
         "noCalendar": "Pick an artist.",
