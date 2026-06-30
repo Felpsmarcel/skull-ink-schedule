@@ -18,8 +18,23 @@ export const getDayAppointmentStatuses = createServerFn({ method: "GET" })
     if (Number.isNaN(day.getTime())) return [];
     const startISO = new Date(brusselsDayStartMs(day)).toISOString();
     const endISO = new Date(brusselsDayEndMs(day)).toISOString();
+    return queryStatuses(supabase, startISO, endISO);
+  });
 
-    const { data: rows, error } = await supabase
+export const getRangeAppointmentStatuses = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { startISO: string; endISO: string }) => input)
+  .handler(async ({ data, context }): Promise<DayAppointmentStatus[]> => {
+    if (!data.startISO || !data.endISO) return [];
+    return queryStatuses(context.supabase, data.startISO, data.endISO);
+  });
+
+async function queryStatuses(
+  supabase: { from: (t: never) => any },
+  startISO: string,
+  endISO: string,
+): Promise<DayAppointmentStatus[]> {
+    const { data: rows, error } = await (supabase as any)
       .from("appointments" as never)
       .select("id, artist_id, ghl_appointment_id, start_at")
       .gte("start_at", startISO)
@@ -36,7 +51,7 @@ export const getDayAppointmentStatuses = createServerFn({ method: "GET" })
     if (appts.length === 0) return [];
 
     const ids = appts.map((a) => a.id);
-    const { data: payRows, error: payErr } = await supabase
+    const { data: payRows, error: payErr } = await (supabase as any)
       .from("payments" as never)
       .select("appointment_id, status")
       .eq("status", "paid")
@@ -53,4 +68,4 @@ export const getDayAppointmentStatuses = createServerFn({ method: "GET" })
       artistId: a.artist_id,
       bucket: deriveBucket(a.start_at, paidIds.has(a.id)),
     }));
-  });
+}
