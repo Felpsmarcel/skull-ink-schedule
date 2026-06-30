@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
-import gfSkull from "@/assets/gf-skull.png";
+import gfLockup from "@/assets/gf-lockup.png";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
@@ -75,8 +75,11 @@ function AuthPage() {
 
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center bg-background px-6">
-      <img src={gfSkull} alt="" width={56} height={56} className="mb-3 h-14 w-14" />
-      <h1 className="font-display text-xl uppercase tracking-wide">GF Tattoo Studio</h1>
+      <img
+        src={gfLockup}
+        alt="GF Tattoo Studio"
+        className="mb-4 h-20 w-auto object-contain"
+      />
       <p className="mb-6 text-xs uppercase tracking-wider text-muted-foreground">Entrar</p>
 
       <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-3">
