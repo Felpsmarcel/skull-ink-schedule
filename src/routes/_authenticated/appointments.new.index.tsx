@@ -56,7 +56,6 @@ import {
   useAppointmentDraft,
   totalDurationMin,
   totalFinalEur,
-  totalOriginalEur,
 } from "@/stores/appointment-draft";
 import { finalizeAppointment } from "@/lib/appointments";
 
