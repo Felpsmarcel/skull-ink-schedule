@@ -20,7 +20,7 @@ import {
 import { useFinalizeAppointment } from "@/hooks/use-finalize-appointment";
 
 export const Route = createFileRoute("/_authenticated/appointments/new/checkout")({
-  head: () => ({ meta: [{ title: "Checkout — GF Tattoo Studio" }] }),
+  head: () => ({ meta: [{ title: "Revisar agendamento — GF Tattoo Studio" }] }),
   component: CheckoutPage,
 });
 
