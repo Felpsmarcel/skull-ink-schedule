@@ -5,7 +5,6 @@ import {
   ArrowLeft,
   AlertTriangle,
   Check,
-  RefreshCw,
   ChevronDown,
   Inbox,
   Calendar,
@@ -40,9 +39,9 @@ import {
 import {
   listOpenSyncFailures,
   resolveSyncFailure,
-  runGhlSync,
   type SyncFailureRow,
 } from "@/lib/sync.functions";
+import { SyncGhlButton } from "@/components/sync-ghl-button";
 
 export const Route = createFileRoute("/_authenticated/_admin/reconciliar")({
   head: () => ({ meta: [{ title: "Reconciliar GHL — GF Tattoo Studio" }] }),
@@ -68,24 +67,11 @@ function ReconciliarPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const list = useServerFn(listOpenSyncFailures);
-  const sync = useServerFn(runGhlSync);
   const resolve = useServerFn(resolveSyncFailure);
 
   const failuresQ = useQuery<SyncFailureRow[]>({
     queryKey: ["sync-failures"],
     queryFn: () => list(),
-  });
-
-  const syncM = useMutation({
-    mutationFn: () => sync(),
-    onSuccess: (r) => {
-      toast.success(
-        `Sync ok · ${r.inserted} novos · ${r.updated} atualizados · ${r.failures} falhas`,
-      );
-      qc.invalidateQueries({ queryKey: ["sync-failures"] });
-      qc.invalidateQueries({ queryKey: ["finance-summary"] });
-    },
-    onError: (e) => toast.error(e instanceof Error ? e.message : String(e)),
   });
 
   const resolveM = useMutation({
@@ -113,17 +99,7 @@ function ReconciliarPage() {
             <AlertTriangle className="h-4 w-4" /> Reconciliar GHL
           </h1>
         </div>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => syncM.mutate()}
-          disabled={syncM.isPending}
-        >
-          <RefreshCw
-            className={`mr-2 h-3.5 w-3.5 ${syncM.isPending ? "animate-spin" : ""}`}
-          />
-          Sincronizar agora
-        </Button>
+        <SyncGhlButton>Sincronizar agora</SyncGhlButton>
       </header>
 
       <main className="flex-1 space-y-3 p-4">

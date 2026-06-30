@@ -1,17 +1,13 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
-import { AlertTriangle, ArrowLeft, RefreshCw, Wallet } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Wallet } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
 import { useFinanceSummary } from "@/hooks/use-finance";
 import { useIsAdmin } from "@/hooks/use-current-user";
 import { formatCurrency, formatDateTime } from "@/lib/format";
-import { Button } from "@/components/ui/button";
 import { LoadingState } from "@/components/ui/loading-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { StatusBadge, bucketToVariant, bucketLabel } from "@/components/ui/status-badge";
-import { runGhlSync } from "@/lib/sync.functions";
+import { SyncGhlButton } from "@/components/sync-ghl-button";
 import type { PaymentBucket } from "@/lib/finance.functions";
 
 type Period = "today" | "week" | "month" | "all";
@@ -97,19 +93,6 @@ function FinanceiroPage() {
   const navigate = useNavigate();
   const { data, isLoading, error, refetch } = useFinanceSummary();
   const isAdmin = useIsAdmin();
-  const qc = useQueryClient();
-  const sync = useServerFn(runGhlSync);
-  const syncM = useMutation({
-    mutationFn: () => sync(),
-    onSuccess: (r) => {
-      toast.success(
-        `Sync · ${r.inserted} novos · ${r.updated} atualizados · ${r.failures} falhas`,
-      );
-      qc.invalidateQueries({ queryKey: ["finance-summary"] });
-      qc.invalidateQueries({ queryKey: ["sync-failures"] });
-    },
-    onError: (e) => toast.error(e instanceof Error ? e.message : String(e)),
-  });
 
   const [period, setPeriod] = useState<Period>("all");
   const [bucket, setBucket] = useState<BucketFilter>("all");
@@ -137,17 +120,7 @@ function FinanceiroPage() {
         <div className="flex items-center gap-2">
           {isAdmin ? (
             <>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => syncM.mutate()}
-                disabled={syncM.isPending}
-              >
-                <RefreshCw
-                  className={`mr-2 h-3.5 w-3.5 ${syncM.isPending ? "animate-spin" : ""}`}
-                />
-                Sincronizar
-              </Button>
+              <SyncGhlButton />
               <Link
                 to="/reconciliar"
                 className="grid h-9 w-9 place-items-center rounded-md hover:bg-muted"
