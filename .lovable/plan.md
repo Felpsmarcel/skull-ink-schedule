@@ -1,35 +1,32 @@
-## Mudanças
+## Mudanças de texto (somente i18n + meta title)
 
-### 1. `src/routes/_authenticated/appointments.new.index.tsx`
-- Logo abaixo do header, antes do `<main>`, adicionar uma **checklist horizontal compacta** com 4 pílulas: Cliente, Tatuador, Horário, Serviço. Cada pílula mostra um ícone `CheckCircle2` (preenchido = `text-primary`) ou `Circle` (pendente = `text-muted-foreground`) + label curta. Layout `flex gap-2 overflow-x-auto` para caber no mobile sem overflow horizontal da página.
-- Usar `validateAppointmentDraft(draft, artists)` (já existente) como **única fonte de verdade** para derivar:
-  - `completed = { contact, staff, start, service }` (booleans, calculados a partir do draft sem repetir lógica).
-  - `firstPending`: a primeira `reason` do validator (`noContact` → `noCalendar`/`noStaff` → `noStart` → `noServices`).
-- Substituir o **footer atual** (3 botões: ghost "⋯", outline "Checkout", primary "Checkout" — visivelmente duplicado) por **um único botão primary full-width**:
-  - Texto dinâmico via `firstPending` → "Selecione um cliente" / "Escolha um tatuador" / "Escolha um horário" / "Adicione um serviço".
-  - Quando válido → "Revisar agendamento" + total à direita; ao clicar, `navigate({ to: "/appointments/new/checkout" })`.
-  - `disabled` quando há pendência (texto explicativo já no próprio botão; o botão fica desabilitado para não parecer quebrado, mas a checklist no topo mostra exatamente o que falta).
-- Reaproveitar `formatPrice(totalFinalEur(draft))` para o total.
+### `src/i18n/locales/pt.json`
+- `appt.checkout`: `"Checkout"` → `"Revisar agendamento"`
+- `appt.checkoutTitle`: `"Detalhe / Checkout"` → `"Revisar agendamento"`
+- `appt.finalize`: `"Finalizar"` → `"Confirmar agendamento"`
+- `appt.payNow`: mantida no JSON (não é renderizada em nenhum lugar hoje — já removida da UI em iteração anterior); nenhuma ação.
 
-### 2. i18n — `src/i18n/locales/{pt,en,fr}.json`
-Adicionar sob `common.appt`:
-```
-"checklist": { "client": "...", "staff": "...", "time": "...", "service": "..." },
-"cta": {
-  "selectClient": "Selecione um cliente" | "Pick a client" | "Choisir un client",
-  "selectStaff":  "Escolha um tatuador" | "Pick an artist" | "Choisir un tatoueur",
-  "selectTime":   "Escolha um horário" | "Pick a time"    | "Choisir un créneau",
-  "addService":   "Adicione um serviço"| "Add a service"  | "Ajouter un service",
-  "review":       "Revisar agendamento"| "Review booking" | "Vérifier le rendez-vous"
-}
-```
-Manter as chaves existentes intactas.
+### `src/i18n/locales/en.json`
+- `appt.checkout`: `"Checkout"` → `"Review appointment"`
+- `appt.checkoutTitle`: `"Detail / Checkout"` → `"Review appointment"`
+- `appt.finalize`: → `"Confirm appointment"`
 
-### 3. Fora de escopo
-- Sem mudanças em `appointment-draft-validate.ts`, store, rotas, server functions, GHL, Supabase, migrations.
-- Não criar agendamento aqui.
-- Comportamento das outras telas (services, checkout) intocado.
+### `src/i18n/locales/fr.json`
+- `appt.checkout`: `"Checkout"` → `"Vérifier le rendez-vous"`
+- `appt.checkoutTitle`: `"Détail / Checkout"` → `"Vérifier le rendez-vous"`
+- `appt.finalize`: → `"Confirmer le rendez-vous"`
 
-## Validação
-- Typecheck.
-- Mobile (390x844) via Playwright: abrir `/appointments/new`, conferir checklist com 4 pílulas e texto do CTA mudando ao preencher cada campo. Sem overflow horizontal.
+### `src/routes/_authenticated/appointments.new.checkout.tsx`
+- Apenas o `<title>` hardcoded na linha 23: `"Checkout — GF Tattoo Studio"` → `"Revisar agendamento — GF Tattoo Studio"`.
+- Nenhuma outra alteração (rota, componente, lógica intactos).
+
+### Fora do escopo (não tocar)
+- Nome do arquivo `appointments.new.checkout.tsx` e rota `/appointments/new/checkout`.
+- Lógica de criação, server functions, GHL, Supabase, migrations.
+- `appointments.new.index.tsx` não tem texto hardcoded relevante (já usa `t()` via `validateAppointmentDraft`); nenhuma edição.
+
+### Critérios de aceite verificáveis
+1. Header do step de revisão exibe "Revisar agendamento".
+2. Botão final exibe "Confirmar agendamento" (quando `canCheckout` é true).
+3. Navegar de `/appointments/new` → `/appointments/new/checkout` continua funcionando (rota inalterada).
+4. EN/FR mostram as traduções equivalentes ao trocar o idioma.
