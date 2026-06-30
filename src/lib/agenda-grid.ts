@@ -91,6 +91,57 @@ export function brusselsDayEndMs(date: Date): number {
   return brusselsDayStartMs(date) + 24 * 3600 * 1000 - 1;
 }
 
+/** Shift a Brussels-day-start by N whole days. */
+export function brusselsAddDays(ms: number, days: number): number {
+  // Use day key arithmetic to survive DST boundaries.
+  const d = new Date(ms + days * 24 * 3600 * 1000);
+  return brusselsDayStartMs(d);
+}
+
+/** Monday 00:00 Europe/Brussels for the week containing `date`. */
+export function brusselsWeekStartMs(date: Date): number {
+  const dayStart = brusselsDayStartMs(date);
+  // Determine weekday (1=Mon..7=Sun) in Brussels.
+  const wd = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, weekday: "short" }).format(
+    new Date(dayStart),
+  );
+  const map: Record<string, number> = { Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4, Sat: 5, Sun: 6 };
+  const delta = map[wd] ?? 0;
+  return brusselsAddDays(dayStart, -delta);
+}
+
+export function brusselsWeekEndMs(date: Date): number {
+  return brusselsAddDays(brusselsWeekStartMs(date), 7) - 1;
+}
+
+/** 1st-of-month 00:00 Europe/Brussels. */
+export function brusselsMonthStartMs(date: Date): number {
+  const key = brusselsDayKey(date);
+  const [y, m] = key.split("-").map(Number);
+  const guess = Date.UTC(y, m - 1, 1, 0, 0, 0);
+  const off = brusselsOffsetMs(new Date(guess));
+  return guess - off;
+}
+
+export function brusselsMonthEndMs(date: Date): number {
+  const key = brusselsDayKey(date);
+  const [y, m] = key.split("-").map(Number);
+  const guess = Date.UTC(y, m, 1, 0, 0, 0);
+  const off = brusselsOffsetMs(new Date(guess));
+  return guess - off - 1;
+}
+
+/** Enumerate day-start ms values for each Brussels calendar day in [start, end). */
+export function enumerateBrusselsDays(startMs: number, endMs: number): number[] {
+  const out: number[] = [];
+  let cur = brusselsDayStartMs(new Date(startMs));
+  while (cur < endMs) {
+    out.push(cur);
+    cur = brusselsAddDays(cur, 1);
+  }
+  return out;
+}
+
 /** Round ms down to nearest SLOT_MINUTES boundary in Brussels day */
 function snapDownToSlot(ms: number, dayStartMs: number): number {
   const delta = ms - dayStartMs;

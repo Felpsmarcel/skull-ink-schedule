@@ -1,54 +1,56 @@
-# Importar agendamentos já existentes
+# Agenda: visão Dia / Semana / Mês
 
-Resposta direta: **você não precisa subir nada manualmente**. A sincronização GHL → Supabase já existe (`syncGhlAppointments`) e é exatamente para isso. O único ajuste necessário é deixar a janela de datas configurável, porque hoje ela é fixa em "últimos 7 dias / próximos 90 dias" e perde agendamentos mais antigos.
+Hoje a agenda mostra só o dia. Vou adicionar um toggle **Dia / Semana / Mês** no header, sem refazer o que já funciona.
 
-## Como funciona hoje
+## Mudanças
 
-- Admin clica em **Sincronizar GHL** em `/financeiro` ou `/reconciliar`.
-- O servidor lê todos os artistas ativos com `ghl_calendar_id`, busca eventos no GHL no intervalo configurado e:
-  - insere novos em `public.appointments` (upsert seguro, sem sobrescrever financeiro);
-  - atualiza horário/status/contato dos já existentes;
-  - registra falhas em `ghl_sync_failures` para a tela de reconciliar.
-- Cada appointment já fica vinculado a `artist_id`, `calendar_id`, `ghl_contact_id`, `contact_name`, `start_at`, `end_at`, `status` e `commission_pct` do artista.
+### 1. `src/routes/_authenticated/agenda.tsx`
+- Estado novo: `view: 'day' | 'week' | 'month'` (default `day`), persistido em `?view=` (validateSearch).
+- Header: adicionar um `Tabs` (shadcn) ao lado do seletor de data com as 3 opções. Os botões `‹ ›` passam a deslocar dia/semana/mês conforme `view`. O `dateLabel` muda de formato (dia: "Seg, 30 jun"; semana: "30 jun – 06 jul"; mês: "Junho 2026").
+- Render condicional:
+  - `view === 'day'` → grid atual intacto.
+  - `view === 'week'` → nova `WeekView`.
+  - `view === 'month'` → nova `MonthView`.
 
-## Pré-requisito no GHL (informações mínimas por cliente)
+### 2. Hook novo `src/hooks/use-agenda-range.ts`
+- `useStaffRangeAgenda(start, end, { artistId })` — versão "range" do `useStaffDayAgenda`.
+- Busca **só eventos** (`getEvents` por calendário no intervalo) — free-slots só faz sentido na visão dia, então não chamamos nas visões semana/mês (economiza chamadas e respeita scope).
+- Retorna por staff: lista de `GhlEvent[]` no intervalo. Reaproveita `useArtists` e o gating por `artistId` igual ao hook atual.
+- Também invalida pela mesma `queryKey: ['agenda', ...]` para o botão Sincronizar continuar refrescando.
 
-Para que o sync identifique corretamente, cada evento no GHL precisa de:
-1. **Calendário do artista correto** (o `calendarId` precisa bater com `artists.ghl_calendar_id` no Supabase — já está seedado).
-2. **Contato vinculado** (`contactId`) com pelo menos **nome + (telefone OU email)**.
-3. **Start/End time** definidos.
-4. **Status** (`confirmed`, `showed`, `noshow`, `cancelled`, `new`).
+### 3. `WeekView` (mesmo arquivo `agenda.tsx`)
+- Layout: 7 colunas (Seg–Dom em `Europe/Brussels`) × linhas de hora (mesma faixa `DEFAULT_START_HOUR`–`DEFAULT_END_HOUR`).
+- Cabeçalho da coluna: dia da semana + número, clicável → muda `view` para `day` daquele dia.
+- Eventos renderizados como blocos posicionados (top/height calculados a partir de `startTime`/`endTime`), com `StatusBadge` (paid/pending/error) usando `useDayAppointmentStatuses` adaptado para a semana (vou expor `useRangeAppointmentStatuses`).
+- Sem horários "livres" desenhados (não chamamos free-slots aqui); slots vazios = grade vazia, e clicar numa célula vazia abre `/appointments/new` com `setStart()` para aquele horário/calendário (quando só 1 artista visível) ou para o início do dia (quando vários).
 
-Campos opcionais que **não** vêm do GHL e ficam vazios no Supabase: `total_eur` (valor), `services`, `tattoo_style`, `tattoo_size`. Quem preenche isso é o checkout no app. Se quiser histórico financeiro também, dá pra editar depois pelo `/relatorios/agendamentos` (proponho um modo de edição numa próxima sprint — fora desse plano).
+### 4. `MonthView`
+- Calendário tipo "month grid" (6 linhas × 7 colunas), começando na segunda.
+- Cada célula mostra **contagem por status** (ex: `3 ●` confirmados, `1 ⚠` pendentes) somando todos os artistas visíveis. Sem listar agendamentos um a um (não cabe na célula).
+- Clique na célula → muda `view` para `day` naquela data.
+- Setas `‹ ›` mudam de mês.
 
-## Ajuste proposto neste plano
+### 5. `src/lib/agenda-grid.ts`
+- Adicionar helpers utilitários:
+  - `brusselsWeekStartMs(date)` / `brusselsWeekEndMs(date)` (segunda 00:00 → segunda+7 00:00).
+  - `brusselsMonthStartMs(date)` / `brusselsMonthEndMs(date)` (1º do mês → 1º do próximo).
+  - `enumerateDays(startMs, endMs)` retornando `Date[]` em Bruxelas.
+- Sem alterar a lógica de `buildDayGrid` existente.
 
-Adicionar **controle de janela** no botão "Sincronizar GHL" para permitir backfill:
+### 6. `src/hooks/use-agenda-status.ts`
+- Generalizar para `useRangeAppointmentStatuses(startMs, endMs, enabled)` que a função atual reusa internamente para o caso "dia". Mantém a `queryKey` baseada no range.
 
-1. **`src/lib/sync.functions.ts`** — `runGhlSync` passa a aceitar `inputValidator` opcional:
-   - `pastDays` (int, 1–730, default 7)
-   - `futureDays` (int, 0–365, default 90)
-   - Mantém o gate de admin.
+### 7. i18n (`pt/en/fr`)
+- `agenda.view.day`, `agenda.view.week`, `agenda.view.month`.
+- Sem mexer em outras chaves.
 
-2. **`src/components/sync-ghl-button.tsx`** — vira um `DropdownMenu` (ou popover pequeno) com presets:
-   - "Atualizar (padrão)" → 7 / 90
-   - "Backfill 30 dias"
-   - "Backfill 90 dias"
-   - "Backfill 12 meses" (365 / 90)
-   - Mantém o spinner, toast de resumo e invalidação de queries existentes.
+## Fora deste plano
+- Drag-and-drop de eventos.
+- Edição de evento ao clicar (continua somente leitura).
+- Filtro por artista na visão semana/mês (admin vê todos os ativos; tatuador vê só ele — igual hoje).
+- Performance otimizada para meses com muitos eventos (no nosso volume atual não é problema; se for, adiciono virtualização depois).
 
-3. **i18n PT/EN/FR** — labels dos presets em `common.sync.*`.
-
-Sem migration. Sem mudança em RLS. Sem novo endpoint. Só estender a server fn que já existe e melhorar a UX do botão.
-
-## O que você faz depois
-
-1. Confirma que os contatos antigos têm `contactId` e estão atribuídos ao calendário do artista certo no GHL.
-2. Em `/reconciliar`, escolhe **Backfill 12 meses** uma vez.
-3. Toast mostra `fetched / inserted / updated / failures`. Falhas aparecem como cards acionáveis na mesma tela.
-4. `/financeiro`, `/agenda` e `/relatorios/agendamentos` passam a refletir o histórico imediatamente (queries são invalidadas automaticamente).
-
-## Fora deste plano (posso fazer em seguida se quiser)
-
-- Tela de **importação CSV** (para clientes que **não** estão no GHL).
-- Modo de **edição financeira** em `/relatorios/agendamentos` para preencher `total_eur` retroativo.
+## Validação
+- Build + tsgo limpos.
+- Verificar `/agenda?view=week` e `/agenda?view=month` no preview.
+- Confirmar que o role artist continua vendo só o próprio calendário nas 3 visões.

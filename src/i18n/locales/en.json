@@ -22,7 +22,11 @@
       "booked": "Booked",
       "outside": "Closed",
       "errorLoading": "Failed to load",
-      "lastUpdate": "Updated"
+      "lastUpdate": "Updated",
+      "prev": "Previous",
+      "next": "Next",
+      "view": { "day": "Day", "week": "Week", "month": "Month" },
+      "month": { "appts": "appts" }
     },
     "nav": {
       "agenda": "Agenda",
