@@ -5,7 +5,7 @@ import { CalendarDays, LogOut, Plus, User as UserIcon, Wallet, AlertTriangle } f
 import { cn } from "@/lib/utils";
 import { useIsAdmin } from "@/hooks/use-current-user";
 import { supabase } from "@/integrations/supabase/client";
-import gfSkull from "@/assets/gf-skull.png";
+import gfMark from "@/assets/gf-mark.png";
 import { BottomNav } from "@/components/layout/bottom-nav";
 
 const HIDE_CHROME_PREFIXES = ["/appointments/new"];
@@ -41,7 +41,7 @@ function TopBar() {
   return (
     <header className="sticky top-0 z-40 hidden h-14 items-center justify-between gap-4 border-b border-border bg-background/95 px-6 backdrop-blur sm:flex">
       <Link to="/agenda" className="flex items-center gap-2">
-        <img src={gfSkull} alt="" className="h-7 w-7" />
+        <img src={gfMark} alt="" className="h-7 w-7 object-contain" />
         <span className="font-display text-sm uppercase tracking-[0.2em]">GF Tattoo</span>
       </Link>
       <nav className="flex items-center gap-1">
