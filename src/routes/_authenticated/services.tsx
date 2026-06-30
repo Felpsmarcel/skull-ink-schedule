@@ -193,7 +193,7 @@ function ServicesPage() {
   );
 }
 
-function ServiceForm({ initial, onDone }: { initial: Row | null; onDone: () => void }) {
+function ServiceForm({ initial, onDone }: { initial: Row | null; onDone: () => void | Promise<void> }) {
   const create = useServerFn(createService);
   const update = useServerFn(updateService);
   const [name, setName] = useState(initial?.name ?? "");
@@ -207,12 +207,9 @@ function ServiceForm({ initial, onDone }: { initial: Row | null; onDone: () => v
   const [descShort, setDescShort] = useState(initial?.description_short ?? "");
   const [desc, setDesc] = useState(initial?.description ?? "");
   const [active, setActive] = useState(initial?.active ?? true);
-  const [busy, setBusy] = useState(false);
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    try {
+  const saveMut = useMutation({
+    mutationFn: async () => {
       const payload = {
         name: name.trim(),
         category: category.trim(),
@@ -226,18 +223,22 @@ function ServiceForm({ initial, onDone }: { initial: Row | null; onDone: () => v
       };
       if (initial) {
         await update({ data: { id: initial.id, patch: payload } });
-        toast.success("Serviço atualizado");
       } else {
         await create({ data: payload });
-        toast.success("Serviço criado");
       }
-      onDone();
-    } catch (err) {
-      toast.error((err as Error).message);
-    } finally {
-      setBusy(false);
-    }
+    },
+    onSuccess: async () => {
+      toast.success(initial ? "Serviço atualizado" : "Serviço criado");
+      await onDone();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    saveMut.mutate();
   }
+  const busy = saveMut.isPending;
 
   return (
     <form onSubmit={submit} className="space-y-3 pt-4">
