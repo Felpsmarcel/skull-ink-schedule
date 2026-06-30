@@ -23,7 +23,6 @@ import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/e
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as ApiPublicHooksSyncGhlRouteImport } from './routes/api/public/hooks/sync-ghl'
-import { Route as ApiPublicHooksSeedTestUsersRouteImport } from './routes/api/public/hooks/seed-test-users'
 import { Route as AuthenticatedAppointmentsNewServicesRouteImport } from './routes/_authenticated/appointments.new.services'
 import { Route as AuthenticatedAppointmentsNewCheckoutRouteImport } from './routes/_authenticated/appointments.new.checkout'
 
@@ -100,12 +99,6 @@ const ApiPublicHooksSyncGhlRoute = ApiPublicHooksSyncGhlRouteImport.update({
   path: '/api/public/hooks/sync-ghl',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicHooksSeedTestUsersRoute =
-  ApiPublicHooksSeedTestUsersRouteImport.update({
-    id: '/api/public/hooks/seed-test-users',
-    path: '/api/public/hooks/seed-test-users',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const AuthenticatedAppointmentsNewServicesRoute =
   AuthenticatedAppointmentsNewServicesRouteImport.update({
     id: '/services',
@@ -129,7 +122,6 @@ export interface FileRoutesByFullPath {
   '/appointments/new': typeof AuthenticatedAppointmentsNewRouteWithChildren
   '/appointments/new/checkout': typeof AuthenticatedAppointmentsNewCheckoutRoute
   '/appointments/new/services': typeof AuthenticatedAppointmentsNewServicesRoute
-  '/api/public/hooks/seed-test-users': typeof ApiPublicHooksSeedTestUsersRoute
   '/api/public/hooks/sync-ghl': typeof ApiPublicHooksSyncGhlRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -145,7 +137,6 @@ export interface FileRoutesByTo {
   '/reconciliar': typeof AuthenticatedAdminReconciliarRoute
   '/appointments/new/checkout': typeof AuthenticatedAppointmentsNewCheckoutRoute
   '/appointments/new/services': typeof AuthenticatedAppointmentsNewServicesRoute
-  '/api/public/hooks/seed-test-users': typeof ApiPublicHooksSeedTestUsersRoute
   '/api/public/hooks/sync-ghl': typeof ApiPublicHooksSyncGhlRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -165,7 +156,6 @@ export interface FileRoutesById {
   '/_authenticated/appointments/new': typeof AuthenticatedAppointmentsNewRouteWithChildren
   '/_authenticated/appointments/new/checkout': typeof AuthenticatedAppointmentsNewCheckoutRoute
   '/_authenticated/appointments/new/services': typeof AuthenticatedAppointmentsNewServicesRoute
-  '/api/public/hooks/seed-test-users': typeof ApiPublicHooksSeedTestUsersRoute
   '/api/public/hooks/sync-ghl': typeof ApiPublicHooksSyncGhlRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -184,7 +174,6 @@ export interface FileRouteTypes {
     | '/appointments/new'
     | '/appointments/new/checkout'
     | '/appointments/new/services'
-    | '/api/public/hooks/seed-test-users'
     | '/api/public/hooks/sync-ghl'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -200,7 +189,6 @@ export interface FileRouteTypes {
     | '/reconciliar'
     | '/appointments/new/checkout'
     | '/appointments/new/services'
-    | '/api/public/hooks/seed-test-users'
     | '/api/public/hooks/sync-ghl'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -219,7 +207,6 @@ export interface FileRouteTypes {
     | '/_authenticated/appointments/new'
     | '/_authenticated/appointments/new/checkout'
     | '/_authenticated/appointments/new/services'
-    | '/api/public/hooks/seed-test-users'
     | '/api/public/hooks/sync-ghl'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -231,7 +218,6 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
-  ApiPublicHooksSeedTestUsersRoute: typeof ApiPublicHooksSeedTestUsersRoute
   ApiPublicHooksSyncGhlRoute: typeof ApiPublicHooksSyncGhlRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
@@ -338,13 +324,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksSyncGhlRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/hooks/seed-test-users': {
-      id: '/api/public/hooks/seed-test-users'
-      path: '/api/public/hooks/seed-test-users'
-      fullPath: '/api/public/hooks/seed-test-users'
-      preLoaderRoute: typeof ApiPublicHooksSeedTestUsersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/_authenticated/appointments/new/services': {
       id: '/_authenticated/appointments/new/services'
       path: '/services'
@@ -421,7 +400,6 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
-  ApiPublicHooksSeedTestUsersRoute: ApiPublicHooksSeedTestUsersRoute,
   ApiPublicHooksSyncGhlRoute: ApiPublicHooksSyncGhlRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
@@ -430,3 +408,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
