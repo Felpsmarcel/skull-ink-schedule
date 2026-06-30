@@ -215,7 +215,7 @@ function AgendaPage() {
           {/* staff columns */}
           <div className="flex flex-1">
             {agendas.map((a) => (
-              <StaffColumn key={a.staff.id} agenda={a} />
+              <StaffColumn key={a.staff.id} agenda={a} statusMap={statusMap} />
             ))}
           </div>
         </div>
