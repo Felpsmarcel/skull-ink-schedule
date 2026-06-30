@@ -1,46 +1,42 @@
-## Plano: Navegação autenticada padronizada
+## Objetivo
+Tornar status visualmente legíveis sem mexer no design system global.
 
-### Componente único `AuthShell`
-Novo `src/components/layout/auth-shell.tsx` renderizado no layout `_authenticated/route.tsx`. Centraliza chrome de navegação; substitui o `BottomNav` atual e o `UserMenu` espalhado.
+## 1. Novo componente `src/components/ui/status-badge.tsx`
+- Props: `variant: "success" | "warning" | "danger" | "info" | "neutral"`, `children`, `className?`, opcional `icon?`.
+- Implementação: wrapper sobre o `Badge` do shadcn (variant `outline`) com classes Tailwind por variante, mantendo fundo claro + texto/borda coloridos para bom contraste no tema B/W:
+  - success → `bg-emerald-50 text-emerald-700 border-emerald-200`
+  - warning → `bg-amber-50 text-amber-800 border-amber-200`
+  - danger  → `bg-red-50 text-red-700 border-red-200`
+  - info    → `bg-sky-50 text-sky-700 border-sky-200`
+  - neutral → `bg-muted text-muted-foreground border-border`
+- Tamanho compacto (`text-xs px-2 py-0.5 rounded-md font-medium`) consistente com badges atuais.
+- Sem alterações em `styles.css` nem em tokens globais (cores Tailwind built-in, escopadas ao componente).
 
-- **Itens base (ambos roles)**: Agenda (`/agenda`), Novo (`/appointments/new`, FAB destacado), Financeiro (`/financeiro`), Perfil (`/menu`).
-- **Itens admin-only** (via `useIsAdmin()`): Reconciliar (`/reconciliar`) — aparece só no header desktop e dentro de `/menu`; **não** vira tab principal para evitar tab vazia para artista.
-- **Itens removidos da nav principal**: Serviços e Avaliações (placeholders/admin-only) — Serviços permanece acessível via `/menu` para admin; Avaliações fica acessível só via `/menu` enquanto não houver feature real.
-- **Sair**: continua no `/menu`; remover do dropdown UserMenu (UserMenu inteiro deixa de ser usado nos headers).
+## 2. Helper de mapeamento de bucket
+No mesmo arquivo, exportar:
+```ts
+export function bucketToVariant(b: "pago" | "pendente" | "a_receber"): Variant
+// pago → success, pendente → warning, a_receber → info
+```
+e `bucketLabel(b)` reutilizando os textos já mostrados hoje (sem tocar na lógica em `finance.functions.ts`).
 
-### Layout responsivo
+## 3. `src/routes/_authenticated/financeiro.tsx`
+Substituir os 4 pontos que hoje renderizam `{r.bucket}` cru (linhas ~268, ~306, ~355, ~412 — cards mobile e tabelas admin/artista) por `<StatusBadge variant={bucketToVariant(r.bucket)}>{bucketLabel(r.bucket)}</StatusBadge>`. Nenhuma mudança em filtros, cálculos ou estrutura de layout.
 
-**Mobile (`< sm`)**: bottom nav fixo no shell, idêntico ao atual mas com 4 itens funcionais (Agenda · Novo (FAB) · Financeiro · Perfil). Destaque via `Link activeProps` (`data-status="active"` → cor primária + linha superior).
+## 4. `src/routes/_authenticated/_admin/reconciliar.tsx`
+Cada card de falha aberta recebe um `<StatusBadge variant="warning">Pendente</StatusBadge>` no header (ao lado do título), e quando o usuário marca como resolvido via mutation otimista podemos exibir `<StatusBadge variant="success">Resolvido</StatusBadge>` temporariamente antes do refetch. Sem mudar `sync.functions.ts` nem fluxos de resolução.
 
-**Desktop/tablet (`>= sm`)**: top bar fino no shell com logo + links horizontais + (se admin) link Reconciliar + botão Sair. Bottom nav escondido (`sm:hidden`). Top bar escondida em mobile (`hidden sm:flex`).
+## 5. Agenda
+Avaliado: os blocos hoje usam apenas livre/ocupado em preto/branco, sem semântica de status colorível pedida no contexto. **Não aplicar** nesta tarefa para respeitar a restrição de não refatorar visual global. (Se quiser depois, podemos colorir conflitos/erros do proxy.)
 
-### Quando esconder o chrome
-O shell calcula `hideChrome` a partir do pathname (via `useRouterState`). Esconde nav em fluxos full-screen:
-- `/appointments/new` e sub-rotas (fluxo multi-step com headers próprios).
+## Fora de escopo
+- `styles.css`, tokens, tema, dark mode.
+- Lógica de bucket, server functions, migrations, GHL.
+- Refatorar outros badges do app.
 
-Páginas tab (agenda, financeiro, services, reviews, menu, reconciliar, ghl-test) recebem o chrome. Tab atual é detectada via `Link activeProps` por rota — sem prop `active` manual.
-
-### Edições por arquivo
-
-- **`src/routes/_authenticated/route.tsx`**: envolver `<Outlet />` em `<AuthShell>` que renderiza TopBar (desktop) + main + BottomNav (mobile) condicionalmente. Sem mexer em auth.
-- **`src/components/layout/auth-shell.tsx`** (novo): shell + cálculo de `hideChrome` + role-gated items.
-- **`src/components/layout/bottom-nav.tsx`**: refator para 4 itens (Agenda, Novo, Financeiro, Perfil); remover prop `active` (usar `activeProps` do Link).
-- **`src/routes/_authenticated/agenda.tsx`**: remover `<BottomNav active="agenda" />` e `<UserMenu />` do header. Ajustar `pb-20` se necessário (mantém porque shell mantém bottom nav fixo).
-- **`src/routes/_authenticated/financeiro.tsx`**: remover `<UserMenu />`; manter botões admin (Sincronizar, atalho Reconciliar) — são ações de página, não de nav.
-- **`src/routes/_authenticated/services.tsx`**, **`reviews.tsx`**, **`menu.tsx`**: remover `<BottomNav ... />` (shell cuida).
-- **`src/components/auth/user-menu.tsx`**: deletar arquivo (não usado mais). Sair vive no `/menu` (já existe lá).
-- **i18n**: adicionar/ajustar `nav.financeiro` e `nav.profile` em pt/en/fr; remover não usados (`nav.services`, `nav.reviews`) só se não usados em outro lugar — confirmar antes; se ainda referenciados em `/menu`, manter.
-
-### Fora de escopo
-- Mudar autenticação, permissões server-side, RLS, GHL, migrations.
-- Criar rotas novas (Perfil reusa `/menu`).
-- Sidebar complexa desktop.
-- Refatorar headers internos das páginas (back button, título, ações de página continuam).
-
-### Critérios de aceite
-1. Rota ativa destacada no mobile e desktop via `activeProps`.
-2. 4 tabs mobile, todas levam a rota real.
-3. Desktop mostra header horizontal consistente em todas as telas autenticadas (exceto fluxo `/appointments/new`).
-4. Artista não vê link Reconciliar; admin vê.
-5. Nada de "Em breve" como ação principal de nav.
-6. Auth/RLS intactos; `/reconciliar` continua protegido pelo `_admin` layout.
+## Critérios de aceite
+- StatusBadge importável e usado nos 3 locais acima.
+- Financeiro mostra pílulas coloridas para pago/pendente/a receber em mobile e desktop.
+- Reconciliar mostra pílula warning por card aberto.
+- Layout mobile inalterado (badge é inline e compacto).
+- Contraste AA nas combinações escolhidas.
