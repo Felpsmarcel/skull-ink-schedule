@@ -55,6 +55,19 @@
       "save": "Enregistrer",
       "checkout": "Checkout",
       "created": "Rendez-vous créé",
+      "checklist": {
+        "client": "Client",
+        "staff": "Tatoueur",
+        "time": "Créneau",
+        "service": "Service"
+      },
+      "cta": {
+        "selectClient": "Choisir un client",
+        "selectStaff": "Choisir un tatoueur",
+        "selectTime": "Choisir un créneau",
+        "addService": "Ajouter un service",
+        "review": "Vérifier le rendez-vous"
+      },
       "pickService": "Choisir un service",
       "searchService": "Rechercher un service",
       "noResults": "Aucun résultat.",

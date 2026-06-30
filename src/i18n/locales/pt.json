@@ -55,6 +55,19 @@
       "save": "Salvar",
       "checkout": "Checkout",
       "created": "Agendamento criado",
+      "checklist": {
+        "client": "Cliente",
+        "staff": "Tatuador",
+        "time": "Horário",
+        "service": "Serviço"
+      },
+      "cta": {
+        "selectClient": "Selecione um cliente",
+        "selectStaff": "Escolha um tatuador",
+        "selectTime": "Escolha um horário",
+        "addService": "Adicione um serviço",
+        "review": "Revisar agendamento"
+      },
       "pickService": "Selecionar serviço",
       "searchService": "Buscar serviço",
       "noResults": "Nada encontrado.",
