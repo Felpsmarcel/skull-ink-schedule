@@ -314,9 +314,12 @@ function AppointmentNewPage() {
             </span>
           ) : null}
         </Button>
-        <Button className="flex-1" onClick={handleSave} disabled={saving || !canSave}>
-          {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-          {t("appt.save")}
+        <Button
+          className="flex-1"
+          onClick={() => navigate({ to: "/appointments/new/checkout" })}
+          disabled={!canCheckout}
+        >
+          {t("appt.checkout")}
         </Button>
       </footer>
     </div>
