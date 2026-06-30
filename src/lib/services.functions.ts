@@ -13,22 +13,37 @@ const ServiceInput = z.object({
   description_short: z.string().max(200).nullable().optional(),
   sort_order: z.number().int().optional(),
   active: z.boolean().optional(),
-});
+}).refine(
+  (v) => v.price_max_eur == null || v.price_max_eur >= v.price_eur,
+  { message: "price_max_eur deve ser >= price_eur", path: ["price_max_eur"] },
+);
 
-async function ensureAdmin(supabase: { rpc: (n: string, a: unknown) => Promise<{ data: unknown; error: { message: string } | null }> }, userId: string) {
-  const { data, error } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
+async function ensureAdmin(supabase: { rpc: (n: string) => Promise<{ data: unknown; error: { message: string } | null }> }) {
+  const { data, error } = await supabase.rpc("current_user_role");
   if (error) throw new Error(error.message);
-  if (!data) throw new Response("Forbidden", { status: 403 });
+  if (data !== "admin") throw new Response("Forbidden", { status: 403 });
 }
 
 export const createService = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => ServiceInput.parse(d))
   .handler(async ({ data, context }) => {
-    await ensureAdmin(context.supabase as never, context.userId);
+    await ensureAdmin(context.supabase as never);
+    let payload: Record<string, unknown> = { ...data };
+    if (payload.sort_order == null) {
+      const { data: maxRow } = await context.supabase
+        .from("services" as never)
+        .select("sort_order")
+        .eq("category", data.category)
+        .order("sort_order", { ascending: false, nullsFirst: false })
+        .limit(1)
+        .maybeSingle();
+      const max = (maxRow as { sort_order: number | null } | null)?.sort_order ?? 0;
+      payload.sort_order = max + 1;
+    }
     const { data: row, error } = await context.supabase
       .from("services" as never)
-      .insert(data as never)
+      .insert(payload as never)
       .select("id")
       .single();
     if (error) throw new Error(error.message);
@@ -37,9 +52,31 @@ export const createService = createServerFn({ method: "POST" })
 
 export const updateService = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ id: z.string().uuid(), patch: ServiceInput.partial() }).parse(d))
+  .inputValidator((d: unknown) =>
+    z.object({
+      id: z.string().uuid(),
+      patch: z.object({
+        name: z.string().min(1).max(120).optional(),
+        category: z.string().min(1).max(60).optional(),
+        duration_min: z.number().int().min(5).max(600).optional(),
+        modality: z.enum(["presencial", "consulta_online", "hibrido"]).optional(),
+        price_eur: z.number().min(0).optional(),
+        price_max_eur: z.number().min(0).nullable().optional(),
+        description: z.string().max(2000).nullable().optional(),
+        description_short: z.string().max(200).nullable().optional(),
+        sort_order: z.number().int().optional(),
+        active: z.boolean().optional(),
+      }).refine(
+        (v) =>
+          v.price_max_eur == null ||
+          v.price_eur == null ||
+          v.price_max_eur >= v.price_eur,
+        { message: "price_max_eur deve ser >= price_eur", path: ["price_max_eur"] },
+      ),
+    }).parse(d),
+  )
   .handler(async ({ data, context }) => {
-    await ensureAdmin(context.supabase as never, context.userId);
+    await ensureAdmin(context.supabase as never);
     const { error } = await context.supabase
       .from("services" as never)
       .update(data.patch as never)
@@ -52,7 +89,7 @@ export const toggleServiceActive = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid(), active: z.boolean() }).parse(d))
   .handler(async ({ data, context }) => {
-    await ensureAdmin(context.supabase as never, context.userId);
+    await ensureAdmin(context.supabase as never);
     const { error } = await context.supabase
       .from("services" as never)
       .update({ active: data.active } as never)
