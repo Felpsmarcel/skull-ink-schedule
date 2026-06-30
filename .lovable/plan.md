@@ -1,80 +1,54 @@
-# Relatório Mensal de Agendamentos
+# Importar agendamentos já existentes
 
-Reaproveitar o schema existente, adicionar apenas os campos novos de estilo/tamanho, expor um RPC seguro e construir a tela `/relatorios/agendamentos` para Admin (com visão restrita p/ Tatuador).
+Resposta direta: **você não precisa subir nada manualmente**. A sincronização GHL → Supabase já existe (`syncGhlAppointments`) e é exatamente para isso. O único ajuste necessário é deixar a janela de datas configurável, porque hoje ela é fixa em "últimos 7 dias / próximos 90 dias" e perde agendamentos mais antigos.
 
-## 1. Migration (mínima, não destrutiva)
+## Como funciona hoje
 
-Adicionar em `public.appointments`:
-- `tattoo_style text` (nullable) — estilo da tatuagem
-- `tattoo_size text` (nullable) — tamanho (ex: P/M/G ou cm)
+- Admin clica em **Sincronizar GHL** em `/financeiro` ou `/reconciliar`.
+- O servidor lê todos os artistas ativos com `ghl_calendar_id`, busca eventos no GHL no intervalo configurado e:
+  - insere novos em `public.appointments` (upsert seguro, sem sobrescrever financeiro);
+  - atualiza horário/status/contato dos já existentes;
+  - registra falhas em `ghl_sync_failures` para a tela de reconciliar.
+- Cada appointment já fica vinculado a `artist_id`, `calendar_id`, `ghl_contact_id`, `contact_name`, `start_at`, `end_at`, `status` e `commission_pct` do artista.
 
-Nenhuma coluna existente é renomeada. `status`, `artist_id`, `calendar_id`, `total_eur`, `commission_pct`, `ghl_contact_id` continuam como estão. O fluxo de checkout passa a gravar `tattoo_style` / `tattoo_size` quando informados (campos opcionais no draft).
+## Pré-requisito no GHL (informações mínimas por cliente)
 
-## 2. RPC `public.get_monthly_report`
+Para que o sync identifique corretamente, cada evento no GHL precisa de:
+1. **Calendário do artista correto** (o `calendarId` precisa bater com `artists.ghl_calendar_id` no Supabase — já está seedado).
+2. **Contato vinculado** (`contactId`) com pelo menos **nome + (telefone OU email)**.
+3. **Start/End time** definidos.
+4. **Status** (`confirmed`, `showed`, `noshow`, `cancelled`, `new`).
 
-`SECURITY DEFINER`, `search_path = public`, retorna `TABLE(...)` com colunas mapeadas para os nomes pedidos:
+Campos opcionais que **não** vêm do GHL e ficam vazios no Supabase: `total_eur` (valor), `services`, `tattoo_style`, `tattoo_size`. Quem preenche isso é o checkout no app. Se quiser histórico financeiro também, dá pra editar depois pelo `/relatorios/agendamentos` (proponho um modo de edição numa próxima sprint — fora desse plano).
 
-```text
-id, nome_do_cliente (contact_name),
-artista (artists.name), artist_id,
-data_e_hora (start_at), estilo_de_tatuagem (tattoo_style),
-tamanho_da_tatuagem (tattoo_size), notas (notes),
-status_pt (CASE pending→agendado, confirmed→confirmado,
-           completed→concluido, cancelled→cancelado, no_show→no_show),
-valor (total_eur), comissao_pct (commission_pct),
-comissao_eur (round(total_eur * commission_pct / 100, 2)),
-ghl_contact_id, ghl_calendar_id (calendar_id), criado_em (created_at)
-```
+## Ajuste proposto neste plano
 
-Parâmetros: `p_month int`, `p_year int`, `p_artist uuid DEFAULT NULL`, `p_status text DEFAULT NULL` (aceita valor PT, traduz para enum), `p_style text DEFAULT NULL` (ILIKE em `tattoo_style`).
+Adicionar **controle de janela** no botão "Sincronizar GHL" para permitir backfill:
 
-Regra de acesso dentro da função:
-- `current_user_role() = 'admin'` → vê tudo; filtros aplicados livremente.
-- `current_user_role() = 'artist'` → força `artist_id = current_artist_id()`, **omite `valor`, `comissao_pct`, `comissao_eur`** (retorna NULL nessas colunas).
-- Qualquer outro → `RAISE EXCEPTION`.
+1. **`src/lib/sync.functions.ts`** — `runGhlSync` passa a aceitar `inputValidator` opcional:
+   - `pastDays` (int, 1–730, default 7)
+   - `futureDays` (int, 0–365, default 90)
+   - Mantém o gate de admin.
 
-`GRANT EXECUTE ... TO authenticated`.
+2. **`src/components/sync-ghl-button.tsx`** — vira um `DropdownMenu` (ou popover pequeno) com presets:
+   - "Atualizar (padrão)" → 7 / 90
+   - "Backfill 30 dias"
+   - "Backfill 90 dias"
+   - "Backfill 12 meses" (365 / 90)
+   - Mantém o spinner, toast de resumo e invalidação de queries existentes.
 
-## 3. Hook `src/hooks/use-monthly-report.ts`
+3. **i18n PT/EN/FR** — labels dos presets em `common.sync.*`.
 
-- `useMonthlyReport(filters)` chama `supabase.rpc('get_monthly_report', ...)` via TanStack Query (`queryKey: ['monthly-report', filters]`).
-- Expõe `data`, `isLoading`, `error`, `refetch`.
-- Função `exportCSV(rows)` — gera CSV client-side (BOM UTF-8, `;` separador, escape de aspas) e dispara download via `Blob` + `URL.createObjectURL`. Disponível só para admin (gate no componente).
+Sem migration. Sem mudança em RLS. Sem novo endpoint. Só estender a server fn que já existe e melhorar a UX do botão.
 
-## 4. Página `/relatorios/agendamentos`
+## O que você faz depois
 
-Arquivo: `src/routes/_authenticated/_admin/relatorios.agendamentos.tsx` (gate admin já existe em `_admin/route.tsx`; tatuador acessando vai para `/agenda`).
+1. Confirma que os contatos antigos têm `contactId` e estão atribuídos ao calendário do artista certo no GHL.
+2. Em `/reconciliar`, escolhe **Backfill 12 meses** uma vez.
+3. Toast mostra `fetched / inserted / updated / failures`. Falhas aparecem como cards acionáveis na mesma tela.
+4. `/financeiro`, `/agenda` e `/relatorios/agendamentos` passam a refletir o histórico imediatamente (queries são invalidadas automaticamente).
 
-Layout (AuthShell + tema atual ink-on-paper, sem mudar accent):
-- Header: título + botão **Exportar CSV**.
-- Filtros (linha responsiva): Mês (1–12), Ano (atual ± 2), Artista (select alimentado por `useArtists`), Status (PT), Estilo (input texto livre — ILIKE).
-- Tabela (shadcn `Table`, desktop) + cards empilhados (mobile) com as colunas do RPC.
-- Coluna GHL: se `ghl_contact_id` existir → chip clicável com ícone link, abre `Sheet` lateral. Caso contrário → "não vinculado".
-- Valor `null` → `—`. Status renderizado via `StatusBadge` existente.
-- Estados padronizados (`LoadingState`, `EmptyState`, `ErrorState`).
+## Fora deste plano (posso fazer em seguida se quiser)
 
-## 5. Enriquecimento GHL lazy
-
-- Server fn `getGhlContact(ghlContactId)` em `src/lib/ghl-contact.functions.ts`, protegida com `requireSupabaseAuth`, chama o proxy GHL existente (`/contacts/{id}`) e retorna `{ phone, email, source, tags, assignedTo }`.
-- `Sheet` da linha usa `useQuery(['ghl-contact', id])` com `staleTime: 5min` (cache local; sem nova chamada ao reabrir).
-- Erros do GHL caem em `ErrorState` dentro do Sheet, não derrubam a tabela.
-
-## 6. Navegação
-
-- Adicionar entrada **Relatórios** no `menu` (visível só para admin, usando `useIsAdmin`).
-- Adicionar i18n PT/EN/FR para labels, status, colunas e botão de exportar.
-
-## 7. Validação
-
-- `supabase--linter` pós-migration.
-- Teste manual: login admin (vê valores + CSV); login tatuador (vê só seus, sem colunas financeiras, sem botão CSV).
-- Verificar prerender — rota está sob `_authenticated/_admin`, RPC só roda via componente (não no loader).
-
----
-
-### Detalhes técnicos
-
-- Tradução de status feita **só na borda** (RPC → PT, input do filtro → enum) para não tocar no enum existente nem em código que já consome `appt_status`.
-- `comissao_eur` calculada na RPC (consistente com `appointments_artist_view` e `get_my_artist_appointments`).
-- Nenhuma dependência nova; usa shadcn/ui, lucide, sonner, TanStack Query já presentes.
-- Tipos TS gerados automaticamente após migration aprovada; hook usa o tipo do RPC via `Database['public']['Functions']['get_monthly_report']['Returns']`.
+- Tela de **importação CSV** (para clientes que **não** estão no GHL).
+- Modo de **edição financeira** em `/relatorios/agendamentos` para preencher `total_eur` retroativo.
