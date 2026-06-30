@@ -41,4 +41,8 @@ for (const [lng, bundle] of Object.entries(BUNDLES)) {
   i18n.addResourceBundle(lng, "common", inner, true, true);
 }
 
+export function ensureI18n() {
+  return i18n;
+}
+
 export default i18n;

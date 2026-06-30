@@ -13,7 +13,9 @@ import appCss from "../styles.css?url";
 import gfMarkUrl from "@/assets/gf-mark.png?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { supabase } from "@/integrations/supabase/client";
-import "@/i18n";
+import { ensureI18n } from "@/i18n";
+
+ensureI18n();
 
 function NotFoundComponent() {
   return (
