@@ -7,6 +7,12 @@
     "actions": {
       "comingSoon": "Coming soon"
     },
+    "loading": "Loading…",
+    "error": {
+      "title": "Something went wrong",
+      "retry": "Try again",
+      "details": "Technical details"
+    },
     "agenda": {
       "title": "Agenda",
       "today": "Today",
