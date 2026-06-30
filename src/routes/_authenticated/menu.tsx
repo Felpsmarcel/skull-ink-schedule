@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { ChevronRight, LogOut, Wallet, RefreshCw, Wrench, Bell, Languages } from "lucide-react";
+import { ChevronRight, LogOut, Wallet, RefreshCw, Wrench, Bell, Languages, FileText } from "lucide-react";
 import { toast } from "sonner";
 import "@/i18n";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -54,6 +54,7 @@ function MenuPage() {
           {isAdmin && (
             <>
               <Row to="/reconciliar" icon={<RefreshCw className="h-4 w-4" />} label="Reconciliar GHL" />
+              <Row to="/relatorios/agendamentos" icon={<FileText className="h-4 w-4" />} label="Relatório mensal" />
               <Row to="/ghl-test" icon={<Wrench className="h-4 w-4" />} label="Testar GHL" />
             </>
           )}
