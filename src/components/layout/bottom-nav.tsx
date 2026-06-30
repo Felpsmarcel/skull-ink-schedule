@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { CalendarDays, Scissors, Plus, Star, Menu as MenuIcon } from "lucide-react";
+import { CalendarDays, Plus, Menu as MenuIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type BottomNavTab = "agenda" | "services" | "reviews" | "menu";
@@ -9,9 +9,8 @@ export function BottomNav({ active }: { active: BottomNavTab }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 mx-auto flex max-w-md items-end justify-around border-t border-border bg-background/95 px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur">
+    <nav className="fixed inset-x-0 bottom-0 z-40 mx-auto flex max-w-md items-end justify-around border-t border-border bg-background/95 px-6 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur">
       <NavLink to="/agenda" icon={<CalendarDays className="h-5 w-5" />} label={t("nav.agenda")} active={active === "agenda"} />
-      <NavLink to="/services" icon={<Scissors className="h-5 w-5" />} label={t("nav.services")} active={active === "services"} />
       <button
         type="button"
         onClick={() => navigate({ to: "/appointments/new" })}
@@ -20,8 +19,7 @@ export function BottomNav({ active }: { active: BottomNavTab }) {
       >
         <Plus className="h-7 w-7" />
       </button>
-      <NavLink to="/reviews" icon={<Star className="h-5 w-5" />} label={t("nav.reviews")} active={active === "reviews"} />
-      <NavLink to="/menu" icon={<MenuIcon className="h-5 w-5" />} label={t("nav.menu")} active={active === "menu"} />
+      <NavLink to="/menu" icon={<MenuIcon className="h-5 w-5" />} label={t("nav.menu")} active={active === "menu" || active === "services" || active === "reviews"} />
     </nav>
   );
 }
