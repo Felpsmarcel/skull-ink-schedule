@@ -22,7 +22,11 @@
       "booked": "Réservé",
       "outside": "Fermé",
       "errorLoading": "Erreur de chargement",
-      "lastUpdate": "Mis à jour"
+      "lastUpdate": "Mis à jour",
+      "prev": "Précédent",
+      "next": "Suivant",
+      "view": { "day": "Jour", "week": "Semaine", "month": "Mois" },
+      "month": { "appts": "rendez-vous" }
     },
     "nav": {
       "agenda": "Agenda",
