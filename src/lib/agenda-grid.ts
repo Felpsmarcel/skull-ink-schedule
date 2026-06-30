@@ -12,6 +12,8 @@ export interface GridSlot {
   status: "free" | "booked" | "outside";
   contactName?: string;
   serviceName?: string;
+  /** GHL event id for booked slots — used to join payment status */
+  ghlEventId?: string;
 }
 
 const TZ = "Europe/Brussels";
@@ -169,6 +171,7 @@ export function buildDayGrid(opts: {
         status: "booked",
         contactName,
         serviceName: ev.title,
+        ghlEventId: ev.id,
       });
     } else if (freeMinutes.has(min)) {
       slots.push({ startMs, label, status: "free" });
