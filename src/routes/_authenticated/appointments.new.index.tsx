@@ -168,8 +168,6 @@ function AppointmentNewPage() {
         notes: draft.notes || undefined,
         status: "confirmed",
         services: draft.services,
-        totalEur: totalFinalEur(draft),
-        originalEur: totalOriginalEur(draft),
       });
 
       await queryClient.invalidateQueries({ queryKey: ["agenda"] });
