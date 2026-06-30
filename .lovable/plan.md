@@ -1,72 +1,57 @@
-## Sprint Sec-1: Auditoria + Fixes Críticos
 
-### Minha recomendação para `seed-test-users`
+## Problema
 
-**Deletar a rota inteira + remover `SEED_SECRET`.** Justificativa:
-- Os usuários já estão criados e funcionando (`admin@gftattoo.test`, `gabriel@gftattoo.test`).
-- A rota tem poder de **resetar senha de admin** — se `SEED_SECRET` vazar (chat, screenshot, log), é game over.
-- Se precisar recriar usuários no futuro, é uma migration ou um script local com `service_role`, não uma rota pública.
-- Reduz superfície de ataque a zero sem perda funcional.
+Os 3 botões SERVIÇOS, AVALIAÇÕES e MENU da tab bar em `src/routes/_authenticated/agenda.tsx` chamam `toast(t("actions.comingSoon"))` — só mostram um aviso. Apenas AGENDA e o "+" central têm comportamento real.
 
-Se um dia precisar de novos seeds, criar sob demanda e deletar depois.
+## Plano
 
----
+### 1. Refatorar a tab bar (parar de duplicar)
+Extrair a `<nav>` (linhas 234–247 de `agenda.tsx`) para `src/components/layout/bottom-nav.tsx` recebendo a aba ativa. Usar `<Link to=...>` em vez de `onClick + navigate` para preload e cmd-click. Aceitar `active: "agenda" | "services" | "reviews" | "menu"`. Reutilizar nas novas rotas.
 
-### Fase 1 — Auditoria (read-only, gera relatório)
+### 2. Rota `/services` — catálogo + CRUD (admin)
+Arquivo: `src/routes/_authenticated/services.tsx`.
+- **Todos os perfis**: lista os 24 serviços já existentes em `public.services`, agrupados por categoria, com nome, faixa de preço, duração estimada e badge de status ativo/inativo.
+- **Admin only** (`useCurrentUser().role === "admin"`):
+  - Botão "Novo serviço" no header → abre `<Sheet>` com form (name, category, description, price_min, price_max, duration_min, active).
+  - Cada card ganha menu kebab com "Editar" e "Desativar/Ativar".
+  - Artistas só veem a lista (sem botões de ação).
+- Mutations via `createServerFn` (`src/lib/services.functions.ts`) com `requireSupabaseAuth` + check `has_role('admin')`. Não criamos endpoints públicos para isso.
+- Invalidação: `queryClient.invalidateQueries({ queryKey: ["services"] })` após cada mutation.
 
-**1.1. Rotas públicas com side effects**
-- Listar todos os arquivos em `src/routes/api/public/` e classificar por: tipo de auth, side effects, blast radius se abusada.
-- Verificar `/lovable/email/queue/process`: confirmar que valida bearer service_role corretamente e não loga o token. **Não editar** (gerenciada por `setup_email_infra`).
+**Banco**: o schema atual de `public.services` já cobre os campos necessários. Verificar que existe policy de UPDATE/INSERT/DELETE para admin (hoje só há SELECT pública); se faltar, migração curta adicionando policies `services_admin_write` usando `has_role(auth.uid(), 'admin')`. Mantém a SELECT pública para a tela de seleção de serviço no checkout.
 
-**1.2. Import graph client/server**
-- Buscar imports diretos de `@/integrations/supabase/client.server` fora de `*.server.ts`.
-- Buscar leitura de `process.env.GHL_TOKEN`, `SERVICE_ROLE_KEY`, `SEED_SECRET` em arquivos que não são `.server.ts` nem `.handler()` body.
-- Buscar uso de `supabaseAdmin` em `.functions.ts` no top-level (deveria ser dynamic import dentro do handler).
+### 3. Rota `/reviews` — placeholder estruturado
+Arquivo: `src/routes/_authenticated/reviews.tsx`.
+- Header "Avaliações" + tab bar inferior com `active="reviews"`.
+- Empty state honesto: ícone Star, título "Em breve", parágrafo explicando que a coleta de reviews via GHL/Google ainda não está integrada. Sem dados fake, sem rota de API, sem tabela nova.
 
-**1.3. Cron jobs**
-- `SELECT * FROM cron.job` para confirmar quais estão ativos, frequência e URL alvo.
-- Validar últimos `cron.job_run_details` do `sync-ghl-appointments` e `process-email-queue` (sucesso/falha).
-- Conferir RLS em `ghl_sync_failures` (rota anônima escreve nela indiretamente).
+### 4. Rota `/menu` — perfil + atalhos + sair
+Arquivo: `src/routes/_authenticated/menu.tsx`.
+- Header "Menu" + tab bar com `active="menu"`.
+- Card de perfil no topo: avatar circular com iniciais, nome do usuário (`app_users.name`), e-mail, badge da role (Admin/Artist).
+- Lista de atalhos com ícones e chevron à direita, usando `<Link>`:
+  - **Todos**: "Meu financeiro" → `/financeiro`.
+  - **Admin only**: "Reconciliar GHL" → `/reconciliar`, "Testar GHL" → `/ghl-test`.
+- Bloco de configurações (não funcionais ainda, marcados como em breve): "Notificações", "Idioma".
+- Botão "Sair" no rodapé chamando `supabase.auth.signOut()` + `navigate({ to: "/auth" })`.
 
-**1.4. Security scan**
-- Rodar `security--run_security_scan` no final da auditoria para validação cruzada.
+### 5. Atualizar `agenda.tsx`
+Remover a `<nav>` inline; importar e usar `<BottomNav active="agenda" />`. O botão "+" central continua dentro do componente (não muda).
 
-### Fase 2 — Fixes críticos
+### 6. i18n
+Adicionar chaves novas em `src/i18n/locales/{pt,fr,en}.json` (se houver): `nav.menu.profile`, `nav.menu.finance`, `nav.menu.reconcile`, `nav.menu.signOut`, `nav.services.new`, `nav.services.edit`, `nav.services.deactivate`, `nav.reviews.emptyTitle`, `nav.reviews.emptyBody`. Sem strings hard-coded.
 
-**2.1. Deletar `seed-test-users`**
-- Remover `src/routes/api/public/hooks/seed-test-users.ts`.
-- Remover secret `SEED_SECRET`.
+## Detalhes técnicos
 
-**2.2. Trocar proteção do `sync-ghl`**
-- Anon key é pública (vai no bundle client + commitada em `.env`). Hoje qualquer pessoa com DevTools dispara o cron.
-- Gerar novo secret `CRON_SHARED_SECRET` (via `generate_secret`, 64 chars).
-- Trocar comparação em `src/routes/api/public/hooks/sync-ghl.ts` para `x-cron-secret` header vs `CRON_SHARED_SECRET`, com `timingSafeEqual`.
-- Atualizar a definição do `pg_cron` (via `supabase--insert`) para enviar o novo header.
-- Manter idempotência (já tem `upsert ignoreDuplicates`).
+- **Acesso a rotas**: tudo fica sob `_authenticated/`, então o guard atual basta. A separação admin/artist é apenas visual + validada nas server fns (defense-in-depth).
+- **Server fns**: `createService`, `updateService`, `toggleServiceActive` em `src/lib/services.functions.ts` (cliente-safe path). Cada uma valida com Zod e checa `has_role('admin')`; falha = `Response('Forbidden', { status: 403 })`. `supabaseAdmin` é importado dinamicamente dentro do handler.
+- **Hook**: `useServices()` já existe (`src/hooks/use-services.ts` ou similar) — reutilizar, garantindo invalidate keys consistentes.
+- **Tab bar ativa**: comparação por prop `active`, não por `pathname` (evita falsos positivos em rotas filhas como `/services/new`).
+- **Sem mudança no fluxo de novo agendamento**: o "+" continua indo para `/appointments/new`, e `/appointments/new/services` segue sendo o passo do wizard (sem conflito com a nova `/services` standalone).
 
-**2.3. Corrigir leaks server→client (se a auditoria achar algum)**
-- Mover imports top-level de `client.server` para dynamic import dentro de `.handler()`.
-- Renomear helpers expostos para `.server.ts` quando aplicável.
-- Se nada for encontrado, documentar "graph limpo" no relatório.
+## Fora de escopo
 
-### Fase 3 — Validação
-
-- Build automático do harness valida que nada quebrou.
-- Smoke test do `sync-ghl` com novo header via `curl` (deve retornar 200 com header certo, 403 sem).
-- Confirmar que GHL sync continua rodando no próximo ciclo do cron.
-- Reportar findings residuais do `security_scan`.
-
-### Fora de escopo (próximas sprints)
-
-- Rate limiting na rota de sync (mitigado pelo secret).
-- Rotação automatizada de `GHL_TOKEN` / `LOVABLE_API_KEY`.
-- Audit log estruturado de tentativas rejeitadas.
-- Qualquer mudança em email infra ou frequência de cron de email.
-
-### Entregáveis
-
-1. Relatório de auditoria em chat com riscos classificados (Crítico/Alto/Médio/Baixo).
-2. `seed-test-users` removida.
-3. `sync-ghl` protegida por secret dedicado.
-4. Leaks server→client corrigidos (ou confirmação de que não há).
-5. Resultado do `security_scan` pós-fixes.
+- Coleta real de reviews (Google/GHL).
+- Configurações de notificação e idioma funcionais.
+- Edição de perfil/avatar.
+- CRUD de serviços para não-admin.
