@@ -93,7 +93,7 @@ export const Route = createFileRoute("/_authenticated/financeiro")({
 
 function FinanceiroPage() {
   const navigate = useNavigate();
-  const { data, isLoading, error } = useFinanceSummary();
+  const { data, isLoading, error, refetch } = useFinanceSummary();
   const isAdmin = useIsAdmin();
   const qc = useQueryClient();
   const sync = useServerFn(runGhlSync);
@@ -161,9 +161,13 @@ function FinanceiroPage() {
 
       <main className="flex-1 space-y-4 p-4">
         {isLoading ? (
-          <p className="text-sm text-muted-foreground">A carregar…</p>
+          <LoadingState />
         ) : error ? (
-          <p className="text-sm text-destructive">{(error as Error).message}</p>
+          <ErrorState
+            description="Não foi possível carregar o financeiro."
+            details={(error as Error).message}
+            onRetry={() => refetch()}
+          />
         ) : !data ? null : (
           <>
             <section className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3">
