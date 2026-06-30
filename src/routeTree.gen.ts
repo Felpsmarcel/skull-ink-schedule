@@ -13,6 +13,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedServicesRouteImport } from './routes/_authenticated/services'
+import { Route as AuthenticatedReviewsRouteImport } from './routes/_authenticated/reviews'
 import { Route as AuthenticatedFinanceiroRouteImport } from './routes/_authenticated/financeiro'
 import { Route as AuthenticatedAgendaRouteImport } from './routes/_authenticated/agenda'
 import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/_admin/route'
@@ -44,6 +45,11 @@ const IndexRoute = IndexRouteImport.update({
 const AuthenticatedServicesRoute = AuthenticatedServicesRouteImport.update({
   id: '/services',
   path: '/services',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedReviewsRoute = AuthenticatedReviewsRouteImport.update({
+  id: '/reviews',
+  path: '/reviews',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedFinanceiroRoute = AuthenticatedFinanceiroRouteImport.update({
@@ -123,6 +129,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/agenda': typeof AuthenticatedAgendaRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
+  '/reviews': typeof AuthenticatedReviewsRoute
   '/services': typeof AuthenticatedServicesRoute
   '/ghl-test': typeof AuthenticatedAdminGhlTestRoute
   '/reconciliar': typeof AuthenticatedAdminReconciliarRoute
@@ -140,6 +147,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/agenda': typeof AuthenticatedAgendaRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
+  '/reviews': typeof AuthenticatedReviewsRoute
   '/services': typeof AuthenticatedServicesRoute
   '/ghl-test': typeof AuthenticatedAdminGhlTestRoute
   '/reconciliar': typeof AuthenticatedAdminReconciliarRoute
@@ -159,6 +167,7 @@ export interface FileRoutesById {
   '/_authenticated/_admin': typeof AuthenticatedAdminRouteRouteWithChildren
   '/_authenticated/agenda': typeof AuthenticatedAgendaRoute
   '/_authenticated/financeiro': typeof AuthenticatedFinanceiroRoute
+  '/_authenticated/reviews': typeof AuthenticatedReviewsRoute
   '/_authenticated/services': typeof AuthenticatedServicesRoute
   '/_authenticated/_admin/ghl-test': typeof AuthenticatedAdminGhlTestRoute
   '/_authenticated/_admin/reconciliar': typeof AuthenticatedAdminReconciliarRoute
@@ -178,6 +187,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/agenda'
     | '/financeiro'
+    | '/reviews'
     | '/services'
     | '/ghl-test'
     | '/reconciliar'
@@ -195,6 +205,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/agenda'
     | '/financeiro'
+    | '/reviews'
     | '/services'
     | '/ghl-test'
     | '/reconciliar'
@@ -213,6 +224,7 @@ export interface FileRouteTypes {
     | '/_authenticated/_admin'
     | '/_authenticated/agenda'
     | '/_authenticated/financeiro'
+    | '/_authenticated/reviews'
     | '/_authenticated/services'
     | '/_authenticated/_admin/ghl-test'
     | '/_authenticated/_admin/reconciliar'
@@ -264,6 +276,13 @@ declare module '@tanstack/react-router' {
       path: '/services'
       fullPath: '/services'
       preLoaderRoute: typeof AuthenticatedServicesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/reviews': {
+      id: '/_authenticated/reviews'
+      path: '/reviews'
+      fullPath: '/reviews'
+      preLoaderRoute: typeof AuthenticatedReviewsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/financeiro': {
@@ -401,6 +420,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRouteRoute: typeof AuthenticatedAdminRouteRouteWithChildren
   AuthenticatedAgendaRoute: typeof AuthenticatedAgendaRoute
   AuthenticatedFinanceiroRoute: typeof AuthenticatedFinanceiroRoute
+  AuthenticatedReviewsRoute: typeof AuthenticatedReviewsRoute
   AuthenticatedServicesRoute: typeof AuthenticatedServicesRoute
   AuthenticatedAppointmentsNewRoute: typeof AuthenticatedAppointmentsNewRouteWithChildren
 }
@@ -409,6 +429,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRouteRoute: AuthenticatedAdminRouteRouteWithChildren,
   AuthenticatedAgendaRoute: AuthenticatedAgendaRoute,
   AuthenticatedFinanceiroRoute: AuthenticatedFinanceiroRoute,
+  AuthenticatedReviewsRoute: AuthenticatedReviewsRoute,
   AuthenticatedServicesRoute: AuthenticatedServicesRoute,
   AuthenticatedAppointmentsNewRoute:
     AuthenticatedAppointmentsNewRouteWithChildren,
