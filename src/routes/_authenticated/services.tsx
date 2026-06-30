@@ -7,7 +7,6 @@ import { Plus, Pencil, Power, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import "@/i18n";
 
-import { BottomNav } from "@/components/layout/bottom-nav";
 import { Toaster } from "@/components/ui/sonner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -188,7 +187,6 @@ function ServicesPage() {
         )}
       </div>
 
-      <BottomNav active="services" />
     </div>
   );
 }

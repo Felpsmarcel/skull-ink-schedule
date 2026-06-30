@@ -29,7 +29,9 @@
       "services": "Services",
       "new": "New",
       "reviews": "Reviews",
-      "menu": "Menu"
+      "menu": "Menu",
+      "financeiro": "Finance",
+      "profile": "Profile"
     },
     "appt": {
       "title": "New appointment",

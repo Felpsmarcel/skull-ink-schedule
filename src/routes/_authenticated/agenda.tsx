@@ -18,9 +18,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
 import gfSkull from "@/assets/gf-skull.png";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { UserMenu } from "@/components/auth/user-menu";
 import { resolveIntlLocale } from "@/lib/locale";
-import { BottomNav } from "@/components/layout/bottom-nav";
 import { useAppointmentDraft } from "@/stores/appointment-draft";
 
 export const Route = createFileRoute("/_authenticated/agenda")({
@@ -148,9 +146,6 @@ function AgendaPage() {
             </button>
           </div>
 
-          <div className="flex items-center gap-1">
-            <UserMenu />
-          </div>
         </div>
 
         <div className="flex items-center justify-between px-4 pb-2 text-xs text-muted-foreground">
@@ -218,8 +213,6 @@ function AgendaPage() {
         </div>
       </div>
 
-      {/* Bottom Nav */}
-      <BottomNav active="agenda" />
     </div>
   );
 }
