@@ -7,6 +7,8 @@ import { z } from "zod";
 import {
   ArrowLeft,
   Calendar as CalendarIcon,
+  CheckCircle2,
+  Circle,
   ChevronRight,
   Loader2,
   Plus,
@@ -55,6 +57,7 @@ import {
   useAppointmentDraft,
   totalFinalEur,
 } from "@/stores/appointment-draft";
+import { validateAppointmentDraft } from "@/lib/appointment-draft-validate";
 
 export const Route = createFileRoute("/_authenticated/appointments/new/")({
   head: () => ({
@@ -93,9 +96,36 @@ function AppointmentNewPage() {
   const dayStartMs = brusselsDayStartMs(dateObj);
   const dayEndMs = brusselsDayEndMs(dateObj);
 
-  const canCheckout = Boolean(
-    draft.contact && draft.calendarId && draft.startISO && draft.services.length > 0,
-  );
+  const validation = validateAppointmentDraft(draft, artists);
+  const canCheckout = validation.ok;
+  const firstPending = validation.ok ? null : validation.reason;
+
+  const checklist = [
+    { key: "client", label: t("appt.checklist.client"), done: Boolean(draft.contact) },
+    {
+      key: "staff",
+      label: t("appt.checklist.staff"),
+      done: Boolean(draft.calendarId && artists.some((a) => a.calendarId === draft.calendarId)),
+    },
+    { key: "time", label: t("appt.checklist.time"), done: Boolean(draft.startISO) },
+    { key: "service", label: t("appt.checklist.service"), done: draft.services.length > 0 },
+  ];
+
+  const ctaLabel = (() => {
+    switch (firstPending) {
+      case "noContact":
+        return t("appt.cta.selectClient");
+      case "noCalendar":
+      case "noStaff":
+        return t("appt.cta.selectStaff");
+      case "noStart":
+        return t("appt.cta.selectTime");
+      case "noServices":
+        return t("appt.cta.addService");
+      default:
+        return t("appt.cta.review");
+    }
+  })();
 
   const slotsQuery = useQuery({
     enabled: Boolean(draft.calendarId),
@@ -129,6 +159,30 @@ function AppointmentNewPage() {
         </Link>
         <h1 className="font-display text-lg uppercase tracking-wide">{t("appt.title")}</h1>
       </header>
+
+      {/* Checklist */}
+      <div className="border-b border-border bg-card/40 px-3 py-2">
+        <ul className="flex gap-2 overflow-x-auto">
+          {checklist.map((item) => (
+            <li
+              key={item.key}
+              className={cn(
+                "flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px]",
+                item.done
+                  ? "border-primary/40 bg-primary/5 text-foreground"
+                  : "border-border bg-background text-muted-foreground",
+              )}
+            >
+              {item.done ? (
+                <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
+              ) : (
+                <Circle className="h-3.5 w-3.5" />
+              )}
+              <span className="uppercase tracking-wider">{item.label}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
 
       <main className="flex-1 space-y-4 p-4">
         {/* Cliente */}
@@ -298,29 +352,16 @@ function AppointmentNewPage() {
       </main>
 
       {/* Footer */}
-      <footer className="fixed inset-x-0 bottom-0 z-40 mx-auto flex max-w-md items-center gap-2 border-t border-border bg-background/95 px-3 pt-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur">
-        <Button variant="ghost" size="sm" disabled>
-          ⋯
-        </Button>
+      <footer className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md border-t border-border bg-background/95 px-3 pt-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur">
         <Button
-          variant="outline"
-          className="flex-1"
+          className="w-full"
           onClick={() => navigate({ to: "/appointments/new/checkout" })}
           disabled={!canCheckout}
         >
-          {t("appt.checkout")}
-          {totalFinalEur(draft) > 0 ? (
-            <span className="ml-2 text-xs text-muted-foreground">
-              {formatPrice(totalFinalEur(draft))}
-            </span>
+          <span>{ctaLabel}</span>
+          {canCheckout && totalFinalEur(draft) > 0 ? (
+            <span className="ml-2 text-xs opacity-80">{formatPrice(totalFinalEur(draft))}</span>
           ) : null}
-        </Button>
-        <Button
-          className="flex-1"
-          onClick={() => navigate({ to: "/appointments/new/checkout" })}
-          disabled={!canCheckout}
-        >
-          {t("appt.checkout")}
         </Button>
       </footer>
     </div>
