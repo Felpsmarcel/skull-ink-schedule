@@ -1,32 +1,30 @@
-## Mudanças de texto (somente i18n + meta title)
+## Liberar largura do shell em telas grandes
 
-### `src/i18n/locales/pt.json`
-- `appt.checkout`: `"Checkout"` → `"Revisar agendamento"`
-- `appt.checkoutTitle`: `"Detalhe / Checkout"` → `"Revisar agendamento"`
-- `appt.finalize`: `"Finalizar"` → `"Confirmar agendamento"`
-- `appt.payNow`: mantida no JSON (não é renderizada em nenhum lugar hoje — já removida da UI em iteração anterior); nenhuma ação.
+Mudança única e segura em `src/routes/__root.tsx`, linha 141.
 
-### `src/i18n/locales/en.json`
-- `appt.checkout`: `"Checkout"` → `"Review appointment"`
-- `appt.checkoutTitle`: `"Detail / Checkout"` → `"Review appointment"`
-- `appt.finalize`: → `"Confirm appointment"`
+### Antes
+```tsx
+<div className="mx-auto w-full max-w-md min-h-dvh">
+```
 
-### `src/i18n/locales/fr.json`
-- `appt.checkout`: `"Checkout"` → `"Vérifier le rendez-vous"`
-- `appt.checkoutTitle`: `"Détail / Checkout"` → `"Vérifier le rendez-vous"`
-- `appt.finalize`: → `"Confirmer le rendez-vous"`
+### Depois
+```tsx
+<div className="mx-auto w-full max-w-md sm:max-w-3xl lg:max-w-6xl min-h-dvh">
+```
 
-### `src/routes/_authenticated/appointments.new.checkout.tsx`
-- Apenas o `<title>` hardcoded na linha 23: `"Checkout — GF Tattoo Studio"` → `"Revisar agendamento — GF Tattoo Studio"`.
-- Nenhuma outra alteração (rota, componente, lógica intactos).
+### Por que isso é seguro
+- **Mobile (<640px)** continua em `max-w-md` (28rem) → idêntico ao atual.
+- **Tablet (≥640px)** sobe para `max-w-3xl` (48rem).
+- **Desktop (≥1024px)** sobe para `max-w-6xl` (72rem) → agenda e financeiro passam a ocupar mais espaço.
+- **Auth** (`src/routes/auth.tsx`) já se auto-constrange com `max-w-sm` interno → continua compacto e centralizado.
+- **Menu, Services, Reviews, Appointments/new, Checkout** já têm `max-w-md` internos → permanecem compactos mesmo com o shell mais largo.
+- **Agenda e Financeiro** não têm `max-w-md` interno → ganham largura automaticamente em tablet/desktop.
+- **BottomNav** já é `fixed` com `max-w-md` próprio → segue como faixa central estilo mobile, sem afetar o conteúdo.
 
-### Fora do escopo (não tocar)
-- Nome do arquivo `appointments.new.checkout.tsx` e rota `/appointments/new/checkout`.
-- Lógica de criação, server functions, GHL, Supabase, migrations.
-- `appointments.new.index.tsx` não tem texto hardcoded relevante (já usa `t()` via `validateAppointmentDraft`); nenhuma edição.
+### Overflow horizontal
+Sem novas regras de largura fixa. O shell mantém `w-full` + `mx-auto`, então não introduz overflow. Nada a tocar em `src/styles.css`.
 
-### Critérios de aceite verificáveis
-1. Header do step de revisão exibe "Revisar agendamento".
-2. Botão final exibe "Confirmar agendamento" (quando `canCheckout` é true).
-3. Navegar de `/appointments/new` → `/appointments/new/checkout` continua funcionando (rota inalterada).
-4. EN/FR mostram as traduções equivalentes ao trocar o idioma.
+### Fora de escopo
+- Sem sidebar.
+- Sem redesign de agenda/financeiro.
+- Sem mudanças em rotas, server functions, GHL, Supabase, migrations.
