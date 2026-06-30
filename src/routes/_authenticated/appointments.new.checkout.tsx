@@ -2,7 +2,6 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft, Loader2, Mail, Phone, Trash2 } from "lucide-react";
-import { toast } from "sonner";
 import "@/i18n";
 
 import { Button } from "@/components/ui/button";
@@ -220,15 +219,7 @@ function CheckoutPage() {
       </main>
 
       <footer className="fixed inset-x-0 bottom-0 z-40 mx-auto flex max-w-md items-center gap-2 border-t border-border bg-background/95 px-3 pt-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur">
-        <Button
-          variant="outline"
-          className="flex-1"
-          onClick={() => toast(t("actions.comingSoon"))}
-          disabled={saving}
-        >
-          {t("appt.payNow")}
-        </Button>
-        <Button className="flex-1" onClick={() => void run()} disabled={saving || !canFinalize}>
+        <Button className="w-full" onClick={() => void run()} disabled={saving || !canFinalize}>
           {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
           {t("appt.finalize")}
           {final > 0 ? (

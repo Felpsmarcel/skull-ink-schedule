@@ -5,12 +5,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Calendar as CalendarIcon,
-  MessageCircle,
-  Bell,
   AlertTriangle,
   Bug,
 } from "lucide-react";
-import { toast } from "sonner";
 import "@/i18n";
 
 import { useStaffDayAgenda } from "@/hooks/use-agenda";
@@ -152,12 +149,6 @@ function AgendaPage() {
           </div>
 
           <div className="flex items-center gap-1">
-            <IconBtn onClick={() => toast(t("actions.comingSoon"))} ariaLabel="Chat">
-              <MessageCircle className="h-5 w-5" />
-            </IconBtn>
-            <IconBtn onClick={() => toast(t("actions.comingSoon"))} ariaLabel="Notificações">
-              <Bell className="h-5 w-5" />
-            </IconBtn>
             <UserMenu />
           </div>
         </div>
@@ -230,27 +221,6 @@ function AgendaPage() {
       {/* Bottom Nav */}
       <BottomNav active="agenda" />
     </div>
-  );
-}
-
-function IconBtn({
-  children,
-  onClick,
-  ariaLabel,
-}: {
-  children: React.ReactNode;
-  onClick: () => void;
-  ariaLabel: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={ariaLabel}
-      className="grid h-9 w-9 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-    >
-      {children}
-    </button>
   );
 }
 
