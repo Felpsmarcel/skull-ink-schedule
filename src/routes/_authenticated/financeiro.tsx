@@ -1,8 +1,14 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Wallet } from "lucide-react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { AlertTriangle, ArrowLeft, RefreshCw, Wallet } from "lucide-react";
+import { toast } from "sonner";
 import { useFinanceSummary } from "@/hooks/use-finance";
+import { useIsAdmin } from "@/hooks/use-current-user";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 import { UserMenu } from "@/components/auth/user-menu";
+import { Button } from "@/components/ui/button";
+import { runGhlSync } from "@/lib/sync.functions";
 
 export const Route = createFileRoute("/_authenticated/financeiro")({
   head: () => ({
@@ -17,6 +23,20 @@ export const Route = createFileRoute("/_authenticated/financeiro")({
 function FinanceiroPage() {
   const navigate = useNavigate();
   const { data, isLoading, error } = useFinanceSummary();
+  const isAdmin = useIsAdmin();
+  const qc = useQueryClient();
+  const sync = useServerFn(runGhlSync);
+  const syncM = useMutation({
+    mutationFn: () => sync(),
+    onSuccess: (r) => {
+      toast.success(
+        `Sync · ${r.inserted} novos · ${r.updated} atualizados · ${r.failures} falhas`,
+      );
+      qc.invalidateQueries({ queryKey: ["finance-summary"] });
+      qc.invalidateQueries({ queryKey: ["sync-failures"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : String(e)),
+  });
 
   return (
     <div className="flex min-h-dvh flex-col bg-background pb-20">
@@ -34,7 +54,31 @@ function FinanceiroPage() {
             <Wallet className="h-4 w-4" /> Financeiro
           </h1>
         </div>
-        <UserMenu />
+        <div className="flex items-center gap-2">
+          {isAdmin ? (
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => syncM.mutate()}
+                disabled={syncM.isPending}
+              >
+                <RefreshCw
+                  className={`mr-2 h-3.5 w-3.5 ${syncM.isPending ? "animate-spin" : ""}`}
+                />
+                Sincronizar
+              </Button>
+              <Link
+                to="/reconciliar"
+                className="grid h-9 w-9 place-items-center rounded-md hover:bg-muted"
+                aria-label="Reconciliar"
+              >
+                <AlertTriangle className="h-4 w-4" />
+              </Link>
+            </>
+          ) : null}
+          <UserMenu />
+        </div>
       </header>
 
       <main className="flex-1 space-y-4 p-4">
