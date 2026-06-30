@@ -1,7 +1,6 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Loader2, Mail, Phone, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import "@/i18n";
@@ -12,16 +11,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
-import { LOCATION_ID } from "@/config/staff";
 import { useArtists } from "@/hooks/use-artists";
 import { formatPrice, modalityLabel } from "@/lib/services";
 import {
   useAppointmentDraft,
-  totalDurationMin,
   totalFinalEur,
   totalOriginalEur,
 } from "@/stores/appointment-draft";
-import { finalizeAppointment } from "@/lib/appointments";
+import { useFinalizeAppointment } from "@/hooks/use-finalize-appointment";
 
 export const Route = createFileRoute("/_authenticated/appointments/new/checkout")({
   head: () => ({ meta: [{ title: "Checkout — GF Tattoo Studio" }] }),
@@ -30,12 +27,10 @@ export const Route = createFileRoute("/_authenticated/appointments/new/checkout"
 
 function CheckoutPage() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const draft = useAppointmentDraft();
   const { data: artists = [] } = useArtists();
   const staff = artists.find((s) => s.calendarId === draft.calendarId) ?? null;
-  const [saving, setSaving] = useState(false);
+  const { run, saving } = useFinalizeAppointment();
   const startLabel = useMemo(() => {
     if (!draft.startISO) return "—";
     return new Intl.DateTimeFormat("pt-PT", {
@@ -58,44 +53,6 @@ function CheckoutPage() {
       draft.startISO &&
       draft.services.length > 0,
   );
-
-  async function handleFinalize() {
-    if (!draft.contact) return toast.error(t("appt.errors.noContact"));
-    if (!draft.calendarId || !staff) return toast.error(t("appt.errors.noCalendar"));
-    if (!draft.startISO) return toast.error(t("appt.errors.noStart"));
-    if (draft.services.length === 0) return toast.error(t("appt.noServices"));
-
-    setSaving(true);
-    try {
-      const startMs = new Date(draft.startISO).getTime();
-      const durationMin = Math.max(15, totalDurationMin(draft) || 60);
-      const endISO = new Date(startMs + durationMin * 60_000).toISOString();
-      const title = draft.services.map((l) => l.service.name).join(" + ");
-
-      const res = await finalizeAppointment({
-        artistId: staff.id,
-        calendarId: draft.calendarId,
-        locationId: LOCATION_ID,
-        contact: draft.contact,
-        startISO: draft.startISO,
-        endISO,
-        title,
-        notes: draft.notes || undefined,
-        status: "confirmed",
-        services: draft.services,
-      });
-
-      await queryClient.invalidateQueries({ queryKey: ["agenda"] });
-      toast.success(`${t("appt.created")} · ${formatPrice(final)}`);
-      draft.reset();
-      navigate({ to: "/agenda" });
-      void res;
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : String(e));
-    } finally {
-      setSaving(false);
-    }
-  }
 
   return (
     <div className="flex min-h-dvh flex-col bg-background pb-28">
@@ -271,7 +228,7 @@ function CheckoutPage() {
         >
           {t("appt.payNow")}
         </Button>
-        <Button className="flex-1" onClick={handleFinalize} disabled={saving || !canFinalize}>
+        <Button className="flex-1" onClick={() => void run()} disabled={saving || !canFinalize}>
           {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
           {t("appt.finalize")}
           {final > 0 ? (
