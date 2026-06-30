@@ -1,61 +1,72 @@
+## Sprint Sec-1: Auditoria + Fixes Críticos
 
-# Triagem Tech Lead — Itens da Sprint 2
+### Minha recomendação para `seed-test-users`
 
-Critério de bloqueio: **impede subir a Sprint 3 com segurança em produção** (perda de dado, inconsistência financeira, brecha de segurança, ou risco de corromper o banco). Tudo o mais é dívida priorizável, não bloqueador.
+**Deletar a rota inteira + remover `SEED_SECRET`.** Justificativa:
+- Os usuários já estão criados e funcionando (`admin@gftattoo.test`, `gabriel@gftattoo.test`).
+- A rota tem poder de **resetar senha de admin** — se `SEED_SECRET` vazar (chat, screenshot, log), é game over.
+- Se precisar recriar usuários no futuro, é uma migration ou um script local com `service_role`, não uma rota pública.
+- Reduz superfície de ataque a zero sem perda funcional.
 
----
-
-## 🔴 BLOQUEADORES (resolver antes da Sprint 3)
-
-### B1. Sync sem `upsert` em `ghl_appointment_id`
-- **Onde**: `src/lib/sync.server.ts` (insert em lote após `select … in ids`).
-- **Por que bloqueia**: cron roda a cada 10 min. Se um run atrasa e sobrepõe o próximo (ou se admin clica "Sincronizar" durante o cron), o segundo run lê o `existing` antes do primeiro ter commitado e tenta `INSERT` duplicado. Resultado: erro de unique key, **toda a batch da calendário falha**, e ainda gera ruído em `ghl_sync_failures`. Em produção isso vira incidente recorrente silencioso.
-- **Correção**: trocar `insert` por `upsert({ onConflict: 'ghl_appointment_id', ignoreDuplicates: true })` (ou update parcial preservando `total_eur`, `commission_pct`, `services`).
-
-### B2. `commission_pct` indefinido em inserts vindos do sync
-- **Onde**: `sync.server.ts` monta `rows` sem `commission_pct`. Eventos criados direto no GHL (fora do app) entram com NULL ou default da tabela.
-- **Por que bloqueia**: Sprint 3 vai mexer em KPIs / dashboards financeiros. Linha com `commission_pct` NULL faz `total_eur * commission_pct / 100` virar NULL e some do somatório — relatórios mentem sem alarme.
-- **Correção**: resolver `commission_pct` via `artists.commission_pct` no momento do insert (já temos `artist_id` no scope).
-
-### B3. Caminho de compensação GHL nunca foi exercitado
-- **Onde**: `createAppointmentRecord` em `src/lib/appointments.functions.ts` — DELETE no GHL quando insert no DB falha.
-- **Por que bloqueia**: é o único mecanismo que evita evento órfão no GHL com cobrança fantasma. Nunca foi testado end-to-end. Se estiver quebrado, descobrimos só quando um cliente real for cobrado errado.
-- **Correção**: teste forçado (mockar falha no insert ou rodar com RLS hostil) + verificar que `ghl_sync_failures` recebe a falha quando o DELETE também falha. Sem teste real, **não sobe**.
+Se um dia precisar de novos seeds, criar sob demanda e deletar depois.
 
 ---
 
-## 🟡 ALTA PRIORIDADE (Sprint 3, não bloqueador)
+### Fase 1 — Auditoria (read-only, gera relatório)
 
-### A1. Endpoint público `/api/public/hooks/sync-ghl` autenticado por anon key
-- Anon key vai no bundle do frontend. Qualquer um dispara o cron manualmente → DoS leve (cada chamada bate N vezes no GHL).
-- **Não bloqueia** porque: sem PII no retorno, sem escrita maliciosa possível (idempotente), GHL tem rate limit próprio.
-- **Tratar com**: secret dedicado `CRON_SECRET` no header `apikey`, configurar no `pg_cron` (uma linha de SQL). Trivial, mas separado da Sprint 3.
+**1.1. Rotas públicas com side effects**
+- Listar todos os arquivos em `src/routes/api/public/` e classificar por: tipo de auth, side effects, blast radius se abusada.
+- Verificar `/lovable/email/queue/process`: confirmar que valida bearer service_role corretamente e não loga o token. **Não editar** (gerenciada por `setup_email_infra`).
 
-### A2. Sem paginação em `/calendars/events`
-- Hoje cabe em 1 página (≤90 dias × 4 artistas). Quebra silenciosamente quando volume crescer — eventos somem do mirror.
-- **Não bloqueia agora**, mas vira incidente sem alarme. Adicionar guard: se `events.length === limite`, logar warning e paginar.
+**1.2. Import graph client/server**
+- Buscar imports diretos de `@/integrations/supabase/client.server` fora de `*.server.ts`.
+- Buscar leitura de `process.env.GHL_TOKEN`, `SERVICE_ROLE_KEY`, `SEED_SECRET` em arquivos que não são `.server.ts` nem `.handler()` body.
+- Buscar uso de `supabaseAdmin` em `.functions.ts` no top-level (deveria ser dynamic import dentro do handler).
 
-### A3. Cron nunca observado em `cron.job_run_details`
-- Está agendado e `active=true`, mas ninguém viu um run concluir. Pode estar falhando 100% das vezes silenciosamente.
-- **Bloqueio condicional**: se inspeção de `cron.job_run_details` mostrar 0 runs de sucesso, **vira B4** e bloqueia.
-- Custo: 1 query read-only. Faço junto com B1/B2/B3.
+**1.3. Cron jobs**
+- `SELECT * FROM cron.job` para confirmar quais estão ativos, frequência e URL alvo.
+- Validar últimos `cron.job_run_details` do `sync-ghl-appointments` e `process-email-queue` (sucesso/falha).
+- Conferir RLS em `ghl_sync_failures` (rota anônima escreve nela indiretamente).
 
----
+**1.4. Security scan**
+- Rodar `security--run_security_scan` no final da auditoria para validação cruzada.
 
-## 🟢 BAIXA / COSMÉTICO (backlog)
+### Fase 2 — Fixes críticos
 
-- **Botões duplicados "Checkout"** em `appointments.new.index.tsx` — UX feio, não é bug funcional.
-- **`locationId` hard-coded** em `sync.server.ts` (já existe em `config/staff`) — DRY, não muda comportamento.
-- **`notes` possivelmente `undefined`** no validate — edge case sem reprodução conhecida.
-- **"Resolvido" em /reconciliar não reprocessa** — comportamento documentado, admin age manual no GHL.
-- **Race compensação × cron** — eventual consistency aceitável, admin reconcilia.
+**2.1. Deletar `seed-test-users`**
+- Remover `src/routes/api/public/hooks/seed-test-users.ts`.
+- Remover secret `SEED_SECRET`.
 
----
+**2.2. Trocar proteção do `sync-ghl`**
+- Anon key é pública (vai no bundle client + commitada em `.env`). Hoje qualquer pessoa com DevTools dispara o cron.
+- Gerar novo secret `CRON_SHARED_SECRET` (via `generate_secret`, 64 chars).
+- Trocar comparação em `src/routes/api/public/hooks/sync-ghl.ts` para `x-cron-secret` header vs `CRON_SHARED_SECRET`, com `timingSafeEqual`.
+- Atualizar a definição do `pg_cron` (via `supabase--insert`) para enviar o novo header.
+- Manter idempotência (já tem `upsert ignoreDuplicates`).
 
-## Recomendação
+**2.3. Corrigir leaks server→client (se a auditoria achar algum)**
+- Mover imports top-level de `client.server` para dynamic import dentro de `.handler()`.
+- Renomear helpers expostos para `.server.ts` quando aplicável.
+- Se nada for encontrado, documentar "graph limpo" no relatório.
 
-**Mini-sprint 2.5 (curta, ~1 ciclo)** com escopo travado em B1 + B2 + B3 + verificação de A3. Sem isso, qualquer feature nova da Sprint 3 corre risco de ser construída sobre dados inconsistentes ou de mascarar o bug original.
+### Fase 3 — Validação
 
-Depois disso, abre Sprint 3 com A1 e A2 entrando como tarefa de hardening dentro do escopo principal.
+- Build automático do harness valida que nada quebrou.
+- Smoke test do `sync-ghl` com novo header via `curl` (deve retornar 200 com header certo, 403 sem).
+- Confirmar que GHL sync continua rodando no próximo ciclo do cron.
+- Reportar findings residuais do `security_scan`.
 
-**Posso preparar o plano executável de Sprint 2.5 (B1+B2+B3+verificação A3) com os patches específicos?**
+### Fora de escopo (próximas sprints)
+
+- Rate limiting na rota de sync (mitigado pelo secret).
+- Rotação automatizada de `GHL_TOKEN` / `LOVABLE_API_KEY`.
+- Audit log estruturado de tentativas rejeitadas.
+- Qualquer mudança em email infra ou frequência de cron de email.
+
+### Entregáveis
+
+1. Relatório de auditoria em chat com riscos classificados (Crítico/Alto/Médio/Baixo).
+2. `seed-test-users` removida.
+3. `sync-ghl` protegida por secret dedicado.
+4. Leaks server→client corrigidos (ou confirmação de que não há).
+5. Resultado do `security_scan` pós-fixes.
