@@ -1,10 +1,18 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { RefreshCw } from "lucide-react";
+import { ChevronDown, RefreshCw } from "lucide-react";
 import type { ReactNode } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { runGhlSync, type SyncResult } from "@/lib/sync.functions";
 
 type ButtonProps = React.ComponentProps<typeof Button>;
@@ -37,6 +45,21 @@ function summary(r: SyncResult): string {
   );
 }
 
+interface Preset {
+  key: string;
+  label: string;
+  description: string;
+  pastDays?: number;
+  futureDays?: number;
+}
+
+const PRESETS: Preset[] = [
+  { key: "default", label: "Atualizar agora", description: "7 dias atrás · 90 dias à frente" },
+  { key: "30", label: "Backfill 30 dias", description: "30 dias atrás · 90 dias à frente", pastDays: 30, futureDays: 90 },
+  { key: "90", label: "Backfill 90 dias", description: "90 dias atrás · 90 dias à frente", pastDays: 90, futureDays: 90 },
+  { key: "365", label: "Backfill 12 meses", description: "365 dias atrás · 90 dias à frente", pastDays: 365, futureDays: 90 },
+];
+
 export function SyncGhlButton({
   variant = "outline",
   size = "sm",
@@ -47,8 +70,8 @@ export function SyncGhlButton({
   const qc = useQueryClient();
   const sync = useServerFn(runGhlSync);
 
-  const syncM = useMutation<SyncResult, Error>({
-    mutationFn: () => sync(),
+  const syncM = useMutation<SyncResult, Error, { pastDays?: number; futureDays?: number }>({
+    mutationFn: (vars) => sync({ data: vars }),
     onSuccess: (r) => {
       const desc = summary(r);
       if (r.failures > 0) {
@@ -60,6 +83,7 @@ export function SyncGhlButton({
       qc.invalidateQueries({ queryKey: ["sync-failures"] });
       qc.invalidateQueries({ queryKey: ["agenda-status"] });
       qc.invalidateQueries({ queryKey: ["agenda"] });
+      qc.invalidateQueries({ queryKey: ["monthly-report"] });
       onSettled?.(r, null);
     },
     onError: (e) => {
@@ -81,20 +105,40 @@ export function SyncGhlButton({
   const idleLabel = children ?? "Sincronizar";
 
   return (
-    <Button
-      type="button"
-      size={size}
-      variant={variant}
-      className={className}
-      onClick={() => {
-        if (pending) return;
-        syncM.mutate();
-      }}
-      disabled={pending}
-      aria-busy={pending || undefined}
-    >
-      <RefreshCw className={`mr-2 h-3.5 w-3.5 ${pending ? "animate-spin" : ""}`} />
-      {pending ? "Sincronizando…" : idleLabel}
-    </Button>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          size={size}
+          variant={variant}
+          className={className}
+          disabled={pending}
+          aria-busy={pending || undefined}
+        >
+          <RefreshCw className={`mr-2 h-3.5 w-3.5 ${pending ? "animate-spin" : ""}`} />
+          {pending ? "Sincronizando…" : idleLabel}
+          <ChevronDown className="ml-1 h-3.5 w-3.5 opacity-60" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-64">
+        <DropdownMenuLabel>Janela de sincronização</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {PRESETS.map((p) => (
+          <DropdownMenuItem
+            key={p.key}
+            disabled={pending}
+            onSelect={(e) => {
+              e.preventDefault();
+              if (pending) return;
+              syncM.mutate({ pastDays: p.pastDays, futureDays: p.futureDays });
+            }}
+            className="flex flex-col items-start gap-0.5"
+          >
+            <span className="text-sm font-medium">{p.label}</span>
+            <span className="text-xs text-muted-foreground">{p.description}</span>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
