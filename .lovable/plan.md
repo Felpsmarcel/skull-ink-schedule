@@ -1,88 +1,106 @@
-## Financeiro: cards no mobile, tabela em sm+
+## Filtros client-side no Financeiro
 
-Edição apenas em `src/routes/_authenticated/financeiro.tsx`. Cálculos, server functions e dados intactos. Nenhum filtro adicionado.
+Tudo em `src/routes/_authenticated/financeiro.tsx`. Nenhuma alteração em `use-finance.ts`, `finance.functions.ts`, server functions, schema, RLS ou GHL.
 
-### Estratégia
-Para cada visão (Artist/Admin), renderizar **duas listas irmãs** sobre o mesmo `data.rows`:
-- **Cards**: `<section className="space-y-2 sm:hidden">…</section>`
-- **Tabela atual**: envolver em `<section className="hidden overflow-hidden rounded-lg border border-border sm:block">…</section>`
-
-Assim a tabela só aparece a partir de `sm` (≥640px) e o mobile vê cards. Estados vazio/loading/erro continuam vindo do bloco pai (sem mudanças).
-
-### Card — Artist
-Mostra: serviço (ou cliente como fallback) · data/hora · status (badge) · comissão (destaque).
-
+### Estado e tipos
+No componente `FinanceiroPage`, adicionar:
 ```tsx
-<article className="rounded-lg border border-border bg-card p-3">
-  <div className="flex items-start justify-between gap-2">
-    <div className="min-w-0">
-      <div className="truncate text-sm font-medium">
-        {r.servicesSummary || r.contactName || "—"}
-      </div>
-      <div className="text-[11px] text-muted-foreground">{formatDateTime(r.startAt)}</div>
-    </div>
-    <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
-      {r.bucket}
-    </span>
-  </div>
-  <div className="mt-2 flex items-baseline justify-between">
-    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Comissão</span>
-    <span className="text-sm font-semibold">{formatCurrency(r.commissionEur)}</span>
-  </div>
-</article>
+type Period = "today" | "week" | "month" | "all";
+type BucketFilter = "all" | "pago" | "pendente" | "a_receber";
+
+const [period, setPeriod] = useState<Period>("all");
+const [bucket, setBucket] = useState<BucketFilter>("all");
 ```
 
-### Card — Admin
-Mostra: cliente + serviço · data/hora · status · total · comissão · estúdio.
+### Helper de filtro
+Função pura no arquivo:
+```tsx
+function filterRows<T extends { startAt: string; bucket: PaymentBucket }>(
+  rows: T[], period: Period, bucket: BucketFilter
+): T[] {
+  const now = new Date();
+  const startOfToday = new Date(now); startOfToday.setHours(0,0,0,0);
+  const startOfWeek = new Date(startOfToday);
+  // ISO-week: segunda como início
+  const dow = (startOfToday.getDay() + 6) % 7;
+  startOfWeek.setDate(startOfToday.getDate() - dow);
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const from =
+    period === "today" ? startOfToday.getTime() :
+    period === "week"  ? startOfWeek.getTime()  :
+    period === "month" ? startOfMonth.getTime() : null;
+
+  return rows.filter((r) => {
+    if (bucket !== "all" && r.bucket !== bucket) return false;
+    if (from !== null && new Date(r.startAt).getTime() < from) return false;
+    return true;
+  });
+}
+```
+Importar `PaymentBucket` de `@/lib/finance.functions`.
+
+### UI dos filtros
+Logo abaixo de `<main … className="… space-y-4 p-4">`, antes da renderização condicional Artist/Admin, dois grupos de pílulas:
 
 ```tsx
-<article className="rounded-lg border border-border bg-card p-3 space-y-2">
-  <div className="flex items-start justify-between gap-2">
-    <div className="min-w-0">
-      <div className="truncate text-sm font-medium">{r.contactName ?? "—"}</div>
-      <div className="truncate text-[11px] text-muted-foreground">{r.servicesSummary}</div>
-      <div className="text-[11px] text-muted-foreground">{formatDateTime(r.startAt)}</div>
-    </div>
-    <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
-      {r.bucket}
-    </span>
-  </div>
-  <div className="grid grid-cols-3 gap-2 border-t border-border pt-2 text-right">
-    <div>
-      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Total</div>
-      <div className="text-sm font-semibold">{formatCurrency(r.totalEur)}</div>
-    </div>
-    <div>
-      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Comissão</div>
-      <div className="text-sm font-semibold text-amber-600">{formatCurrency(r.commissionEur)}</div>
-    </div>
-    <div>
-      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Estúdio</div>
-      <div className="text-sm font-semibold text-emerald-600">{formatCurrency(r.studioEur)}</div>
-    </div>
-  </div>
-</article>
+<section className="flex flex-col gap-2">
+  <FilterRow
+    label="Período"
+    value={period}
+    onChange={setPeriod}
+    options={[
+      { v: "today", l: "Hoje" },
+      { v: "week",  l: "Semana" },
+      { v: "month", l: "Mês" },
+      { v: "all",   l: "Todos" },
+    ]}
+  />
+  <FilterRow
+    label="Status"
+    value={bucket}
+    onChange={setBucket}
+    options={[
+      { v: "all",       l: "Todos" },
+      { v: "pago",      l: "Pago" },
+      { v: "pendente",  l: "Pendente" },
+      { v: "a_receber", l: "A receber" },
+    ]}
+  />
+</section>
 ```
 
-### Estado vazio mobile
-Quando `data.rows.length === 0`, renderizar nos cards um único bloco:
+`FilterRow` é local — div com label `text-[10px] uppercase` e row `flex flex-wrap gap-1` de botões com `aria-pressed`, estilo coerente com o resto (border + bg-card; ativo: `bg-foreground text-background`). Sem novos pacotes; usa apenas Tailwind.
+
+### Aplicação dos filtros
+Passar as `rows` já filtradas para `ArtistView` e `AdminView` substituindo `data.rows`:
 ```tsx
-<div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-  Sem agendamentos.
-</div>
+const visibleRows = useMemo(
+  () => filterRows(data.rows, period, bucket),
+  [data.rows, period, bucket]
+);
 ```
-A tabela já cobre o caso vazio em sm+.
+As views recebem `rows={visibleRows}` em vez de ler `data.rows`. Ajustar as assinaturas:
+```tsx
+function ArtistView({ data, rows }: { data: …; rows: typeof data.rows }) { … }
+function AdminView ({ data, rows }: { data: …; rows: typeof data.rows }) { … }
+```
+Cards de resumo no topo continuam usando `data.aReceber/pendente/pago/…` (totais agregados do backend) — não recalculados localmente para evitar inconsistências.
 
-### O que NÃO muda
-- Cards de resumo (`StatCard`) no topo — preservados.
-- Lógica admin × artista, comissão, totais — preservados.
-- Botão Sincronizar (admin) e link Reconciliar — preservados.
-- Estados de loading/erro no bloco pai — preservados.
-- Sem novos imports, sem mudança em `format.ts`.
+### Estado vazio reflete filtros
+Quando `rows.length === 0` E (`period !== "all"` ou `bucket !== "all"`), trocar o texto para "Nenhum agendamento com os filtros aplicados." Caso contrário, mantém "Sem agendamentos." Vale para cards mobile e linha da tabela.
 
-### Critérios de aceite (verificação)
-1. <640px → cards visíveis, tabela oculta.
-2. ≥640px → tabela visível, cards ocultos.
-3. Admin vê total/comissão/estúdio nos dois layouts; artista vê apenas comissão.
-4. Sincronizar e Reconciliar continuam admin-only.
-5. Sem agendamentos → mensagem aparece em ambos os modos.
+### Permissões e segurança
+- Estado de admin/artista vem de `data.role` (server). Filtro é apenas UI sobre rows que o server já autorizou.
+- Botão Sincronizar e link Reconciliar continuam admin-only.
+
+### Critérios de aceite (verificáveis)
+1. Pílulas de período/status visíveis para admin e artista.
+2. Filtrar por "Hoje/Semana/Mês" reduz a lista.
+3. Filtrar por bucket reduz a lista.
+4. Estado vazio mostra mensagem específica quando há filtros ativos.
+5. Mobile cards + tabela em sm+ continuam funcionando; filtros não causam overflow horizontal (`flex-wrap`).
+6. Cards de resumo no topo permanecem com os totais do backend.
+
+### Fora de escopo
+Filtro por tatuador, range de datas custom, exportação, persistência em URL — não nesta tarefa.

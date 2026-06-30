@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, ArrowLeft, RefreshCw, Wallet } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { useFinanceSummary } from "@/hooks/use-finance";
 import { useIsAdmin } from "@/hooks/use-current-user";
@@ -9,6 +10,76 @@ import { formatCurrency, formatDateTime } from "@/lib/format";
 import { UserMenu } from "@/components/auth/user-menu";
 import { Button } from "@/components/ui/button";
 import { runGhlSync } from "@/lib/sync.functions";
+import type { PaymentBucket } from "@/lib/finance.functions";
+
+type Period = "today" | "week" | "month" | "all";
+type BucketFilter = "all" | PaymentBucket;
+
+function filterRows<T extends { startAt: string; bucket: PaymentBucket }>(
+  rows: T[],
+  period: Period,
+  bucket: BucketFilter,
+): T[] {
+  const now = new Date();
+  const startOfToday = new Date(now);
+  startOfToday.setHours(0, 0, 0, 0);
+  const startOfWeek = new Date(startOfToday);
+  const dow = (startOfToday.getDay() + 6) % 7;
+  startOfWeek.setDate(startOfToday.getDate() - dow);
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const from =
+    period === "today"
+      ? startOfToday.getTime()
+      : period === "week"
+        ? startOfWeek.getTime()
+        : period === "month"
+          ? startOfMonth.getTime()
+          : null;
+  return rows.filter((r) => {
+    if (bucket !== "all" && r.bucket !== bucket) return false;
+    if (from !== null && new Date(r.startAt).getTime() < from) return false;
+    return true;
+  });
+}
+
+function FilterRow<V extends string>({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: V;
+  onChange: (v: V) => void;
+  options: ReadonlyArray<{ v: V; l: string }>;
+}) {
+  return (
+    <div>
+      <div className="mb-1 text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className="flex flex-wrap gap-1">
+        {options.map((o) => {
+          const active = o.v === value;
+          return (
+            <button
+              key={o.v}
+              type="button"
+              aria-pressed={active}
+              onClick={() => onChange(o.v)}
+              className={
+                "rounded-full border px-3 py-1 text-xs transition " +
+                (active
+                  ? "border-foreground bg-foreground text-background"
+                  : "border-border bg-card text-foreground hover:bg-muted")
+              }
+            >
+              {o.l}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 export const Route = createFileRoute("/_authenticated/financeiro")({
   head: () => ({
@@ -37,6 +108,13 @@ function FinanceiroPage() {
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : String(e)),
   });
+
+  const [period, setPeriod] = useState<Period>("all");
+  const [bucket, setBucket] = useState<BucketFilter>("all");
+  const filtersActive = period !== "all" || bucket !== "all";
+  const emptyMsg = filtersActive
+    ? "Nenhum agendamento com os filtros aplicados."
+    : "Sem agendamentos.";
 
   return (
     <div className="flex min-h-dvh flex-col bg-background pb-20">
@@ -86,10 +164,46 @@ function FinanceiroPage() {
           <p className="text-sm text-muted-foreground">A carregar…</p>
         ) : error ? (
           <p className="text-sm text-destructive">{(error as Error).message}</p>
-        ) : !data ? null : data.role === "artist" ? (
-          <ArtistView data={data} />
-        ) : (
-          <AdminView data={data} />
+        ) : !data ? null : (
+          <>
+            <section className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3">
+              <FilterRow
+                label="Período"
+                value={period}
+                onChange={setPeriod}
+                options={[
+                  { v: "today", l: "Hoje" },
+                  { v: "week", l: "Semana" },
+                  { v: "month", l: "Mês" },
+                  { v: "all", l: "Todos" },
+                ]}
+              />
+              <FilterRow
+                label="Status"
+                value={bucket}
+                onChange={setBucket}
+                options={[
+                  { v: "all", l: "Todos" },
+                  { v: "pago", l: "Pago" },
+                  { v: "pendente", l: "Pendente" },
+                  { v: "a_receber", l: "A receber" },
+                ]}
+              />
+            </section>
+            {data.role === "artist" ? (
+              <ArtistView
+                data={data}
+                rows={filterRows(data.rows, period, bucket)}
+                emptyMsg={emptyMsg}
+              />
+            ) : (
+              <AdminView
+                data={data}
+                rows={filterRows(data.rows, period, bucket)}
+                emptyMsg={emptyMsg}
+              />
+            )}
+          </>
         )}
       </main>
     </div>
@@ -111,7 +225,15 @@ function StatCard({ label, value, tone }: { label: string; value: string; tone?:
   );
 }
 
-function ArtistView({ data }: { data: Extract<ReturnType<typeof useFinanceSummary>["data"], { role: "artist" }> }) {
+function ArtistView({
+  data,
+  rows,
+  emptyMsg,
+}: {
+  data: Extract<ReturnType<typeof useFinanceSummary>["data"], { role: "artist" }>;
+  rows: Extract<ReturnType<typeof useFinanceSummary>["data"], { role: "artist" }>["rows"];
+  emptyMsg: string;
+}) {
   return (
     <>
       <section className="grid grid-cols-3 gap-2">
@@ -123,13 +245,13 @@ function ArtistView({ data }: { data: Extract<ReturnType<typeof useFinanceSummar
         Valores exibidos são a sua comissão (40%).
       </p>
 
-      {data.rows.length === 0 ? (
+      {rows.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground sm:hidden">
-          Sem agendamentos.
+          {emptyMsg}
         </div>
       ) : (
         <section className="space-y-2 sm:hidden">
-          {data.rows.map((r) => (
+          {rows.map((r) => (
             <article key={r.id} className="rounded-lg border border-border bg-card p-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
@@ -162,14 +284,14 @@ function ArtistView({ data }: { data: Extract<ReturnType<typeof useFinanceSummar
             </tr>
           </thead>
           <tbody>
-            {data.rows.length === 0 ? (
+            {rows.length === 0 ? (
               <tr>
                 <td colSpan={4} className="px-3 py-6 text-center text-muted-foreground">
-                  Sem agendamentos.
+                  {emptyMsg}
                 </td>
               </tr>
             ) : (
-              data.rows.map((r) => (
+              rows.map((r) => (
                 <tr key={r.id} className="border-t border-border">
                   <td className="px-3 py-2">{formatDateTime(r.startAt)}</td>
                   <td className="px-3 py-2">{r.servicesSummary || r.contactName || "—"}</td>
@@ -189,7 +311,15 @@ function ArtistView({ data }: { data: Extract<ReturnType<typeof useFinanceSummar
   );
 }
 
-function AdminView({ data }: { data: Extract<ReturnType<typeof useFinanceSummary>["data"], { role: "admin" }> }) {
+function AdminView({
+  data,
+  rows,
+  emptyMsg,
+}: {
+  data: Extract<ReturnType<typeof useFinanceSummary>["data"], { role: "admin" }>;
+  rows: Extract<ReturnType<typeof useFinanceSummary>["data"], { role: "admin" }>["rows"];
+  emptyMsg: string;
+}) {
   return (
     <>
       <section className="grid grid-cols-3 gap-2">
@@ -203,13 +333,13 @@ function AdminView({ data }: { data: Extract<ReturnType<typeof useFinanceSummary
         <StatCard label="A receber" value={formatCurrency(data.aReceber)} />
       </section>
 
-      {data.rows.length === 0 ? (
+      {rows.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground sm:hidden">
-          Sem agendamentos.
+          {emptyMsg}
         </div>
       ) : (
         <section className="space-y-2 sm:hidden">
-          {data.rows.map((r) => (
+          {rows.map((r) => (
             <article key={r.id} className="space-y-2 rounded-lg border border-border bg-card p-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
@@ -253,14 +383,14 @@ function AdminView({ data }: { data: Extract<ReturnType<typeof useFinanceSummary
             </tr>
           </thead>
           <tbody>
-            {data.rows.length === 0 ? (
+            {rows.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-3 py-6 text-center text-muted-foreground">
-                  Sem agendamentos.
+                  {emptyMsg}
                 </td>
               </tr>
             ) : (
-              data.rows.map((r) => (
+              rows.map((r) => (
                 <tr key={r.id} className="border-t border-border">
                   <td className="px-3 py-2">{formatDateTime(r.startAt)}</td>
                   <td className="px-3 py-2">
