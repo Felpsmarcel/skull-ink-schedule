@@ -55,6 +55,19 @@
       "save": "Save",
       "checkout": "Checkout",
       "created": "Appointment created",
+      "checklist": {
+        "client": "Client",
+        "staff": "Artist",
+        "time": "Time",
+        "service": "Service"
+      },
+      "cta": {
+        "selectClient": "Pick a client",
+        "selectStaff": "Pick an artist",
+        "selectTime": "Pick a time",
+        "addService": "Add a service",
+        "review": "Review booking"
+      },
       "pickService": "Pick service",
       "searchService": "Search service",
       "noResults": "Nothing found.",
