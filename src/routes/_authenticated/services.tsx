@@ -55,12 +55,14 @@ function ServicesPage() {
   const toggleFn = useServerFn(toggleServiceActive);
   const toggleMut = useMutation({
     mutationFn: (v: { id: string; active: boolean }) => toggleFn({ data: v }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["services"] });
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["services"] });
       toast.success("Atualizado");
     },
     onError: (e: Error) => toast.error(e.message),
   });
+  const togglingId =
+    toggleMut.isPending ? (toggleMut.variables as { id: string } | undefined)?.id : undefined;
 
   return (
     <div className="min-h-svh bg-background pb-24 text-foreground">
@@ -92,10 +94,10 @@ function ServicesPage() {
               </SheetHeader>
               <ServiceForm
                 initial={editing}
-                onDone={() => {
+                onDone={async () => {
+                  await qc.invalidateQueries({ queryKey: ["services"] });
                   setOpen(false);
                   setEditing(null);
-                  qc.invalidateQueries({ queryKey: ["services"] });
                 }}
               />
             </SheetContent>
@@ -164,11 +166,15 @@ function ServicesPage() {
                             <button
                               type="button"
                               aria-label={s.active ? "Desativar" : "Ativar"}
-                              disabled={toggleMut.isPending}
+                              disabled={togglingId === s.id}
                               onClick={() => toggleMut.mutate({ id: s.id, active: !s.active })}
                               className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
                             >
-                              <Power className="h-4 w-4" />
+                              {togglingId === s.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Power className="h-4 w-4" />
+                              )}
                             </button>
                           </div>
                         )}
