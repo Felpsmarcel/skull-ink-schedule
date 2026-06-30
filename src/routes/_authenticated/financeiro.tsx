@@ -225,7 +225,15 @@ function StatCard({ label, value, tone }: { label: string; value: string; tone?:
   );
 }
 
-function ArtistView({ data }: { data: Extract<ReturnType<typeof useFinanceSummary>["data"], { role: "artist" }> }) {
+function ArtistView({
+  data,
+  rows,
+  emptyMsg,
+}: {
+  data: Extract<ReturnType<typeof useFinanceSummary>["data"], { role: "artist" }>;
+  rows: Extract<ReturnType<typeof useFinanceSummary>["data"], { role: "artist" }>["rows"];
+  emptyMsg: string;
+}) {
   return (
     <>
       <section className="grid grid-cols-3 gap-2">
@@ -237,13 +245,13 @@ function ArtistView({ data }: { data: Extract<ReturnType<typeof useFinanceSummar
         Valores exibidos são a sua comissão (40%).
       </p>
 
-      {data.rows.length === 0 ? (
+      {rows.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground sm:hidden">
-          Sem agendamentos.
+          {emptyMsg}
         </div>
       ) : (
         <section className="space-y-2 sm:hidden">
-          {data.rows.map((r) => (
+          {rows.map((r) => (
             <article key={r.id} className="rounded-lg border border-border bg-card p-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
@@ -276,14 +284,14 @@ function ArtistView({ data }: { data: Extract<ReturnType<typeof useFinanceSummar
             </tr>
           </thead>
           <tbody>
-            {data.rows.length === 0 ? (
+            {rows.length === 0 ? (
               <tr>
                 <td colSpan={4} className="px-3 py-6 text-center text-muted-foreground">
-                  Sem agendamentos.
+                  {emptyMsg}
                 </td>
               </tr>
             ) : (
-              data.rows.map((r) => (
+              rows.map((r) => (
                 <tr key={r.id} className="border-t border-border">
                   <td className="px-3 py-2">{formatDateTime(r.startAt)}</td>
                   <td className="px-3 py-2">{r.servicesSummary || r.contactName || "—"}</td>
@@ -303,7 +311,15 @@ function ArtistView({ data }: { data: Extract<ReturnType<typeof useFinanceSummar
   );
 }
 
-function AdminView({ data }: { data: Extract<ReturnType<typeof useFinanceSummary>["data"], { role: "admin" }> }) {
+function AdminView({
+  data,
+  rows,
+  emptyMsg,
+}: {
+  data: Extract<ReturnType<typeof useFinanceSummary>["data"], { role: "admin" }>;
+  rows: Extract<ReturnType<typeof useFinanceSummary>["data"], { role: "admin" }>["rows"];
+  emptyMsg: string;
+}) {
   return (
     <>
       <section className="grid grid-cols-3 gap-2">
@@ -317,13 +333,13 @@ function AdminView({ data }: { data: Extract<ReturnType<typeof useFinanceSummary
         <StatCard label="A receber" value={formatCurrency(data.aReceber)} />
       </section>
 
-      {data.rows.length === 0 ? (
+      {rows.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground sm:hidden">
-          Sem agendamentos.
+          {emptyMsg}
         </div>
       ) : (
         <section className="space-y-2 sm:hidden">
-          {data.rows.map((r) => (
+          {rows.map((r) => (
             <article key={r.id} className="space-y-2 rounded-lg border border-border bg-card p-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
@@ -367,14 +383,14 @@ function AdminView({ data }: { data: Extract<ReturnType<typeof useFinanceSummary
             </tr>
           </thead>
           <tbody>
-            {data.rows.length === 0 ? (
+            {rows.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-3 py-6 text-center text-muted-foreground">
-                  Sem agendamentos.
+                  {emptyMsg}
                 </td>
               </tr>
             ) : (
-              data.rows.map((r) => (
+              rows.map((r) => (
                 <tr key={r.id} className="border-t border-border">
                   <td className="px-3 py-2">{formatDateTime(r.startAt)}</td>
                   <td className="px-3 py-2">
