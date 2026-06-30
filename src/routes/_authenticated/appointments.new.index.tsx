@@ -34,7 +34,6 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
-import { LOCATION_ID } from "@/config/staff";
 import { useArtists } from "@/hooks/use-artists";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import {
@@ -45,7 +44,6 @@ import {
   formatHHmm,
 } from "@/lib/agenda-grid";
 import {
-  createAppointment,
   createContact,
   getFreeSlots,
   searchContacts,
@@ -54,10 +52,8 @@ import {
 import { formatPrice, modalityLabel } from "@/lib/services";
 import {
   useAppointmentDraft,
-  totalDurationMin,
   totalFinalEur,
 } from "@/stores/appointment-draft";
-import { finalizeAppointment } from "@/lib/appointments";
 
 export const Route = createFileRoute("/_authenticated/appointments/new/")({
   head: () => ({
@@ -69,7 +65,6 @@ export const Route = createFileRoute("/_authenticated/appointments/new/")({
 function AppointmentNewPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const artistsQuery = useArtists();
   const allArtists = artistsQuery.data ?? [];
   const { data: me } = useCurrentUser();
@@ -92,16 +87,14 @@ function AppointmentNewPage() {
     draft.startISO ? new Date(draft.startISO) : new Date(),
   );
   const [datePickerOpen, setDatePickerOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
 
   const dayKey = brusselsDayKey(dateObj);
   const dayStartMs = brusselsDayStartMs(dateObj);
   const dayEndMs = brusselsDayEndMs(dateObj);
 
-  const canSave = Boolean(
-    draft.contact && draft.calendarId && draft.startISO,
+  const canCheckout = Boolean(
+    draft.contact && draft.calendarId && draft.startISO && draft.services.length > 0,
   );
-  const canCheckout = canSave && draft.services.length > 0;
 
   const slotsQuery = useQuery({
     enabled: Boolean(draft.calendarId),
@@ -126,59 +119,6 @@ function AppointmentNewPage() {
     [dateObj],
   );
 
-  async function handleSave() {
-    if (!draft.contact) return toast.error(t("appt.errors.noContact"));
-    if (!draft.calendarId) return toast.error(t("appt.errors.noCalendar"));
-    if (!draft.startISO) return toast.error(t("appt.errors.noStart"));
-
-    setSaving(true);
-    try {
-      // Re-validate slot freshness against GHL right before saving.
-      const startMs = new Date(draft.startISO).getTime();
-      const fresh = await getFreeSlots(draft.calendarId, dayStartMs, dayEndMs);
-      if (!fresh.ok) throw new Error(`free-slots ${fresh.status}`);
-      const free = extractFreeSlotStarts(fresh.data);
-      if (!free.some((m) => Math.abs(m - startMs) < 60_000)) {
-        toast.error(t("appt.errors.slotTaken"));
-        slotsQuery.refetch();
-        return;
-      }
-
-      const durationMin = Math.max(15, totalDurationMin(draft) || 60);
-      const endMs = startMs + durationMin * 60_000;
-      const title =
-        draft.services.length > 0
-          ? draft.services.map((l) => l.service.name).join(" + ")
-          : draft.contact.contactName || draft.contact.firstName || "Agendamento";
-
-      const staff = artists.find((a) => a.calendarId === draft.calendarId);
-      if (!staff) {
-        toast.error(t("appt.errors.noCalendar"));
-        return;
-      }
-      await finalizeAppointment({
-        artistId: staff.id,
-        calendarId: draft.calendarId,
-        locationId: LOCATION_ID,
-        contact: draft.contact,
-        startISO: new Date(startMs).toISOString(),
-        endISO: new Date(endMs).toISOString(),
-        title,
-        notes: draft.notes || undefined,
-        status: "confirmed",
-        services: draft.services,
-      });
-
-      await queryClient.invalidateQueries({ queryKey: ["agenda"] });
-      toast.success(t("appt.created"));
-      draft.reset();
-      navigate({ to: "/agenda" });
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : String(e));
-    } finally {
-      setSaving(false);
-    }
-  }
 
   return (
     <div className="flex min-h-dvh flex-col bg-background pb-24">
