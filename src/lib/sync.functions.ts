@@ -6,18 +6,31 @@ export type { SyncResult } from "@/lib/sync.server";
 
 export const runGhlSync = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<SyncResult> => {
+  .inputValidator((data: unknown) => {
+    const d = (data ?? {}) as { pastDays?: unknown; futureDays?: unknown };
+    const past = typeof d.pastDays === "number" ? Math.floor(d.pastDays) : undefined;
+    const future = typeof d.futureDays === "number" ? Math.floor(d.futureDays) : undefined;
+    if (past !== undefined && (past < 1 || past > 730))
+      throw new Error("pastDays fora do intervalo (1–730)");
+    if (future !== undefined && (future < 0 || future > 365))
+      throw new Error("futureDays fora do intervalo (0–365)");
+    return { pastDays: past, futureDays: future };
+  })
+  .handler(async ({ data, context }): Promise<SyncResult> => {
     const { supabase, userId } = context;
-    const { data, error } = await supabase
+    const { data: row, error } = await supabase
       .from("app_users" as never)
       .select("role")
       .eq("id", userId)
       .maybeSingle();
     if (error) throw new Error(error.message);
-    const role = (data as { role: string } | null)?.role;
+    const role = (row as { role: string } | null)?.role;
     if (role !== "admin") throw new Error("Apenas administradores podem rodar a sincronização.");
     const { syncGhlAppointments } = await import("@/lib/sync.server");
-    return syncGhlAppointments();
+    return syncGhlAppointments({
+      pastDays: data.pastDays,
+      futureDays: data.futureDays,
+    });
   });
 
 export interface SyncFailureRow {
