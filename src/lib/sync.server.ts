@@ -159,8 +159,7 @@ export async function syncGhlAppointments(opts?: {
         calendar_id: calId,
         contact_name:
           e.contact?.name ??
-          [e.contact?.firstName, e.contact?.lastName].filter(Boolean).join(" ") ||
-          null,
+          ([e.contact?.firstName, e.contact?.lastName].filter(Boolean).join(" ") || null),
         start_at: e.startTime,
         end_at: e.endTime,
         status: mapStatus(e.appointmentStatus),
@@ -194,8 +193,7 @@ export async function syncGhlAppointments(opts?: {
             status: mapStatus(e.appointmentStatus),
             contact_name:
               e.contact?.name ??
-              [e.contact?.firstName, e.contact?.lastName].filter(Boolean).join(" ") ||
-              null,
+              ([e.contact?.firstName, e.contact?.lastName].filter(Boolean).join(" ") || null),
             ghl_contact_id: e.contactId ?? null,
             calendar_id: calId,
           } as never,
