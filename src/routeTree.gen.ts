@@ -28,6 +28,7 @@ import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/em
 import { Route as ApiPublicHooksSyncGhlRouteImport } from './routes/api/public/hooks/sync-ghl'
 import { Route as AuthenticatedAppointmentsNewServicesRouteImport } from './routes/_authenticated/appointments.new.services'
 import { Route as AuthenticatedAppointmentsNewCheckoutRouteImport } from './routes/_authenticated/appointments.new.checkout'
+import { Route as AuthenticatedAdminRelatoriosAgendamentosRouteImport } from './routes/_authenticated/_admin/relatorios.agendamentos'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -129,6 +130,12 @@ const AuthenticatedAppointmentsNewCheckoutRoute =
     path: '/checkout',
     getParentRoute: () => AuthenticatedAppointmentsNewRoute,
   } as any)
+const AuthenticatedAdminRelatoriosAgendamentosRoute =
+  AuthenticatedAdminRelatoriosAgendamentosRouteImport.update({
+    id: '/relatorios/agendamentos',
+    path: '/relatorios/agendamentos',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -141,6 +148,7 @@ export interface FileRoutesByFullPath {
   '/ghl-test': typeof AuthenticatedAdminGhlTestRoute
   '/reconciliar': typeof AuthenticatedAdminReconciliarRoute
   '/appointments/new': typeof AuthenticatedAppointmentsNewRouteWithChildren
+  '/relatorios/agendamentos': typeof AuthenticatedAdminRelatoriosAgendamentosRoute
   '/appointments/new/checkout': typeof AuthenticatedAppointmentsNewCheckoutRoute
   '/appointments/new/services': typeof AuthenticatedAppointmentsNewServicesRoute
   '/api/public/hooks/sync-ghl': typeof ApiPublicHooksSyncGhlRoute
@@ -159,6 +167,7 @@ export interface FileRoutesByTo {
   '/services': typeof AuthenticatedServicesRoute
   '/ghl-test': typeof AuthenticatedAdminGhlTestRoute
   '/reconciliar': typeof AuthenticatedAdminReconciliarRoute
+  '/relatorios/agendamentos': typeof AuthenticatedAdminRelatoriosAgendamentosRoute
   '/appointments/new/checkout': typeof AuthenticatedAppointmentsNewCheckoutRoute
   '/appointments/new/services': typeof AuthenticatedAppointmentsNewServicesRoute
   '/api/public/hooks/sync-ghl': typeof ApiPublicHooksSyncGhlRoute
@@ -181,6 +190,7 @@ export interface FileRoutesById {
   '/_authenticated/_admin/ghl-test': typeof AuthenticatedAdminGhlTestRoute
   '/_authenticated/_admin/reconciliar': typeof AuthenticatedAdminReconciliarRoute
   '/_authenticated/appointments/new': typeof AuthenticatedAppointmentsNewRouteWithChildren
+  '/_authenticated/_admin/relatorios/agendamentos': typeof AuthenticatedAdminRelatoriosAgendamentosRoute
   '/_authenticated/appointments/new/checkout': typeof AuthenticatedAppointmentsNewCheckoutRoute
   '/_authenticated/appointments/new/services': typeof AuthenticatedAppointmentsNewServicesRoute
   '/api/public/hooks/sync-ghl': typeof ApiPublicHooksSyncGhlRoute
@@ -202,6 +212,7 @@ export interface FileRouteTypes {
     | '/ghl-test'
     | '/reconciliar'
     | '/appointments/new'
+    | '/relatorios/agendamentos'
     | '/appointments/new/checkout'
     | '/appointments/new/services'
     | '/api/public/hooks/sync-ghl'
@@ -220,6 +231,7 @@ export interface FileRouteTypes {
     | '/services'
     | '/ghl-test'
     | '/reconciliar'
+    | '/relatorios/agendamentos'
     | '/appointments/new/checkout'
     | '/appointments/new/services'
     | '/api/public/hooks/sync-ghl'
@@ -241,6 +253,7 @@ export interface FileRouteTypes {
     | '/_authenticated/_admin/ghl-test'
     | '/_authenticated/_admin/reconciliar'
     | '/_authenticated/appointments/new'
+    | '/_authenticated/_admin/relatorios/agendamentos'
     | '/_authenticated/appointments/new/checkout'
     | '/_authenticated/appointments/new/services'
     | '/api/public/hooks/sync-ghl'
@@ -395,18 +408,28 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppointmentsNewCheckoutRouteImport
       parentRoute: typeof AuthenticatedAppointmentsNewRoute
     }
+    '/_authenticated/_admin/relatorios/agendamentos': {
+      id: '/_authenticated/_admin/relatorios/agendamentos'
+      path: '/relatorios/agendamentos'
+      fullPath: '/relatorios/agendamentos'
+      preLoaderRoute: typeof AuthenticatedAdminRelatoriosAgendamentosRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
   }
 }
 
 interface AuthenticatedAdminRouteRouteChildren {
   AuthenticatedAdminGhlTestRoute: typeof AuthenticatedAdminGhlTestRoute
   AuthenticatedAdminReconciliarRoute: typeof AuthenticatedAdminReconciliarRoute
+  AuthenticatedAdminRelatoriosAgendamentosRoute: typeof AuthenticatedAdminRelatoriosAgendamentosRoute
 }
 
 const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren =
   {
     AuthenticatedAdminGhlTestRoute: AuthenticatedAdminGhlTestRoute,
     AuthenticatedAdminReconciliarRoute: AuthenticatedAdminReconciliarRoute,
+    AuthenticatedAdminRelatoriosAgendamentosRoute:
+      AuthenticatedAdminRelatoriosAgendamentosRoute,
   }
 
 const AuthenticatedAdminRouteRouteWithChildren =

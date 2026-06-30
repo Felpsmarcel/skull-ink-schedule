@@ -145,6 +145,25 @@ export async function createContact(input: CreateContactInput) {
   });
 }
 
+export interface GhlContactDetail extends GhlContact {
+  source?: string;
+  tags?: string[];
+  assignedTo?: string;
+}
+
+export interface GetContactResponse {
+  contact?: GhlContactDetail;
+  traceId?: string;
+}
+
+export async function getContact(contactId: string) {
+  return ghlFetch<GetContactResponse>({
+    path: `/contacts/${contactId}`,
+    method: "GET",
+    version: CONTACTS_VERSION,
+  });
+}
+
 /* --------------------- Appointments --------------------- */
 
 export interface CreateAppointmentInput {
