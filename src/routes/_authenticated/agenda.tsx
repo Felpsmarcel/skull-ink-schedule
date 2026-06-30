@@ -24,6 +24,7 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { UserMenu } from "@/components/auth/user-menu";
 import { resolveIntlLocale } from "@/lib/locale";
 import { BottomNav } from "@/components/layout/bottom-nav";
+import { useAppointmentDraft } from "@/stores/appointment-draft";
 
 export const Route = createFileRoute("/_authenticated/agenda")({
   head: () => ({
@@ -320,15 +321,25 @@ function StaffColumn({ agenda }: { agenda: ReturnType<typeof useStaffDayAgenda>[
             <pre className="whitespace-pre-wrap break-all">{error}</pre>
           </div>
         ) : (
-          slots.map((slot) => <SlotCell key={slot.startMs} slot={slot} />)
+          slots.map((slot) => (
+            <SlotCell key={slot.startMs} slot={slot} calendarId={staff.calendarId} />
+          ))
         )}
       </div>
     </div>
   );
 }
 
-function SlotCell({ slot }: { slot: import("@/lib/agenda-grid").GridSlot }) {
+function SlotCell({
+  slot,
+  calendarId,
+}: {
+  slot: import("@/lib/agenda-grid").GridSlot;
+  calendarId: string;
+}) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const draft = useAppointmentDraft();
 
   if (slot.status === "outside") {
     return <div className={cn("border-b border-border/30 bg-background/40", ROW_HEIGHT)} />;
@@ -339,7 +350,12 @@ function SlotCell({ slot }: { slot: import("@/lib/agenda-grid").GridSlot }) {
       <div className={cn("border-b border-border/30 p-0.5", ROW_HEIGHT)}>
         <button
           type="button"
-          onClick={() => toast(t("actions.comingSoon"))}
+          onClick={() => {
+            draft.reset();
+            draft.setCalendar(calendarId);
+            draft.setStart(new Date(slot.startMs).toISOString());
+            void navigate({ to: "/appointments/new" });
+          }}
           className="flex h-full w-full flex-col items-center justify-center rounded border border-dashed border-border bg-background text-[10px] uppercase tracking-wider text-muted-foreground hover:border-foreground hover:text-foreground"
         >
           {t("agenda.noBooking")}
