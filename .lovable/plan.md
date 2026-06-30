@@ -1,91 +1,65 @@
-## Bloqueio #1 — Artista não consegue gravar appointment no Supabase
+## Sprint 2 — proposta do Tech Lead
 
-### Causa raiz
+Objetivo: tirar o app do estado "fluxo funciona em condições ideais" e levar para "fluxo confiável em produção". Foco em **integridade de dados (GHL ↔ Supabase)** e **fechar buracos do fluxo de agendamento que já estão à mostra**. Sem features novas grandes; sem mexer em finanças, agenda, ou design.
 
-`public.appointments` tem hoje 3 policies:
+### Por que essa Sprint, e não outra
 
-| Policy | Cmd | Quem | Efeito |
-|---|---|---|---|
-| `appt_admin` | ALL | `current_user_role() = 'admin'` | admin faz tudo |
-| `appt_artist_select_blocked` | SELECT | só admin | artista lê via função `get_my_artist_appointments` (SECURITY DEFINER) |
-| `appt_artist_update` | UPDATE | artista do próprio `artist_id` | só UPDATE |
+Hoje a maior dívida não é UI nem features — é **consistência**. O Bloqueio #1 foi resolvido (server fn SECURITY DEFINER), mas três problemas reais continuam de pé e todos vão estourar em produção antes de qualquer feature nova valer a pena:
 
-Não existe policy de **INSERT** para `artist`. Quando o tatuador logado clica em "Finalizar", `finalizeAppointment()` cria o evento no GHL com sucesso e em seguida tenta `supabase.from("appointments").insert(...)` com o token dele. O insert é barrado por RLS → erro propaga, mas o evento já existe no GHL → **dessincronia permanente**.
+1. **Sem backfill GHL → Supabase.** Eventos criados fora do app (no próprio GHL, por telefone, pelo cliente) nunca aparecem no banco. Hoje o app só "vê" o que ele mesmo criou. Qualquer relatório financeiro é parcial por definição.
+2. **Sem reconciliação quando o GHL falha no meio.** A server fn compensa GHL→DB, mas não há retry/fila para o caso inverso (evento criado no GHL, app caiu antes de inserir). Hoje o aviso é só `console.error` no servidor — ninguém lê.
+3. **Duplicação no fluxo de finalização.** `appointments.new.index.tsx` e `appointments.new.checkout.tsx` chamam `finalizeAppointment` em paralelo, com lógicas próprias de validação. Já identificado em auditoria; é onde o próximo bug vai nascer.
 
-### Alternativas consideradas
+Auth, recovery UI e Sprint 5 (KPIs) ficam para depois — não bloqueiam ninguém hoje.
 
-**A. Adicionar policy `INSERT` para `artist`**
-- `WITH CHECK (current_user_role() = 'artist' AND artist_id = current_artist_id())`
-- Simples, mantém escrita client-side, sem nova superfície de servidor.
-- Contra: amplia o que o cliente pode escrever diretamente em `appointments` (campos como `total_eur`, `commission_pct`, `services`). Mesmo com check de `artist_id`, o tatuador poderia forjar valores. Hoje isso não é blindado por nenhum trigger.
+### Escopo (3 entregas, nessa ordem)
 
-**B. Mover a escrita para uma server function `SECURITY DEFINER`**
-- `finalizeAppointment` vira `createServerFn` com `requireSupabaseAuth`, autoriza o caller (admin OU artist dono do `artist_id`), e usa `supabaseAdmin` para o insert.
-- Vantagem: o servidor é a fonte de verdade dos campos sensíveis (`total_eur`, `commission_pct`, `original_eur`, `services`). Cliente só manda intent + contato + slot.
-- Vantagem: cria o evento no GHL e o registro no banco no mesmo handler — facilita compensação se o insert falhar.
-- Contra: refactor maior; mexe em `src/lib/appointments.ts`, no checkout e no index do fluxo.
+**1. Sync GHL → Supabase (backfill incremental)**
+- Server fn `syncGhlAppointments` (SECURITY DEFINER, admin-only quando chamada manualmente).
+- Lê eventos do GHL por janela (`startTime` últimos 7 dias → próximos 90 dias) por `calendarId` de cada artista ativo.
+- Upsert em `public.appointments` por `ghl_appointment_id` (UNIQUE). Campos sensíveis (`total_eur`, `commission_pct`) **só** são definidos se o registro estiver sendo criado por sync — nunca sobrescreve valores já gravados pela server fn de checkout.
+- Status mapping GHL→app (`confirmed`, `cancelled`, `noshow`, `showed` → `confirmed/cancelled/no_show/completed`).
+- Agendamento: `pg_cron` a cada 10 min chamando rota pública `/api/public/hooks/sync-ghl` autenticada por header secreto (`SYNC_SECRET`). Padrão idêntico ao `seed-test-users`.
+- Botão "Sincronizar agora" no `/financeiro` (apenas admin) para forçar execução e ver erros.
 
-**C. Trigger BEFORE INSERT que valida `artist_id = current_artist_id()` + policy A**
-- Mistura A com defesa em profundidade.
-- Não resolve o problema de o cliente poder inflar `total_eur` (a comissão do artista é calculada sobre esse valor — incentivo direto a manipular).
+**2. Reconciliação de eventos órfãos**
+- Tabela `public.ghl_sync_failures` (id, ghl_event_id, reason, payload jsonb, created_at, resolved_at). Admin-only.
+- Quando `createAppointmentRecord` falha no insert e a compensação no GHL também falha, em vez de só logar: grava em `ghl_sync_failures` e retorna `warning` na response (UI já tem `warning?` no tipo, hoje não usado).
+- Tela admin `/financeiro/reconciliar` listando falhas em aberto, com ação "marcar como reconciliado" (atualiza `resolved_at`). Sem auto-retry — risco de duplicar é maior que o ganho.
+- Toast de aviso na UI de checkout quando `warning` vem na response.
 
-### Solução escolhida: **B — server function + SECURITY DEFINER**
+**3. Unificar o caminho de finalização**
+- Extrair a lógica de validação do draft (contato, artista, data, ≥1 serviço, calendário) para `src/lib/appointment-draft-validate.ts` puro, com discriminated union `{ ok: true, payload } | { ok: false, reason }`.
+- `appointments.new.index.tsx` e `appointments.new.checkout.tsx` passam a usar o mesmo validador e o mesmo handler `useFinalizeAppointment` (novo hook que envolve `useServerFn(createAppointmentRecord)` + invalidate de queries + toast + reset do draft + navegação).
+- Botão "Salvar" no index passa a redirecionar para `/appointments/new/checkout` em vez de finalizar direto. **Existe um único ponto de finalização**: o checkout. Reduz superfície de bug e alinha com o fluxo de 3 telas que o usuário pediu originalmente.
 
-Por quê:
-- A comissão do artista (`get_my_artist_appointments`) usa `total_eur * commission_pct / 100`. Permitir que o próprio artista escreva esses campos do navegador é um furo de negócio, não só de RLS.
-- Já temos a infraestrutura: `requireSupabaseAuth`, `attachSupabaseAuth` em `src/start.ts`, padrão consolidado em `src/lib/finance.functions.ts`.
-- Mantém GHL como source-of-truth do evento e Supabase como espelho consistente, escrito por código confiável.
+### Mudanças técnicas (resumo para review)
 
-### Mudanças propostas
+- **Migration**: nova tabela `ghl_sync_failures` + RLS admin-only + GRANTs; cron job `pg_cron` apontando para a rota pública; segredo `SYNC_SECRET` via add_secret.
+- **Novos arquivos**: `src/lib/sync.functions.ts`, `src/routes/api/public/hooks/sync-ghl.ts`, `src/lib/appointment-draft-validate.ts`, `src/hooks/use-finalize-appointment.ts`, `src/routes/_authenticated/_admin/reconciliar.tsx`.
+- **Edits**: `src/lib/appointments.functions.ts` (gravar falha de compensação na tabela), `appointments.new.index.tsx` (remove finalize, vira "Continuar"), `appointments.new.checkout.tsx` (usa o hook unificado), `financeiro.tsx` (botão admin "Sincronizar agora" + link "Reconciliar").
+- **Sem mudança**: schema de `appointments`, `artists`, `services`, `app_users`, finanças, agenda, GHL proxy, design.
 
-**1. Migration (RLS)**
-- Manter `appt_admin` como está.
-- Manter `appt_artist_update` (artista ainda pode editar status/notas do próprio appointment via futuras telas).
-- **Não** adicionar policy de INSERT para artista. Insert continua bloqueado para client; só o service role escreve.
-- Revogar `INSERT` direto de `authenticated` (defesa em profundidade), garantindo que o caminho oficial seja a server fn.
+### O que NÃO entra
 
-**2. Nova server fn `createAppointmentRecord` em `src/lib/appointments.functions.ts`**
-- `.middleware([requireSupabaseAuth])`
-- Input validado (Zod): `{ artistId, calendarId, locationId, contactId, contactName?, contactPhone?, contactEmail?, startISO, endISO, title, notes?, status?, services: [{ id, discountPct }] }`. **Não** aceita `total_eur` nem `commission_pct` do cliente.
-- Autorização: `role = admin` OU (`role = artist` AND `artistId === current_artist_id()`). Caso contrário, 403.
-- Recalcula `total_eur`, `original_eur`, `final_eur` por linha a partir de `public.services` (server-side, fonte de verdade dos preços) usando o `discountPct` informado.
-- `commission_pct` lido de `public.artists` (default 40 se nulo).
-- Cria o evento no GHL (chamando o proxy igual hoje).
-- Insere em `public.appointments` via `supabaseAdmin`.
-- Se o insert falhar após o evento GHL ser criado: tenta deletar o evento no GHL para compensar; se a deleção falhar, retorna erro estruturado com `ghlEventId` para reconciliação manual e loga.
+- Auth recovery UI / esqueci minha senha / convite por email (Sprint 4).
+- Pipelines / pagamento real (próxima sprint depois de Sprint 4).
+- Notificações para o cliente final.
+- Edição/cancelamento de appointment existente — só leitura sincronizada nesta sprint. Editar continua sendo no GHL.
+- Bottom Nav: stubs continuam stubs nesta sprint.
 
-**3. Refactor de `src/lib/appointments.ts`**
-- `finalizeAppointment` passa a ser um wrapper fino que chama a server fn via `useServerFn` (ou export direto para uso fora de componente).
-- Remove a chamada direta a `createAppointment` e ao `supabase.from("appointments").insert` no cliente.
+### Critérios de aceite
 
-**4. Call sites**
-- `src/routes/_authenticated/appointments.new.checkout.tsx` e `appointments.new.index.tsx`: continuam chamando `finalizeAppointment(draft)`; assinatura externa muda só para refletir que `totalEur/commissionPct` não são mais necessários no input (são derivados no servidor). Resultado segue `{ ghlEventId, appointmentId }`.
+- Criar appointment direto no GHL (web) → aparece em `/financeiro` em ≤10 min sem ação manual; admin consegue clicar "Sincronizar agora" e ver na hora.
+- Forçar falha de insert (simulação) → registro aparece em `/financeiro/reconciliar` com `ghl_event_id`; toast de aviso aparece no checkout.
+- Tentar finalizar com draft incompleto a partir de qualquer uma das 3 telas → mesmo erro, mesmo comportamento.
+- Logar como artista, finalizar → continua funcionando (não-regressão do Bloqueio #1).
+- Linter Supabase: sem warning novo introduzido por esta sprint.
 
-**5. Validação**
-- Playwright: logar como `gabriel@gftattoo.test`, completar o fluxo de novo agendamento, finalizar, e verificar:
-  - resposta 200 da server fn,
-  - `appointments` no banco com `artist_id = Gabriel`, `total_eur` correto,
-  - evento aparece em `getEvents` do GHL.
-- Repetir como `admin@gftattoo.test` para garantir não-regressão.
-- Teste negativo: chamar a server fn com `artistId` diferente do `current_artist_id()` do artista → esperar 403, sem evento criado.
+### Riscos
 
-### Impacto arquitetural
-
-- Cliente perde a capacidade de gravar em `appointments` diretamente — passa a ser via server fn. Coerente com o que já fizemos em finanças.
-- `total_eur` e `commission_pct` deixam de ser confiáveis a partir do cliente — passam a ser autoridade do servidor.
-- Nada muda para admin no curto prazo (continua vendo tudo).
-
-### Risco de regressão
-
-- **Médio-baixo**. O ponto de chamada está concentrado em `finalizeAppointment`. Risco principal é a compensação GHL↔DB: se o insert no banco falhar e o delete no GHL também falhar, fica um evento órfão no GHL — mitigado por log + retorno do `ghlEventId` para a UI mostrar aviso.
-- Tabelas/RLS de outras telas não são tocadas.
-- Sem mudança de schema (colunas).
-
-### O que NÃO entra neste plano
-
-- Não toco em `artist_id` nullability, FK para `auth.users`, nem em `appointments.contact_id` (FK para `contacts` Supabase).
-- Não migro o search de contato do GHL.
-- Não implemento backfill / cron GHL → Supabase (continua Sprint 3).
-- Não mexo em finanças, agenda, ou outras rotas.
+- **Médio**: cron tocar a tabela e sobrescrever um `total_eur` correto. Mitigado por `INSERT ... ON CONFLICT DO UPDATE SET ... WHERE appointments.total_eur IS NULL` (sync nunca sobrescreve valores já confiáveis do checkout).
+- **Baixo**: rota pública `/api/public/hooks/sync-ghl` exposta. Mitigado por header `x-sync-secret` (padrão idêntico ao já existente em `seed-test-users`).
+- **Baixo**: duplicar handler de finalização durante a refactor. Mitigado por extrair primeiro o validador puro com testes e só depois mexer nas duas telas.
 
 Aprovado para implementar?

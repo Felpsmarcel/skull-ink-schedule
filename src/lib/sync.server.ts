@@ -1,0 +1,220 @@
+/**
+ * Backfill GHL appointments into the local `appointments` table.
+ * Server-only — never import from a client module or a `.functions.ts` file
+ * at module scope.
+ */
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
+
+const GHL_BASE = "https://services.leadconnectorhq.com";
+const GHL_VERSION = "2021-04-15";
+
+export interface SyncResult {
+  ok: boolean;
+  scannedCalendars: number;
+  fetchedEvents: number;
+  inserted: number;
+  updated: number;
+  failures: number;
+  errors: string[];
+}
+
+interface GhlEvent {
+  id: string;
+  calendarId?: string;
+  contactId?: string;
+  title?: string;
+  appointmentStatus?: string;
+  startTime: string;
+  endTime: string;
+  contact?: { id?: string; name?: string; firstName?: string; lastName?: string };
+}
+
+interface ArtistRow {
+  id: string;
+  ghl_calendar_id: string | null;
+  active: boolean;
+}
+
+function mapStatus(s: string | undefined): string {
+  switch ((s ?? "").toLowerCase()) {
+    case "confirmed":
+      return "confirmed";
+    case "showed":
+    case "completed":
+      return "completed";
+    case "noshow":
+    case "no_show":
+      return "no_show";
+    case "cancelled":
+    case "invalid":
+      return "cancelled";
+    case "new":
+    case "pending":
+    default:
+      return "pending";
+  }
+}
+
+async function ghlGetEvents(
+  calendarId: string,
+  locationId: string,
+  startMs: number,
+  endMs: number,
+  token: string,
+): Promise<{ ok: boolean; status: number; events: GhlEvent[]; raw: unknown }> {
+  const url = new URL(`${GHL_BASE}/calendars/events`);
+  url.searchParams.set("calendarId", calendarId);
+  url.searchParams.set("locationId", locationId);
+  url.searchParams.set("startTime", String(startMs));
+  url.searchParams.set("endTime", String(endMs));
+  const res = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Version: GHL_VERSION,
+      Accept: "application/json",
+    },
+  });
+  const text = await res.text();
+  let raw: unknown = null;
+  try {
+    raw = text ? JSON.parse(text) : null;
+  } catch {
+    raw = text;
+  }
+  const events = (raw as { events?: GhlEvent[] } | null)?.events ?? [];
+  return { ok: res.ok, status: res.status, events, raw };
+}
+
+export async function syncGhlAppointments(opts?: {
+  pastDays?: number;
+  futureDays?: number;
+  locationId?: string;
+}): Promise<SyncResult> {
+  const token = process.env.GHL_TOKEN;
+  if (!token) throw new Error("GHL_TOKEN ausente no servidor");
+  const locationId = opts?.locationId ?? "9iqrKUVPDddINb9S4Iwd";
+  const pastDays = opts?.pastDays ?? 7;
+  const futureDays = opts?.futureDays ?? 90;
+
+  const now = Date.now();
+  const startMs = now - pastDays * 86_400_000;
+  const endMs = now + futureDays * 86_400_000;
+
+  const errors: string[] = [];
+  let fetched = 0;
+  let inserted = 0;
+  let updated = 0;
+  let failures = 0;
+
+  const { data: artistsData, error: artistsErr } = await supabaseAdmin
+    .from("artists" as never)
+    .select("id, ghl_calendar_id, active")
+    .eq("active", true);
+  if (artistsErr) throw new Error(`artists: ${artistsErr.message}`);
+  const artists = ((artistsData ?? []) as ArtistRow[]).filter(
+    (a) => a.ghl_calendar_id,
+  );
+
+  for (const artist of artists) {
+    const calId = artist.ghl_calendar_id!;
+    const res = await ghlGetEvents(calId, locationId, startMs, endMs, token);
+    if (!res.ok) {
+      const reason = `GHL events ${res.status} cal=${calId}`;
+      errors.push(reason);
+      await supabaseAdmin.from("ghl_sync_failures" as never).insert({
+        ghl_event_id: null,
+        reason,
+        payload: { calendarId: calId, raw: res.raw },
+      } as never);
+      failures++;
+      continue;
+    }
+    fetched += res.events.length;
+    if (res.events.length === 0) continue;
+
+    const ids = res.events.map((e) => e.id);
+    const { data: existingRows, error: existingErr } = await supabaseAdmin
+      .from("appointments" as never)
+      .select("ghl_appointment_id")
+      .in("ghl_appointment_id", ids);
+    if (existingErr) {
+      errors.push(`select existing: ${existingErr.message}`);
+      failures++;
+      continue;
+    }
+    const existing = new Set(
+      ((existingRows ?? []) as Array<{ ghl_appointment_id: string }>).map(
+        (r) => r.ghl_appointment_id,
+      ),
+    );
+
+    const toInsert = res.events.filter((e) => !existing.has(e.id));
+    const toUpdate = res.events.filter((e) => existing.has(e.id));
+
+    if (toInsert.length > 0) {
+      const rows = toInsert.map((e) => ({
+        ghl_appointment_id: e.id,
+        ghl_contact_id: e.contactId ?? null,
+        artist_id: artist.id,
+        calendar_id: calId,
+        contact_name:
+          e.contact?.name ??
+          ([e.contact?.firstName, e.contact?.lastName].filter(Boolean).join(" ") || null),
+        start_at: e.startTime,
+        end_at: e.endTime,
+        status: mapStatus(e.appointmentStatus),
+        notes: e.title ?? null,
+      }));
+      const { error: insErr, count } = await supabaseAdmin
+        .from("appointments" as never)
+        .insert(rows as never, { count: "exact" });
+      if (insErr) {
+        errors.push(`insert: ${insErr.message}`);
+        await supabaseAdmin.from("ghl_sync_failures" as never).insert({
+          ghl_event_id: null,
+          reason: `bulk insert failed: ${insErr.message}`,
+          payload: { calendarId: calId, eventIds: toInsert.map((e) => e.id) },
+        } as never);
+        failures += toInsert.length;
+      } else {
+        inserted += count ?? rows.length;
+      }
+    }
+
+    for (const e of toUpdate) {
+      // Only refresh non-sensitive fields. NEVER overwrite total_eur,
+      // commission_pct, or services — those belong to checkout.
+      const { error: upErr } = await supabaseAdmin
+        .from("appointments" as never)
+        .update(
+          {
+            start_at: e.startTime,
+            end_at: e.endTime,
+            status: mapStatus(e.appointmentStatus),
+            contact_name:
+              e.contact?.name ??
+              ([e.contact?.firstName, e.contact?.lastName].filter(Boolean).join(" ") || null),
+            ghl_contact_id: e.contactId ?? null,
+            calendar_id: calId,
+          } as never,
+        )
+        .eq("ghl_appointment_id", e.id);
+      if (upErr) {
+        errors.push(`update ${e.id}: ${upErr.message}`);
+        failures++;
+      } else {
+        updated++;
+      }
+    }
+  }
+
+  return {
+    ok: failures === 0,
+    scannedCalendars: artists.length,
+    fetchedEvents: fetched,
+    inserted,
+    updated,
+    failures,
+    errors: errors.slice(0, 20),
+  };
+}

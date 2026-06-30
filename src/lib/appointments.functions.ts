@@ -209,6 +209,20 @@ export const createAppointmentRecord = createServerFn({ method: "POST" })
             ghlEventId,
             status: del.status,
           });
+          // Persist for admin reconciliation UI.
+          try {
+            await supabaseAdmin.from("ghl_sync_failures" as never).insert({
+              ghl_event_id: ghlEventId,
+              reason: `Insert no banco falhou e compensação no GHL também: ${insErr?.message ?? "unknown"} (delete status ${del.status})`,
+              payload: {
+                row,
+                ghl_delete_status: del.status,
+                ghl_delete_response: del.data,
+              },
+            } as never);
+          } catch (logErr) {
+            console.error("[createAppointmentRecord] failed to record sync failure", logErr);
+          }
         }
       }
       throw new Error(

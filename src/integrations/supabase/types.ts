@@ -399,6 +399,47 @@ export type Database = {
         }
         Relationships: []
       }
+      ghl_sync_failures: {
+        Row: {
+          created_at: string
+          ghl_event_id: string | null
+          id: string
+          payload: Json | null
+          reason: string
+          resolved_at: string | null
+          resolved_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          ghl_event_id?: string | null
+          id?: string
+          payload?: Json | null
+          reason: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          ghl_event_id?: string | null
+          id?: string
+          payload?: Json | null
+          reason?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ghl_sync_failures_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payments: {
         Row: {
           amount_eur: number
