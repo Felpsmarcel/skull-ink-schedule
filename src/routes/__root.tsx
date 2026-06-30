@@ -138,7 +138,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       {/* Mobile-first shell: trava largura em telas grandes */}
-      <div className="mx-auto w-full max-w-md min-h-dvh">
+      <div className="mx-auto w-full max-w-md sm:max-w-3xl lg:max-w-6xl min-h-dvh">
         <Outlet />
       </div>
     </QueryClientProvider>
