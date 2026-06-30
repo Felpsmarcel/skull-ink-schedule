@@ -91,7 +91,10 @@ function AgendaPage() {
   const view: View = search.view ?? "day";
   const setView = (v: View) =>
     navigate({
-      search: (prev) => ({ ...prev, view: v === "day" ? undefined : v }),
+      search: (prev: { debug?: boolean; view?: View }) => ({
+        ...prev,
+        view: v === "day" ? undefined : v,
+      }),
       replace: true,
     });
   const [date, setDate] = useState<Date>(() => new Date());
@@ -699,8 +702,9 @@ function MonthView({
           const buckets = { paid: 0, pending: 0, error: 0 } as Record<string, number>;
           for (const ev of evs) {
             const b = statusMap.get(ev.id);
-            if (b === "paid_today" || b === "paid_past") buckets.paid++;
-            else if (b === "error") buckets.error++;
+            if (b === "pago") buckets.paid++;
+            else if (b === "a_receber") buckets.pending++;
+            else if (b === "pendente") buckets.error++;
             else buckets.pending++;
           }
           return (
