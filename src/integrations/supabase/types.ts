@@ -114,6 +114,8 @@ export type Database = {
           services: Json
           start_at: string
           status: Database["public"]["Enums"]["appt_status"]
+          tattoo_size: string | null
+          tattoo_style: string | null
           total_eur: number
           updated_at: string
         }
@@ -138,6 +140,8 @@ export type Database = {
           services?: Json
           start_at: string
           status?: Database["public"]["Enums"]["appt_status"]
+          tattoo_size?: string | null
+          tattoo_style?: string | null
           total_eur?: number
           updated_at?: string
         }
@@ -162,6 +166,8 @@ export type Database = {
           services?: Json
           start_at?: string
           status?: Database["public"]["Enums"]["appt_status"]
+          tattoo_size?: string | null
+          tattoo_style?: string | null
           total_eur?: number
           updated_at?: string
         }
@@ -773,6 +779,32 @@ export type Database = {
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number
+      }
+      get_monthly_report: {
+        Args: {
+          p_artist?: string
+          p_month: number
+          p_status?: string
+          p_style?: string
+          p_year: number
+        }
+        Returns: {
+          artist_id: string
+          artista: string
+          comissao_eur: number
+          comissao_pct: number
+          criado_em: string
+          data_e_hora: string
+          estilo_de_tatuagem: string
+          ghl_calendar_id: string
+          ghl_contact_id: string
+          id: string
+          nome_do_cliente: string
+          notas: string
+          status_pt: string
+          tamanho_da_tatuagem: string
+          valor: number
+        }[]
       }
       get_my_artist_appointments: {
         Args: never
