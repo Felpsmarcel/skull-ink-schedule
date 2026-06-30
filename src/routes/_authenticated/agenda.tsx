@@ -11,6 +11,13 @@ import {
 import "@/i18n";
 
 import { useStaffDayAgenda } from "@/hooks/use-agenda";
+import { useDayAppointmentStatuses } from "@/hooks/use-agenda-status";
+import type { PaymentBucket } from "@/lib/finance.functions";
+import {
+  StatusBadge,
+  bucketToVariant,
+  bucketLabel,
+} from "@/components/ui/status-badge";
 import { DEFAULT_START_HOUR, DEFAULT_END_HOUR, SLOT_MINUTES } from "@/lib/agenda-grid";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -62,6 +69,7 @@ function AgendaPage() {
     artistId: restrictArtistId,
     enabled: Boolean(me),
   });
+  const { map: statusMap } = useDayAppointmentStatuses(date, Boolean(me));
 
   const dateLabel = useMemo(
     () =>
@@ -243,7 +251,13 @@ function NavItem({
   );
 }
 
-function StaffColumn({ agenda }: { agenda: ReturnType<typeof useStaffDayAgenda>["agendas"][number] }) {
+function StaffColumn({
+  agenda,
+  statusMap,
+}: {
+  agenda: ReturnType<typeof useStaffDayAgenda>["agendas"][number];
+  statusMap: Map<string, PaymentBucket>;
+}) {
   const { t } = useTranslation();
   const { staff, slots, isLoading, error } = agenda;
 
@@ -258,12 +272,13 @@ function StaffColumn({ agenda }: { agenda: ReturnType<typeof useStaffDayAgenda>[
           <span className="truncate text-xs font-semibold">{staff.shortName}</span>
         </div>
         {error && agenda.slots.length === 0 ? (
-          <span
+          <StatusBadge
+            variant="danger"
             title={error}
-            className="flex items-center gap-1 rounded-full bg-muted px-1.5 py-0.5 text-[9px] text-foreground"
+            icon={<AlertTriangle className="h-3 w-3" />}
           >
-            <AlertTriangle className="h-3 w-3" /> {t("agenda.errorLoading")}
-          </span>
+            {t("agenda.errorLoading")}
+          </StatusBadge>
         ) : (
           <span className="text-[9px] text-muted-foreground">
             {agenda.bookedCount}● {agenda.freeCount}○
@@ -280,13 +295,25 @@ function StaffColumn({ agenda }: { agenda: ReturnType<typeof useStaffDayAgenda>[
             </div>
           ))
         ) : error && slots.length === 0 ? (
-          <div className="p-2 text-center text-[10px] text-muted-foreground" title={error}>
-            <AlertTriangle className="mx-auto mb-1 h-3 w-3 text-destructive" />
-            <p>{t("agenda.errorLoading")}</p>
+          <div
+            className="flex flex-col items-center gap-1 p-2 text-center"
+            title={error}
+          >
+            <StatusBadge
+              variant="danger"
+              icon={<AlertTriangle className="h-3 w-3" />}
+            >
+              {t("agenda.errorLoading")}
+            </StatusBadge>
           </div>
         ) : (
           slots.map((slot) => (
-            <SlotCell key={slot.startMs} slot={slot} calendarId={staff.calendarId} />
+            <SlotCell
+              key={slot.startMs}
+              slot={slot}
+              calendarId={staff.calendarId}
+              statusMap={statusMap}
+            />
           ))
         )}
       </div>
@@ -297,9 +324,11 @@ function StaffColumn({ agenda }: { agenda: ReturnType<typeof useStaffDayAgenda>[
 function SlotCell({
   slot,
   calendarId,
+  statusMap,
 }: {
   slot: import("@/lib/agenda-grid").GridSlot;
   calendarId: string;
+  statusMap: Map<string, PaymentBucket>;
 }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -329,6 +358,7 @@ function SlotCell({
   }
 
   // booked
+  const bucket = slot.ghlEventId ? statusMap.get(slot.ghlEventId) : undefined;
   return (
     <div className={cn("border-b border-border/30 p-0.5", ROW_HEIGHT)}>
       <div
@@ -340,6 +370,14 @@ function SlotCell({
         </div>
         {slot.serviceName ? (
           <div className="truncate text-[9px] text-muted-foreground">{slot.serviceName}</div>
+        ) : null}
+        {bucket ? (
+          <StatusBadge
+            variant={bucketToVariant(bucket)}
+            className="mt-0.5 self-start px-1 py-0 text-[9px]"
+          >
+            {bucketLabel(bucket)}
+          </StatusBadge>
         ) : null}
       </div>
     </div>
