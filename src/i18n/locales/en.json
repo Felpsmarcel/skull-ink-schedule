@@ -53,7 +53,7 @@
       "addService": "Add service",
       "removeService": "Remove",
       "save": "Save",
-      "checkout": "Checkout",
+      "checkout": "Review appointment",
       "created": "Appointment created",
       "checklist": {
         "client": "Client",
@@ -73,7 +73,7 @@
       "noResults": "Nothing found.",
       "noServicesCatalog": "Empty catalogue.",
       "noServicesCatalogHint": "Send your list to populate the catalogue.",
-      "checkoutTitle": "Detail / Checkout",
+      "checkoutTitle": "Review appointment",
       "noClient": "No client",
       "discount": "Discount",
       "notes": "Internal notes",
