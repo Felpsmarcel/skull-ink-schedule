@@ -16,11 +16,13 @@ import { Route as AuthenticatedFinanceiroRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAgendaRouteImport } from './routes/_authenticated/agenda'
 import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/_admin/route'
 import { Route as AuthenticatedAppointmentsNewRouteImport } from './routes/_authenticated/appointments.new'
+import { Route as AuthenticatedAdminReconciliarRouteImport } from './routes/_authenticated/_admin/reconciliar'
 import { Route as AuthenticatedAdminGhlTestRouteImport } from './routes/_authenticated/_admin/ghl-test'
 import { Route as AuthenticatedAppointmentsNewIndexRouteImport } from './routes/_authenticated/appointments.new.index'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
+import { Route as ApiPublicHooksSyncGhlRouteImport } from './routes/api/public/hooks/sync-ghl'
 import { Route as ApiPublicHooksSeedTestUsersRouteImport } from './routes/api/public/hooks/seed-test-users'
 import { Route as AuthenticatedAppointmentsNewServicesRouteImport } from './routes/_authenticated/appointments.new.services'
 import { Route as AuthenticatedAppointmentsNewCheckoutRouteImport } from './routes/_authenticated/appointments.new.checkout'
@@ -59,6 +61,12 @@ const AuthenticatedAppointmentsNewRoute =
     path: '/appointments/new',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAdminReconciliarRoute =
+  AuthenticatedAdminReconciliarRouteImport.update({
+    id: '/reconciliar',
+    path: '/reconciliar',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
 const AuthenticatedAdminGhlTestRoute =
   AuthenticatedAdminGhlTestRouteImport.update({
     id: '/ghl-test',
@@ -87,6 +95,11 @@ const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
   path: '/lovable/email/auth/preview',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksSyncGhlRoute = ApiPublicHooksSyncGhlRouteImport.update({
+  id: '/api/public/hooks/sync-ghl',
+  path: '/api/public/hooks/sync-ghl',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHooksSeedTestUsersRoute =
   ApiPublicHooksSeedTestUsersRouteImport.update({
     id: '/api/public/hooks/seed-test-users',
@@ -112,10 +125,12 @@ export interface FileRoutesByFullPath {
   '/agenda': typeof AuthenticatedAgendaRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/ghl-test': typeof AuthenticatedAdminGhlTestRoute
+  '/reconciliar': typeof AuthenticatedAdminReconciliarRoute
   '/appointments/new': typeof AuthenticatedAppointmentsNewRouteWithChildren
   '/appointments/new/checkout': typeof AuthenticatedAppointmentsNewCheckoutRoute
   '/appointments/new/services': typeof AuthenticatedAppointmentsNewServicesRoute
   '/api/public/hooks/seed-test-users': typeof ApiPublicHooksSeedTestUsersRoute
+  '/api/public/hooks/sync-ghl': typeof ApiPublicHooksSyncGhlRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -127,9 +142,11 @@ export interface FileRoutesByTo {
   '/agenda': typeof AuthenticatedAgendaRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/ghl-test': typeof AuthenticatedAdminGhlTestRoute
+  '/reconciliar': typeof AuthenticatedAdminReconciliarRoute
   '/appointments/new/checkout': typeof AuthenticatedAppointmentsNewCheckoutRoute
   '/appointments/new/services': typeof AuthenticatedAppointmentsNewServicesRoute
   '/api/public/hooks/seed-test-users': typeof ApiPublicHooksSeedTestUsersRoute
+  '/api/public/hooks/sync-ghl': typeof ApiPublicHooksSyncGhlRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -144,10 +161,12 @@ export interface FileRoutesById {
   '/_authenticated/agenda': typeof AuthenticatedAgendaRoute
   '/_authenticated/financeiro': typeof AuthenticatedFinanceiroRoute
   '/_authenticated/_admin/ghl-test': typeof AuthenticatedAdminGhlTestRoute
+  '/_authenticated/_admin/reconciliar': typeof AuthenticatedAdminReconciliarRoute
   '/_authenticated/appointments/new': typeof AuthenticatedAppointmentsNewRouteWithChildren
   '/_authenticated/appointments/new/checkout': typeof AuthenticatedAppointmentsNewCheckoutRoute
   '/_authenticated/appointments/new/services': typeof AuthenticatedAppointmentsNewServicesRoute
   '/api/public/hooks/seed-test-users': typeof ApiPublicHooksSeedTestUsersRoute
+  '/api/public/hooks/sync-ghl': typeof ApiPublicHooksSyncGhlRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -161,10 +180,12 @@ export interface FileRouteTypes {
     | '/agenda'
     | '/financeiro'
     | '/ghl-test'
+    | '/reconciliar'
     | '/appointments/new'
     | '/appointments/new/checkout'
     | '/appointments/new/services'
     | '/api/public/hooks/seed-test-users'
+    | '/api/public/hooks/sync-ghl'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -176,9 +197,11 @@ export interface FileRouteTypes {
     | '/agenda'
     | '/financeiro'
     | '/ghl-test'
+    | '/reconciliar'
     | '/appointments/new/checkout'
     | '/appointments/new/services'
     | '/api/public/hooks/seed-test-users'
+    | '/api/public/hooks/sync-ghl'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -192,10 +215,12 @@ export interface FileRouteTypes {
     | '/_authenticated/agenda'
     | '/_authenticated/financeiro'
     | '/_authenticated/_admin/ghl-test'
+    | '/_authenticated/_admin/reconciliar'
     | '/_authenticated/appointments/new'
     | '/_authenticated/appointments/new/checkout'
     | '/_authenticated/appointments/new/services'
     | '/api/public/hooks/seed-test-users'
+    | '/api/public/hooks/sync-ghl'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -207,6 +232,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ApiPublicHooksSeedTestUsersRoute: typeof ApiPublicHooksSeedTestUsersRoute
+  ApiPublicHooksSyncGhlRoute: typeof ApiPublicHooksSyncGhlRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
@@ -263,6 +289,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppointmentsNewRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/_admin/reconciliar': {
+      id: '/_authenticated/_admin/reconciliar'
+      path: '/reconciliar'
+      fullPath: '/reconciliar'
+      preLoaderRoute: typeof AuthenticatedAdminReconciliarRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
     '/_authenticated/_admin/ghl-test': {
       id: '/_authenticated/_admin/ghl-test'
       path: '/ghl-test'
@@ -298,6 +331,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LovableEmailAuthPreviewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/sync-ghl': {
+      id: '/api/public/hooks/sync-ghl'
+      path: '/api/public/hooks/sync-ghl'
+      fullPath: '/api/public/hooks/sync-ghl'
+      preLoaderRoute: typeof ApiPublicHooksSyncGhlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/seed-test-users': {
       id: '/api/public/hooks/seed-test-users'
       path: '/api/public/hooks/seed-test-users'
@@ -324,11 +364,13 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedAdminRouteRouteChildren {
   AuthenticatedAdminGhlTestRoute: typeof AuthenticatedAdminGhlTestRoute
+  AuthenticatedAdminReconciliarRoute: typeof AuthenticatedAdminReconciliarRoute
 }
 
 const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren =
   {
     AuthenticatedAdminGhlTestRoute: AuthenticatedAdminGhlTestRoute,
+    AuthenticatedAdminReconciliarRoute: AuthenticatedAdminReconciliarRoute,
   }
 
 const AuthenticatedAdminRouteRouteWithChildren =
@@ -380,6 +422,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ApiPublicHooksSeedTestUsersRoute: ApiPublicHooksSeedTestUsersRoute,
+  ApiPublicHooksSyncGhlRoute: ApiPublicHooksSyncGhlRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,

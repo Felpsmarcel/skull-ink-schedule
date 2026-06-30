@@ -24,7 +24,7 @@ export interface SyncFailureRow {
   id: string;
   ghl_event_id: string | null;
   reason: string;
-  payload: unknown;
+  payload: Record<string, unknown> | null;
   created_at: string;
 }
 
