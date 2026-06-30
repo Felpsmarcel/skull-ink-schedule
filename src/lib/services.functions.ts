@@ -18,17 +18,17 @@ const ServiceInput = z.object({
   { message: "price_max_eur deve ser >= price_eur", path: ["price_max_eur"] },
 );
 
-async function ensureAdmin(supabase: { rpc: (n: string, a: unknown) => Promise<{ data: unknown; error: { message: string } | null }> }, userId: string) {
-  const { data, error } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
+async function ensureAdmin(supabase: { rpc: (n: string) => Promise<{ data: unknown; error: { message: string } | null }> }) {
+  const { data, error } = await supabase.rpc("current_user_role");
   if (error) throw new Error(error.message);
-  if (!data) throw new Response("Forbidden", { status: 403 });
+  if (data !== "admin") throw new Response("Forbidden", { status: 403 });
 }
 
 export const createService = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => ServiceInput.parse(d))
   .handler(async ({ data, context }) => {
-    await ensureAdmin(context.supabase as never, context.userId);
+    await ensureAdmin(context.supabase as never);
     let payload: Record<string, unknown> = { ...data };
     if (payload.sort_order == null) {
       const { data: maxRow } = await context.supabase
@@ -76,7 +76,7 @@ export const updateService = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    await ensureAdmin(context.supabase as never, context.userId);
+    await ensureAdmin(context.supabase as never);
     const { error } = await context.supabase
       .from("services" as never)
       .update(data.patch as never)
@@ -89,7 +89,7 @@ export const toggleServiceActive = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid(), active: z.boolean() }).parse(d))
   .handler(async ({ data, context }) => {
-    await ensureAdmin(context.supabase as never, context.userId);
+    await ensureAdmin(context.supabase as never);
     const { error } = await context.supabase
       .from("services" as never)
       .update({ active: data.active } as never)
