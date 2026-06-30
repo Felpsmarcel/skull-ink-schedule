@@ -33,6 +33,7 @@ interface ArtistRow {
   id: string;
   ghl_calendar_id: string | null;
   active: boolean;
+  commission_pct: number | string | null;
 }
 
 function mapStatus(s: string | undefined): string {
@@ -108,7 +109,7 @@ export async function syncGhlAppointments(opts?: {
 
   const { data: artistsData, error: artistsErr } = await supabaseAdmin
     .from("artists" as never)
-    .select("id, ghl_calendar_id, active")
+    .select("id, ghl_calendar_id, active, commission_pct")
     .eq("active", true);
   if (artistsErr) throw new Error(`artists: ${artistsErr.message}`);
   const artists = ((artistsData ?? []) as ArtistRow[]).filter(
@@ -117,6 +118,7 @@ export async function syncGhlAppointments(opts?: {
 
   for (const artist of artists) {
     const calId = artist.ghl_calendar_id!;
+    const artistCommissionPct = Number(artist.commission_pct ?? 40);
     const res = await ghlGetEvents(calId, locationId, startMs, endMs, token);
     if (!res.ok) {
       const reason = `GHL events ${res.status} cal=${calId}`;
@@ -132,6 +134,11 @@ export async function syncGhlAppointments(opts?: {
     fetched += res.events.length;
     if (res.events.length === 0) continue;
 
+    // Concurrent runs (cron + manual admin click) can race the read-then-insert
+    // pattern and trip the unique index on ghl_appointment_id. Split into:
+    //   - upsert(ignoreDuplicates) for net-new rows: safe under concurrency, and
+    //     critically NEVER touches existing financial fields.
+    //   - explicit UPDATE per existing row: refreshes only non-financial fields.
     const ids = res.events.map((e) => e.id);
     const { data: existingRows, error: existingErr } = await supabaseAdmin
       .from("appointments" as never)
@@ -163,16 +170,25 @@ export async function syncGhlAppointments(opts?: {
         start_at: e.startTime,
         end_at: e.endTime,
         status: mapStatus(e.appointmentStatus),
+        // Resolve commission from the artist so financial rollups never see NULL
+        // for events created directly in GHL (outside the app's checkout flow).
+        commission_pct: artistCommissionPct,
         notes: e.title ?? null,
       }));
+      // ignoreDuplicates: another concurrent run may have inserted between our
+      // SELECT and INSERT. Treat that as a no-op, not a batch failure.
       const { error: insErr, count } = await supabaseAdmin
         .from("appointments" as never)
-        .insert(rows as never, { count: "exact" });
+        .upsert(rows as never, {
+          onConflict: "ghl_appointment_id",
+          ignoreDuplicates: true,
+          count: "exact",
+        });
       if (insErr) {
-        errors.push(`insert: ${insErr.message}`);
+        errors.push(`upsert: ${insErr.message}`);
         await supabaseAdmin.from("ghl_sync_failures" as never).insert({
           ghl_event_id: null,
-          reason: `bulk insert failed: ${insErr.message}`,
+          reason: `bulk upsert failed: ${insErr.message}`,
           payload: { calendarId: calId, eventIds: toInsert.map((e) => e.id) },
         } as never);
         failures += toInsert.length;
