@@ -7,6 +7,12 @@
     "actions": {
       "comingSoon": "Em breve"
     },
+    "loading": "Carregando…",
+    "error": {
+      "title": "Algo deu errado",
+      "retry": "Tentar novamente",
+      "details": "Detalhes técnicos"
+    },
     "agenda": {
       "title": "Agenda",
       "today": "Hoje",

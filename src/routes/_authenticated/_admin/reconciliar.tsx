@@ -18,6 +18,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorState } from "@/components/ui/error-state";
 import {
   Collapsible,
   CollapsibleContent,
@@ -142,30 +144,18 @@ function ReconciliarPage() {
             ))}
           </div>
         ) : failuresQ.error ? (
-          <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Não foi possível carregar as falhas</AlertTitle>
-            <AlertDescription className="flex items-center justify-between gap-2">
-              <span className="truncate">
-                {(failuresQ.error as Error).message}
-              </span>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => failuresQ.refetch()}
-              >
-                Tentar novamente
-              </Button>
-            </AlertDescription>
-          </Alert>
+          <ErrorState
+            title="Não foi possível carregar as falhas"
+            description="Verifique a conexão e tente novamente."
+            details={(failuresQ.error as Error).message}
+            onRetry={() => failuresQ.refetch()}
+          />
         ) : (failuresQ.data ?? []).length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-card p-10 text-center">
-            <Inbox className="h-8 w-8 text-muted-foreground" />
-            <p className="text-sm font-medium">Nenhuma falha em aberto</p>
-            <p className="text-xs text-muted-foreground">
-              Tudo sincronizado com o GHL.
-            </p>
-          </div>
+          <EmptyState
+            icon={<Inbox className="h-5 w-5" />}
+            title="Nenhuma falha em aberto"
+            description="Tudo sincronizado com o GHL."
+          />
         ) : (
           <ul className="space-y-3">
             {(failuresQ.data ?? []).map((f) => (
