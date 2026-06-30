@@ -83,8 +83,6 @@ function CheckoutPage() {
         notes: draft.notes || undefined,
         status: "confirmed",
         services: draft.services,
-        totalEur: final,
-        originalEur: original,
       });
 
       await queryClient.invalidateQueries({ queryKey: ["agenda"] });
