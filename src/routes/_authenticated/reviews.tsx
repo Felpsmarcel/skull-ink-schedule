@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Star } from "lucide-react";
 import "@/i18n";
-import { BottomNav } from "@/components/layout/bottom-nav";
 
 export const Route = createFileRoute("/_authenticated/reviews")({
   head: () => ({ meta: [{ title: "Avaliações — GF Tattoo Studio" }] }),
@@ -24,7 +23,6 @@ function ReviewsPage() {
           acompanhar feedback e nota média dos clientes por aqui.
         </p>
       </div>
-      <BottomNav active="reviews" />
     </div>
   );
 }

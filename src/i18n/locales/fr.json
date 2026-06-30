@@ -29,7 +29,9 @@
       "services": "Services",
       "new": "Nouveau",
       "reviews": "Avis",
-      "menu": "Menu"
+      "menu": "Menu",
+      "financeiro": "Finances",
+      "profile": "Profil"
     },
     "appt": {
       "title": "Nouveau rendez-vous",

@@ -29,7 +29,9 @@
       "services": "Serviços",
       "new": "Novo",
       "reviews": "Avaliações",
-      "menu": "Menu"
+      "menu": "Menu",
+      "financeiro": "Financeiro",
+      "profile": "Perfil"
     },
     "appt": {
       "title": "Novo agendamento",

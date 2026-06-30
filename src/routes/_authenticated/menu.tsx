@@ -3,7 +3,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ChevronRight, LogOut, Wallet, RefreshCw, Wrench, Bell, Languages } from "lucide-react";
 import { toast } from "sonner";
 import "@/i18n";
-import { BottomNav } from "@/components/layout/bottom-nav";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "@/components/ui/sonner";
@@ -70,7 +69,6 @@ function MenuPage() {
         </button>
       </div>
 
-      <BottomNav active="menu" />
     </div>
   );
 }
