@@ -227,20 +227,7 @@ function AgendaPage() {
       </div>
 
       {/* Bottom Nav */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 mx-auto flex max-w-md items-end justify-around border-t border-border bg-background/95 px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur">
-        <NavItem icon={<CalendarDays className="h-5 w-5" />} label={t("nav.agenda")} active />
-        <NavItem icon={<Scissors className="h-5 w-5" />} label={t("nav.services")} onClick={() => toast(t("actions.comingSoon"))} />
-        <button
-          type="button"
-          onClick={() => navigate({ to: "/appointments/new" })}
-          aria-label={t("nav.new")}
-          className="-mt-6 grid h-14 w-14 place-items-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 ring-4 ring-background"
-        >
-          <Plus className="h-7 w-7" />
-        </button>
-        <NavItem icon={<Star className="h-5 w-5" />} label={t("nav.reviews")} onClick={() => toast(t("actions.comingSoon"))} />
-        <NavItem icon={<MenuIcon className="h-5 w-5" />} label={t("nav.menu")} onClick={() => toast(t("actions.comingSoon"))} />
-      </nav>
+      <BottomNav active="agenda" />
     </div>
   );
 }
