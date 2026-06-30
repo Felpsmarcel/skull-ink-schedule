@@ -1,106 +1,72 @@
-## Filtros client-side no Financeiro
+## Plano: Componentes padronizados de Empty/Error/Loading
 
-Tudo em `src/routes/_authenticated/financeiro.tsx`. Nenhuma alteração em `use-finance.ts`, `finance.functions.ts`, server functions, schema, RLS ou GHL.
+### Novos componentes (UI puros, sem deps novas)
 
-### Estado e tipos
-No componente `FinanceiroPage`, adicionar:
+**`src/components/ui/empty-state.tsx`**
 ```tsx
-type Period = "today" | "week" | "month" | "all";
-type BucketFilter = "all" | "pago" | "pendente" | "a_receber";
-
-const [period, setPeriod] = useState<Period>("all");
-const [bucket, setBucket] = useState<BucketFilter>("all");
+type Props = { icon?: ReactNode; title: string; description?: string; action?: ReactNode; className?: string };
 ```
+Layout centralizado vertical, ícone em círculo `bg-muted`, título `text-sm font-medium`, descrição `text-xs text-muted-foreground`, action abaixo. Padding `py-10`.
 
-### Helper de filtro
-Função pura no arquivo:
+**`src/components/ui/error-state.tsx`**
 ```tsx
-function filterRows<T extends { startAt: string; bucket: PaymentBucket }>(
-  rows: T[], period: Period, bucket: BucketFilter
-): T[] {
-  const now = new Date();
-  const startOfToday = new Date(now); startOfToday.setHours(0,0,0,0);
-  const startOfWeek = new Date(startOfToday);
-  // ISO-week: segunda como início
-  const dow = (startOfToday.getDay() + 6) % 7;
-  startOfWeek.setDate(startOfToday.getDate() - dow);
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-  const from =
-    period === "today" ? startOfToday.getTime() :
-    period === "week"  ? startOfWeek.getTime()  :
-    period === "month" ? startOfMonth.getTime() : null;
-
-  return rows.filter((r) => {
-    if (bucket !== "all" && r.bucket !== bucket) return false;
-    if (from !== null && new Date(r.startAt).getTime() < from) return false;
-    return true;
-  });
-}
+type Props = { title?: string; description?: string; details?: string; onRetry?: () => void; retryLabel?: string; className?: string };
 ```
-Importar `PaymentBucket` de `@/lib/finance.functions`.
+- `title` default: "Algo deu errado" (i18n `common.error.title`).
+- `description` curta e amigável.
+- `details` (mensagem técnica) escondida em `<details><summary>Detalhes técnicos</summary><pre>…</pre></details>` — não exibida como mensagem principal, mas continua acessível.
+- Botão "Tentar novamente" (ícone RefreshCw) quando `onRetry` definido.
+- Ícone `AlertTriangle` em destaque sutil (`text-destructive`).
 
-### UI dos filtros
-Logo abaixo de `<main … className="… space-y-4 p-4">`, antes da renderização condicional Artist/Admin, dois grupos de pílulas:
-
+**`src/components/ui/loading-state.tsx`**
 ```tsx
-<section className="flex flex-col gap-2">
-  <FilterRow
-    label="Período"
-    value={period}
-    onChange={setPeriod}
-    options={[
-      { v: "today", l: "Hoje" },
-      { v: "week",  l: "Semana" },
-      { v: "month", l: "Mês" },
-      { v: "all",   l: "Todos" },
-    ]}
-  />
-  <FilterRow
-    label="Status"
-    value={bucket}
-    onChange={setBucket}
-    options={[
-      { v: "all",       l: "Todos" },
-      { v: "pago",      l: "Pago" },
-      { v: "pendente",  l: "Pendente" },
-      { v: "a_receber", l: "A receber" },
-    ]}
-  />
-</section>
+type Props = { label?: string; size?: "sm" | "md"; inline?: boolean; className?: string };
 ```
+- `Loader2 animate-spin` + label curta (default `common.loading` = "Carregando…").
+- `inline` para uso em linha (flex row pequeno); padrão é bloco centralizado `py-8`.
 
-`FilterRow` é local — div com label `text-[10px] uppercase` e row `flex flex-wrap gap-1` de botões com `aria-pressed`, estilo coerente com o resto (border + bg-card; ativo: `bg-foreground text-background`). Sem novos pacotes; usa apenas Tailwind.
+Sem novas dependências (usa `lucide-react`, `cn`, tokens existentes).
 
-### Aplicação dos filtros
-Passar as `rows` já filtradas para `ArtistView` e `AdminView` substituindo `data.rows`:
-```tsx
-const visibleRows = useMemo(
-  () => filterRows(data.rows, period, bucket),
-  [data.rows, period, bucket]
-);
-```
-As views recebem `rows={visibleRows}` em vez de ler `data.rows`. Ajustar as assinaturas:
-```tsx
-function ArtistView({ data, rows }: { data: …; rows: typeof data.rows }) { … }
-function AdminView ({ data, rows }: { data: …; rows: typeof data.rows }) { … }
-```
-Cards de resumo no topo continuam usando `data.aReceber/pendente/pago/…` (totais agregados do backend) — não recalculados localmente para evitar inconsistências.
+### Aplicação inicial (sem mudar lógica de dados)
 
-### Estado vazio reflete filtros
-Quando `rows.length === 0` E (`period !== "all"` ou `bucket !== "all"`), trocar o texto para "Nenhum agendamento com os filtros aplicados." Caso contrário, mantém "Sem agendamentos." Vale para cards mobile e linha da tabela.
+**`agenda.tsx`** (linhas ~267-291)
+- Bloco de error com `slots.length === 0`: trocar Alert/pre por `<ErrorState description={t("agenda.errorLoading")} details={error} onRetry={() => agenda.refetch?.()} />` (manter retry existente se houver; senão sem retry).
+- Painel debug (`<pre>{error}</pre>`) permanece intacto.
 
-### Permissões e segurança
-- Estado de admin/artista vem de `data.role` (server). Filtro é apenas UI sobre rows que o server já autorizou.
-- Botão Sincronizar e link Reconciliar continuam admin-only.
+**`financeiro.tsx`**
+- Loading principal (linha ~165, `isLoading`): `<LoadingState />`.
+- Error block: `<ErrorState description="Não foi possível carregar o financeiro." details={(error as Error).message} onRetry={() => refetchSummary()} />` (se hook expõe refetch; senão sem onRetry).
+- Empty rows dentro de tabela/cards: manter texto existente OU trocar célula de "sem dados" por `<EmptyState title={emptyMsg} />` apenas nos containers fora de `<tr>` (cards mobile). Linha de tabela continua com `<tr><td>{emptyMsg}</td></tr>` para não quebrar markup.
 
-### Critérios de aceite (verificáveis)
-1. Pílulas de período/status visíveis para admin e artista.
-2. Filtrar por "Hoje/Semana/Mês" reduz a lista.
-3. Filtrar por bucket reduz a lista.
-4. Estado vazio mostra mensagem específica quando há filtros ativos.
-5. Mobile cards + tabela em sm+ continuam funcionando; filtros não causam overflow horizontal (`flex-wrap`).
-6. Cards de resumo no topo permanecem com os totais do backend.
+**`appointments.new.index.tsx`**
+- Slots loading (linha 258) → `<LoadingState inline label={t("appt.loadingSlots")} size="sm" />`.
+- Slots error (linha 261) → `<ErrorState description="Não foi possível carregar horários." details={(slotsQuery.error as Error).message} onRetry={() => slotsQuery.refetch()} />`.
+- Contacts loading (linha 478) / error (linha 481) → mesmo tratamento (`LoadingState inline` + `ErrorState`).
+- Toasts de validação/erro de submit permanecem como estão.
+
+**`appointments.new.services.tsx`**
+- Loading (linha 80) → `<LoadingState inline size="sm" />`.
+- Error (linha 83) → `<ErrorState description="Não foi possível carregar serviços." details={(query.error as Error).message} onRetry={() => query.refetch()} />`.
+
+**`_admin/reconciliar.tsx`**
+- Loading branch (linha ~144) → `<LoadingState />`.
+- Error branch (linha ~150) → `<ErrorState description="Não foi possível carregar falhas." details={(failuresQ.error as Error).message} onRetry={() => failuresQ.refetch()} />`.
+- Empty "Nenhuma falha em aberto" (linha 164) → `<EmptyState icon={<Check/>} title="Nenhuma falha em aberto" description="Tudo sincronizado." />`.
+
+### i18n
+Adicionar em `pt/en/fr`:
+- `common.loading` = "Carregando…" / "Loading…" / "Chargement…"
+- `common.error.title` = "Algo deu errado" / "Something went wrong" / "Une erreur est survenue"
+- `common.error.retry` = "Tentar novamente" / "Try again" / "Réessayer"
+- `common.error.details` = "Detalhes técnicos" / "Technical details" / "Détails techniques"
 
 ### Fora de escopo
-Filtro por tatuador, range de datas custom, exportação, persistência em URL — não nesta tarefa.
+- Lógica de dados, server functions, Supabase, GHL, migrations — intocados.
+- Refator amplo de outras telas (auth, menu, reviews, services) — fica para depois.
+- Substituição de toasts de erro de mutação — permanecem.
+
+### Critérios de aceite
+1. Empty/Error/Loading com visual consistente nas 5 telas listadas.
+2. Mensagens técnicas escondidas em `<details>` ou mantidas no painel debug; nenhuma quebra de retry/refetch.
+3. Componentes reutilizáveis (props mínimas, sem acoplamento a domínio).
+4. Sem novas deps; build limpo.
