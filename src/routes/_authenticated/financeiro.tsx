@@ -10,6 +10,7 @@ import { formatCurrency, formatDateTime } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { LoadingState } from "@/components/ui/loading-state";
 import { ErrorState } from "@/components/ui/error-state";
+import { StatusBadge, bucketToVariant, bucketLabel } from "@/components/ui/status-badge";
 import { runGhlSync } from "@/lib/sync.functions";
 import type { PaymentBucket } from "@/lib/finance.functions";
 
