@@ -117,7 +117,7 @@ function ReconciliarPage() {
                 </div>
                 {f.payload ? (
                   <pre className="mt-2 max-h-32 overflow-auto rounded bg-muted/50 p-2 text-[10px]">
-                    {JSON.stringify(f.payload, null, 2)}
+                    {f.payload}
                   </pre>
                 ) : null}
               </li>

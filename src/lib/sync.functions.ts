@@ -24,7 +24,8 @@ export interface SyncFailureRow {
   id: string;
   ghl_event_id: string | null;
   reason: string;
-  payload: Record<string, unknown> | null;
+  /** JSON-stringified payload (or null). Server fn pre-serializes for safe transport. */
+  payload: string | null;
   created_at: string;
 }
 
@@ -39,7 +40,20 @@ export const listOpenSyncFailures = createServerFn({ method: "GET" })
       .order("created_at", { ascending: false })
       .limit(200);
     if (error) throw new Error(error.message);
-    return (data ?? []) as SyncFailureRow[];
+    type Raw = {
+      id: string;
+      ghl_event_id: string | null;
+      reason: string;
+      payload: unknown;
+      created_at: string;
+    };
+    return ((data ?? []) as Raw[]).map<SyncFailureRow>((r) => ({
+      id: r.id,
+      ghl_event_id: r.ghl_event_id,
+      reason: r.reason,
+      payload: r.payload == null ? null : JSON.stringify(r.payload),
+      created_at: r.created_at,
+    }));
   });
 
 export const resolveSyncFailure = createServerFn({ method: "POST" })
