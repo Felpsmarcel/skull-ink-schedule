@@ -7,11 +7,6 @@ import {
   Calendar as CalendarIcon,
   MessageCircle,
   Bell,
-  CalendarDays,
-  Scissors,
-  Plus,
-  Star,
-  Menu as MenuIcon,
   AlertTriangle,
   Bug,
 } from "lucide-react";
@@ -28,6 +23,7 @@ import gfSkull from "@/assets/gf-skull.png";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { UserMenu } from "@/components/auth/user-menu";
 import { resolveIntlLocale } from "@/lib/locale";
+import { BottomNav } from "@/components/layout/bottom-nav";
 
 export const Route = createFileRoute("/_authenticated/agenda")({
   head: () => ({
