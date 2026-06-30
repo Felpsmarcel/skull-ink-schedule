@@ -41,7 +41,7 @@ export interface AdminSummary {
 
 export type FinanceSummary = ArtistSummary | AdminSummary;
 
-function deriveBucket(
+export function deriveBucket(
   startAt: string,
   hasPayment: boolean,
 ): PaymentBucket {
