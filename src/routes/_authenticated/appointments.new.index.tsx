@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
+import { LOCATION_ID } from "@/config/staff";
 import { useArtists } from "@/hooks/use-artists";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import {
