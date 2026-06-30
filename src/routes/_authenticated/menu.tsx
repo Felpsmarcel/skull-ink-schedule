@@ -6,6 +6,7 @@ import "@/i18n";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "@/components/ui/sonner";
+import gfMark from "@/assets/gf-mark.png";
 
 export const Route = createFileRoute("/_authenticated/menu")({
   head: () => ({ meta: [{ title: "Menu — GF Tattoo Studio" }] }),
@@ -31,7 +32,10 @@ function MenuPage() {
     <div className="min-h-svh bg-background pb-24 text-foreground">
       <Toaster position="top-center" />
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-background/95 px-4 py-3 backdrop-blur">
-        <h1 className="text-base font-bold uppercase tracking-wider">Menu</h1>
+        <div className="flex items-center gap-2">
+          <img src={gfMark} alt="" className="h-7 w-7 object-contain" />
+          <h1 className="text-base font-bold uppercase tracking-wider">Menu</h1>
+        </div>
       </header>
 
       <div className="mx-auto max-w-md space-y-4 px-4 py-4">

@@ -23,7 +23,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
-import gfSkull from "@/assets/gf-skull.png";
+import gfMark from "@/assets/gf-mark.png";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { resolveIntlLocale } from "@/lib/locale";
 import { useAppointmentDraft } from "@/stores/appointment-draft";
@@ -105,7 +105,7 @@ function AgendaPage() {
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-1">
             <img
-              src={gfSkull}
+              src={gfMark}
               alt="GF Tattoo Studio"
               width={28}
               height={28}

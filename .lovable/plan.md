@@ -1,48 +1,43 @@
 ## Objetivo
-Melhorar feedback do botão "Sincronizar GHL" no Financeiro e no Reconciliar, usando o `SyncResult` que o servidor já devolve (`scannedCalendars`, `fetchedEvents`, `inserted`, `updated`, `failures`, `errors`).
+Substituir o atual `gf-skull.png` (placeholder gerado) pela logo oficial da GF Tattoo em todos os pontos visíveis do app, mantendo o layout intacto.
+
+## Variantes da logo a gerar (a partir de `src/assets/gf-logo-official.png`)
+
+Vou recortar a logo oficial em 3 assets dedicados — a logo é monocromática (#18182E sobre branco), então basta cropar:
+
+1. `src/assets/gf-mark.png` — apenas a **caveira central** (quadrado, ~512×512). Usado em: favicon, auth, menu (avatar fallback do header), AuthShell topbar, splash/agenda header, FAB.
+2. `src/assets/gf-lockup.png` — **lockup horizontal completo** (G F + caveira + arco "TATTOO LIFESTYLE"). Usado em: tela `/auth` (acima do título), futura splash/email.
+3. Manter `gf-logo-official.png` como master.
+
+Removo `gf-skull.png` ao final (não há mais referências).
+
+## Pontos de substituição
+
+| Arquivo | Hoje | Depois |
+|---|---|---|
+| `src/components/layout/auth-shell.tsx` (TopBar desktop) | `gfSkull` 7×7 | `gfMark` 7×7 |
+| `src/routes/auth.tsx` | `gfSkull` 14×14 acima do título | `gfLockup` (h-12, w-auto) — o título textual "GF Tattoo Studio" some pois o lockup já contém a marca; mantém o subtítulo "Entrar" |
+| `src/routes/_authenticated/agenda.tsx` (linha 26) | `gfSkull` | `gfMark` (mesmo tamanho/posição) |
+| `src/routes/_authenticated/menu.tsx` | (sem logo hoje) | adicionar `gfMark` 8×8 ao lado do título "Menu" no header sticky, para coerência visual |
+| `src/components/layout/bottom-nav.tsx` FAB central | ícone `<Plus>` em círculo primary | manter botão, mas trocar o círculo para fundo branco com `gfMark` sobreposto + `<Plus>` pequeno no canto? **NÃO** — logo dentro de FAB de 56px fica ilegível. **Decisão:** manter `<Plus>` no FAB e NÃO usar a logo lá. Justifico abaixo. |
+| `src/routes/__root.tsx` head | sem `<link rel="icon">` | adicionar `{ rel: "icon", type: "image/png", href: gfMarkUrl }` e atualizar `og:image`/`twitter:image` para o lockup |
+
+### Sobre o FAB
+O usuário pediu "FAB central quando aplicável". O FAB tem 56px; a caveira da logo perde legibilidade abaixo de ~40px e compete com o ícone "+". Vou **manter o `<Plus>`** e registrar isso na resposta — se preferir forçar a logo, é uma linha de código.
+
+### Splash
+Não existe rota/componente de splash dedicado hoje (o app entra direto em `/auth` ou `/agenda`). O equivalente visual é a tela `/auth`, que já recebe o lockup. Não vou inventar uma splash nova nesta task.
+
+## Passos de implementação
+
+1. Recortar `gf-logo-official.png`:
+   - `image_tools--zoom_image` para localizar o bounding box da caveira → exportar para `src/assets/gf-mark.png`
+   - segundo recorte para o lockup completo (sem padding excessivo) → `src/assets/gf-lockup.png`
+2. Editar 5 arquivos acima trocando o `import` e o `<img>`.
+3. Adicionar `rel="icon"` em `src/routes/__root.tsx` apontando para o asset importado (`?url`).
+4. `rm src/assets/gf-skull.png` após confirmar zero referências.
+5. Validar via Playwright: screenshot de `/auth` e `/agenda` em 1280×1800 + favicon presente no `<head>`.
 
 ## Fora de escopo
-`src/lib/sync.functions.ts` e `sync.server.ts` — o payload já contém tudo. Nenhuma mudança em migrations, schema, cron, GHL ou permissões.
-
-## 1. Componente compartilhado — `src/components/sync-ghl-button.tsx` (novo)
-Encapsula UX consistente nos dois lugares; evita divergir copy/toast.
-
-- Props: `variant?`, `size?`, `className?`, `onSettled?()`.
-- Internamente: `useServerFn(runGhlSync)` + `useMutation`.
-- `disabled = syncM.isPending` — atende anti-duplo-clique mesmo com cliques rápidos (TanStack Query também deduplica a mutation em voo).
-- Render:
-  - Idle: `<RefreshCw />` + "Sincronizar".
-  - Pending: `<RefreshCw className="animate-spin" />` + "Sincronizando…", `aria-busy`.
-- `onSuccess(r)`:
-  - Toast `toast.success("Sincronização concluída", { description })` onde `description` é uma linha resumo:
-    `${scannedCalendars} calendários · ${fetchedEvents} eventos · ${inserted} novos · ${updated} atualizados · ${failures} falhas`.
-  - Se `failures > 0`, usar `toast.warning` (sonner aceita) com a mesma descrição + ação "Reconciliar" navegando para `/reconciliar` (via callback opcional `onHasFailures`, default sem ação extra).
-  - Invalida `["finance-summary"]`, `["sync-failures"]`, `["agenda-status"]`, `["agenda"]`.
-  - Chama `onSettled?.()` para a página decidir extras.
-- `onError(e)`:
-  - `toast.error("Falha ao sincronizar", { description: friendlyMessage(e) })`.
-  - `friendlyMessage`: mapeia mensagens conhecidas ("Unauthorized" → "Sessão expirada. Faça login novamente."; "GHL_TOKEN ausente" → "Token do GHL não configurado."; "Apenas administradores…" → mesma string). Fallback: "Não foi possível sincronizar agora. Tente novamente em instantes."
-  - Detalhe técnico: incluir `e.message` cru em `description` apenas como segunda linha (`\n`), e copiar mensagem completa via botão `action: { label: "Copiar erro", onClick: () => navigator.clipboard.writeText(e.message) }`. Sem expor stack nem secrets.
-
-## 2. `src/routes/_authenticated/financeiro.tsx`
-- Remover `useMutation`/`useServerFn(runGhlSync)`/`syncM` locais e o `<Button>` inline.
-- Substituir por `<SyncGhlButton size="sm" variant="outline" />` dentro do mesmo bloco `{isAdmin ? … : null}` (mantém restrição admin).
-- Remover imports não usados (`useMutation`, `useServerFn`, `runGhlSync`, `toast` se não restar uso, `RefreshCw` se não restar uso).
-- `useQueryClient`/`qc` permanece se outra parte usa; senão remover.
-
-## 3. `src/routes/_authenticated/_admin/reconciliar.tsx`
-- Substituir o `<Button>` "Sincronizar agora" + `syncM` por `<SyncGhlButton size="sm" variant="outline">Sincronizar agora</SyncGhlButton>` (componente aceita `children` opcional para sobrescrever rótulo idle; pending continua "Sincronizando…").
-- Remover `useMutation`/`useServerFn(runGhlSync)` e imports órfãos.
-- `resolveM` e demais lógicas ficam intactas.
-
-## 4. Acessibilidade & anti-duplo-clique
-- `disabled` durante `isPending` + `aria-busy="true"` + `aria-live` implícito do sonner cobrem leitores de tela.
-- Como cada página tem sua própria instância do `useMutation`, dois botões em telas diferentes podem rodar — aceitável (são páginas distintas, raro). No mesmo render, `disabled` previne duplo disparo.
-
-## Critérios de aceite — mapeamento
-1. Botão troca rótulo/ícone enquanto roda → 1 ✓.
-2. Toast sucesso com resumo numérico → 2 ✓.
-3. Toast erro com mensagem amigável + "Copiar erro" → 3 ✓.
-4. `disabled` + dedup do `useMutation` → 4 ✓.
-5. `invalidateQueries` cobre finance-summary, sync-failures, agenda-status, agenda → 5 ✓.
-6. Componente renderizado só dentro do bloco `isAdmin` em ambas as telas → restrição mantida.
+- Não mexer em tokens CSS, tipografia, BottomNav layout, splash dedicada, emails.
+- Não substituir logo dentro de StatusBadge/EmptyState (a "marca d'água em estados vazios" mencionada na conversa anterior fica para outra task).
