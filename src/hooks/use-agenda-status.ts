@@ -14,7 +14,15 @@ export function useDayAppointmentStatuses(date: Date, enabled = true) {
   const q = useQuery<DayAppointmentStatus[]>({
     queryKey: ["agenda-status", dayKey],
     enabled,
-    queryFn: () => fetchFn({ data: { dateISO: date.toISOString() } }),
+    queryFn: async () => {
+      try {
+        return await fetchFn({ data: { dateISO: date.toISOString() } });
+      } catch (error) {
+        console.warn("agenda status unavailable", summarizeError(error));
+        return [];
+      }
+    },
+    retry: false,
     staleTime: 60_000,
     refetchInterval: 120_000,
     refetchIntervalInBackground: false,
@@ -31,7 +39,15 @@ export function useRangeAppointmentStatuses(startMs: number, endMs: number, enab
   const q = useQuery<DayAppointmentStatus[]>({
     queryKey: ["agenda-status-range", startISO, endISO],
     enabled,
-    queryFn: () => fetchFn({ data: { startISO, endISO } }),
+    queryFn: async () => {
+      try {
+        return await fetchFn({ data: { startISO, endISO } });
+      } catch (error) {
+        console.warn("agenda range status unavailable", summarizeError(error));
+        return [];
+      }
+    },
+    retry: false,
     staleTime: 60_000,
     refetchInterval: 120_000,
     refetchIntervalInBackground: false,
@@ -39,4 +55,15 @@ export function useRangeAppointmentStatuses(startMs: number, endMs: number, enab
   const map = new Map<string, PaymentBucket>();
   for (const r of q.data ?? []) map.set(r.ghlAppointmentId, r.bucket);
   return { map, isLoading: q.isLoading, error: q.error };
+}
+
+function summarizeError(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  if (message.includes("522") || message.includes("Connection timed out")) {
+    return "backend timeout while loading payment badges";
+  }
+  if (message.includes("Invalid token") || message.includes("Unauthorized")) {
+    return "session token rejected while loading payment badges";
+  }
+  return message.slice(0, 180);
 }

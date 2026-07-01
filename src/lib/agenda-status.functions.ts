@@ -34,13 +34,17 @@ async function queryStatuses(
   startISO: string,
   endISO: string,
 ): Promise<DayAppointmentStatus[]> {
+  try {
     const { data: rows, error } = await (supabase as any)
       .from("appointments" as never)
       .select("id, artist_id, ghl_appointment_id, start_at")
       .gte("start_at", startISO)
       .lte("start_at", endISO)
       .not("ghl_appointment_id", "is", null);
-    if (error) throw new Error(error.message);
+    if (error) {
+      console.warn("agenda-status appointments query failed", summarizeBackendError(error));
+      return [];
+    }
 
     const appts = (rows ?? []) as Array<{
       id: string;
@@ -56,7 +60,14 @@ async function queryStatuses(
       .select("appointment_id, status")
       .eq("status", "paid")
       .in("appointment_id", ids);
-    if (payErr) throw new Error(payErr.message);
+    if (payErr) {
+      console.warn("agenda-status payments query failed", summarizeBackendError(payErr));
+      return appts.map((a) => ({
+        ghlAppointmentId: a.ghl_appointment_id,
+        artistId: a.artist_id,
+        bucket: deriveBucket(a.start_at, false),
+      }));
+    }
     const paidIds = new Set(
       ((payRows ?? []) as Array<{ appointment_id: string | null }>)
         .map((r) => r.appointment_id)
@@ -68,4 +79,24 @@ async function queryStatuses(
       artistId: a.artist_id,
       bucket: deriveBucket(a.start_at, paidIds.has(a.id)),
     }));
+  } catch (error) {
+    console.warn("agenda-status unavailable", summarizeBackendError(error));
+    return [];
+  }
+}
+
+function summarizeBackendError(error: unknown): string {
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === "object" && error && "message" in error
+        ? String((error as { message?: unknown }).message)
+        : String(error);
+  if (message.includes("522") || message.includes("Connection timed out")) {
+    return "backend timeout";
+  }
+  if (message.includes("<!DOCTYPE html>")) {
+    return "backend returned an HTML error page";
+  }
+  return message.slice(0, 240);
 }
