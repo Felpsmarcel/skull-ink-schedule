@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthUpdatePasswordRouteImport } from './routes/auth.update-password'
 import { Route as AuthResetRouteImport } from './routes/auth.reset'
 import { Route as AuthenticatedServicesRouteImport } from './routes/_authenticated/services'
 import { Route as AuthenticatedReviewsRouteImport } from './routes/_authenticated/reviews'
@@ -44,6 +45,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthUpdatePasswordRoute = AuthUpdatePasswordRouteImport.update({
+  id: '/update-password',
+  path: '/update-password',
+  getParentRoute: () => AuthRoute,
 } as any)
 const AuthResetRoute = AuthResetRouteImport.update({
   id: '/reset',
@@ -152,6 +158,7 @@ export interface FileRoutesByFullPath {
   '/reviews': typeof AuthenticatedReviewsRoute
   '/services': typeof AuthenticatedServicesRoute
   '/auth/reset': typeof AuthResetRoute
+  '/auth/update-password': typeof AuthUpdatePasswordRoute
   '/ghl-test': typeof AuthenticatedAdminGhlTestRoute
   '/reconciliar': typeof AuthenticatedAdminReconciliarRoute
   '/appointments/new': typeof AuthenticatedAppointmentsNewRouteWithChildren
@@ -173,6 +180,7 @@ export interface FileRoutesByTo {
   '/reviews': typeof AuthenticatedReviewsRoute
   '/services': typeof AuthenticatedServicesRoute
   '/auth/reset': typeof AuthResetRoute
+  '/auth/update-password': typeof AuthUpdatePasswordRoute
   '/ghl-test': typeof AuthenticatedAdminGhlTestRoute
   '/reconciliar': typeof AuthenticatedAdminReconciliarRoute
   '/relatorios/agendamentos': typeof AuthenticatedAdminRelatoriosAgendamentosRoute
@@ -196,6 +204,7 @@ export interface FileRoutesById {
   '/_authenticated/reviews': typeof AuthenticatedReviewsRoute
   '/_authenticated/services': typeof AuthenticatedServicesRoute
   '/auth/reset': typeof AuthResetRoute
+  '/auth/update-password': typeof AuthUpdatePasswordRoute
   '/_authenticated/_admin/ghl-test': typeof AuthenticatedAdminGhlTestRoute
   '/_authenticated/_admin/reconciliar': typeof AuthenticatedAdminReconciliarRoute
   '/_authenticated/appointments/new': typeof AuthenticatedAppointmentsNewRouteWithChildren
@@ -219,6 +228,7 @@ export interface FileRouteTypes {
     | '/reviews'
     | '/services'
     | '/auth/reset'
+    | '/auth/update-password'
     | '/ghl-test'
     | '/reconciliar'
     | '/appointments/new'
@@ -240,6 +250,7 @@ export interface FileRouteTypes {
     | '/reviews'
     | '/services'
     | '/auth/reset'
+    | '/auth/update-password'
     | '/ghl-test'
     | '/reconciliar'
     | '/relatorios/agendamentos'
@@ -262,6 +273,7 @@ export interface FileRouteTypes {
     | '/_authenticated/reviews'
     | '/_authenticated/services'
     | '/auth/reset'
+    | '/auth/update-password'
     | '/_authenticated/_admin/ghl-test'
     | '/_authenticated/_admin/reconciliar'
     | '/_authenticated/appointments/new'
@@ -307,6 +319,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/auth/update-password': {
+      id: '/auth/update-password'
+      path: '/update-password'
+      fullPath: '/auth/update-password'
+      preLoaderRoute: typeof AuthUpdatePasswordRouteImport
+      parentRoute: typeof AuthRoute
     }
     '/auth/reset': {
       id: '/auth/reset'
@@ -503,10 +522,12 @@ const AuthenticatedRouteRouteWithChildren =
 
 interface AuthRouteChildren {
   AuthResetRoute: typeof AuthResetRoute
+  AuthUpdatePasswordRoute: typeof AuthUpdatePasswordRoute
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
   AuthResetRoute: AuthResetRoute,
+  AuthUpdatePasswordRoute: AuthUpdatePasswordRoute,
 }
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
