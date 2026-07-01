@@ -53,7 +53,7 @@ function MenuPage() {
           <Row to="/financeiro" icon={<Wallet className="h-4 w-4" />} label="Meu financeiro" />
           {isAdmin && (
             <>
-              <Row to="/equipe" icon={<Users className="h-4 w-4" />} label="Equipe" />
+              <Row to="/admin/equipe" icon={<Users className="h-4 w-4" />} label="Equipe" />
               <Row to="/reconciliar" icon={<RefreshCw className="h-4 w-4" />} label="Reconciliar GHL" />
               <Row to="/relatorios/agendamentos" icon={<FileText className="h-4 w-4" />} label="Relatório mensal" />
             </>

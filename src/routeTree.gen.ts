@@ -13,7 +13,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthUpdatePasswordRouteImport } from './routes/auth_.update-password'
-import { Route as AuthResetRouteImport } from './routes/auth_.reset'
+import { Route as AuthRecoverRouteImport } from './routes/auth_.recover'
 import { Route as AuthenticatedServicesRouteImport } from './routes/_authenticated/services'
 import { Route as AuthenticatedReviewsRouteImport } from './routes/_authenticated/reviews'
 import { Route as AuthenticatedMenuRouteImport } from './routes/_authenticated/menu'
@@ -23,7 +23,6 @@ import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAppointmentsNewRouteImport } from './routes/_authenticated/appointments.new'
 import { Route as AuthenticatedAdminReconciliarRouteImport } from './routes/_authenticated/_admin/reconciliar'
 import { Route as AuthenticatedAdminGhlTestRouteImport } from './routes/_authenticated/_admin/ghl-test'
-import { Route as AuthenticatedAdminEquipeRouteImport } from './routes/_authenticated/_admin/equipe'
 import { Route as AuthenticatedAppointmentsNewIndexRouteImport } from './routes/_authenticated/appointments.new.index'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
@@ -32,6 +31,7 @@ import { Route as ApiPublicHooksSyncGhlRouteImport } from './routes/api/public/h
 import { Route as AuthenticatedAppointmentsNewServicesRouteImport } from './routes/_authenticated/appointments.new.services'
 import { Route as AuthenticatedAppointmentsNewCheckoutRouteImport } from './routes/_authenticated/appointments.new.checkout'
 import { Route as AuthenticatedAdminRelatoriosAgendamentosRouteImport } from './routes/_authenticated/_admin/relatorios.agendamentos'
+import { Route as AuthenticatedAdminAdminEquipeRouteImport } from './routes/_authenticated/_admin/admin.equipe'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -52,9 +52,9 @@ const AuthUpdatePasswordRoute = AuthUpdatePasswordRouteImport.update({
   path: '/auth/update-password',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthResetRoute = AuthResetRouteImport.update({
-  id: '/auth_/reset',
-  path: '/auth/reset',
+const AuthRecoverRoute = AuthRecoverRouteImport.update({
+  id: '/auth_/recover',
+  path: '/auth/recover',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedServicesRoute = AuthenticatedServicesRouteImport.update({
@@ -104,12 +104,6 @@ const AuthenticatedAdminGhlTestRoute =
     path: '/ghl-test',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
-const AuthenticatedAdminEquipeRoute =
-  AuthenticatedAdminEquipeRouteImport.update({
-    id: '/equipe',
-    path: '/equipe',
-    getParentRoute: () => AuthenticatedAdminRouteRoute,
-  } as any)
 const AuthenticatedAppointmentsNewIndexRoute =
   AuthenticatedAppointmentsNewIndexRouteImport.update({
     id: '/',
@@ -155,6 +149,12 @@ const AuthenticatedAdminRelatoriosAgendamentosRoute =
     path: '/relatorios/agendamentos',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
+const AuthenticatedAdminAdminEquipeRoute =
+  AuthenticatedAdminAdminEquipeRouteImport.update({
+    id: '/admin/equipe',
+    path: '/admin/equipe',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -164,12 +164,12 @@ export interface FileRoutesByFullPath {
   '/menu': typeof AuthenticatedMenuRoute
   '/reviews': typeof AuthenticatedReviewsRoute
   '/services': typeof AuthenticatedServicesRoute
-  '/auth/reset': typeof AuthResetRoute
+  '/auth/recover': typeof AuthRecoverRoute
   '/auth/update-password': typeof AuthUpdatePasswordRoute
-  '/equipe': typeof AuthenticatedAdminEquipeRoute
   '/ghl-test': typeof AuthenticatedAdminGhlTestRoute
   '/reconciliar': typeof AuthenticatedAdminReconciliarRoute
   '/appointments/new': typeof AuthenticatedAppointmentsNewRouteWithChildren
+  '/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
   '/relatorios/agendamentos': typeof AuthenticatedAdminRelatoriosAgendamentosRoute
   '/appointments/new/checkout': typeof AuthenticatedAppointmentsNewCheckoutRoute
   '/appointments/new/services': typeof AuthenticatedAppointmentsNewServicesRoute
@@ -187,11 +187,11 @@ export interface FileRoutesByTo {
   '/menu': typeof AuthenticatedMenuRoute
   '/reviews': typeof AuthenticatedReviewsRoute
   '/services': typeof AuthenticatedServicesRoute
-  '/auth/reset': typeof AuthResetRoute
+  '/auth/recover': typeof AuthRecoverRoute
   '/auth/update-password': typeof AuthUpdatePasswordRoute
-  '/equipe': typeof AuthenticatedAdminEquipeRoute
   '/ghl-test': typeof AuthenticatedAdminGhlTestRoute
   '/reconciliar': typeof AuthenticatedAdminReconciliarRoute
+  '/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
   '/relatorios/agendamentos': typeof AuthenticatedAdminRelatoriosAgendamentosRoute
   '/appointments/new/checkout': typeof AuthenticatedAppointmentsNewCheckoutRoute
   '/appointments/new/services': typeof AuthenticatedAppointmentsNewServicesRoute
@@ -212,12 +212,12 @@ export interface FileRoutesById {
   '/_authenticated/menu': typeof AuthenticatedMenuRoute
   '/_authenticated/reviews': typeof AuthenticatedReviewsRoute
   '/_authenticated/services': typeof AuthenticatedServicesRoute
-  '/auth_/reset': typeof AuthResetRoute
+  '/auth_/recover': typeof AuthRecoverRoute
   '/auth_/update-password': typeof AuthUpdatePasswordRoute
-  '/_authenticated/_admin/equipe': typeof AuthenticatedAdminEquipeRoute
   '/_authenticated/_admin/ghl-test': typeof AuthenticatedAdminGhlTestRoute
   '/_authenticated/_admin/reconciliar': typeof AuthenticatedAdminReconciliarRoute
   '/_authenticated/appointments/new': typeof AuthenticatedAppointmentsNewRouteWithChildren
+  '/_authenticated/_admin/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
   '/_authenticated/_admin/relatorios/agendamentos': typeof AuthenticatedAdminRelatoriosAgendamentosRoute
   '/_authenticated/appointments/new/checkout': typeof AuthenticatedAppointmentsNewCheckoutRoute
   '/_authenticated/appointments/new/services': typeof AuthenticatedAppointmentsNewServicesRoute
@@ -237,12 +237,12 @@ export interface FileRouteTypes {
     | '/menu'
     | '/reviews'
     | '/services'
-    | '/auth/reset'
+    | '/auth/recover'
     | '/auth/update-password'
-    | '/equipe'
     | '/ghl-test'
     | '/reconciliar'
     | '/appointments/new'
+    | '/admin/equipe'
     | '/relatorios/agendamentos'
     | '/appointments/new/checkout'
     | '/appointments/new/services'
@@ -260,11 +260,11 @@ export interface FileRouteTypes {
     | '/menu'
     | '/reviews'
     | '/services'
-    | '/auth/reset'
+    | '/auth/recover'
     | '/auth/update-password'
-    | '/equipe'
     | '/ghl-test'
     | '/reconciliar'
+    | '/admin/equipe'
     | '/relatorios/agendamentos'
     | '/appointments/new/checkout'
     | '/appointments/new/services'
@@ -284,12 +284,12 @@ export interface FileRouteTypes {
     | '/_authenticated/menu'
     | '/_authenticated/reviews'
     | '/_authenticated/services'
-    | '/auth_/reset'
+    | '/auth_/recover'
     | '/auth_/update-password'
-    | '/_authenticated/_admin/equipe'
     | '/_authenticated/_admin/ghl-test'
     | '/_authenticated/_admin/reconciliar'
     | '/_authenticated/appointments/new'
+    | '/_authenticated/_admin/admin/equipe'
     | '/_authenticated/_admin/relatorios/agendamentos'
     | '/_authenticated/appointments/new/checkout'
     | '/_authenticated/appointments/new/services'
@@ -304,7 +304,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
-  AuthResetRoute: typeof AuthResetRoute
+  AuthRecoverRoute: typeof AuthRecoverRoute
   AuthUpdatePasswordRoute: typeof AuthUpdatePasswordRoute
   ApiPublicHooksSyncGhlRoute: typeof ApiPublicHooksSyncGhlRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
@@ -342,11 +342,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthUpdatePasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/auth_/reset': {
-      id: '/auth_/reset'
-      path: '/auth/reset'
-      fullPath: '/auth/reset'
-      preLoaderRoute: typeof AuthResetRouteImport
+    '/auth_/recover': {
+      id: '/auth_/recover'
+      path: '/auth/recover'
+      fullPath: '/auth/recover'
+      preLoaderRoute: typeof AuthRecoverRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/services': {
@@ -412,13 +412,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminGhlTestRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
-    '/_authenticated/_admin/equipe': {
-      id: '/_authenticated/_admin/equipe'
-      path: '/equipe'
-      fullPath: '/equipe'
-      preLoaderRoute: typeof AuthenticatedAdminEquipeRouteImport
-      parentRoute: typeof AuthenticatedAdminRouteRoute
-    }
     '/_authenticated/appointments/new/': {
       id: '/_authenticated/appointments/new/'
       path: '/'
@@ -475,21 +468,28 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRelatoriosAgendamentosRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
+    '/_authenticated/_admin/admin/equipe': {
+      id: '/_authenticated/_admin/admin/equipe'
+      path: '/admin/equipe'
+      fullPath: '/admin/equipe'
+      preLoaderRoute: typeof AuthenticatedAdminAdminEquipeRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
   }
 }
 
 interface AuthenticatedAdminRouteRouteChildren {
-  AuthenticatedAdminEquipeRoute: typeof AuthenticatedAdminEquipeRoute
   AuthenticatedAdminGhlTestRoute: typeof AuthenticatedAdminGhlTestRoute
   AuthenticatedAdminReconciliarRoute: typeof AuthenticatedAdminReconciliarRoute
+  AuthenticatedAdminAdminEquipeRoute: typeof AuthenticatedAdminAdminEquipeRoute
   AuthenticatedAdminRelatoriosAgendamentosRoute: typeof AuthenticatedAdminRelatoriosAgendamentosRoute
 }
 
 const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren =
   {
-    AuthenticatedAdminEquipeRoute: AuthenticatedAdminEquipeRoute,
     AuthenticatedAdminGhlTestRoute: AuthenticatedAdminGhlTestRoute,
     AuthenticatedAdminReconciliarRoute: AuthenticatedAdminReconciliarRoute,
+    AuthenticatedAdminAdminEquipeRoute: AuthenticatedAdminAdminEquipeRoute,
     AuthenticatedAdminRelatoriosAgendamentosRoute:
       AuthenticatedAdminRelatoriosAgendamentosRoute,
   }
@@ -548,7 +548,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
-  AuthResetRoute: AuthResetRoute,
+  AuthRecoverRoute: AuthRecoverRoute,
   AuthUpdatePasswordRoute: AuthUpdatePasswordRoute,
   ApiPublicHooksSyncGhlRoute: ApiPublicHooksSyncGhlRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
