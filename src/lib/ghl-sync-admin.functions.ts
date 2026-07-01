@@ -1,16 +1,22 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-async function assertAdmin(supabase: unknown, userId: string) {
-  const client = supabase as { rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: boolean | null }> };
-  const { data: isAdmin } = await client.rpc("has_role", { _user_id: userId, _role: "admin" });
-  if (!isAdmin) throw new Response("Forbidden", { status: 403 });
+async function assertAdmin(userId: string) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data, error } = await supabaseAdmin
+    .from("app_users" as never)
+    .select("role")
+    .eq("id", userId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  const role = (data as { role?: string } | null)?.role;
+  if (role !== "admin") throw new Error("Forbidden");
 }
 
 export const getGhlSyncStatus = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await assertAdmin(context.supabase, context.userId);
+    await assertAdmin(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data, error } = await supabaseAdmin.rpc("ghl_sync_status" as never);
     if (error) throw new Error(error.message);
@@ -24,7 +30,7 @@ export const getGhlSyncStatus = createServerFn({ method: "GET" })
 export const scheduleGhlSync = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await assertAdmin(context.supabase, context.userId);
+    await assertAdmin(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin.rpc("schedule_ghl_sync" as never);
     if (error) throw new Error(error.message);
@@ -34,7 +40,7 @@ export const scheduleGhlSync = createServerFn({ method: "POST" })
 export const unscheduleGhlSync = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await assertAdmin(context.supabase, context.userId);
+    await assertAdmin(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin.rpc("unschedule_ghl_sync" as never);
     if (error) throw new Error(error.message);

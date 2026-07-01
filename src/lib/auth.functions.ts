@@ -34,11 +34,13 @@ export const requireAdmin = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
-    const { data, error } = await supabase.rpc("has_role" as never, {
-      _user_id: userId,
-      _role: "admin",
-    } as never);
+    const { data, error } = await supabase
+      .from("app_users" as never)
+      .select("role")
+      .eq("id", userId)
+      .maybeSingle();
     if (error) throw new Error(error.message);
-    if (!data) throw redirect({ to: "/agenda" });
+    const role = (data as { role?: string } | null)?.role;
+    if (role !== "admin") throw redirect({ to: "/agenda" });
     return { ok: true as const };
   });
