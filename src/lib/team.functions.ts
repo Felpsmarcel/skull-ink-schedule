@@ -31,10 +31,16 @@ export interface InviteArtistResult {
   linkError?: string;
 }
 
-async function assertAdmin(supabase: unknown, userId: string) {
-  const client = supabase as { rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: boolean | null }> };
-  const { data: isAdmin } = await client.rpc("has_role", { _user_id: userId, _role: "admin" });
-  if (!isAdmin) throw new Response("Forbidden", { status: 403 });
+async function assertAdmin(_supabase: unknown, userId: string) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data, error } = await supabaseAdmin
+    .from("app_users" as never)
+    .select("role")
+    .eq("id", userId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  const role = (data as { role?: string } | null)?.role;
+  if (role !== "admin") throw new Error("Forbidden");
 }
 
 export const listTeam = createServerFn({ method: "GET" })
