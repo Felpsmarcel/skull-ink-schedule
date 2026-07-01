@@ -287,6 +287,13 @@ function DayView({
   });
   const { map: statusMap } = useDayAppointmentStatuses(date, meReady);
 
+  // Mobile: show one artist column at a time (chips selector).
+  const [activeStaffId, setActiveStaffId] = useState<string | null>(null);
+  const effectiveActiveId =
+    activeStaffId && agendas.some((a) => a.staff.id === activeStaffId)
+      ? activeStaffId
+      : agendas[0]?.staff.id ?? null;
+
   const rowCount = agendas.reduce((m, a) => Math.max(m, a.slots.length), 0);
   const timeColumn =
     rowCount > 0
@@ -385,6 +392,40 @@ function DayView({
         </div>
       </div>
 
+      {/* Mobile-only artist chip selector */}
+      {agendas.length > 1 ? (
+        <div className="border-b border-border bg-background sm:hidden">
+          <div className="flex gap-2 overflow-x-auto px-3 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {agendas.map((a) => {
+              const active = a.staff.id === effectiveActiveId;
+              return (
+                <button
+                  key={a.staff.id}
+                  type="button"
+                  onClick={() => setActiveStaffId(a.staff.id)}
+                  className={cn(
+                    "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-bold uppercase tracking-widest transition-colors",
+                    active
+                      ? "border-foreground bg-foreground text-background"
+                      : "border-border bg-card text-muted-foreground hover:border-foreground/40 hover:text-foreground",
+                  )}
+                >
+                  <span className="truncate max-w-[140px]">{a.staff.shortName}</span>
+                  <span
+                    className={cn(
+                      "rounded-sm px-1 text-[9px] tabular-nums",
+                      active ? "bg-background/20" : "bg-muted",
+                    )}
+                  >
+                    {a.bookedCount}·{a.freeCount}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+
       {/* Grid card */}
       <div className="mx-auto w-full max-w-[1400px] flex-1 px-2 py-4 sm:px-6">
         <div className="h-full overflow-hidden rounded-xl border border-border bg-card shadow-sm">
@@ -397,7 +438,7 @@ function DayView({
                   <div
                     key={label}
                     className={cn(
-                      "flex w-14 items-start justify-center border-b border-border/40 pt-1 text-[10px] font-medium text-muted-foreground",
+                      "flex w-10 items-start justify-center border-b border-border/40 pt-1 text-[9px] font-medium tabular-nums text-muted-foreground sm:w-14 sm:text-[10px]",
                       ROW_HEIGHT,
                     )}
                   >
@@ -406,20 +447,30 @@ function DayView({
                 ))}
               </div>
               <div className="relative flex flex-1">
-                {agendas.map((a) => (
-                  <StaffColumn
-                    key={a.staff.id}
-                    agenda={a}
-                    statusMap={statusMap}
-                    onOpen={(slot) =>
-                      setOpenSlot({
-                        slot,
-                        staffName: a.staff.shortName,
-                        calendarId: a.staff.calendarId,
-                      })
-                    }
-                  />
-                ))}
+                {agendas.map((a) => {
+                  const isActive = a.staff.id === effectiveActiveId;
+                  return (
+                    <div
+                      key={a.staff.id}
+                      className={cn(
+                        "flex sm:contents",
+                        isActive ? "w-full" : "hidden sm:block",
+                      )}
+                    >
+                      <StaffColumn
+                        agenda={a}
+                        statusMap={statusMap}
+                        onOpen={(slot) =>
+                          setOpenSlot({
+                            slot,
+                            staffName: a.staff.shortName,
+                            calendarId: a.staff.calendarId,
+                          })
+                        }
+                      />
+                    </div>
+                  );
+                })}
                 {/* Now line */}
                 {nowTopPx != null ? (
                   <div
