@@ -73,7 +73,7 @@ export const Route = createFileRoute("/_authenticated/agenda")({
   component: AgendaPage,
 });
 
-const COL_WIDTH = "min-w-[120px] flex-1";
+const COL_WIDTH = "min-w-[120px] basis-0 grow";
 const ROW_HEIGHT = "h-14";
 const ROW_HEIGHT_PX = 56; // must match ROW_HEIGHT (h-14 = 56px)
 
@@ -466,7 +466,7 @@ function StaffColumn({
   const { staff, slots, isLoading, error } = agenda;
 
   return (
-    <div className={cn("flex shrink-0 flex-col border-l border-border", COL_WIDTH)}>
+    <div className={cn("flex flex-col border-l border-border", COL_WIDTH)}>
       {/* Column header — editorial */}
       <div className="sticky top-0 z-10 flex h-16 flex-col items-center justify-center gap-0.5 border-b border-border bg-muted/40 px-2 py-2 text-center">
         <span
