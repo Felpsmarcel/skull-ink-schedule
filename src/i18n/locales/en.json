@@ -26,7 +26,22 @@
       "prev": "Previous",
       "next": "Next",
       "view": { "day": "Day", "week": "Week", "month": "Month" },
-      "month": { "appts": "appts" }
+      "month": { "appts": "appts" },
+      "details": {
+        "title": "Appointment details",
+        "artist": "Artist",
+        "service": "Service",
+        "status": "Status",
+        "contact": "Contact",
+        "noContact": "No contact linked.",
+        "contactError": "Could not load contact data.",
+        "copy": "Copy",
+        "copied": "Copied",
+        "call": "Call",
+        "sendEmail": "Email",
+        "overlap": "This slot has more than one overlapping booking.",
+        "close": "Close"
+      }
     },
     "nav": {
       "agenda": "Agenda",
