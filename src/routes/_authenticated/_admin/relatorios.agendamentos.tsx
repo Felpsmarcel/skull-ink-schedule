@@ -34,7 +34,13 @@ import {
 import { getContact } from "@/lib/ghl";
 
 export const Route = createFileRoute("/_authenticated/_admin/relatorios/agendamentos")({
-  head: () => ({ meta: [{ title: "Relatório mensal — GF Tattoo Studio" }] }),
+  head: () => ({
+    meta: [
+      { title: "Relatório mensal — GF Tattoo Studio" },
+      { name: "description", content: "Relatório mensal de agendamentos." },
+      { name: "robots", content: "noindex,nofollow" },
+    ],
+  }),
   component: MonthlyReportPage,
 });
 

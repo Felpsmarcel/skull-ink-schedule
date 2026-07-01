@@ -52,7 +52,8 @@ export const Route = createFileRoute("/_authenticated/agenda")({
   head: () => ({
     meta: [
       { title: "Agenda — GF Tattoo Studio" },
-      { name: "description", content: "Agenda diária dos tatuadores" },
+      { name: "description", content: "Sua agenda de atendimentos no GF Tattoo Studio." },
+      { name: "robots", content: "noindex,nofollow" },
     ],
   }),
   validateSearch: (s: Record<string, unknown>) => {

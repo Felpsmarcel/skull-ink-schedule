@@ -63,7 +63,11 @@ import { validateAppointmentDraft } from "@/lib/appointment-draft-validate";
 
 export const Route = createFileRoute("/_authenticated/appointments/new/")({
   head: () => ({
-    meta: [{ title: "Novo agendamento — GF Tattoo Studio" }],
+    meta: [
+      { title: "Novo agendamento — GF Tattoo Studio" },
+      { name: "description", content: "Inicie um novo agendamento no GF Tattoo Studio." },
+      { name: "robots", content: "noindex,nofollow" },
+    ],
   }),
   component: AppointmentNewPage,
 });

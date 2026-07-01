@@ -3,7 +3,7 @@ import { render } from 'react-email'
 import { createFileRoute } from '@tanstack/react-router'
 import { TEMPLATES } from '@/lib/email-templates/registry'
 
-const SITE_NAME = 'app-gftattoo-schedule'
+const SITE_NAME = 'GF Tattoo Studio'
 const SENDER_DOMAIN = 'notify.gftattooacademy.info'
 const FROM_DOMAIN = 'notify.gftattooacademy.info'
 

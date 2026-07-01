@@ -16,7 +16,13 @@ import { inviteArtist, listTeam, repairArtistLink, upsertArtist } from "@/lib/te
 import { getGhlSyncStatus, scheduleGhlSync } from "@/lib/ghl-sync-admin.functions";
 
 export const Route = createFileRoute("/_authenticated/_admin/admin/equipe")({
-  head: () => ({ meta: [{ title: "Equipe — GF Tattoo Studio" }] }),
+  head: () => ({
+    meta: [
+      { title: "Equipe — GF Tattoo Studio" },
+      { name: "description", content: "Gestão da equipe do GF Tattoo Studio." },
+      { name: "robots", content: "noindex,nofollow" },
+    ],
+  }),
   component: EquipePage,
 });
 

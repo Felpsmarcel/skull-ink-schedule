@@ -83,7 +83,8 @@ export const Route = createFileRoute("/_authenticated/financeiro")({
   head: () => ({
     meta: [
       { title: "Financeiro — GF Tattoo Studio" },
-      { name: "description", content: "Resumo financeiro e comissões" },
+      { name: "description", content: "Painel financeiro do GF Tattoo Studio." },
+      { name: "robots", content: "noindex,nofollow" },
     ],
   }),
   component: FinanceiroPage,
