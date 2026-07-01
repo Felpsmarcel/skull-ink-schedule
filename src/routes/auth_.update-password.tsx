@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import gfLockup from "@/assets/gf-lockup.png";
 
-export const Route = createFileRoute("/auth/update-password")({
+export const Route = createFileRoute("/auth_/update-password")({
   ssr: false,
   head: () => ({ meta: [{ title: "Definir senha — GF Tattoo Studio" }] }),
   component: () => (
