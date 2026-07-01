@@ -112,7 +112,7 @@ function AuthPage() {
         </Button>
         <div className="text-center">
           <Link
-            to="/auth/reset"
+            to="/auth_/reset"
             className="text-xs text-muted-foreground underline underline-offset-2"
           >
             Esqueci minha senha
