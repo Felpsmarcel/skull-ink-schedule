@@ -206,6 +206,63 @@ export const inviteArtist = createServerFn({ method: "POST" })
       };
     }
 
+    // Boas-vindas branded (extra ao invite auth email). Falhas não abortam o convite.
+    try {
+      const { data: artistRow } = await supabaseAdmin
+        .from("artists" as never)
+        .select("name")
+        .eq("id", data.artistId)
+        .maybeSingle();
+      const artistName = (artistRow as { name?: string } | null)?.name ?? null;
+      const origin = new URL(data.redirectTo).origin;
+
+      const { TEMPLATES } = await import("@/lib/email-templates/registry");
+      const React = await import("react");
+      const { render } = await import("react-email");
+      const template = TEMPLATES["team-welcome"];
+      if (template) {
+        const messageId = `team-welcome-${invitedUserId}`;
+        const existing = await supabaseAdmin
+          .from("email_send_log" as never)
+          .select("id")
+          .eq("message_id", messageId)
+          .limit(1)
+          .maybeSingle();
+        if (!existing.data) {
+          const props = { artistName, agendaUrl: `${origin}/agenda` };
+          const element = React.createElement(template.component, props);
+          const html = await render(element);
+          const text = await render(element, { plainText: true });
+          const subject =
+            typeof template.subject === "function" ? template.subject(props) : template.subject;
+          await supabaseAdmin.from("email_send_log" as never).insert({
+            message_id: messageId,
+            template_name: "team-welcome",
+            recipient_email: data.email,
+            status: "pending",
+          } as never);
+          await supabaseAdmin.rpc("enqueue_email" as never, {
+            queue_name: "transactional_emails",
+            payload: {
+              message_id: messageId,
+              to: data.email,
+              from: "app-gftattoo-schedule <noreply@notify.gftattooacademy.info>",
+              sender_domain: "notify.gftattooacademy.info",
+              subject,
+              html,
+              text,
+              purpose: "transactional",
+              label: "team-welcome",
+              idempotency_key: messageId,
+              queued_at: new Date().toISOString(),
+            },
+          } as never);
+        }
+      }
+    } catch (welcomeErr) {
+      console.error("[inviteArtist] team-welcome email failed", welcomeErr);
+    }
+
     return { artistId: data.artistId, userId: invitedUserId, reused, linkOk: true };
   });
 
