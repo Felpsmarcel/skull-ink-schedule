@@ -116,7 +116,15 @@ export function useFinalizeAppointment() {
       draft.reset();
       navigate({ to: "/agenda" });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : String(e));
+      const msg = e instanceof Error ? e.message : String(e);
+      const slotTaken = /slot.*(no longer|not).*available|no longer available/i.test(msg);
+      if (slotTaken) {
+        toast.error(t("appt.errors.slotTaken"));
+        draft.setStart(null);
+        navigate({ to: "/appointments/new" });
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setSaving(false);
     }
