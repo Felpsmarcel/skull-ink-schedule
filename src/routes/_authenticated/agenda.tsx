@@ -488,7 +488,7 @@ function SlotCell({
 
   return (
     <div
-      className={cn("relative border-b border-border/30", ROW_HEIGHT)}
+      className={cn("relative", ROW_HEIGHT)}
       style={{ overflow: "visible" }}
     >
       <button
