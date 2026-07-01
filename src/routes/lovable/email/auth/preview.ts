@@ -18,7 +18,7 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 }
 
 // Configuration
-const SITE_NAME = "skull-ink-schedule"
+const SITE_NAME = "GF Tattoo Studio"
 const ROOT_DOMAIN = "gftattooacademy.info"
 
 // Sample data for preview mode ONLY (not used in actual email sending).
