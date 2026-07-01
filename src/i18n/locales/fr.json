@@ -26,7 +26,22 @@
       "prev": "Précédent",
       "next": "Suivant",
       "view": { "day": "Jour", "week": "Semaine", "month": "Mois" },
-      "month": { "appts": "rendez-vous" }
+      "month": { "appts": "rendez-vous" },
+      "details": {
+        "title": "Détails du rendez-vous",
+        "artist": "Tatoueur",
+        "service": "Service",
+        "status": "Statut",
+        "contact": "Contact",
+        "noContact": "Aucun contact lié.",
+        "contactError": "Impossible de charger les données du contact.",
+        "copy": "Copier",
+        "copied": "Copié",
+        "call": "Appeler",
+        "sendEmail": "E-mail",
+        "overlap": "Ce créneau a plus d'un rendez-vous superposé.",
+        "close": "Fermer"
+      }
     },
     "nav": {
       "agenda": "Agenda",
