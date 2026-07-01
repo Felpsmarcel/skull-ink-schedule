@@ -23,6 +23,7 @@ import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAppointmentsNewRouteImport } from './routes/_authenticated/appointments.new'
 import { Route as AuthenticatedAdminReconciliarRouteImport } from './routes/_authenticated/_admin/reconciliar'
 import { Route as AuthenticatedAdminGhlTestRouteImport } from './routes/_authenticated/_admin/ghl-test'
+import { Route as AuthenticatedAdminEquipeRouteImport } from './routes/_authenticated/_admin/equipe'
 import { Route as AuthenticatedAppointmentsNewIndexRouteImport } from './routes/_authenticated/appointments.new.index'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
@@ -103,6 +104,12 @@ const AuthenticatedAdminGhlTestRoute =
     path: '/ghl-test',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
+const AuthenticatedAdminEquipeRoute =
+  AuthenticatedAdminEquipeRouteImport.update({
+    id: '/equipe',
+    path: '/equipe',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
 const AuthenticatedAppointmentsNewIndexRoute =
   AuthenticatedAppointmentsNewIndexRouteImport.update({
     id: '/',
@@ -159,6 +166,7 @@ export interface FileRoutesByFullPath {
   '/services': typeof AuthenticatedServicesRoute
   '/auth/reset': typeof AuthResetRoute
   '/auth/update-password': typeof AuthUpdatePasswordRoute
+  '/equipe': typeof AuthenticatedAdminEquipeRoute
   '/ghl-test': typeof AuthenticatedAdminGhlTestRoute
   '/reconciliar': typeof AuthenticatedAdminReconciliarRoute
   '/appointments/new': typeof AuthenticatedAppointmentsNewRouteWithChildren
@@ -181,6 +189,7 @@ export interface FileRoutesByTo {
   '/services': typeof AuthenticatedServicesRoute
   '/auth/reset': typeof AuthResetRoute
   '/auth/update-password': typeof AuthUpdatePasswordRoute
+  '/equipe': typeof AuthenticatedAdminEquipeRoute
   '/ghl-test': typeof AuthenticatedAdminGhlTestRoute
   '/reconciliar': typeof AuthenticatedAdminReconciliarRoute
   '/relatorios/agendamentos': typeof AuthenticatedAdminRelatoriosAgendamentosRoute
@@ -205,6 +214,7 @@ export interface FileRoutesById {
   '/_authenticated/services': typeof AuthenticatedServicesRoute
   '/auth/reset': typeof AuthResetRoute
   '/auth/update-password': typeof AuthUpdatePasswordRoute
+  '/_authenticated/_admin/equipe': typeof AuthenticatedAdminEquipeRoute
   '/_authenticated/_admin/ghl-test': typeof AuthenticatedAdminGhlTestRoute
   '/_authenticated/_admin/reconciliar': typeof AuthenticatedAdminReconciliarRoute
   '/_authenticated/appointments/new': typeof AuthenticatedAppointmentsNewRouteWithChildren
@@ -229,6 +239,7 @@ export interface FileRouteTypes {
     | '/services'
     | '/auth/reset'
     | '/auth/update-password'
+    | '/equipe'
     | '/ghl-test'
     | '/reconciliar'
     | '/appointments/new'
@@ -251,6 +262,7 @@ export interface FileRouteTypes {
     | '/services'
     | '/auth/reset'
     | '/auth/update-password'
+    | '/equipe'
     | '/ghl-test'
     | '/reconciliar'
     | '/relatorios/agendamentos'
@@ -274,6 +286,7 @@ export interface FileRouteTypes {
     | '/_authenticated/services'
     | '/auth/reset'
     | '/auth/update-password'
+    | '/_authenticated/_admin/equipe'
     | '/_authenticated/_admin/ghl-test'
     | '/_authenticated/_admin/reconciliar'
     | '/_authenticated/appointments/new'
@@ -397,6 +410,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminGhlTestRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
+    '/_authenticated/_admin/equipe': {
+      id: '/_authenticated/_admin/equipe'
+      path: '/equipe'
+      fullPath: '/equipe'
+      preLoaderRoute: typeof AuthenticatedAdminEquipeRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
     '/_authenticated/appointments/new/': {
       id: '/_authenticated/appointments/new/'
       path: '/'
@@ -457,6 +477,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedAdminRouteRouteChildren {
+  AuthenticatedAdminEquipeRoute: typeof AuthenticatedAdminEquipeRoute
   AuthenticatedAdminGhlTestRoute: typeof AuthenticatedAdminGhlTestRoute
   AuthenticatedAdminReconciliarRoute: typeof AuthenticatedAdminReconciliarRoute
   AuthenticatedAdminRelatoriosAgendamentosRoute: typeof AuthenticatedAdminRelatoriosAgendamentosRoute
@@ -464,6 +485,7 @@ interface AuthenticatedAdminRouteRouteChildren {
 
 const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren =
   {
+    AuthenticatedAdminEquipeRoute: AuthenticatedAdminEquipeRoute,
     AuthenticatedAdminGhlTestRoute: AuthenticatedAdminGhlTestRoute,
     AuthenticatedAdminReconciliarRoute: AuthenticatedAdminReconciliarRoute,
     AuthenticatedAdminRelatoriosAgendamentosRoute:
