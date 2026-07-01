@@ -18,4 +18,5 @@ export interface StaffMember {
   color: string; // tailwind bg utility
   userId?: string;
   avatarUrl?: string | null;
+  email?: string | null;
 }

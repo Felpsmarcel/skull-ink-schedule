@@ -17,6 +17,7 @@ import {
   reasonToI18nKey,
 } from "@/lib/appointment-draft-validate";
 import { formatPrice } from "@/lib/services";
+import { sendTransactionalEmail } from "@/lib/email/send";
 
 export function useFinalizeAppointment() {
   const { t } = useTranslation();
@@ -58,6 +59,60 @@ export function useFinalizeAppointment() {
       const final = totalFinalEur(draft);
       toast.success(`${t("appt.created")} · ${formatPrice(final)}`);
       if (res.warning) toast.warning(res.warning);
+
+      // Fire-and-forget notification emails. Failures never abort the flow.
+      const whenLabel = new Intl.DateTimeFormat("pt-PT", {
+        timeZone: "Europe/Brussels",
+        weekday: "short",
+        day: "2-digit",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(new Date(startISO));
+      const servicesSummary = services.map((l) => l.service.name).join(", ");
+      const clientName =
+        contact.contactName ??
+        [contact.firstName, contact.lastName].filter(Boolean).join(" ") ??
+        null;
+      const agendaUrl = `${window.location.origin}/agenda`;
+      const totalLabel = formatPrice(final);
+      const commissionLabel = formatPrice(
+        Math.round(final * (res.commissionPct / 100) * 100) / 100,
+      );
+
+      if (contact.email) {
+        void sendTransactionalEmail({
+          templateName: "appointment-confirmation",
+          recipientEmail: contact.email,
+          idempotencyKey: `appt-confirm-${res.appointmentId}`,
+          templateData: {
+            clientName,
+            artistName: staff.name,
+            servicesSummary,
+            whenLabel,
+            totalLabel,
+            agendaUrl,
+          },
+        });
+      }
+      if (staff.email) {
+        void sendTransactionalEmail({
+          templateName: "artist-new-booking",
+          recipientEmail: staff.email,
+          idempotencyKey: `appt-artist-${res.appointmentId}`,
+          templateData: {
+            artistName: staff.name,
+            clientName,
+            clientPhone: contact.phone ?? undefined,
+            servicesSummary,
+            whenLabel,
+            commissionLabel,
+            notes: notes || undefined,
+            agendaUrl,
+          },
+        });
+      }
+
       draft.reset();
       navigate({ to: "/agenda" });
     } catch (e) {
