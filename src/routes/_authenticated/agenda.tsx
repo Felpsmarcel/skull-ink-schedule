@@ -40,7 +40,6 @@ import { Calendar } from "@/components/ui/calendar";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
-import gfMark from "@/assets/gf-mark.png";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { resolveIntlLocale } from "@/lib/locale";
 import { useAppointmentDraft } from "@/stores/appointment-draft";
@@ -150,24 +149,17 @@ function AgendaPage() {
   };
 
   return (
-    <div className="flex min-h-dvh flex-col bg-background pb-20">
+    <div className="flex min-h-dvh flex-col bg-muted/40 pb-20">
       <Toaster theme="light" position="top-center" />
 
-      {/* Header */}
+      {/* Header — editorial monochrome */}
       <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur">
-        <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
-          <div className="flex items-center gap-1">
-            <img
-              src={gfMark}
-              alt="GF Tattoo Studio"
-              width={28}
-              height={28}
-              className="mr-1 h-7 w-7 object-contain"
-            />
+        <div className="mx-auto flex w-full max-w-[1400px] flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6">
+          <div className="flex min-w-0 items-center gap-2">
             <button
               type="button"
               onClick={() => shift(-1)}
-              className="grid h-9 w-9 place-items-center rounded-md hover:bg-muted"
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
               aria-label={t("agenda.prev")}
             >
               <ChevronLeft className="h-5 w-5" />
@@ -177,10 +169,15 @@ function AgendaPage() {
               <PopoverTrigger asChild>
                 <button
                   type="button"
-                  className="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-semibold uppercase tracking-wide hover:bg-muted"
+                  className="flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-muted"
                 >
-                  <CalendarIcon className="h-4 w-4 text-foreground" />
-                  {dateLabel}
+                  <CalendarIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <span
+                    className="truncate text-base uppercase tracking-tight text-foreground sm:text-lg"
+                    style={{ fontFamily: "var(--font-display)" }}
+                  >
+                    {dateLabel}
+                  </span>
                 </button>
               </PopoverTrigger>
               <PopoverContent align="center" className="w-auto p-0">
@@ -200,37 +197,43 @@ function AgendaPage() {
             <button
               type="button"
               onClick={() => shift(1)}
-              className="grid h-9 w-9 place-items-center rounded-md hover:bg-muted"
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
               aria-label={t("agenda.next")}
             >
               <ChevronRight className="h-5 w-5" />
             </button>
+
+            <button
+              type="button"
+              onClick={() => setDate(new Date())}
+              className="ml-1 hidden rounded-full border border-border bg-card px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:border-foreground hover:text-foreground sm:inline-flex"
+            >
+              {t("agenda.today")}
+            </button>
           </div>
 
           <Tabs value={view} onValueChange={(v) => setView(v as View)}>
-            <TabsList className="h-8">
-              <TabsTrigger value="day" className="text-xs">
+            <TabsList className="h-9 rounded-lg bg-muted p-1">
+              <TabsTrigger
+                value="day"
+                className="rounded-md px-3 text-[11px] font-bold uppercase tracking-widest data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+              >
                 {t("agenda.view.day")}
               </TabsTrigger>
-              <TabsTrigger value="week" className="text-xs">
+              <TabsTrigger
+                value="week"
+                className="rounded-md px-3 text-[11px] font-bold uppercase tracking-widest data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+              >
                 {t("agenda.view.week")}
               </TabsTrigger>
-              <TabsTrigger value="month" className="text-xs">
+              <TabsTrigger
+                value="month"
+                className="rounded-md px-3 text-[11px] font-bold uppercase tracking-widest data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+              >
                 {t("agenda.view.month")}
               </TabsTrigger>
             </TabsList>
           </Tabs>
-        </div>
-
-        <div className="flex items-center justify-between px-4 pb-2 text-xs text-muted-foreground">
-          <button
-            type="button"
-            onClick={() => setDate(new Date())}
-            className="rounded-full border border-border bg-card px-3 py-1 text-[11px] uppercase tracking-wider hover:border-foreground hover:text-foreground"
-          >
-            {t("agenda.today")}
-          </button>
-          <span className="text-[11px]">{t("agenda.lastUpdate")}</span>
         </div>
       </header>
 
