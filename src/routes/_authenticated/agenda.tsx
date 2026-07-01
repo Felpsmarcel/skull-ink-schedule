@@ -504,7 +504,7 @@ function SlotCell({
           </span>
           {slot.hasOverlap ? (
             <AlertTriangleIcon
-              className="h-3 w-3 shrink-0 text-warning"
+              className="h-3 w-3 shrink-0 text-foreground"
               aria-label={t("agenda.details.overlap")}
             />
           ) : null}
