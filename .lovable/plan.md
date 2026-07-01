@@ -1,25 +1,50 @@
-## Ativar sync automático GHL (cron 10 min)
+## Diagnóstico visual da Agenda atual
 
-Hoje o `ghl_sync_status` mostra `job: null` e `vault_ok: false` — o cron nunca foi armado porque falta o segredo no Vault. As funções `schedule_ghl_sync()` / `unschedule_ghl_sync()` já existem e chamam `POST /api/public/hooks/sync-ghl` a cada 10 min usando `apikey` do Vault.
+Olhando o screenshot de sábado 04/07, vejo problemas concretos que fazem o dashboard parecer "planilha crua" em vez de produto:
 
-### Passos
+**1. Ruído visual dominante**
+- Cada slot livre repete "SEM RESERVA" em caixa tracejada. Em um dia com 7 tatuadores × 20 slots isso são ~140 rótulos idênticos gritando na tela.
+- O olho não consegue achar o que importa (os agendamentos reais).
 
-1. **Popular o Vault** com o segredo `ghl_sync_anon_key` (valor = anon key pública do projeto, mesma que o cron precisa mandar no header `apikey`):
-   ```sql
-   select vault.create_secret(
-     '<anon key>', 'ghl_sync_anon_key', 'Anon key usada pelo cron ghl-sync-10min'
-   );
-   ```
-   Se já existir com placeholder `__set_me__`, faço `update` no lugar.
+**2. Header sem hierarquia**
+- Skull + setas + "SÁBADO, 04/07/2026" + "HOJE" competem pela mesma linha, sem âncora clara.
+- Falta seletor Dia/Semana/Mês visível (existe no código mas não aparece bem).
+- Contadores "0● 9○" ao lado do nome são crípticos — ninguém sabe se bola cheia é livre ou ocupado.
 
-2. **Armar o cron** chamando `select public.schedule_ghl_sync();` — isso registra o job `ghl-sync-10min` com schedule `*/10 * * * *` apontando para `https://project--03a6f57d-9b2a-4876-a3b5-a886d4f4b51d.lovable.app/api/public/hooks/sync-ghl`.
+**3. Cards de evento fracos**
+- Todos os "Reservado" têm o mesmo peso — não dá pra distinguir consulta rápida (30min) de tattoo de 5h.
+- Badge "A RECEBER" fica solto no rodapé do card, às vezes fora dele.
+- Sem cor por tatuador → 7 colunas viram um borrão preto-e-branco.
+- Ícone ⚠️ aparece sem legenda.
 
-3. **Validar**:
-   - `select public.ghl_sync_status();` → `job.active = true`, `vault_ok = true`.
-   - Aguardar 1 execução e conferir `runs[0].status = 'succeeded'`.
-   - Conferir `select max(updated_at) from appointments;` avançou.
+**4. Densidade e escala**
+- Slots de 30min fixos ocupam altura enorme. Um dia inteiro exige scroll longo mesmo em desktop 1248px.
+- Colunas dos tatuadores têm larguras iguais, mesmo quando um deles não tem nada agendado (Andre, Joyce).
 
-### Observações
-- Segurança: o segredo fica só no Vault (nunca em código). O endpoint `/api/public/hooks/sync-ghl` já existe e valida internamente.
-- Reversível a qualquer momento com `select public.unschedule_ghl_sync();`.
-- Nenhuma alteração de código de app — só SQL/infra.
+**5. Falta de contexto de negócio**
+- Não há barra de KPIs do dia (ex: "6 agendamentos • €480 previsto • 2 a receber").
+- Sem indicação visual de "agora" (linha do horário atual).
+- Sem filtro rápido por tatuador ou por status.
+
+---
+
+## Como eu proponho evoluir
+
+Quero gerar **3 direções visuais renderizadas** que resolvem os 5 problemas acima, mantendo a identidade GF Tattoo (preto/branco, Archivo Black + Inter, skull mark). As 3 direções variariam em:
+
+- **Direção A — "Studio Board"**: densidade tipo Linear/Notion Calendar. Slots livres viram fundo neutro sutil (sem rótulo), só eventos têm card. Header consolidado com KPIs do dia. Linha do "agora" viva.
+- **Direção B — "Print de Estúdio"**: editorial monocromático, tipografia grande Archivo Black nos horários âncora (08, 12, 18), colunas com iniciais grandes dos tatuadores no topo, cards de evento com hairline preta e valor em destaque.
+- **Direção C — "Command Center"**: mais denso, escala vertical comprimida (30min = ~32px), coluna esquerda com timeline, chips coloridos por serviço, filtros no topo (tatuador, status, período), badge "A RECEBER" virando pill amarela consistente.
+
+Todas mantêm: paleta B/W, fontes atuais, layout mobile-friendly, dados reais do GHL, sem quebrar rotas ou hooks (`use-agenda`, `useStaffDayAgenda`, `agenda-grid.ts`).
+
+---
+
+## Próximo passo (o que vai acontecer se aprovar)
+
+1. Capturo a tela `/agenda` em desktop e mobile via Playwright para servir de referência visual às direções.
+2. Rodo `design--create_directions` com as 3 direções acima usando o screenshot que você já enviou + a captura live.
+3. Te apresento as 3 prévias renderizadas lado a lado via `ask_questions` (type: prototype).
+4. Você escolhe UMA — eu implemento só ela, sem mexer em lógica de negócio (fetch, GHL, comissão, checkout intocados).
+
+Escopo estritamente frontend: `src/routes/_authenticated/agenda.tsx`, `src/lib/agenda-grid.ts` (só camada de apresentação/agrupamento visual), `src/components/agenda-appointment-sheet.tsx`, tokens em `src/styles.css`. Sem migrations, sem mudanças em server functions.
