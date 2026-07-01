@@ -467,25 +467,29 @@ function StaffColumn({
 
   return (
     <div className={cn("flex shrink-0 flex-col border-l border-border", COL_WIDTH)}>
-      {/* Column header */}
-      <div className="sticky top-0 z-10 flex h-16 flex-col items-center justify-center gap-1 border-b border-border bg-card px-1 py-2">
-        <div className="flex items-center gap-1.5">
-          <div className="grid h-7 w-7 place-items-center rounded-full bg-muted text-[10px] font-bold text-foreground">
-            {staff.initials}
-          </div>
-          <span className="truncate text-xs font-semibold">{staff.shortName}</span>
-        </div>
+      {/* Column header — editorial */}
+      <div className="sticky top-0 z-10 flex h-16 flex-col items-center justify-center gap-0.5 border-b border-border bg-muted/40 px-2 py-2 text-center">
+        <span
+          className="truncate text-[13px] uppercase leading-none tracking-tight text-foreground"
+          style={{ fontFamily: "var(--font-display)" }}
+        >
+          {staff.shortName}
+        </span>
         {error && agenda.slots.length === 0 ? (
           <StatusBadge
             variant="danger"
             title={error}
             icon={<AlertTriangle className="h-3 w-3" />}
+            className="mt-1"
           >
             {t("agenda.errorLoading")}
           </StatusBadge>
         ) : (
-          <span className="text-[9px] text-muted-foreground">
-            {agenda.bookedCount}● {agenda.freeCount}○
+          <span className="text-[9px] font-medium uppercase tracking-wider text-muted-foreground">
+            {t("agenda.staff.summary", {
+              booked: agenda.bookedCount,
+              free: agenda.freeCount,
+            })}
           </span>
         )}
       </div>
@@ -547,7 +551,7 @@ function SlotCell({
 
   if (slot.status === "free") {
     return (
-      <div className={cn("border-b border-border/30 p-0.5", ROW_HEIGHT)}>
+      <div className={cn("group border-b border-border/30 p-0.5", ROW_HEIGHT)}>
         <button
           type="button"
           onClick={() => {
@@ -556,9 +560,11 @@ function SlotCell({
             draft.setStart(new Date(slot.startMs).toISOString());
             void navigate({ to: "/appointments/new" });
           }}
-          className="flex h-full w-full flex-col items-center justify-center rounded border border-dashed border-border bg-background text-[10px] uppercase tracking-wider text-muted-foreground hover:border-foreground hover:text-foreground"
+          aria-label={t("agenda.addSlot")}
+          title={t("agenda.addSlot")}
+          className="flex h-full w-full items-center justify-center rounded-md bg-transparent text-[10px] font-bold uppercase tracking-widest text-transparent transition-all hover:border hover:border-dashed hover:border-foreground/40 hover:bg-muted/40 hover:text-muted-foreground"
         >
-          {t("agenda.noBooking")}
+          + {t("agenda.addSlot")}
         </button>
       </div>
     );
@@ -586,11 +592,14 @@ function SlotCell({
         type="button"
         onClick={() => onOpen(slot)}
         title={`${slot.contactName ?? t("agenda.client")} — ${slot.serviceName ?? t("agenda.booked")}`}
-        className="absolute left-[2px] right-[2px] top-[2px] z-[1] flex flex-col justify-start gap-0.5 overflow-hidden rounded border-l-4 border-foreground bg-muted px-2 py-1 text-left text-foreground shadow-sm transition-colors hover:bg-muted/80 focus:outline-none focus:ring-2 focus:ring-foreground/40"
+        className="absolute left-[3px] right-[3px] top-[2px] z-[1] flex flex-col justify-start gap-0.5 overflow-hidden rounded-md border border-border border-l-4 border-l-foreground bg-background px-2 py-1.5 text-left text-foreground shadow-sm transition-all hover:-translate-y-[1px] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-foreground/40"
         style={{ height: cardHeight }}
       >
         <div className="flex items-center gap-1">
-          <span className="truncate text-[11px] font-semibold">
+          <span
+            className="truncate text-[11px] uppercase leading-tight tracking-tight"
+            style={{ fontFamily: "var(--font-display)" }}
+          >
             {slot.contactName ?? t("agenda.booked")}
           </span>
           {slot.hasOverlap ? (
