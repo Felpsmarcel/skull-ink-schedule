@@ -73,7 +73,7 @@ export const Route = createFileRoute("/_authenticated/agenda")({
   component: AgendaPage,
 });
 
-const COL_WIDTH = "min-w-[120px] basis-0 grow";
+const COL_WIDTH = "w-full sm:w-auto sm:min-w-[140px] sm:basis-0 sm:grow";
 const ROW_HEIGHT = "h-14";
 const ROW_HEIGHT_PX = 56; // must match ROW_HEIGHT (h-14 = 56px)
 
@@ -154,8 +154,8 @@ function AgendaPage() {
 
       {/* Header — editorial monochrome */}
       <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-[1400px] flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6">
-          <div className="flex min-w-0 items-center gap-2">
+        <div className="mx-auto flex w-full max-w-[1400px] flex-wrap items-center justify-between gap-2 px-3 py-3 sm:gap-3 sm:px-6 sm:py-4">
+          <div className="flex min-w-0 flex-1 items-center gap-1 sm:flex-none sm:gap-2">
             <button
               type="button"
               onClick={() => shift(-1)}
@@ -212,7 +212,11 @@ function AgendaPage() {
             </button>
           </div>
 
-          <Tabs value={view} onValueChange={(v) => setView(v as View)}>
+          <Tabs
+            value={view}
+            onValueChange={(v) => setView(v as View)}
+            className="w-full sm:w-auto"
+          >
             <TabsList className="h-9 rounded-lg bg-muted p-1">
               <TabsTrigger
                 value="day"
