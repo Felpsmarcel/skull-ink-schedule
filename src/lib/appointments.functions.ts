@@ -88,15 +88,15 @@ export const createAppointmentRecord = createServerFn({ method: "POST" })
     // 2. Resolve commission_pct from artist (defaults to 40).
     const { data: artistRow, error: artistErr } = await supabase
       .from("artists" as never)
-      .select("id, calendar_id, commission_pct")
+      .select("id, ghl_calendar_id, commission_pct")
       .eq("id", data.artistId)
       .maybeSingle();
     if (artistErr) throw new Error(artistErr.message);
     const artist = artistRow as
-      | { id: string; calendar_id: string | null; commission_pct: number | string | null }
+      | { id: string; ghl_calendar_id: string | null; commission_pct: number | string | null }
       | null;
     if (!artist) throw new Error("Artist não encontrado");
-    if (artist.calendar_id && artist.calendar_id !== data.calendarId) {
+    if (artist.ghl_calendar_id && artist.ghl_calendar_id !== data.calendarId) {
       throw new Error("calendarId não confere com o artista");
     }
     const commissionPct = Number(artist.commission_pct ?? 40);

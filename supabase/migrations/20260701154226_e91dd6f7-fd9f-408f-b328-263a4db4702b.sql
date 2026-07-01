@@ -1,0 +1,1 @@
+DELETE FROM public.appointments WHERE id = '58a39a4a-bd2e-4db9-890b-8ada53a075c7';
