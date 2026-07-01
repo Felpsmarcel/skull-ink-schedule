@@ -1,30 +1,48 @@
-## Diagnóstico
+## Problema
 
-A Agenda renderiza o cabeçalho e a coluna de horários, mas **nenhuma coluna de artista aparece**. Isso porque `useArtists()` está recebendo **HTTP 403 permission denied** no `GET /rest/v1/artists`:
+Na tela **Revisar agendamento** (`/appointments/new/checkout`), o botão **"Confirmar agendamento"** não conclui a operação. Nos logs de rede recentes não há nenhuma requisição para `createAppointmentRecord` nem para o endpoint `/calendars/events/appointments` do GHL — ou seja, o clique não chega a disparar o `run()`, ou ele aborta silenciosamente antes do POST.
 
-```
-{"code":"42501","message":"permission denied for table artists",
- "hint":"Grant the required privileges to the current role with:
-         GRANT SELECT ON public.artists TO authenticated;"}
-```
+Estado atual verificado:
+- O usuário logado é **admin**, então `useArtists()` retorna dados.
+- O rascunho em `sessionStorage` tem contato, `calendarId`, `startISO`, serviços — `canFinalize` deveria ser `true`.
+- Nenhum erro de console foi capturado no snapshot atual.
 
-O que aconteceu: no hardening de segurança recente (finding `artists_email_phone_public_read`) o `GRANT SELECT` para `authenticated` foi removido junto com o de `anon`. As policies RLS continuam certas (admin vê tudo; artista vê a própria linha), mas sem GRANT o PostgREST nem chega a avaliar RLS — bloqueia na camada de privilégio.
+Suspeitas mais prováveis (a validar):
+1. Alguma validação em `useFinalizeAppointment` está retornando cedo e o `toast.error` não aparece (i18n ausente ou `toast` fora de contexto).
+2. `useArtists` está temporariamente vazio no momento do render → `staff` = null → botão desabilitado ou `validateAppointmentDraft` retorna `noCalendar`.
+3. `startISO` no rascunho está em formato inválido (`endISO = NaN`) e o POST falha na serialização.
 
-## Correção
+## Plano de correção
 
-Migração SQL única:
+### 1. Reproduzir e capturar sinal (Playwright)
+- Abrir `/appointments/new/checkout` autenticado, clicar em **Confirmar agendamento** e coletar:
+  - `console.error` / `console.warn`
+  - Requisições `POST /_serverFn/*` (payload + resposta)
+  - Toasts renderizados
+- Screenshot antes/depois do clique.
 
-```sql
-GRANT SELECT ON public.artists TO authenticated;
--- (anon continua SEM acesso — não regride o finding de segurança)
-```
+### 2. Instrumentar o fluxo
+Em `src/hooks/use-finalize-appointment.ts`:
+- Adicionar `console.info("[finalize] start", {...})` no início de `run()`.
+- Logar o resultado de `validateAppointmentDraft` (com o `reason` quando inválido).
+- Envolver `finalizeAppointment(...)` em `try/catch` que loga o erro completo (`console.error("[finalize] failed", e)`) além do toast.
 
-Isso restaura a leitura para usuários logados, mantendo a proteção contra leitura pública (anon) e mantendo a restrição por linha via RLS (`artists_admin_read` e `artists_self_read`).
+Em `src/routes/_authenticated/appointments.new.checkout.tsx`:
+- Trocar `onClick={() => void run()}` por um handler nomeado com `try/catch` que loga a intenção de clique — assim descartamos definitivamente "o clique não chega".
+- Se `!canFinalize`, o botão hoje fica desabilitado silenciosamente: exibir um `toast.info` ou uma linha discreta indicando o campo faltante quando o usuário clica.
 
-## Validação
+### 3. Aplicar a correção
+Depois de identificar a causa raiz com o log/repro:
+- **Se for `useArtists` vazio no render**: usar `isLoading` do hook para exibir `<Loader2 />` no botão até os artistas carregarem, evitando `staff = null` transitório.
+- **Se for `startISO` inválido**: sanear no `setStart` do `appointment-draft` store, e revalidar no cliente antes de chamar o server fn.
+- **Se for erro do server fn (GHL/DB)**: propagar `e.message` no toast (já feito) e revisar o retorno do server fn para incluir `code`/`step` explícito.
 
-1. Recarregar `/agenda` — as 6 colunas de artistas voltam.
-2. Confirmar via network que `GET /rest/v1/artists` retorna 200 com a lista completa (admin) ou apenas a própria linha (artista).
-3. Rodar o security linter — o finding `artists_email_phone_public_read` deve continuar resolvido (anon segue sem grant).
+### 4. Validação
+- Playwright cria um agendamento real ponta-a-ponta com um contato/serviço de teste.
+- Confirmar em `public.appointments` (SELECT via `supabase--read_query`) que o registro apareceu com `total_eur` e `commission_pct`.
+- Confirmar no toast: "Agendamento criado · 1080,00 €".
 
-Nenhum código de aplicação muda; é só a migração.
+## Notas técnicas
+- Não alterar `appointments.functions.ts` sem sinal — ele já compensa GHL vs DB.
+- Não introduzir novos endpoints; usar o server fn existente `createAppointmentRecord`.
+- Manter i18n: qualquer nova string entra em `pt.json` / `fr.json` / `en.json`.
