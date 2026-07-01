@@ -370,7 +370,7 @@ function DayView({
 
       {/* KPI ribbon */}
       <div className="border-b border-border bg-background">
-        <div className="mx-auto flex w-full max-w-[1400px] flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 text-[11px] font-bold uppercase tracking-widest sm:px-6">
+        <div className="mx-auto flex w-full max-w-[1400px] flex-wrap items-center gap-x-4 gap-y-2 px-3 py-2 text-[10px] font-bold uppercase tracking-widest sm:gap-x-6 sm:px-6 sm:py-3 sm:text-[11px]">
           <div className="flex items-center gap-2 text-foreground">
             <span className="h-2 w-2 rounded-full bg-foreground" aria-hidden />
             <span>{t("agenda.kpi.sessions", { n: totals.booked })}</span>
@@ -647,12 +647,12 @@ function SlotCell({
         type="button"
         onClick={() => onOpen(slot)}
         title={`${slot.contactName ?? t("agenda.client")} — ${slot.serviceName ?? t("agenda.booked")}`}
-        className="absolute left-[3px] right-[3px] top-[2px] z-[1] flex flex-col justify-start gap-0.5 overflow-hidden rounded-md border border-border border-l-4 border-l-foreground bg-background px-2 py-1.5 text-left text-foreground shadow-sm transition-all hover:-translate-y-[1px] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-foreground/40"
+        className="absolute left-[3px] right-[3px] top-[2px] z-[1] flex flex-col justify-start gap-0.5 overflow-hidden rounded-md border border-border border-l-4 border-l-foreground bg-background px-1.5 py-1 text-left text-foreground shadow-sm transition-all hover:-translate-y-[1px] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-foreground/40 sm:px-2 sm:py-1.5"
         style={{ height: cardHeight }}
       >
         <div className="flex items-center gap-1">
           <span
-            className="truncate text-[11px] uppercase leading-tight tracking-tight"
+            className="truncate text-[11px] uppercase leading-tight tracking-tight sm:text-[12px]"
             style={{ fontFamily: "var(--font-display)" }}
           >
             {slot.contactName ?? t("agenda.booked")}
@@ -665,13 +665,13 @@ function SlotCell({
           ) : null}
         </div>
         {slot.serviceName ? (
-          <div className="truncate text-[10px] text-muted-foreground">{slot.serviceName}</div>
+          <div className="line-clamp-2 text-[10px] leading-tight text-muted-foreground">{slot.serviceName}</div>
         ) : null}
-        <div className="text-[10px] font-medium text-muted-foreground">
+        <div className="text-[10px] font-medium tabular-nums text-muted-foreground">
           {startLabel}
           {endLabel ? ` – ${endLabel}` : ""}
         </div>
-        {bucket && cardHeight >= 56 ? (
+        {bucket && cardHeight >= 84 ? (
           <StatusBadge
             variant={bucketToVariant(bucket)}
             className="mt-auto self-start px-1 py-0 text-[9px]"
