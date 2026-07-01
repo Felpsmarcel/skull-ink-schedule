@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import gfLockup from "@/assets/gf-lockup.png";
 
-export const Route = createFileRoute("/auth_/reset")({
+export const Route = createFileRoute("/auth_/recover")({
   ssr: false,
   head: () => ({ meta: [{ title: "Recuperar senha — GF Tattoo Studio" }] }),
   component: () => (
