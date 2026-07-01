@@ -26,7 +26,22 @@
       "prev": "Anterior",
       "next": "Próximo",
       "view": { "day": "Dia", "week": "Semana", "month": "Mês" },
-      "month": { "appts": "agendamentos" }
+      "month": { "appts": "agendamentos" },
+      "details": {
+        "title": "Detalhes do agendamento",
+        "artist": "Tatuador",
+        "service": "Serviço",
+        "status": "Status",
+        "contact": "Contato",
+        "noContact": "Sem contato vinculado.",
+        "contactError": "Não foi possível carregar os dados do contato.",
+        "copy": "Copiar",
+        "copied": "Copiado",
+        "call": "Ligar",
+        "sendEmail": "E-mail",
+        "overlap": "Este horário tem mais de um agendamento sobreposto.",
+        "close": "Fechar"
+      }
     },
     "nav": {
       "agenda": "Agenda",
