@@ -73,7 +73,7 @@ export const Route = createFileRoute("/_authenticated/agenda")({
   component: AgendaPage,
 });
 
-const COL_WIDTH = "min-w-[110px] w-[110px]";
+const COL_WIDTH = "min-w-[120px] flex-1";
 const ROW_HEIGHT = "h-14";
 const ROW_HEIGHT_PX = 56; // must match ROW_HEIGHT (h-14 = 56px)
 
@@ -616,7 +616,7 @@ function SlotCell({
           {startLabel}
           {endLabel ? ` – ${endLabel}` : ""}
         </div>
-        {bucket ? (
+        {bucket && cardHeight >= 56 ? (
           <StatusBadge
             variant={bucketToVariant(bucket)}
             className="mt-auto self-start px-1 py-0 text-[9px]"
