@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, useRouter, ClientOnly } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useRouter, ClientOnly, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
@@ -110,6 +110,14 @@ function AuthPage() {
           {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
           Entrar
         </Button>
+        <div className="text-center">
+          <Link
+            to="/auth/reset"
+            className="text-xs text-muted-foreground underline underline-offset-2"
+          >
+            Esqueci minha senha
+          </Link>
+        </div>
       </form>
 
       <div className="my-4 flex w-full max-w-sm items-center gap-3">
