@@ -45,6 +45,9 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { resolveIntlLocale } from "@/lib/locale";
 import { useAppointmentDraft } from "@/stores/appointment-draft";
 import type { GhlEvent } from "@/lib/ghl";
+import { AgendaAppointmentSheet } from "@/components/agenda-appointment-sheet";
+import type { GridSlot } from "@/lib/agenda-grid";
+import { AlertTriangle as AlertTriangleIcon } from "lucide-react";
 
 type View = "day" | "week" | "month";
 
@@ -73,6 +76,7 @@ export const Route = createFileRoute("/_authenticated/agenda")({
 
 const COL_WIDTH = "min-w-[110px] w-[110px]";
 const ROW_HEIGHT = "h-14";
+const ROW_HEIGHT_PX = 56; // must match ROW_HEIGHT (h-14 = 56px)
 
 function defaultTimeLabels(): string[] {
   const out: string[] = [];
@@ -281,6 +285,12 @@ function DayView({
       ? (agendas.find((a) => a.slots.length === rowCount)?.slots ?? []).map((s) => s.label)
       : defaultTimeLabels();
 
+  const [openSlot, setOpenSlot] = useState<{
+    slot: GridSlot;
+    staffName: string;
+    calendarId: string;
+  } | null>(null);
+
   return (
     <>
       {debug ? (
@@ -317,11 +327,37 @@ function DayView({
           </div>
           <div className="flex flex-1">
             {agendas.map((a) => (
-              <StaffColumn key={a.staff.id} agenda={a} statusMap={statusMap} />
+              <StaffColumn
+                key={a.staff.id}
+                agenda={a}
+                statusMap={statusMap}
+                onOpen={(slot) =>
+                  setOpenSlot({
+                    slot,
+                    staffName: a.staff.shortName,
+                    calendarId: a.staff.calendarId,
+                  })
+                }
+              />
             ))}
           </div>
         </div>
       </div>
+      <AgendaAppointmentSheet
+        open={Boolean(openSlot)}
+        onOpenChange={(o) => {
+          if (!o) setOpenSlot(null);
+        }}
+        slot={openSlot?.slot ?? null}
+        staffName={openSlot?.staffName ?? ""}
+        calendarId={openSlot?.calendarId ?? ""}
+        bucket={
+          openSlot?.slot.ghlEventId
+            ? statusMap.get(openSlot.slot.ghlEventId)
+            : undefined
+        }
+        debug={debug}
+      />
     </>
   );
 }
@@ -329,9 +365,11 @@ function DayView({
 function StaffColumn({
   agenda,
   statusMap,
+  onOpen,
 }: {
   agenda: ReturnType<typeof useStaffDayAgenda>["agendas"][number];
   statusMap: Map<string, PaymentBucket>;
+  onOpen: (slot: GridSlot) => void;
 }) {
   const { t } = useTranslation();
   const { staff, slots, isLoading, error } = agenda;
@@ -388,6 +426,7 @@ function StaffColumn({
               slot={slot}
               calendarId={staff.calendarId}
               statusMap={statusMap}
+              onOpen={onOpen}
             />
           ))
         )}
@@ -400,10 +439,12 @@ function SlotCell({
   slot,
   calendarId,
   statusMap,
+  onOpen,
 }: {
   slot: import("@/lib/agenda-grid").GridSlot;
   calendarId: string;
   statusMap: Map<string, PaymentBucket>;
+  onOpen: (slot: GridSlot) => void;
 }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -432,31 +473,70 @@ function SlotCell({
     );
   }
 
-  // booked
+  // booked — continuation slots render an invisible spacer so the time
+  // column on the left stays aligned; the first slot renders a single
+  // absolutely-positioned card that spans all of its slots.
+  if (!slot.isFirstSlot) {
+    return <div className={cn(ROW_HEIGHT)} aria-hidden="true" />;
+  }
+
   const bucket = slot.ghlEventId ? statusMap.get(slot.ghlEventId) : undefined;
+  const span = Math.max(1, slot.spanSlots ?? 1);
+  const cardHeight = span * ROW_HEIGHT_PX - 4; // 2px inset top/bottom
+  const startLabel = fmtHHmm(slot.eventStartMs ?? slot.startMs);
+  const endLabel = slot.eventEndMs ? fmtHHmm(slot.eventEndMs) : null;
+
   return (
-    <div className={cn("border-b border-border/30 p-0.5", ROW_HEIGHT)}>
-      <div
+    <div
+      className={cn("relative border-b border-border/30", ROW_HEIGHT)}
+      style={{ overflow: "visible" }}
+    >
+      <button
+        type="button"
+        onClick={() => onOpen(slot)}
         title={`${slot.contactName ?? t("agenda.client")} — ${slot.serviceName ?? t("agenda.booked")}`}
-        className="flex h-full w-full cursor-not-allowed flex-col justify-center rounded border-l-4 border-foreground bg-muted px-1.5 py-1 text-foreground"
+        className="absolute left-[2px] right-[2px] top-[2px] z-[1] flex flex-col justify-start gap-0.5 overflow-hidden rounded border-l-4 border-foreground bg-muted px-2 py-1 text-left text-foreground shadow-sm transition-colors hover:bg-muted/80 focus:outline-none focus:ring-2 focus:ring-foreground/40"
+        style={{ height: cardHeight }}
       >
-        <div className="truncate text-[10px] font-semibold text-foreground">
-          {slot.contactName ?? t("agenda.booked")}
+        <div className="flex items-center gap-1">
+          <span className="truncate text-[11px] font-semibold">
+            {slot.contactName ?? t("agenda.booked")}
+          </span>
+          {slot.hasOverlap ? (
+            <AlertTriangleIcon
+              className="h-3 w-3 shrink-0 text-warning"
+              aria-label={t("agenda.details.overlap")}
+            />
+          ) : null}
         </div>
         {slot.serviceName ? (
-          <div className="truncate text-[9px] text-muted-foreground">{slot.serviceName}</div>
+          <div className="truncate text-[10px] text-muted-foreground">{slot.serviceName}</div>
         ) : null}
+        <div className="text-[10px] font-medium text-muted-foreground">
+          {startLabel}
+          {endLabel ? ` – ${endLabel}` : ""}
+        </div>
         {bucket ? (
           <StatusBadge
             variant={bucketToVariant(bucket)}
-            className="mt-0.5 self-start px-1 py-0 text-[9px]"
+            className="mt-auto self-start px-1 py-0 text-[9px]"
           >
             {bucketLabel(bucket)}
           </StatusBadge>
         ) : null}
-      </div>
+      </button>
     </div>
   );
+}
+
+const _hhmmFmt = new Intl.DateTimeFormat("en-GB", {
+  timeZone: "Europe/Brussels",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
+function fmtHHmm(ms: number): string {
+  return _hhmmFmt.format(new Date(ms));
 }
 
 /* ============================ WEEK VIEW ============================ */
