@@ -3,7 +3,13 @@ import { Star } from "lucide-react";
 import "@/i18n";
 
 export const Route = createFileRoute("/_authenticated/reviews")({
-  head: () => ({ meta: [{ title: "Avaliações — GF Tattoo Studio" }] }),
+  head: () => ({
+    meta: [
+      { title: "Avaliações — GF Tattoo Studio" },
+      { name: "description", content: "Feedback dos clientes do GF Tattoo Studio." },
+      { name: "robots", content: "noindex,nofollow" },
+    ],
+  }),
   component: ReviewsPage,
 });
 

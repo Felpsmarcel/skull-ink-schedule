@@ -44,7 +44,13 @@ import {
 import { SyncGhlButton } from "@/components/sync-ghl-button";
 
 export const Route = createFileRoute("/_authenticated/_admin/reconciliar")({
-  head: () => ({ meta: [{ title: "Reconciliar GHL — GF Tattoo Studio" }] }),
+  head: () => ({
+    meta: [
+      { title: "Reconciliar GHL — GF Tattoo Studio" },
+      { name: "description", content: "Reconciliação de sincronizações com o GHL." },
+      { name: "robots", content: "noindex,nofollow" },
+    ],
+  }),
   component: ReconciliarPage,
 });
 

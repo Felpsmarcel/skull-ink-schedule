@@ -13,7 +13,13 @@ import { fetchActiveServices, formatPriceRange, type Service } from "@/lib/servi
 import { useAppointmentDraft } from "@/stores/appointment-draft";
 
 export const Route = createFileRoute("/_authenticated/appointments/new/services")({
-  head: () => ({ meta: [{ title: "Selecionar serviço — GF Tattoo Studio" }] }),
+  head: () => ({
+    meta: [
+      { title: "Selecionar serviço — GF Tattoo Studio" },
+      { name: "description", content: "Escolha o serviço para o agendamento." },
+      { name: "robots", content: "noindex,nofollow" },
+    ],
+  }),
   component: ServicesPage,
 });
 

@@ -246,7 +246,7 @@ export const inviteArtist = createServerFn({ method: "POST" })
             payload: {
               message_id: messageId,
               to: data.email,
-              from: "app-gftattoo-schedule <noreply@notify.gftattooacademy.info>",
+              from: "GF Tattoo Studio <noreply@notify.gftattooacademy.info>",
               sender_domain: "notify.gftattooacademy.info",
               subject,
               html,

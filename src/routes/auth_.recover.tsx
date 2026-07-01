@@ -9,7 +9,16 @@ import gfLockup from "@/assets/gf-lockup.png";
 
 export const Route = createFileRoute("/auth_/recover")({
   ssr: false,
-  head: () => ({ meta: [{ title: "Recuperar senha — GF Tattoo Studio" }] }),
+  head: () => ({
+    meta: [
+      { title: "Recuperar senha — GF Tattoo Studio" },
+      { name: "description", content: "Recupere o acesso à sua conta GF Tattoo Studio." },
+      { name: "robots", content: "noindex,nofollow" },
+      { property: "og:title", content: "Recuperar senha — GF Tattoo Studio" },
+      { property: "og:url", content: "https://gftattoocalendar.com/auth_/recover" },
+    ],
+    links: [{ rel: "canonical", href: "https://gftattoocalendar.com/auth_/recover" }],
+  }),
   component: () => (
     <ClientOnly fallback={null}>
       <ResetPage />

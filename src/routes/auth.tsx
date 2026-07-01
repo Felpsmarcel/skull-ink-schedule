@@ -13,7 +13,16 @@ export const Route = createFileRoute("/auth")({
   validateSearch: (s: Record<string, unknown>) => ({
     redirect: typeof s.redirect === "string" ? s.redirect : undefined,
   }),
-  head: () => ({ meta: [{ title: "Entrar — GF Tattoo Studio" }] }),
+  head: () => ({
+    meta: [
+      { title: "Entrar — GF Tattoo Studio" },
+      { name: "description", content: "Acesse sua conta no GF Tattoo Studio." },
+      { property: "og:title", content: "Entrar — GF Tattoo Studio" },
+      { property: "og:description", content: "Acesse sua conta no GF Tattoo Studio." },
+      { property: "og:url", content: "https://gftattoocalendar.com/auth" },
+    ],
+    links: [{ rel: "canonical", href: "https://gftattoocalendar.com/auth" }],
+  }),
   component: AuthRoute,
 });
 

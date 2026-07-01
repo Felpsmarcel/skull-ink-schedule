@@ -9,7 +9,13 @@ import { Toaster } from "@/components/ui/sonner";
 import gfMark from "@/assets/gf-mark.png";
 
 export const Route = createFileRoute("/_authenticated/menu")({
-  head: () => ({ meta: [{ title: "Menu — GF Tattoo Studio" }] }),
+  head: () => ({
+    meta: [
+      { title: "Menu — GF Tattoo Studio" },
+      { name: "description", content: "Menu do GF Tattoo Studio." },
+      { name: "robots", content: "noindex,nofollow" },
+    ],
+  }),
   component: MenuPage,
 });
 

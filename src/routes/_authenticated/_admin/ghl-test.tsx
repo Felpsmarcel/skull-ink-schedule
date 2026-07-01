@@ -10,7 +10,13 @@ import {
 const CALENDAR_ID = "NzAYeRNJnvfpu7ynyoEK";
 
 export const Route = createFileRoute("/_authenticated/_admin/ghl-test")({
-  head: () => ({ meta: [{ title: "GHL Test — GF Tattoo Studio" }] }),
+  head: () => ({
+    meta: [
+      { title: "GHL Test — GF Tattoo Studio" },
+      { name: "description", content: "Diagnóstico da integração GHL." },
+      { name: "robots", content: "noindex,nofollow" },
+    ],
+  }),
   component: GhlTest,
 });
 

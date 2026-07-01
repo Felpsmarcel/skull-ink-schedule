@@ -19,7 +19,13 @@ import { listAllServices, createService, updateService, toggleServiceActive } fr
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/services")({
-  head: () => ({ meta: [{ title: "Serviços — GF Tattoo Studio" }] }),
+  head: () => ({
+    meta: [
+      { title: "Serviços — GF Tattoo Studio" },
+      { name: "description", content: "Catálogo de serviços do GF Tattoo Studio." },
+      { name: "robots", content: "noindex,nofollow" },
+    ],
+  }),
   component: ServicesPage,
 });
 
