@@ -187,9 +187,9 @@ export const inviteArtist = createServerFn({ method: "POST" })
     if (linkErr) {
       // Log estruturado — reusa ghl_sync_failures como buffer de auditoria.
       await supabaseAdmin.from("ghl_sync_failures" as never).insert({
-        context: "invite_link",
-        payload: { artistId: data.artistId, userId: invitedUserId, email: data.email },
-        error_message: linkErr.message,
+        ghl_event_id: `invite:${invitedUserId}`,
+        reason: `invite_link: ${linkErr.message}`,
+        payload: { artistId: data.artistId, userId: invitedUserId, email: data.email } as never,
       } as never);
       return {
         artistId: data.artistId,
