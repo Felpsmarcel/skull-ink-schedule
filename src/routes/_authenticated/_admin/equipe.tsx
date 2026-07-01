@@ -140,7 +140,12 @@ function EquipePage() {
         {q.isLoading ? (
           <LoadingState label="Carregando equipe…" />
         ) : q.isError ? (
-          <ErrorState message={q.error instanceof Error ? q.error.message : "Falha"} onRetry={() => q.refetch()} />
+          <ErrorState
+            description={q.error instanceof Error ? q.error.message : "Falha"}
+            onRetry={() => {
+              void q.refetch();
+            }}
+          />
         ) : (
           <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
             {(q.data?.artists ?? []).map((a) => (
