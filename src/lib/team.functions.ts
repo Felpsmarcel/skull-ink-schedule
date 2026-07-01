@@ -2,37 +2,51 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-const InviteInput = z.object({
-  email: z.string().email(),
-  name: z.string().min(1).max(120),
-  calendarId: z.string().min(5).max(120),
-  ghlUserId: z.string().max(120).nullish(),
+const UpsertArtistInput = z.object({
+  id: z.string().uuid().optional(),
+  name: z.string().trim().min(1).max(120),
+  phone: z.string().trim().max(40).nullish(),
+  calendarId: z.string().trim().max(120).nullish(),
+  ghlUserId: z.string().trim().max(120).nullish(),
   commissionPct: z.number().min(0).max(100).default(40),
+  active: z.boolean().default(true),
+});
+
+const InviteInput = z.object({
+  artistId: z.string().uuid(),
+  email: z.string().email(),
   redirectTo: z.string().url(),
 });
 
-export type InviteArtistInput = z.infer<typeof InviteInput>;
+const RepairInput = z.object({
+  artistId: z.string().uuid(),
+  email: z.string().email(),
+});
 
 export interface InviteArtistResult {
   artistId: string;
   userId: string;
   reused: boolean;
+  linkOk: boolean;
+  linkError?: string;
+}
+
+async function assertAdmin(supabase: unknown, userId: string) {
+  const client = supabase as { rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: boolean | null }> };
+  const { data: isAdmin } = await client.rpc("has_role", { _user_id: userId, _role: "admin" });
+  if (!isAdmin) throw new Response("Forbidden", { status: 403 });
 }
 
 export const listTeam = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
-    const { data: isAdmin } = await supabase.rpc("has_role" as never, {
-      _user_id: userId,
-      _role: "admin",
-    } as never);
-    if (!isAdmin) throw new Response("Forbidden", { status: 403 });
+    await assertAdmin(supabase, userId);
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: artists, error: aErr } = await supabaseAdmin
       .from("artists" as never)
-      .select("id, name, ghl_calendar_id, ghl_user_id, commission_pct, active")
+      .select("id, name, phone, ghl_calendar_id, ghl_user_id, commission_pct, active")
       .order("name");
     if (aErr) throw new Error(aErr.message);
 
@@ -49,7 +63,6 @@ export const listTeam = createServerFn({ method: "GET" })
       usersByArtist.set(u.artist_id, list);
     }
 
-    // Best-effort: enrich with email from auth.users via admin API.
     const userIds = new Set<string>();
     for (const list of usersByArtist.values()) for (const u of list) userIds.add(u.id);
     const emailById = new Map<string, string | null>();
@@ -65,6 +78,7 @@ export const listTeam = createServerFn({ method: "GET" })
         const row = a as {
           id: string;
           name: string;
+          phone: string | null;
           ghl_calendar_id: string | null;
           ghl_user_id: string | null;
           commission_pct: number | string | null;
@@ -74,6 +88,7 @@ export const listTeam = createServerFn({ method: "GET" })
         return {
           id: row.id,
           name: row.name,
+          phone: row.phone,
           calendarId: row.ghl_calendar_id,
           ghlUserId: row.ghl_user_id,
           commissionPct: Number(row.commission_pct ?? 40),
@@ -84,66 +99,77 @@ export const listTeam = createServerFn({ method: "GET" })
     };
   });
 
+export const upsertArtist = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => UpsertArtistInput.parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    if (data.active && (!data.calendarId || data.calendarId.length < 5)) {
+      throw new Error("Artista ativo precisa de um GHL calendar ID válido.");
+    }
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const row = {
+      name: data.name,
+      phone: data.phone ?? null,
+      ghl_calendar_id: data.calendarId ?? null,
+      ghl_user_id: data.ghlUserId ?? null,
+      commission_pct: data.commissionPct,
+      active: data.active,
+    };
+    if (data.id) {
+      const { error } = await supabaseAdmin
+        .from("artists" as never)
+        .update(row as never)
+        .eq("id", data.id);
+      if (error) throw new Error(error.message);
+      return { id: data.id };
+    }
+    const { data: ins, error } = await supabaseAdmin
+      .from("artists" as never)
+      .insert(row as never)
+      .select("id")
+      .single();
+    if (error || !ins) throw new Error(error?.message ?? "Falha ao criar artista");
+    return { id: (ins as { id: string }).id };
+  });
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function findAuthUserByEmail(admin: any, email: string): Promise<{ id: string; email: string | null } | null> {
+  const needle = email.toLowerCase();
+  for (let page = 1; page <= 3; page++) {
+    const { data } = await admin.auth.admin.listUsers({ perPage: 200, page });
+    const list: Array<{ id: string; email?: string | null }> = data?.users ?? [];
+    const hit = list.find((u) => (u.email ?? "").toLowerCase() === needle);
+    if (hit) return { id: hit.id, email: hit.email ?? null };
+    if (list.length < 200) break;
+  }
+  return null;
+}
+
 export const inviteArtist = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => InviteInput.parse(d))
   .handler(async ({ data, context }): Promise<InviteArtistResult> => {
-    const { supabase, userId } = context;
-    const { data: isAdmin } = await supabase.rpc("has_role" as never, {
-      _user_id: userId,
-      _role: "admin",
-    } as never);
-    if (!isAdmin) throw new Response("Forbidden", { status: 403 });
-
+    await assertAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    // 1. Upsert artist by calendarId (evita duplicar quando admin re-envia convite).
-    let artistId: string;
-    const { data: existing } = await supabaseAdmin
+    // Confirma que o artista existe.
+    const { data: artist, error: aErr } = await supabaseAdmin
       .from("artists" as never)
       .select("id")
-      .eq("ghl_calendar_id", data.calendarId)
+      .eq("id", data.artistId)
       .maybeSingle();
-    if (existing) {
-      artistId = (existing as { id: string }).id;
-      await supabaseAdmin
-        .from("artists" as never)
-        .update({
-          name: data.name,
-          ghl_user_id: data.ghlUserId ?? null,
-          commission_pct: data.commissionPct,
-          active: true,
-        } as never)
-        .eq("id", artistId);
-    } else {
-      const { data: ins, error: insErr } = await supabaseAdmin
-        .from("artists" as never)
-        .insert({
-          name: data.name,
-          ghl_calendar_id: data.calendarId,
-          ghl_user_id: data.ghlUserId ?? null,
-          commission_pct: data.commissionPct,
-          active: true,
-        } as never)
-        .select("id")
-        .single();
-      if (insErr || !ins) throw new Error(insErr?.message ?? "Falha ao criar artista");
-      artistId = (ins as { id: string }).id;
-    }
+    if (aErr) throw new Error(aErr.message);
+    if (!artist) throw new Error("Artista não encontrado.");
 
-    // 2. Convite por email. Reutiliza usuário se já existir.
     let invitedUserId: string | null = null;
     let reused = false;
     const invite = await supabaseAdmin.auth.admin.inviteUserByEmail(data.email, {
       redirectTo: data.redirectTo,
-      data: { pending_artist_id: artistId },
+      data: { pending_artist_id: data.artistId },
     });
     if (invite.error) {
-      // Já cadastrado — buscar id em auth.users e apenas linkar.
-      const { data: page } = await supabaseAdmin.auth.admin.listUsers({ perPage: 200 });
-      const existingUser = page?.users?.find(
-        (u) => (u.email ?? "").toLowerCase() === data.email.toLowerCase(),
-      );
+      const existingUser = await findAuthUserByEmail(supabaseAdmin, data.email);
       if (!existingUser) throw new Error(invite.error.message);
       invitedUserId = existingUser.id;
       reused = true;
@@ -152,18 +178,45 @@ export const inviteArtist = createServerFn({ method: "POST" })
     }
     if (!invitedUserId) throw new Error("Não foi possível resolver o usuário convidado.");
 
-    // 3. Linkar em app_users (idempotente).
     const { error: linkErr } = await supabaseAdmin
       .from("app_users" as never)
       .upsert(
-        {
-          id: invitedUserId,
-          role: "artist",
-          artist_id: artistId,
-        } as never,
+        { id: invitedUserId, role: "artist", artist_id: data.artistId } as never,
         { onConflict: "id" },
       );
-    if (linkErr) throw new Error(linkErr.message);
+    if (linkErr) {
+      // Log estruturado — reusa ghl_sync_failures como buffer de auditoria.
+      await supabaseAdmin.from("ghl_sync_failures" as never).insert({
+        ghl_event_id: `invite:${invitedUserId}`,
+        reason: `invite_link: ${linkErr.message}`,
+        payload: { artistId: data.artistId, userId: invitedUserId, email: data.email } as never,
+      } as never);
+      return {
+        artistId: data.artistId,
+        userId: invitedUserId,
+        reused,
+        linkOk: false,
+        linkError: linkErr.message,
+      };
+    }
 
-    return { artistId, userId: invitedUserId, reused };
+    return { artistId: data.artistId, userId: invitedUserId, reused, linkOk: true };
+  });
+
+export const repairArtistLink = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => RepairInput.parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const user = await findAuthUserByEmail(supabaseAdmin, data.email);
+    if (!user) throw new Error("Nenhum usuário no Auth com esse email. Convide primeiro.");
+    const { error } = await supabaseAdmin
+      .from("app_users" as never)
+      .upsert(
+        { id: user.id, role: "artist", artist_id: data.artistId } as never,
+        { onConflict: "id" },
+      );
+    if (error) throw new Error(error.message);
+    return { userId: user.id };
   });

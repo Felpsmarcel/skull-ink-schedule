@@ -1,117 +1,123 @@
-## Problema
+## Correções Sprint MVP-1
 
-`src/routes/auth.tsx` renderiza o formulário de login diretamente e não tem `<Outlet />`. Como os arquivos `auth.reset.tsx` e `auth.update-password.tsx` usam a convenção de pontos, o TanStack Router os trata como **filhos** da rota `/auth`. Resultado: ao abrir `/auth/reset` ou `/auth/update-password`, o router casa a rota filha, mas o pai (`auth.tsx`) monta o login e nunca renderiza o filho. As telas ficam invisíveis.
+### 1. Renomear rotas de auth para `/auth/recover` e `/auth/update-password`
 
-Observação: o commit foi referido como `/auth/recover`, mas o arquivo real é `auth.reset.tsx` e o link em `auth.tsx` aponta para `/auth/reset`. Vou manter `/auth/reset` (o que já está em uso) para não quebrar o link existente.
+Hoje existem `src/routes/auth_.reset.tsx` e `src/routes/auth_.update-password.tsx`. A convenção `auth_` (trailing underscore) já desanicha do layout `/auth`, então a URL correta é `/auth/reset` e `/auth/update-password`. Vou:
 
-## Correção
+- Renomear `auth_.reset.tsx` → `auth_.recover.tsx` e ajustar `createFileRoute("/auth_/recover")`.
+- Atualizar o link "Esqueci minha senha" em `src/routes/auth.tsx` para `to="/auth_/recover"`.
+- `redirectTo` do `resetPasswordForEmail` passa a apontar para `/auth/update-password` (já é o comportamento atual).
 
-Usar a convenção de **underscore final** do TanStack para desanichar as rotas filhas do layout `/auth`, sem transformar `auth.tsx` em layout (o que exigiria refatorar o login para dentro de um `auth.index.tsx`).
+Critério: `/auth`, `/auth/recover` e `/auth/update-password` renderizam telas distintas, sem sobreposição.
 
-### Passos
+### 2. Callback real de invite/recovery em `/auth/update-password`
 
-1. Renomear via `mv`:
-  - `src/routes/auth.reset.tsx` → `src/routes/auth_.reset.tsx`
-  - `src/routes/auth.update-password.tsx` → `src/routes/auth_.update-password.tsx`
-   O `auth_` (com underscore final) quebra a herança de layout: as URLs continuam `/auth/reset` e `/auth/update-password`, mas o TanStack não as monta mais dentro de `auth.tsx`.
-2. Atualizar o `createFileRoute(...)` de cada arquivo renomeado para o novo id gerado:
-  - `createFileRoute("/auth/reset")` → `createFileRoute("/auth_/reset")`
-  - `createFileRoute("/auth/update-password")` → `createFileRoute("/auth_/update-password")`
-3. Ajustar o link "Esqueci minha senha" em `src/routes/auth.tsx` para `<Link to="/auth_/reset">` (a URL pública renderizada continua `/auth/reset`, mas o `to` tipado usa o id do router).
-4. Ajustar `redirectTo` no `resetPasswordForEmail` para `${window.location.origin}/auth/update-password` (já está, apenas confirmar após rename).
-5. `src/routeTree.gen.ts` é regenerado automaticamente pelo plugin — não editar.
+Hoje a página só faz `updateUser({ password })` e assume sessão pronta. Vou reescrever o fluxo de bootstrap:
 
-### Critério de aceite
+- Ler `window.location` no mount e detectar em ordem:
+  1. Query `?code=...` (PKCE) → `supabase.auth.exchangeCodeForSession(code)`.
+  2. Query `?token_hash=...&type=invite|recovery` → `supabase.auth.verifyOtp({ token_hash, type })`.
+  3. Hash `#access_token=...&refresh_token=...&type=...` (formato legacy) → `supabase.auth.setSession({ access_token, refresh_token })` e disparar `PASSWORD_RECOVERY`.
+  4. Fallback: `getSession()` (caso o usuário já esteja logado).
+- Estados de UI: `bootstrapping`, `ready`, `expired_or_invalid`, `no_link`.
+- Erros mapeados: link expirado / token inválido / sessão ausente → mensagem amigável + botão "Solicitar novo link" que leva a `/auth/recover`.
+- Só chama `updateUser({ password })` no estado `ready`. Só redireciona para `/agenda` **após** `updateUser` responder sucesso.
+- Limpar `code` / `token_hash` da URL após consumir (`history.replaceState`) para permitir refresh sem reprocessar.
 
-- `/auth` mostra o login.
-- `/auth/reset` mostra o formulário de recuperação (form independente, sem overlay do login).
-- `/auth/update-password` mostra o formulário de nova senha para o link do email de convite/recovery.
-- Nenhuma rota sobrepõe a outra e o link "Esqueci minha senha" navega corretamente.
+Critério: convidado abre link do email → define senha → entra. Recovery idem. Link expirado → erro claro com CTA.
 
-## Fora do escopo desta correção
+### 3. Rota `/admin/equipe`
 
-Sua mensagem cita mais 4 blocos (onboarding real, convite Supabase, cron GHL com `x-cron-secret`, testabilidade), mas só o problema **#1 (rotas /auth/*)** veio detalhado. Confirme se quer que eu continue com os itens 2–5 no próximo plano ou cole os detalhes deles para eu incluir agora.  
-segue o prompt completo.  
-# Correção crítica do commit MVP-1 — onboarding, recuperação de senha e cron GHL
+Renomear o arquivo para produzir literalmente `/admin/equipe`:
 
-Você deve corrigir o último commit relacionado a:
+- Mover `src/routes/_authenticated/_admin/equipe.tsx` → `src/routes/_authenticated/_admin/admin.equipe.tsx` com `createFileRoute("/_authenticated/_admin/admin/equipe")`.
+- Atualizar o link do menu (`src/routes/_authenticated/menu.tsx`) para `to="/admin/equipe"`.
+- Gate admin continua herdado do layout `_admin/route.tsx`.
 
-- Team management / onboarding de artistas
+Critério: URL é `/admin/equipe`, não-admins recebem redirect/negação.
 
-- Recuperação de senha
+### 4. Onboarding real do artista
 
-- Update password para usuários convidados
+Ampliar `src/lib/team.functions.ts` e `admin.equipe.tsx`:
 
-- Cron/sync GHL com `x-cron-secret`
+Nova server fn `upsertArtist` (admin only):
+- Input: `{ id?: string, name, phone?, calendarId, ghlUserId?, commissionPct, active }`.
+- Sem `id` → cria; com `id` → atualiza.
+- Valida `calendarId` obrigatório quando `active=true` (senão o artista não aparece na agenda) — retorna erro validado.
 
-## Contexto
+Ampliar `inviteArtist`:
+- Aceita `artistId` opcional; se ausente, exige campos do artista e cria antes de convidar (compondo com `upsertArtist`).
+- Reenvio de convite: se já existe user linkado, envia `resend` (ou re-invite) sem quebrar.
 
-O último commit adicionou:
+UI em `admin.equipe.tsx`:
+- Card por artista com botões: **Editar**, **Convidar / Reenviar convite**, **Vincular usuário existente por email**, **Ativar/Desativar**.
+- Botão "Novo artista" abre form (Dialog) com nome, email opcional para convite imediato, telefone opcional, calendarId, ghlUserId, commissionPct, ativo.
+- Badges de estado: `sem usuário`, `convite enviado`, `usuário vinculado`, `email divergente` (compara email do auth.users com email digitado no form quando disponível), `sem calendário GHL`.
+- Loading e erro **por card** (mutation state local por artistId), não global.
+- `Input` de email usa `type="email"` (já usa no form principal; garantir em todos os novos forms).
 
-- `src/lib/team.functions.ts`
+### 5. Invite idempotente + falha compensada
 
-- `src/routes/_authenticated/_admin/equipe.tsx`
+Refatorar `inviteArtist` para não deixar usuário órfão:
 
-- `src/routes/auth.recover.tsx`
+- Ordem nova: (a) upsert artist, (b) `app_users` upsert **antes** do invite quando possível — mas o `id` do auth só existe após o convite. Solução:
+  1. Cria/resolve usuário via `inviteUserByEmail` (ou reaproveita existente).
+  2. Tenta `app_users` upsert.
+  3. Se upsert falhar: registrar em `ghl_sync_failures` (reuso da tabela existente com `context='invite_link'`) OU numa tabela dedicada mínima `invite_failures` (decido reusar `ghl_sync_failures` renomeando semanticamente via coluna `context`, para evitar migration nova).
+  4. Retornar mensagem específica ao admin (`"Convite enviado mas vínculo falhou: <erro>. Clique em 'Reparar vínculo' no card."`).
+- Novo endpoint `repairArtistLink({ artistId, email })`: procura usuário no auth pelo email e faz o `app_users` upsert. Aparece como botão no card quando o estado for `email divergente` ou `vínculo pendente`.
+- Reenviar convite é idempotente: upsert em `app_users` roda de novo mesmo se já linkado.
 
-- `src/routes/auth.update-password.tsx`
+Critério: admin sempre tem caminho de recuperação; nada fica invisível.
 
-- alterações em `src/routes/auth.tsx`
+### 6. Endpoint `sync-ghl` — manter padrão apikey (documentado da Lovable)
 
-- alterações em `src/routes/api/public/hooks/sync-ghl.ts`
+Confirmado com o usuário: **manter `apikey`**. A doc oficial da Lovable diz para usar exatamente esse padrão em `/api/public/*` + pg_cron, e desaconselha inventar `CRON_SECRET`. Ações:
 
-- migration `supabase/migrations/20260701090000_setup_ghl_sync_cron.sql`
+- Manter `src/routes/api/public/hooks/sync-ghl.ts` como está: valida `apikey` header contra `SUPABASE_PUBLISHABLE_KEY` / `SUPABASE_ANON_KEY`, usa comparação simples (chave pública, não é segredo criptográfico), retorna 403 sem detalhes.
+- Atualizar o comentário de topo do arquivo para deixar essa decisão explícita (evita a próxima revisão questionar de novo).
+- **Não** criar `CRON_SECRET`. **Não** adicionar fallback de dev.
 
-Mas a revisão crítica encontrou problemas bloqueadores. Corrija sem reescrever histórico publicado. Faça novos commits normais.
+Critério: chamada sem header falha 403; com header correto executa sync.
+
+### 7. Cron GHL — instalar de fato + runbook
+
+O arquivo `20260701090000_setup_ghl_sync_cron.sql` mencionado no pedido **não existe** no repositório. Vou criar migration nova (data atual) que:
+
+- `CREATE EXTENSION IF NOT EXISTS pg_cron; pg_net;`
+- Cria função `public.schedule_ghl_sync()` (SECURITY DEFINER, admin-only via check `has_role`) que faz `cron.unschedule` (se existir) + `cron.schedule('ghl-sync-10min', '*/10 * * * *', $$ SELECT net.http_post(url:='https://project--03a6f57d-9b2a-4876-a3b5-a886d4f4b51d.lovable.app/api/public/hooks/sync-ghl', headers:=jsonb_build_object('apikey', <anon>, 'Content-Type','application/json'), body:='{}'::jsonb); $$)`.
+- A anon key vai **do Vault** (`vault.decrypted_secrets`) sob o nome `ghl_sync_anon_key` — assim não fica em texto puro em `cron.job`. Migration insere no vault via `vault.create_secret` só se ainda não existir; valor real setado por script/admin.
+- Função `public.unschedule_ghl_sync()` para desligar.
+- Função `public.ghl_sync_status()` que retorna a linha de `cron.job` + últimas 5 execuções de `cron.job_run_details`, exposta como server fn `getGhlSyncStatus`.
+
+Runbook curto adicionado em `docs/ghl-sync.md`:
+1. Como popular o vault com a anon key.
+2. Como rodar `SELECT public.schedule_ghl_sync();`.
+3. Como verificar via UI admin (novo botão "Verificar cron" na tela `/admin/equipe` ou em `/admin/reconciliar`, mostrando o status retornado).
+
+Critério: após deploy, admin roda a fn uma vez, cron passa a bater a cada 10min, status visível na UI.
+
+### 8. UX da tela equipe
+
+Aplicado junto do item 4:
+- Loading e erro por card (mutation state por artistId).
+- Mensagens de erro do Supabase mapeadas: `User already registered` → "Usuário já existe, vincule pelo botão 'Vincular usuário'".
+- Validação: bloquear salvar `active=true` sem `calendarId` (mensagem inline).
+- Badge amarela "sem calendário GHL" quando `calendar_id IS NULL`.
+- Inputs de email com `type="email"` e `autoComplete="email"`.
 
 ---
 
-## Objetivo
+## Arquivos afetados
 
-Deixar a Sprint MVP-1 realmente funcional e segura para MVP:
+- **Renomear**: `src/routes/auth_.reset.tsx` → `auth_.recover.tsx`; `_authenticated/_admin/equipe.tsx` → `_authenticated/_admin/admin.equipe.tsx`.
+- **Editar**: `src/routes/auth.tsx` (link), `src/routes/auth_.update-password.tsx` (bootstrap PKCE/OTP), `src/lib/team.functions.ts` (upsertArtist, invite idempotente, repairArtistLink, listTeam expandido), `src/routes/_authenticated/_admin/admin.equipe.tsx` (nova UI), `src/routes/_authenticated/menu.tsx` (link `/admin/equipe`), `src/routes/api/public/hooks/sync-ghl.ts` (só comentário).
+- **Criar**: migration `2026xxxx_ghl_sync_cron.sql` (schedule/unschedule/status via Vault), `docs/ghl-sync.md`, `src/lib/ghl-sync-admin.functions.ts` (server fns `scheduleGhlSync`, `unscheduleGhlSync`, `getGhlSyncStatus`).
 
-1. Onboarding real de artista
+## Não faz parte deste plano
 
-2. Recuperação de senha funcionando
+- Criar `CRON_SECRET` (decidido manter apikey).
+- Nova tabela `invite_failures` (reuso de `ghl_sync_failures`).
+- Redesign de `/admin/reconciliar`.
 
-3. Convite Supabase funcionando para artista definir senha
-
-4. Sync GHL agendável com segurança
-
-5. Rotas corretas e testáveis
-
----
-
-## Problemas a corrigir
-
-### 1. Rotas `/auth/recover` e `/auth/update-password` provavelmente não renderizam
-
-Hoje elas foram criadas como filhas de `/auth`, mas `src/routes/auth.tsx` não renderiza `<Outlet />`.
-
-Corrigir a arquitetura de rotas de uma das formas abaixo:
-
-- opção preferida: transformar `/auth` em layout que renderiza `<Outlet />` quando estiver em rota filha;
-
-- ou mover as rotas para uma estrutura que não dependa de `<Outlet />`;
-
-- ou consolidar recovery/update em modos da própria rota `/auth`, se for mais simples.
-
-Critério de aceite:
-
-- acessar `/auth` mostra login;
-
-- acessar `/auth/recover` mostra tela de recuperação;
-
-- acessar `/auth/update-password` mostra tela de nova senha;
-
-- uma rota não sobrepõe a outra.
-
----
-
-### 2. Corrigir callback real de Supabase invite/recovery
-
-A rota `/auth/update-password` hoje só chama:
-
-```ts
-
-supabase.auth.updateUser({ password })
+Quando aprovar, executo em uma sequência: rotas de auth → equipe/onboarding → cron. Cada bloco fica testável isoladamente.

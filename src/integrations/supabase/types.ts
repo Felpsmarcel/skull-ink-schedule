@@ -200,6 +200,7 @@ export type Database = {
           active: boolean
           avatar_url: string | null
           bio: string | null
+          commission_pct: number
           created_at: string
           email: string | null
           ghl_calendar_id: string | null
@@ -213,6 +214,7 @@ export type Database = {
           active?: boolean
           avatar_url?: string | null
           bio?: string | null
+          commission_pct?: number
           created_at?: string
           email?: string | null
           ghl_calendar_id?: string | null
@@ -226,6 +228,7 @@ export type Database = {
           active?: boolean
           avatar_url?: string | null
           bio?: string | null
+          commission_pct?: number
           created_at?: string
           email?: string | null
           ghl_calendar_id?: string | null
@@ -827,6 +830,7 @@ export type Database = {
           updated_at: string
         }[]
       }
+      ghl_sync_status: { Args: never; Returns: Json }
       move_to_dlq: {
         Args: {
           dlq_name: string
@@ -844,6 +848,8 @@ export type Database = {
           read_ct: number
         }[]
       }
+      schedule_ghl_sync: { Args: never; Returns: string }
+      unschedule_ghl_sync: { Args: never; Returns: string }
     }
     Enums: {
       appt_status:
