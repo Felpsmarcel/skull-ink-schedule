@@ -102,7 +102,7 @@ export function AgendaAppointmentSheet({
 
         <div className="mt-6 space-y-5 text-sm">
           {slot?.hasOverlap ? (
-            <div className="flex items-start gap-2 rounded border border-warning-foreground/20 bg-warning/10 p-2 text-[12px] text-foreground">
+            <div className="flex items-start gap-2 rounded border border-border bg-muted p-2 text-[12px] text-foreground">
               <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
               <span>{t("agenda.details.overlap")}</span>
             </div>
