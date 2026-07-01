@@ -27,6 +27,17 @@
       "next": "Próximo",
       "view": { "day": "Dia", "week": "Semana", "month": "Mês" },
       "month": { "appts": "agendamentos" },
+      "kpi": {
+        "sessions": "{{n}} sessões marcadas",
+        "free": "{{n}} horários livres",
+        "legendPending": "Pendente",
+        "legendReceive": "A receber",
+        "legendPaid": "Pago"
+      },
+      "staff": {
+        "summary": "{{booked}} reservas · {{free}} livres"
+      },
+      "addSlot": "Novo agendamento",
       "details": {
         "title": "Detalhes do agendamento",
         "artist": "Tatuador",

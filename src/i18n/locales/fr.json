@@ -27,6 +27,17 @@
       "next": "Suivant",
       "view": { "day": "Jour", "week": "Semaine", "month": "Mois" },
       "month": { "appts": "rendez-vous" },
+      "kpi": {
+        "sessions": "{{n}} séances réservées",
+        "free": "{{n}} créneaux libres",
+        "legendPending": "En attente",
+        "legendReceive": "À recevoir",
+        "legendPaid": "Payé"
+      },
+      "staff": {
+        "summary": "{{booked}} réservés · {{free}} libres"
+      },
+      "addSlot": "Nouveau rendez-vous",
       "details": {
         "title": "Détails du rendez-vous",
         "artist": "Tatoueur",

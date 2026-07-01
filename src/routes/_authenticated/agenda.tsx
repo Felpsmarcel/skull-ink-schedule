@@ -40,7 +40,6 @@ import { Calendar } from "@/components/ui/calendar";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
-import gfMark from "@/assets/gf-mark.png";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { resolveIntlLocale } from "@/lib/locale";
 import { useAppointmentDraft } from "@/stores/appointment-draft";
@@ -74,7 +73,7 @@ export const Route = createFileRoute("/_authenticated/agenda")({
   component: AgendaPage,
 });
 
-const COL_WIDTH = "min-w-[110px] w-[110px]";
+const COL_WIDTH = "min-w-[120px] basis-0 grow";
 const ROW_HEIGHT = "h-14";
 const ROW_HEIGHT_PX = 56; // must match ROW_HEIGHT (h-14 = 56px)
 
@@ -150,24 +149,17 @@ function AgendaPage() {
   };
 
   return (
-    <div className="flex min-h-dvh flex-col bg-background pb-20">
+    <div className="flex min-h-dvh flex-col bg-muted/40 pb-20">
       <Toaster theme="light" position="top-center" />
 
-      {/* Header */}
+      {/* Header — editorial monochrome */}
       <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur">
-        <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
-          <div className="flex items-center gap-1">
-            <img
-              src={gfMark}
-              alt="GF Tattoo Studio"
-              width={28}
-              height={28}
-              className="mr-1 h-7 w-7 object-contain"
-            />
+        <div className="mx-auto flex w-full max-w-[1400px] flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6">
+          <div className="flex min-w-0 items-center gap-2">
             <button
               type="button"
               onClick={() => shift(-1)}
-              className="grid h-9 w-9 place-items-center rounded-md hover:bg-muted"
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
               aria-label={t("agenda.prev")}
             >
               <ChevronLeft className="h-5 w-5" />
@@ -177,10 +169,15 @@ function AgendaPage() {
               <PopoverTrigger asChild>
                 <button
                   type="button"
-                  className="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-semibold uppercase tracking-wide hover:bg-muted"
+                  className="flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-muted"
                 >
-                  <CalendarIcon className="h-4 w-4 text-foreground" />
-                  {dateLabel}
+                  <CalendarIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <span
+                    className="truncate text-base uppercase tracking-tight text-foreground sm:text-lg"
+                    style={{ fontFamily: "var(--font-display)" }}
+                  >
+                    {dateLabel}
+                  </span>
                 </button>
               </PopoverTrigger>
               <PopoverContent align="center" className="w-auto p-0">
@@ -200,37 +197,43 @@ function AgendaPage() {
             <button
               type="button"
               onClick={() => shift(1)}
-              className="grid h-9 w-9 place-items-center rounded-md hover:bg-muted"
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
               aria-label={t("agenda.next")}
             >
               <ChevronRight className="h-5 w-5" />
             </button>
+
+            <button
+              type="button"
+              onClick={() => setDate(new Date())}
+              className="ml-1 hidden rounded-full border border-border bg-card px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:border-foreground hover:text-foreground sm:inline-flex"
+            >
+              {t("agenda.today")}
+            </button>
           </div>
 
           <Tabs value={view} onValueChange={(v) => setView(v as View)}>
-            <TabsList className="h-8">
-              <TabsTrigger value="day" className="text-xs">
+            <TabsList className="h-9 rounded-lg bg-muted p-1">
+              <TabsTrigger
+                value="day"
+                className="rounded-md px-3 text-[11px] font-bold uppercase tracking-widest data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+              >
                 {t("agenda.view.day")}
               </TabsTrigger>
-              <TabsTrigger value="week" className="text-xs">
+              <TabsTrigger
+                value="week"
+                className="rounded-md px-3 text-[11px] font-bold uppercase tracking-widest data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+              >
                 {t("agenda.view.week")}
               </TabsTrigger>
-              <TabsTrigger value="month" className="text-xs">
+              <TabsTrigger
+                value="month"
+                className="rounded-md px-3 text-[11px] font-bold uppercase tracking-widest data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+              >
                 {t("agenda.view.month")}
               </TabsTrigger>
             </TabsList>
           </Tabs>
-        </div>
-
-        <div className="flex items-center justify-between px-4 pb-2 text-xs text-muted-foreground">
-          <button
-            type="button"
-            onClick={() => setDate(new Date())}
-            className="rounded-full border border-border bg-card px-3 py-1 text-[11px] uppercase tracking-wider hover:border-foreground hover:text-foreground"
-          >
-            {t("agenda.today")}
-          </button>
-          <span className="text-[11px]">{t("agenda.lastUpdate")}</span>
         </div>
       </header>
 
@@ -273,6 +276,7 @@ function DayView({
   meReady: boolean;
   debug: boolean;
 }) {
+  const { t } = useTranslation();
   const { agendas } = useStaffDayAgenda(date, {
     artistId: restrictArtistId,
     enabled: meReady,
@@ -284,6 +288,49 @@ function DayView({
     rowCount > 0
       ? (agendas.find((a) => a.slots.length === rowCount)?.slots ?? []).map((s) => s.label)
       : defaultTimeLabels();
+
+  const totals = useMemo(() => {
+    let booked = 0;
+    let free = 0;
+    for (const a of agendas) {
+      booked += a.bookedCount;
+      free += a.freeCount;
+    }
+    return { booked, free };
+  }, [agendas]);
+
+  // "Now" indicator position (px from top of grid body) — visible only when today
+  const nowTopPx = useMemo(() => {
+    const now = new Date();
+    const isToday = brusselsDayKey(now) === brusselsDayKey(date);
+    if (!isToday) return null;
+    const parts = new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Europe/Brussels",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    })
+      .format(now)
+      .split(":")
+      .map(Number);
+    const [h, m] = parts;
+    const startMin = DEFAULT_START_HOUR * 60;
+    const endMin = DEFAULT_END_HOUR * 60;
+    const nowMin = h * 60 + m;
+    if (nowMin < startMin || nowMin > endMin) return null;
+    const offsetSlots = (nowMin - startMin) / SLOT_MINUTES;
+    return offsetSlots * ROW_HEIGHT_PX;
+  }, [date]);
+
+  const nowLabel = useMemo(() => {
+    if (nowTopPx == null) return null;
+    return new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Europe/Brussels",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).format(new Date());
+  }, [nowTopPx]);
 
   const [openSlot, setOpenSlot] = useState<{
     slot: GridSlot;
@@ -309,37 +356,81 @@ function DayView({
           ))}
         </div>
       ) : null}
-      <div className="flex-1 overflow-auto">
-        <div className="flex min-w-full">
-          <div className="sticky left-0 z-10 shrink-0 bg-background">
-            <div className="h-16 border-b border-border" />
-            {timeColumn.map((label) => (
-              <div
-                key={label}
-                className={cn(
-                  "flex w-14 items-start justify-center border-b border-border/40 pt-1 text-[10px] text-muted-foreground",
-                  ROW_HEIGHT,
-                )}
-              >
-                {label}
-              </div>
-            ))}
+
+      {/* KPI ribbon */}
+      <div className="border-b border-border bg-background">
+        <div className="mx-auto flex w-full max-w-[1400px] flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 text-[11px] font-bold uppercase tracking-widest sm:px-6">
+          <div className="flex items-center gap-2 text-foreground">
+            <span className="h-2 w-2 rounded-full bg-foreground" aria-hidden />
+            <span>{t("agenda.kpi.sessions", { n: totals.booked })}</span>
           </div>
-          <div className="flex flex-1">
-            {agendas.map((a) => (
-              <StaffColumn
-                key={a.staff.id}
-                agenda={a}
-                statusMap={statusMap}
-                onOpen={(slot) =>
-                  setOpenSlot({
-                    slot,
-                    staffName: a.staff.shortName,
-                    calendarId: a.staff.calendarId,
-                  })
-                }
-              />
-            ))}
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <span className="h-2 w-2 rounded-full border border-border" aria-hidden />
+            <span>{t("agenda.kpi.free", { n: totals.free })}</span>
+          </div>
+          <div className="ml-auto hidden items-center gap-4 text-[10px] font-medium normal-case text-muted-foreground sm:flex">
+            <span className="flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-sm border border-border bg-muted" />
+              {t("agenda.kpi.legendReceive")}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-sm bg-foreground" />
+              {t("agenda.kpi.legendPaid")}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Grid card */}
+      <div className="mx-auto w-full max-w-[1400px] flex-1 px-2 py-4 sm:px-6">
+        <div className="h-full overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+          <div className="h-full overflow-auto">
+            <div className="relative flex w-full min-w-full">
+              {/* Time column */}
+              <div className="sticky left-0 z-10 shrink-0 border-r border-border bg-card">
+                <div className="h-16 border-b border-border" />
+                {timeColumn.map((label) => (
+                  <div
+                    key={label}
+                    className={cn(
+                      "flex w-14 items-start justify-center border-b border-border/40 pt-1 text-[10px] font-medium text-muted-foreground",
+                      ROW_HEIGHT,
+                    )}
+                  >
+                    {label}
+                  </div>
+                ))}
+              </div>
+              <div className="relative flex flex-1">
+                {agendas.map((a) => (
+                  <StaffColumn
+                    key={a.staff.id}
+                    agenda={a}
+                    statusMap={statusMap}
+                    onOpen={(slot) =>
+                      setOpenSlot({
+                        slot,
+                        staffName: a.staff.shortName,
+                        calendarId: a.staff.calendarId,
+                      })
+                    }
+                  />
+                ))}
+                {/* Now line */}
+                {nowTopPx != null ? (
+                  <div
+                    className="pointer-events-none absolute left-0 right-0 z-20 flex items-center"
+                    style={{ top: `calc(4rem + ${nowTopPx}px)` }}
+                    aria-hidden
+                  >
+                    <span className="ml-1 rounded-sm bg-foreground px-1 py-[1px] text-[9px] font-black tracking-widest text-background">
+                      {nowLabel}
+                    </span>
+                    <div className="h-px flex-1 bg-foreground" />
+                  </div>
+                ) : null}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -375,26 +466,30 @@ function StaffColumn({
   const { staff, slots, isLoading, error } = agenda;
 
   return (
-    <div className={cn("flex shrink-0 flex-col border-l border-border", COL_WIDTH)}>
-      {/* Column header */}
-      <div className="sticky top-0 z-10 flex h-16 flex-col items-center justify-center gap-1 border-b border-border bg-card px-1 py-2">
-        <div className="flex items-center gap-1.5">
-          <div className="grid h-7 w-7 place-items-center rounded-full bg-muted text-[10px] font-bold text-foreground">
-            {staff.initials}
-          </div>
-          <span className="truncate text-xs font-semibold">{staff.shortName}</span>
-        </div>
+    <div className={cn("flex flex-col border-l border-border", COL_WIDTH)}>
+      {/* Column header — editorial */}
+      <div className="sticky top-0 z-10 flex h-16 flex-col items-center justify-center gap-0.5 border-b border-border bg-muted/40 px-2 py-2 text-center">
+        <span
+          className="truncate text-[13px] uppercase leading-none tracking-tight text-foreground"
+          style={{ fontFamily: "var(--font-display)" }}
+        >
+          {staff.shortName}
+        </span>
         {error && agenda.slots.length === 0 ? (
           <StatusBadge
             variant="danger"
             title={error}
             icon={<AlertTriangle className="h-3 w-3" />}
+            className="mt-1"
           >
             {t("agenda.errorLoading")}
           </StatusBadge>
         ) : (
-          <span className="text-[9px] text-muted-foreground">
-            {agenda.bookedCount}● {agenda.freeCount}○
+          <span className="text-[9px] font-medium uppercase tracking-wider text-muted-foreground">
+            {t("agenda.staff.summary", {
+              booked: agenda.bookedCount,
+              free: agenda.freeCount,
+            })}
           </span>
         )}
       </div>
@@ -456,7 +551,7 @@ function SlotCell({
 
   if (slot.status === "free") {
     return (
-      <div className={cn("border-b border-border/30 p-0.5", ROW_HEIGHT)}>
+      <div className={cn("group border-b border-border/30 p-0.5", ROW_HEIGHT)}>
         <button
           type="button"
           onClick={() => {
@@ -465,9 +560,11 @@ function SlotCell({
             draft.setStart(new Date(slot.startMs).toISOString());
             void navigate({ to: "/appointments/new" });
           }}
-          className="flex h-full w-full flex-col items-center justify-center rounded border border-dashed border-border bg-background text-[10px] uppercase tracking-wider text-muted-foreground hover:border-foreground hover:text-foreground"
+          aria-label={t("agenda.addSlot")}
+          title={t("agenda.addSlot")}
+          className="flex h-full w-full items-center justify-center rounded-md bg-transparent text-[10px] font-bold uppercase tracking-widest text-transparent transition-all hover:border hover:border-dashed hover:border-foreground/40 hover:bg-muted/40 hover:text-muted-foreground"
         >
-          {t("agenda.noBooking")}
+          + {t("agenda.addSlot")}
         </button>
       </div>
     );
@@ -495,11 +592,14 @@ function SlotCell({
         type="button"
         onClick={() => onOpen(slot)}
         title={`${slot.contactName ?? t("agenda.client")} — ${slot.serviceName ?? t("agenda.booked")}`}
-        className="absolute left-[2px] right-[2px] top-[2px] z-[1] flex flex-col justify-start gap-0.5 overflow-hidden rounded border-l-4 border-foreground bg-muted px-2 py-1 text-left text-foreground shadow-sm transition-colors hover:bg-muted/80 focus:outline-none focus:ring-2 focus:ring-foreground/40"
+        className="absolute left-[3px] right-[3px] top-[2px] z-[1] flex flex-col justify-start gap-0.5 overflow-hidden rounded-md border border-border border-l-4 border-l-foreground bg-background px-2 py-1.5 text-left text-foreground shadow-sm transition-all hover:-translate-y-[1px] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-foreground/40"
         style={{ height: cardHeight }}
       >
         <div className="flex items-center gap-1">
-          <span className="truncate text-[11px] font-semibold">
+          <span
+            className="truncate text-[11px] uppercase leading-tight tracking-tight"
+            style={{ fontFamily: "var(--font-display)" }}
+          >
             {slot.contactName ?? t("agenda.booked")}
           </span>
           {slot.hasOverlap ? (
@@ -516,7 +616,7 @@ function SlotCell({
           {startLabel}
           {endLabel ? ` – ${endLabel}` : ""}
         </div>
-        {bucket ? (
+        {bucket && cardHeight >= 56 ? (
           <StatusBadge
             variant={bucketToVariant(bucket)}
             className="mt-auto self-start px-1 py-0 text-[9px]"

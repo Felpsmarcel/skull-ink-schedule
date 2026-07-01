@@ -27,6 +27,17 @@
       "next": "Next",
       "view": { "day": "Day", "week": "Week", "month": "Month" },
       "month": { "appts": "appts" },
+      "kpi": {
+        "sessions": "{{n}} sessions booked",
+        "free": "{{n}} free slots",
+        "legendPending": "Pending",
+        "legendReceive": "To receive",
+        "legendPaid": "Paid"
+      },
+      "staff": {
+        "summary": "{{booked}} booked · {{free}} free"
+      },
+      "addSlot": "New appointment",
       "details": {
         "title": "Appointment details",
         "artist": "Artist",
