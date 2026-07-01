@@ -1,56 +1,51 @@
-# Agenda: visão Dia / Semana / Mês
 
-Hoje a agenda mostra só o dia. Vou adicionar um toggle **Dia / Semana / Mês** no header, sem refazer o que já funciona.
+# MVP — o que falta para lançar
 
-## Mudanças
+Baseado no raio-x atual, o app já tem: auth (admin/artista), agenda dia/semana/mês ligada ao GHL, criação de agendamento com dual-write (GHL + Supabase), serviços no Supabase, financeiro com comissão, sync/reconciliação GHL, relatórios mensais. Para chamar de MVP publicável, faltam poucos itens críticos.
 
-### 1. `src/routes/_authenticated/agenda.tsx`
-- Estado novo: `view: 'day' | 'week' | 'month'` (default `day`), persistido em `?view=` (validateSearch).
-- Header: adicionar um `Tabs` (shadcn) ao lado do seletor de data com as 3 opções. Os botões `‹ ›` passam a deslocar dia/semana/mês conforme `view`. O `dateLabel` muda de formato (dia: "Seg, 30 jun"; semana: "30 jun – 06 jul"; mês: "Junho 2026").
-- Render condicional:
-  - `view === 'day'` → grid atual intacto.
-  - `view === 'week'` → nova `WeekView`.
-  - `view === 'month'` → nova `MonthView`.
+## Escopo do MVP (o mínimo para ir ao ar)
 
-### 2. Hook novo `src/hooks/use-agenda-range.ts`
-- `useStaffRangeAgenda(start, end, { artistId })` — versão "range" do `useStaffDayAgenda`.
-- Busca **só eventos** (`getEvents` por calendário no intervalo) — free-slots só faz sentido na visão dia, então não chamamos nas visões semana/mês (economiza chamadas e respeita scope).
-- Retorna por staff: lista de `GhlEvent[]` no intervalo. Reaproveita `useArtists` e o gating por `artistId` igual ao hook atual.
-- Também invalida pela mesma `queryKey: ['agenda', ...]` para o botão Sincronizar continuar refrescando.
+### 1. Onboarding real dos usuários (bloqueador)
+- Remover seeds de teste (já feito) e criar fluxo real:
+  - Admin convida artista por email (Supabase invite) → artista define senha → linka `app_users.artist_id`.
+  - Tela `/admin/equipe` (lista artistas + convidar + vincular `ghl_calendar_id`).
+- Sem isso, só quem existe no seed consegue entrar.
 
-### 3. `WeekView` (mesmo arquivo `agenda.tsx`)
-- Layout: 7 colunas (Seg–Dom em `Europe/Brussels`) × linhas de hora (mesma faixa `DEFAULT_START_HOUR`–`DEFAULT_END_HOUR`).
-- Cabeçalho da coluna: dia da semana + número, clicável → muda `view` para `day` daquele dia.
-- Eventos renderizados como blocos posicionados (top/height calculados a partir de `startTime`/`endTime`), com `StatusBadge` (paid/pending/error) usando `useDayAppointmentStatuses` adaptado para a semana (vou expor `useRangeAppointmentStatuses`).
-- Sem horários "livres" desenhados (não chamamos free-slots aqui); slots vazios = grade vazia, e clicar numa célula vazia abre `/appointments/new` com `setStart()` para aquele horário/calendário (quando só 1 artista visível) ou para o início do dia (quando vários).
+### 2. Recuperação de senha (bloqueador legal/UX)
+- Rota `/auth/recover` + template já existe (`recovery.tsx`) — falta ligar o botão "Esqueci a senha" em `/auth` e a rota de callback `update-password`.
 
-### 4. `MonthView`
-- Calendário tipo "month grid" (6 linhas × 7 colunas), começando na segunda.
-- Cada célula mostra **contagem por status** (ex: `3 ●` confirmados, `1 ⚠` pendentes) somando todos os artistas visíveis. Sem listar agendamentos um a um (não cabe na célula).
-- Clique na célula → muda `view` para `day` naquela data.
-- Setas `‹ ›` mudam de mês.
+### 3. Sync GHL agendado (bloqueador de confiabilidade)
+- `pg_cron` chamando `/api/public/hooks/sync-ghl` a cada 10 min (endpoint já existe, falta o cron).
+- Garante que Agenda/Financeiro continuam corretos se alguém editar direto no GHL.
 
-### 5. `src/lib/agenda-grid.ts`
-- Adicionar helpers utilitários:
-  - `brusselsWeekStartMs(date)` / `brusselsWeekEndMs(date)` (segunda 00:00 → segunda+7 00:00).
-  - `brusselsMonthStartMs(date)` / `brusselsMonthEndMs(date)` (1º do mês → 1º do próximo).
-  - `enumerateDays(startMs, endMs)` retornando `Date[]` em Bruxelas.
-- Sem alterar a lógica de `buildDayGrid` existente.
+### 4. Backfill inicial + validação dos dados
+- Rodar "Backfill 12 meses" uma vez (botão já existe).
+- Passar em `/reconciliar` e resolver o que sobrar (calendário sem artista, contato sem telefone, etc.).
 
-### 6. `src/hooks/use-agenda-status.ts`
-- Generalizar para `useRangeAppointmentStatuses(startMs, endMs, enabled)` que a função atual reusa internamente para o caso "dia". Mantém a `queryKey` baseada no range.
+### 5. Ajustes de produção
+- `head()` do `__root.tsx`: título/description reais da GF Tattoo, og:image com o lockup (já temos asset).
+- Remover rotas de debug: `/agenda?debug=1`, `_admin/ghl-test`.
+- Configurar domínio de email transacional (`email_domain`) — hoje envia do domínio padrão do Lovable.
+- Rodar `security--run_security_scan` e resolver o que for crítico.
 
-### 7. i18n (`pt/en/fr`)
-- `agenda.view.day`, `agenda.view.week`, `agenda.view.month`.
-- Sem mexer em outras chaves.
+### 6. Documentação mínima para o cliente
+- README curto em `/menu` (ou modal "Ajuda") com: como convidar artista, como sincronizar, como resolver reconciliação, como ver relatório.
 
-## Fora deste plano
-- Drag-and-drop de eventos.
-- Edição de evento ao clicar (continua somente leitura).
-- Filtro por artista na visão semana/mês (admin vê todos os ativos; tatuador vê só ele — igual hoje).
-- Performance otimizada para meses com muitos eventos (no nosso volume atual não é problema; se for, adiciono virtualização depois).
+## Fora do MVP (fica para v1.1)
+- Pagamento real (Stripe/Paddle) — hoje é stub e o fluxo confirma sem cobrar; ok para MVP porque a cobrança acontece presencialmente no estúdio.
+- Módulo de avaliações (`/reviews` é placeholder).
+- Edição/cancelamento de agendamento pela UI (hoje só cria; edição continua no GHL).
+- Push/notificações — GHL já dispara os lembretes por SMS/email.
+- Drag-and-drop na agenda.
 
-## Validação
-- Build + tsgo limpos.
-- Verificar `/agenda?view=week` e `/agenda?view=month` no preview.
-- Confirmar que o role artist continua vendo só o próprio calendário nas 3 visões.
+## Ordem sugerida de execução (sprints curtos)
+1. **Sprint MVP-1 (bloqueadores):** onboarding de artista + recuperação de senha + cron de sync.
+2. **Sprint MVP-2 (produção):** metadados/SEO, remoção de rotas debug, email transacional, security scan.
+3. **Go-live:** backfill 12m + reconciliação + doc de ajuda + publicar.
+
+## Perguntas antes de detalhar cada sprint
+- **Onboarding:** admin convida por email (recomendado) ou você prefere criar artista + senha manualmente no `/admin/equipe`?
+- **Email transacional:** quer configurar domínio próprio (`no-reply@gftattoo.be`) agora ou deixa o domínio padrão do Lovable no MVP?
+- **Rotas debug:** posso deletar `/_admin/ghl-test` e o `?debug=1` da agenda, ou prefere mantê-las escondidas atrás de flag?
+
+Responda essas 3 e eu abro o plano detalhado da Sprint MVP-1 para você aprovar.
