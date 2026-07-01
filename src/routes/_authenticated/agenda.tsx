@@ -453,8 +453,8 @@ function DayView({
                     <div
                       key={a.staff.id}
                       className={cn(
-                        "flex sm:contents",
-                        isActive ? "w-full" : "hidden sm:block",
+                        "sm:contents",
+                        isActive ? "flex w-full" : "hidden",
                       )}
                     >
                       <StaffColumn
