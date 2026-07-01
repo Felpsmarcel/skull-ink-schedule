@@ -10,6 +10,7 @@ interface ArtistRow {
   avatar_url: string | null;
   specialties: string[] | null;
   active: boolean;
+  email: string | null;
 }
 
 const COLORS = [
@@ -56,7 +57,7 @@ async function fetchArtists(): Promise<StaffMember[]> {
     };
   })
     .from("artists")
-    .select("id,ghl_user_id,ghl_calendar_id,name,avatar_url,specialties,active")
+    .select("id,ghl_user_id,ghl_calendar_id,name,avatar_url,specialties,active,email")
     .eq("active", true)
     .not("ghl_calendar_id", "is", null)
     .order("name");
@@ -72,6 +73,7 @@ async function fetchArtists(): Promise<StaffMember[]> {
     initials: initials(r.name),
     color: COLORS[i % COLORS.length],
     avatarUrl: r.avatar_url,
+    email: r.email,
   }));
 }
 
