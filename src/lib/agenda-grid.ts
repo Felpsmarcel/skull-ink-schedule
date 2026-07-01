@@ -14,6 +14,20 @@ export interface GridSlot {
   serviceName?: string;
   /** GHL event id for booked slots — used to join payment status */
   ghlEventId?: string;
+  /** GHL contact id when the event carries it (used to fetch details) */
+  contactId?: string;
+  /** GHL appointmentStatus, when present */
+  appointmentStatus?: string;
+  /** Snapped event start (ms) — same value on all slots of the same event */
+  eventStartMs?: number;
+  /** Snapped event end (ms, exclusive) */
+  eventEndMs?: number;
+  /** Number of 30-min slots this event spans (>=1) */
+  spanSlots?: number;
+  /** True on the first slot of the event; false on continuation slots */
+  isFirstSlot?: boolean;
+  /** True when 2+ events overlap this slot on the same calendar */
+  hasOverlap?: boolean;
 }
 
 const TZ = "Europe/Brussels";
@@ -209,7 +223,8 @@ export function buildDayGrid(opts: {
   for (let min = startMin; min < endMin; min += SLOT_MINUTES) {
     const startMs = dayStartMs + min * 60 * 1000;
     const label = `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
-    const hit = evRanges.find((r) => min >= r.startMin && min < r.endMin);
+    const overlapping = evRanges.filter((r) => min >= r.startMin && min < r.endMin);
+    const hit = overlapping[0];
     if (hit) {
       const ev = hit.ev;
       const contactName =
@@ -223,6 +238,13 @@ export function buildDayGrid(opts: {
         contactName,
         serviceName: ev.title,
         ghlEventId: ev.id,
+        contactId: ev.contactId ?? ev.contact?.id,
+        appointmentStatus: ev.appointmentStatus,
+        eventStartMs: dayStartMs + hit.startMin * 60 * 1000,
+        eventEndMs: dayStartMs + hit.endMin * 60 * 1000,
+        spanSlots: Math.max(1, (hit.endMin - hit.startMin) / SLOT_MINUTES),
+        isFirstSlot: min === hit.startMin,
+        hasOverlap: overlapping.length > 1,
       });
     } else if (freeMinutes.has(min)) {
       slots.push({ startMs, label, status: "free" });
