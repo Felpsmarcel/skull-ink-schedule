@@ -441,6 +441,25 @@ export const getAppointmentFinanceByGhlId = createServerFn({ method: "GET" })
     );
     const balanceEur = totalEur == null ? null : round2(totalEur - paidTotalEur);
 
+    let seller: AppointmentFinanceView["seller"] = null;
+    if (appt.seller_id) {
+      const { data: sellerRow } = await (supabase as any)
+        .from("sellers" as never)
+        .select("id, name, commission_pct")
+        .eq("id", appt.seller_id)
+        .maybeSingle();
+      if (sellerRow) {
+        const s = sellerRow as { id: string; name: string; commission_pct: number | string };
+        const pct = Number(s.commission_pct);
+        seller = {
+          id: s.id,
+          name: s.name,
+          commissionPct: pct,
+          commissionEur: totalEur != null ? round2((totalEur * pct) / 100) : 0,
+        };
+      }
+    }
+
     return {
       visible: true,
       appointmentId: appt.id,
@@ -456,6 +475,7 @@ export const getAppointmentFinanceByGhlId = createServerFn({ method: "GET" })
       paidTotalEur,
       balanceEur,
       manualPaymentStatus: parseManualBucket(appt.manual_payment_status),
+      seller,
     };
   });
 
