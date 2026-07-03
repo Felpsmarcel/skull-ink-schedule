@@ -737,14 +737,159 @@ function WeekView({
 
   const todayKey = brusselsDayKey(new Date());
 
+  // Mobile: which day is expanded/visible in the day-picker view.
+  const initialMobileKey = useMemo(() => {
+    const tKey = brusselsDayKey(new Date());
+    const inWeek = days.some((d) => brusselsDayKey(new Date(d)) === tKey);
+    return inWeek ? tKey : brusselsDayKey(new Date(days[0] ?? startMs));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startMs, endMs]);
+  const [mobileDayKey, setMobileDayKey] = useState<string>(initialMobileKey);
+  const activeMobileKey = days.some((d) => brusselsDayKey(new Date(d)) === mobileDayKey)
+    ? mobileDayKey
+    : initialMobileKey;
+  const dayLongFmt = new Intl.DateTimeFormat(locale, {
+    timeZone: "Europe/Brussels",
+    weekday: "long",
+    day: "2-digit",
+    month: "short",
+  });
+
   return (
     <div className="flex-1 overflow-auto">
       {isFetching && totalEvents === 0 ? (
         <div className="p-4 text-xs text-muted-foreground">{t("common.loading")}</div>
       ) : null}
-      <div className="min-w-[720px]">
+
+      {/* ============== MOBILE: single-day, stacked artists ============== */}
+      <div className="sm:hidden">
+        <div className="sticky top-0 z-10 flex gap-1 overflow-x-auto border-b border-border bg-background px-2 py-2">
+          {days.map((dayMs) => {
+            const d = new Date(dayMs);
+            const key = brusselsDayKey(d);
+            const isActive = key === activeMobileKey;
+            const isToday = key === todayKey;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setMobileDayKey(key)}
+                className={cn(
+                  "flex min-w-[44px] shrink-0 flex-col items-center gap-0.5 rounded-md border px-2 py-1.5 text-xs",
+                  isActive
+                    ? "border-foreground bg-foreground text-background"
+                    : "border-border bg-background text-foreground hover:bg-muted",
+                  !isActive && isToday && "ring-1 ring-foreground/40",
+                )}
+              >
+                <span className="text-[9px] uppercase tracking-wide opacity-70">
+                  {dayFmt.format(d)}
+                </span>
+                <span className="text-sm font-semibold tabular-nums">{numFmt.format(d)}</span>
+              </button>
+            );
+          })}
+        </div>
+        <div className="p-2">
+          <div className="mb-2 text-[11px] uppercase tracking-wide text-muted-foreground">
+            {dayLongFmt.format(
+              new Date(
+                days.find((d) => brusselsDayKey(new Date(d)) === activeMobileKey) ?? startMs,
+              ),
+            )}
+          </div>
+          <div className="space-y-2">
+            {agendas.map((a) => {
+              const evs = a.events
+                .filter((ev) => brusselsDayKey(new Date(ev.startTime)) === activeMobileKey)
+                .sort(
+                  (x, y) =>
+                    new Date(x.startTime).getTime() - new Date(y.startTime).getTime(),
+                );
+              return (
+                <div
+                  key={a.staff.id}
+                  className="rounded-md border border-border bg-background"
+                >
+                  <div className="flex items-center gap-2 border-b border-border bg-muted/40 px-2 py-1.5">
+                    <Avatar className="h-7 w-7 shrink-0">
+                      {a.staff.avatarUrl ? (
+                        <AvatarImage src={a.staff.avatarUrl} alt={a.staff.name} />
+                      ) : null}
+                      <AvatarFallback className={cn("text-[10px] text-white", a.staff.color)}>
+                        {a.staff.initials}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-xs font-semibold text-foreground">
+                        {a.staff.shortName}
+                      </div>
+                    </div>
+                    <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">
+                      {evs.length} {t("agenda.month.appts")}
+                    </span>
+                  </div>
+                  {evs.length === 0 ? (
+                    <div className="px-2 py-2 text-[11px] text-muted-foreground">—</div>
+                  ) : (
+                    <div className="divide-y divide-border">
+                      {evs.map((ev) => {
+                        const bucket = statusMap.get(ev.id);
+                        const name =
+                          ev.contact?.name ||
+                          [ev.contact?.firstName, ev.contact?.lastName]
+                            .filter(Boolean)
+                            .join(" ") ||
+                          t("agenda.booked");
+                        const s = new Date(ev.startTime).getTime();
+                        return (
+                          <div
+                            key={ev.id}
+                            className="flex items-center gap-2 px-2 py-1.5"
+                            title={`${name}${ev.title ? " — " + ev.title : ""}`}
+                          >
+                            <span
+                              className={cn(
+                                "inline-block h-2 w-2 shrink-0 rounded-full",
+                                a.staff.color,
+                              )}
+                              aria-hidden
+                            />
+                            <span className="w-10 shrink-0 text-xs tabular-nums text-muted-foreground">
+                              {fmtHHmm(s)}
+                            </span>
+                            <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
+                              {name}
+                            </span>
+                            {bucket ? (
+                              <StatusBadge
+                                variant={bucketToVariant(bucket)}
+                                className="shrink-0 px-1 py-0 text-[9px]"
+                              >
+                                {bucketLabel(bucket)}
+                              </StatusBadge>
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            {agendas.length === 0 && !isFetching ? (
+              <div className="p-4 text-center text-xs text-muted-foreground">
+                {t("common.loading")}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </div>
+
+      {/* ============== DESKTOP: full 7-day grid ============== */}
+      <div className="hidden min-w-[720px] sm:block">
         {/* Header row: sidebar spacer + 7 day headers */}
-        <div className="sticky top-0 z-10 grid grid-cols-[56px_repeat(7,minmax(0,1fr))] border-b border-border bg-background sm:grid-cols-[160px_repeat(7,minmax(0,1fr))]">
+        <div className="sticky top-0 z-10 grid grid-cols-[160px_repeat(7,minmax(0,1fr))] border-b border-border bg-background">
           <div className="border-r border-border" />
           {days.map((dayMs) => {
             const d = new Date(dayMs);
@@ -783,11 +928,11 @@ function WeekView({
           return (
             <div
               key={a.staff.id}
-              className="grid grid-cols-[56px_repeat(7,minmax(0,1fr))] border-b border-border sm:grid-cols-[160px_repeat(7,minmax(0,1fr))]"
+              className="grid grid-cols-[160px_repeat(7,minmax(0,1fr))] border-b border-border"
             >
               {/* Sidebar */}
               <div
-                className="flex items-center gap-2 border-r border-border bg-muted/30 px-1 py-2 sm:px-3"
+                className="flex items-center gap-2 border-r border-border bg-muted/30 px-3 py-2"
                 title={a.staff.name}
               >
                 <Avatar className="h-8 w-8 shrink-0">
@@ -798,7 +943,7 @@ function WeekView({
                     {a.staff.initials}
                   </AvatarFallback>
                 </Avatar>
-                <div className="hidden min-w-0 flex-col sm:flex">
+                <div className="flex min-w-0 flex-col">
                   <span className="truncate text-xs font-semibold text-foreground">
                     {a.staff.shortName}
                   </span>
