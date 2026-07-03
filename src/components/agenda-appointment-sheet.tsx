@@ -309,6 +309,8 @@ function FinanceBody({
   onPay,
   editing,
   paying,
+  ghlEventId,
+  onOverrideChanged,
 }: {
   data: AppointmentFinanceView;
   locale: string;
@@ -316,9 +318,17 @@ function FinanceBody({
   onPay: () => void;
   editing: boolean;
   paying: boolean;
+  ghlEventId: string;
+  onOverrideChanged: () => void;
 }) {
   return (
     <div className="space-y-3">
+      <PaymentStatusPicker
+        ghlEventId={ghlEventId}
+        current={data.manualPaymentStatus}
+        onChanged={onOverrideChanged}
+      />
+
       <div className="grid grid-cols-2 gap-2 rounded border border-border bg-muted/30 p-2 text-xs">
         <div>
           <div className="text-[9px] uppercase tracking-wider text-muted-foreground">
