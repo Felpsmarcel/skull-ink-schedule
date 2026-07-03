@@ -1088,15 +1088,20 @@ function MonthView({
     timeZone: "Europe/Brussels",
     weekday: "short",
   });
+  const wdNarrowFmt = new Intl.DateTimeFormat(locale, {
+    timeZone: "Europe/Brussels",
+    weekday: "narrow",
+  });
 
   const headerDays = days.slice(0, 7);
 
   return (
-    <div className="flex-1 overflow-auto p-2">
-      <div className="grid grid-cols-7 border-b border-border text-[10px] uppercase tracking-wide text-muted-foreground">
+    <div className="flex-1 overflow-auto p-1 sm:p-2">
+      <div className="grid grid-cols-7 border-b border-border text-[9px] uppercase tracking-wide text-muted-foreground sm:text-[10px]">
         {headerDays.map((d) => (
-          <div key={d} className="px-2 py-1 text-center">
-            {wdFmt.format(new Date(d))}
+          <div key={d} className="px-1 py-1 text-center sm:px-2">
+            <span className="sm:hidden">{wdNarrowFmt.format(new Date(d))}</span>
+            <span className="hidden sm:inline">{wdFmt.format(new Date(d))}</span>
           </div>
         ))}
       </div>
@@ -1118,20 +1123,49 @@ function MonthView({
           }
           const visibleArtists = artistsHere.slice(0, 3);
           const extraArtists = artistsHere.length - visibleArtists.length;
+          const dominant: "paid" | "pending" | "error" | null =
+            evs.length === 0
+              ? null
+              : buckets.error >= buckets.paid && buckets.error >= buckets.pending
+                ? "error"
+                : buckets.pending >= buckets.paid
+                  ? "pending"
+                  : "paid";
+          const dotClass =
+            dominant === "paid"
+              ? "bg-emerald-500"
+              : dominant === "error"
+                ? "bg-red-500"
+                : "bg-amber-500";
           return (
             <button
               key={key}
               type="button"
               onClick={() => onPickDay(d)}
               className={cn(
-                "flex min-h-[88px] flex-col items-start gap-1 border-b border-r border-border p-1.5 text-left transition-colors hover:bg-muted",
+                "flex min-h-[56px] flex-col items-start gap-1 border-b border-r border-border p-1 text-left transition-colors hover:bg-muted sm:min-h-[88px] sm:p-1.5",
                 !inMonth && "bg-background/50 text-muted-foreground/60",
                 key === todayKey && "ring-1 ring-foreground/40",
               )}
             >
-              <span className="text-xs font-semibold">{numFmt.format(d)}</span>
+              <div className="flex w-full items-center justify-between gap-1">
+                <span className="text-[11px] font-semibold sm:text-xs">{numFmt.format(d)}</span>
+                {evs.length > 0 ? (
+                  <span className="flex items-center gap-1 sm:hidden">
+                    {dominant ? (
+                      <span
+                        className={cn("inline-block h-1.5 w-1.5 rounded-full", dotClass)}
+                        aria-hidden
+                      />
+                    ) : null}
+                    <span className="text-[10px] font-semibold tabular-nums text-foreground">
+                      {evs.length}
+                    </span>
+                  </span>
+                ) : null}
+              </div>
               {artistsHere.length > 0 ? (
-                <div className="flex items-center gap-1">
+                <div className="hidden items-center gap-1 sm:flex">
                   <div className="flex -space-x-1.5">
                     {visibleArtists.map((entry) => (
                       <Avatar
@@ -1161,7 +1195,7 @@ function MonthView({
                 </div>
               ) : null}
               {evs.length > 0 ? (
-                <div className="mt-auto flex flex-wrap gap-1">
+                <div className="mt-auto hidden flex-wrap gap-1 sm:flex">
                   {buckets.paid > 0 ? (
                     <StatusBadge variant="success" className="px-1 py-0 text-[9px]">
                       {buckets.paid}
