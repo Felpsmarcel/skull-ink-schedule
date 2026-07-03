@@ -1,48 +1,50 @@
-## Objetivo
+## Resumo
 
-Cards de agendamento no `WeekView` e `MonthView` (mobile + desktop) devem:
-1. Truncar de forma inteligente para nunca quebrar o layout.
-2. Ao clicar, abrir o `AgendaAppointmentSheet` já existente (mesmo componente usado no Day view) com detalhes completos: horário, duração, cliente, contato, serviço, status de pagamento.
-3. No desktop (`sm+`), mostrar um `Tooltip` no hover com resumo (cliente + horário + serviço) para leitura rápida sem abrir o sheet.
+Boa notícia: o esquema para conectar valores do agendamento ao Financeiro **já existe** no banco. O que falta é a UI para exibir/editar o valor a partir do agendamento e a sincronização quando o valor for informado no momento do agendamento (não só depois no /financeiro).
 
-## Escopo
+## Como está hoje
 
-- `src/routes/_authenticated/agenda.tsx` — Week/Month.
-- Nenhuma mudança em backend, hooks, RPCs, ou no próprio `agenda-appointment-sheet.tsx`.
+- `public.appointments` já tem `total_eur`, `original_eur`, `discount_eur`, `commission_pct`, `services jsonb`, `ghl_appointment_id` (link com o evento do calendário mostrado na Agenda).
+- `public.appointment_services` guarda linhas de serviço com `price_eur`, `duration_min`, `quantity`.
+- `public.payments` guarda recebimentos (`amount_eur`, `type`, `method`, `status`, `paid_at`) com FK a `appointment_id`.
+- `src/lib/finance.functions.ts` já lê de `appointments.total_eur` para produzir os relatórios do Financeiro.
+- `src/lib/sync.server.ts` já faz upsert de eventos do GHL para `appointments` (via `ghl_appointment_id`), então cada card do calendário tem uma linha correspondente no banco.
 
-## Semana (WeekView)
+Ou seja, os dados já falam a mesma língua — falta ligar as duas telas na interface.
 
-- **Mobile (lista de dia único)**: cada linha de agendamento vira `<button>` clicável (área toque ≥ 44px alto). Nome do cliente com `truncate` + `flex-1 min-w-0`; hora fixa à esquerda; badge de status à direita; ícone chevron sutil indicando "toque para detalhes".
-- **Desktop (grid 7 dias)**: cada card no cell vira `<button>` envolto em `Tooltip` (shadcn `@/components/ui/tooltip`) que mostra ao hover: `HH:mm–HH:mm · Cliente · Serviço/Título`. `truncate` no nome mantém a única linha; hora com `tabular-nums`.
-- Clique (mobile e desktop) chama `openEvent(ev, staff)` que constrói um `GridSlot` sintético a partir do `GhlEvent`:
-  ```
-  { startMs, eventStartMs, eventEndMs, label: HH:mm, status: "booked",
-    contactName, contactId, ghlEventId: ev.id, serviceName: ev.title,
-    appointmentStatus: ev.appointmentStatus, isFirstSlot: true, spanSlots: 1 }
-  ```
-  e abre `AgendaAppointmentSheet` com `staffName`, `calendarId` (do `staff` do agendamento), `bucket` via `statusMap.get(ev.id)`.
+## O que fazer (3 partes)
 
-## Mês (MonthView)
+### 1. Mostrar o valor no sheet de detalhes do agendamento
+- No `AgendaAppointmentSheet`, buscar por `ghl_appointment_id` a linha em `appointments` (novo server fn `getAppointmentByGhlId` em `src/lib/appointments.functions.ts`, com `requireSupabaseAuth`).
+- Exibir bloco **"Financeiro"** com: `total_eur`, `original_eur`, `discount_eur`, `commission_pct`, resumo de serviços (`services jsonb`) e status de pagamento (o `bucket` já vem do `useRangeAppointmentStatuses`).
+- Restrição já discutida: mostrar valores APENAS quando o `artist_id` da linha for o próprio usuário logado (ou admin). Para os demais tatuadores, esconder o bloco financeiro e mostrar apenas "Valor não visível".
 
-- A célula do dia continua clicável para abrir o Day view (comportamento atual). Cards individuais não existem no mês por design — mas:
-- **Desktop (`sm+`)**: envolver a fileira de avatares num `Tooltip` que lista os agendamentos daquele dia (`HH:mm Cliente` por linha, até 8 itens + `+N`). Isso permite ver detalhes sem sair da grade.
-- **Mobile**: manter o comportamento atual (toque → Day view). Não introduzir tooltip (não há hover em toque).
+### 2. Adicionar/editar valor a partir do sheet
+- Botão "Registrar valor" abre um mini-form (dentro do próprio sheet ou num sub-dialog):
+  - `total_eur` (obrigatório), `discount_eur` (opcional), `commission_pct` (default do artista).
+  - Seleção de serviços (multi-select de `public.services`) → grava linhas em `appointment_services` e recalcula `total_eur` automaticamente.
+- Salvar chama um server fn `upsertAppointmentFinance` (`requireSupabaseAuth` + policy `artist_id = auth.uid()` ou admin) que:
+  1. Garante que existe row em `appointments` (se ainda não sincronizada, cria via `ghl_appointment_id` + dados do evento).
+  2. Atualiza `total_eur`, `original_eur`, `discount_eur`, `commission_pct`, `services jsonb`.
+  3. Substitui `appointment_services` do agendamento.
+- Após salvar, invalidar `["finance", ...]` e `["appointment", ghlId]` no react-query — o /financeiro atualiza automaticamente.
 
-## Estado & sheet
+### 3. (Opcional, mesma tela) Registrar pagamento
+- Botão secundário "Registrar pagamento" abre form curto: `amount_eur`, `method`, `type` (sinal/final/etc.), `paid_at` → insere em `payments`.
+- Isso alimenta o bucket de status (pago/a receber/pendente) já usado pelo `StatusBadge` na Agenda.
 
-- Adicionar `useState<{ ev: GhlEvent; staffName: string; calendarId: string } | null>` em `WeekView`.
-- Renderizar `<AgendaAppointmentSheet>` no final do `WeekView` (mesma prop shape do Day view), passando o `GridSlot` sintético.
-- Sem mudanças no `MonthView` além do tooltip visual.
+## Escopo técnico
 
-## Truncamento inteligente
+- **Sem mudança de schema** — todas as colunas já existem.
+- Novos arquivos: `src/lib/appointments.functions.ts` (já existe, adicionar 2 funções), possivelmente `src/components/appointment-finance-form.tsx`.
+- Alteração: `src/components/agenda-appointment-sheet.tsx` (novo bloco Financeiro + botões).
+- RLS: usar policies já existentes de `appointments` / `appointment_services` / `payments`; validar via read query se `artist_id = auth.uid()` está coberto (senão, adicionar policy owner-scoped na mesma migração).
+- Nenhuma alteração no /financeiro — ele passa a mostrar o valor automaticamente porque lê da mesma tabela.
 
-- Toda linha de texto do card usa: container `flex min-w-0`, texto com `truncate` (single line) ou `line-clamp-2` para o campo `title` no tooltip.
-- Ícones/avatares/badges com `shrink-0`.
-- Hora sempre `tabular-nums` e largura mínima fixa (`w-10` mobile / `w-12` desktop) para alinhar coluna.
+## Perguntas antes de implementar
 
-## Validação
+1. **Quem pode registrar valor?** Só o próprio tatuador do agendamento, ou também admin/dono do estúdio pode registrar por qualquer artista?
+2. **Serviços obrigatórios ou valor livre?** Preferir "escolher serviços do catálogo (`services`) e somar" ou permitir digitar um valor livre sem serviços?
+3. **Pagamento no mesmo fluxo ou depois?** Registrar valor + pagamento juntos no sheet, ou apenas valor na Agenda e pagamento continua sendo feito na tela /financeiro?
 
-- Preview mobile 390px: tocar num card do Week abre o sheet com detalhes; nada estoura horizontalmente; textos longos truncam com `…`.
-- Preview desktop: hover no card mostra tooltip; clique abre sheet; grid preservado.
-- Month desktop: hover na fileira de avatares mostra lista de agendamentos do dia; toque no dia continua indo para Day view.
-- Sem regressão no Day view, no header, na navegação, ou no `financeiro`.
+Responda essas 3 e eu implemento no próximo turno.
