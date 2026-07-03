@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { parseManualBucket, type PaymentBucket } from "@/lib/finance.functions";
 
 const ServiceLineSchema = z.object({
   id: z.string().uuid(),
@@ -273,6 +274,7 @@ export interface AppointmentFinanceView {
   }>;
   paidTotalEur: number;
   balanceEur: number | null;
+  manualPaymentStatus: PaymentBucket | null;
 }
 
 async function authorizeArtistOrAdmin(
