@@ -1,55 +1,112 @@
-## Diagnóstico
+## O que muda para o usuário
 
-O erro `"Agendamento sem contato vinculado no banco — não é possível registrar pagamento."` vem de `registerAppointmentPayment` em `src/lib/appointments.functions.ts`, que exige `appointments.contact_id` (uuid) para inserir em `payments` (a coluna `payments.contact_id` é `NOT NULL`).
+Hoje o status ("Pendente", "A receber", "Pago") é **calculado automaticamente**:
 
-Verifiquei no banco:
+- tem pagamento registrado → **Pago**
+- sem pagamento e horário já passou → **Pendente**
+- sem pagamento e horário no futuro → **A receber**
 
-- `appointments.contact_id` (uuid, FK para `contacts.id`) está **NULL em todos os registros**.
-- A tabela `appointments` só está guardando `ghl_contact_id` (texto vindo do GHL).
-- A sincronização `src/lib/sync.server.ts` faz upsert do agendamento com `ghl_contact_id`, mas **nunca cria/vincula a linha em `public.contacts`** nem preenche `appointments.contact_id`.
-- A tabela `contacts` existe e tem `ghl_contact_id` — é onde o `contact_id` deveria apontar.
+Você quer poder **forçar** um desses status direto no agendamento, sem depender de pagamento. Por exemplo: marcar como "Pago" mesmo sem lançar pagamento, ou marcar um agendamento passado como "A receber" porque o cliente vai pagar depois.
 
-Ou seja: o pagamento falha porque o "elo" entre agendamento e contato no banco nunca foi criado. Não é bug do formulário, é dado ausente.
+## Como vai funcionar
 
-## Como resolver
+No sheet do agendamento (Agenda), na seção **Financeiro**, adiciono um controle novo:
 
-Duas correções complementares — a primeira desbloqueia agora, a segunda evita repetir o problema.
+```text
+Status do pagamento:  [ Automático ▾ ]
+                        Automático (padrão)
+                        Pago
+                        Pendente
+                        A receber
+```
 
-### 1. Resolver o contato na hora de registrar o pagamento (desbloqueio imediato)
+- **Automático** = usa a regra atual (baseada em pagamentos + data).
+- **Pago / Pendente / A receber** = trava aquele status, ignorando a regra.
 
-Em `registerAppointmentPayment` (`src/lib/appointments.functions.ts`), quando `appt.contact_id` for `null`:
+O badge no topo do sheet, na grade da Agenda (semana/dia/mês) e nas listas do Financeiro passam a mostrar o status forçado quando existir; se estiver em "Automático", nada muda em relação a hoje.
 
-1. Ler `appt.ghl_contact_id`, `contact_name`, `contact_phone`, `contact_email` do próprio agendamento.
-2. Fazer `upsert` em `public.contacts` por `ghl_contact_id` (com nome/telefone/e-mail que já temos) usando `supabaseAdmin`, retornando o `id`.
-3. Fazer `update` em `appointments.contact_id = <novo id>` (backfill, para próximas vezes ser instantâneo).
-4. Inserir o `payments` com esse `contact_id`.
+Um pequeno ícone (ex.: cadeado) aparece no badge quando o status foi definido manualmente, para diferenciar do calculado.
 
-Se `appt.ghl_contact_id` também for null (agendamento manual sem contato), aí sim mostrar mensagem clara pedindo pra vincular um contato.
+## Permissões
 
-### 2. Corrigir a sincronização (para novos agendamentos nascerem vinculados)
+- **Admin**: pode mudar qualquer agendamento.
+- **Tatuador**: pode mudar apenas os seus próprios agendamentos (mesma regra do restante do financeiro).
 
-Em `src/lib/sync.server.ts`, dentro do loop que faz upsert de eventos GHL, antes de gravar o `appointments`:
+## Detalhes técnicos
 
-- Se `e.contactId` existir, fazer `upsert` em `public.contacts` (por `ghl_contact_id`) com os dados de contato do evento e recuperar o `id`.
-- Gravar esse `id` em `appointments.contact_id` junto com `ghl_contact_id`.
+### 1. Banco — nova coluna em `appointments`
 
-Assim todo agendamento novo já sai com o link pronto e o botão "Registrar pagamento" funciona de primeira, sem fallback.
+Migration adiciona:
 
-### 3. (Opcional, mesma migração) Backfill único dos agendamentos existentes
+- `manual_payment_status text NULL` com CHECK `IN ('pago','pendente','a_receber')`.
+- `manual_payment_status_by uuid NULL` (auth.uid de quem definiu, para auditoria).
+- `manual_payment_status_at timestamptz NULL`.
 
-Migration SQL que, para cada `appointments` com `contact_id IS NULL AND ghl_contact_id IS NOT NULL`:
+Sem alteração de RLS (as policies atuais de `appointments` já cobrem UPDATE por admin/tatuador dono).
 
-- Insere em `contacts` (`ON CONFLICT (ghl_contact_id) DO NOTHING`) usando `contact_name/phone/email` do próprio agendamento.
-- `UPDATE appointments a SET contact_id = c.id FROM contacts c WHERE c.ghl_contact_id = a.ghl_contact_id AND a.contact_id IS NULL`.
+### 2. Lógica de derivação — `src/lib/finance.functions.ts`
 
-Com isso, os agendamentos que já existem (incluindo o do print, Thomas Watt) passam a aceitar pagamento sem precisar de upsert em runtime.
+`deriveBucket()` passa a aceitar um terceiro parâmetro opcional `override`:
 
-## Escopo
+```ts
+export function deriveBucket(
+  startAt: string,
+  hasPayment: boolean,
+  override?: PaymentBucket | null,
+): PaymentBucket {
+  if (override) return override;
+  if (hasPayment) return "pago";
+  return new Date(startAt).getTime() < Date.now() ? "pendente" : "a_receber";
+}
+```
 
-- **Editado:** `src/lib/appointments.functions.ts` (fallback em `registerAppointmentPayment`), `src/lib/sync.server.ts` (upsert de contact + link).
-- **Migração:** backfill de `appointments.contact_id` + garantir índice único em `contacts.ghl_contact_id` se ainda não existir.
-- **Sem mudanças de UI** — o sheet e o formulário continuam iguais; só o backend passa a resolver o contato sozinho.
+Todos os call sites que hoje chamam `deriveBucket(startAt, hasPayment)` passam a ler também `manual_payment_status` da linha e repassar. Arquivos tocados:
 
-## Confirme antes de eu implementar
+- `src/lib/finance.functions.ts` (resumo do Financeiro — admin e artista)
+- `src/lib/agenda-status.functions.ts` (mapa de status da Agenda)
+- `src/lib/appointments.functions.ts` (`getAppointmentFinanceByGhlId` — badge do sheet)
 
-Quer que eu faça as 3 partes (fix imediato + fix da sync + backfill) ou só o fix imediato agora?
+### 3. Nova server function — `setAppointmentPaymentStatus`
+
+Em `src/lib/appointments.functions.ts`, com `requireSupabaseAuth`:
+
+- Input: `{ ghlAppointmentId, status: 'pago' | 'pendente' | 'a_receber' | null }` (null = voltar para Automático).
+- Verifica papel: admin passa; tatuador só se `artist_id === current_artist_id()`.
+- Faz `update appointments set manual_payment_status = ?, manual_payment_status_by = auth.uid(), manual_payment_status_at = now() where ghl_appointment_id = ?` via `supabaseAdmin` (após checagem de permissão).
+- Retorna o novo bucket efetivo.
+
+**Não** cria nem apaga registros em `payments`. É apenas um override de exibição/classificação.
+
+### 4. UI — `src/components/agenda-appointment-sheet.tsx`
+
+Na `FinanceSection`, acima do bloco "Registrar valor / Registrar pagamento", adiciono um `<Select>` com as 4 opções (Automático + 3 status). Ao mudar:
+
+- Chama `setAppointmentPaymentStatus` via `useServerFn`.
+- Invalida `['appointment-finance', ghlId]`, `['finance']`, `['agenda-status']` — igual ao que já é feito nas outras ações do sheet.
+- Toast de sucesso/erro.
+
+O `StatusBadge` do topo do sheet ganha um ícone `Lock` (lucide) quando `manual_payment_status` está preenchido.
+
+### 5. Agenda e Financeiro — badge com indicador
+
+Em `src/routes/_authenticated/agenda.tsx` e `src/routes/_authenticated/financeiro.tsx`, o `StatusBadge` passa a receber opcionalmente um `icon={<Lock className="h-3 w-3" />}` quando a linha vier com `manualOverride: true`. Requer adicionar `manualOverride: boolean` ao shape das linhas em `finance.functions.ts` e `agenda-status.functions.ts`.
+
+Nenhuma mudança nos rótulos ("Pendente", "A receber", "Pago") nem nas cores.
+
+## Arquivos afetados
+
+- `supabase/migrations/<nova>.sql` (colunas de override)
+- `src/lib/finance.functions.ts`
+- `src/lib/agenda-status.functions.ts`
+- `src/lib/appointments.functions.ts` (nova server fn + leitura do override)
+- `src/hooks/use-agenda-status.ts` (repassar `manualOverride`)
+- `src/components/agenda-appointment-sheet.tsx` (Select + ícone)
+- `src/routes/_authenticated/agenda.tsx` (ícone no badge)
+- `src/routes/_authenticated/financeiro.tsx` (ícone no badge)
+
+## Fora do escopo
+
+- Não renomeia os status (continuam "Pendente", "A receber", "Pago").
+- Não muda cores.
+- Não cria/apaga pagamentos automaticamente ao mudar o status.
+- Não adiciona histórico visível de mudanças (só grava quem/quando no banco para auditoria futura).

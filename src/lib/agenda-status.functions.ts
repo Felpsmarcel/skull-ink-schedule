@@ -7,6 +7,7 @@ export interface DayAppointmentStatus {
   ghlAppointmentId: string;
   artistId: string;
   bucket: PaymentBucket;
+  manualOverride: boolean;
 }
 
 export const getDayAppointmentStatuses = createServerFn({ method: "GET" })
@@ -37,7 +38,7 @@ async function queryStatuses(
   try {
     const { data: rows, error } = await (supabase as any)
       .from("appointments" as never)
-      .select("id, artist_id, ghl_appointment_id, start_at")
+      .select("id, artist_id, ghl_appointment_id, start_at, manual_payment_status")
       .gte("start_at", startISO)
       .lte("start_at", endISO)
       .not("ghl_appointment_id", "is", null);
@@ -51,6 +52,7 @@ async function queryStatuses(
       artist_id: string;
       ghl_appointment_id: string;
       start_at: string;
+      manual_payment_status: string | null;
     }>;
     if (appts.length === 0) return [];
 
@@ -65,7 +67,8 @@ async function queryStatuses(
       return appts.map((a) => ({
         ghlAppointmentId: a.ghl_appointment_id,
         artistId: a.artist_id,
-        bucket: deriveBucket(a.start_at, false),
+        bucket: deriveBucket(a.start_at, false, a.manual_payment_status),
+        manualOverride: a.manual_payment_status != null,
       }));
     }
     const paidIds = new Set(
@@ -77,7 +80,8 @@ async function queryStatuses(
     return appts.map((a) => ({
       ghlAppointmentId: a.ghl_appointment_id,
       artistId: a.artist_id,
-      bucket: deriveBucket(a.start_at, paidIds.has(a.id)),
+      bucket: deriveBucket(a.start_at, paidIds.has(a.id), a.manual_payment_status),
+      manualOverride: a.manual_payment_status != null,
     }));
   } catch (error) {
     console.warn("agenda-status unavailable", summarizeBackendError(error));

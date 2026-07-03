@@ -13,6 +13,7 @@ import {
   Wallet,
   Plus,
   Loader2,
+  Lock,
 } from "lucide-react";
 
 import {
@@ -34,6 +35,7 @@ import {
   getAppointmentFinanceByGhlId,
   upsertAppointmentFinance,
   registerAppointmentPayment,
+  setAppointmentPaymentStatus,
   type AppointmentFinanceView,
 } from "@/lib/appointments.functions";
 import { listAllServices } from "@/lib/services.functions";
@@ -270,6 +272,8 @@ function FinanceSection({
           onPay={() => setShowPaymentForm((v) => !v)}
           editing={showValueForm}
           paying={showPaymentForm}
+          ghlEventId={ghlEventId}
+          onOverrideChanged={invalidateAll}
         />
       )}
 
@@ -307,6 +311,8 @@ function FinanceBody({
   onPay,
   editing,
   paying,
+  ghlEventId,
+  onOverrideChanged,
 }: {
   data: AppointmentFinanceView;
   locale: string;
@@ -314,9 +320,17 @@ function FinanceBody({
   onPay: () => void;
   editing: boolean;
   paying: boolean;
+  ghlEventId: string;
+  onOverrideChanged: () => void;
 }) {
   return (
     <div className="space-y-3">
+      <PaymentStatusPicker
+        ghlEventId={ghlEventId}
+        current={data.manualPaymentStatus}
+        onChanged={onOverrideChanged}
+      />
+
       <div className="grid grid-cols-2 gap-2 rounded border border-border bg-muted/30 p-2 text-xs">
         <div>
           <div className="text-[9px] uppercase tracking-wider text-muted-foreground">
@@ -861,4 +875,57 @@ function formatDuration(min: number): string {
   if (h && m) return `${h}h${String(m).padStart(2, "0")}`;
   if (h) return `${h}h`;
   return `${m}min`;
+}
+
+function PaymentStatusPicker({
+  ghlEventId,
+  current,
+  onChanged,
+}: {
+  ghlEventId: string;
+  current: "pago" | "pendente" | "a_receber" | null;
+  onChanged: () => void;
+}) {
+  const setStatus = useServerFn(setAppointmentPaymentStatus);
+  const mut = useMutation({
+    mutationFn: async (status: "pago" | "pendente" | "a_receber" | null) =>
+      setStatus({ data: { ghlEventId, status } }),
+    onSuccess: () => {
+      toast.success("Status atualizado");
+      onChanged();
+    },
+    onError: (err: unknown) =>
+      toast.error(err instanceof Error ? err.message : "Falha ao atualizar"),
+  });
+
+  const value = current ?? "auto";
+  return (
+    <div className="flex items-center gap-2 rounded border border-border bg-muted/20 p-2">
+      <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+        Status
+      </Label>
+      <Select
+        value={value}
+        onValueChange={(v) => {
+          const next = v === "auto" ? null : (v as "pago" | "pendente" | "a_receber");
+          mut.mutate(next);
+        }}
+        disabled={mut.isPending}
+      >
+        <SelectTrigger className="h-7 flex-1 text-[11px]">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="auto">Automático</SelectItem>
+          <SelectItem value="pago">Pago</SelectItem>
+          <SelectItem value="pendente">Pendente</SelectItem>
+          <SelectItem value="a_receber">A receber</SelectItem>
+        </SelectContent>
+      </Select>
+      {current ? (
+        <Lock className="h-3 w-3 text-muted-foreground" aria-label="Status manual" />
+      ) : null}
+      {mut.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+    </div>
+  );
 }

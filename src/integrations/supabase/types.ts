@@ -109,6 +109,9 @@ export type Database = {
           ghl_contact_id: string | null
           id: string
           internal_note: string | null
+          manual_payment_status: string | null
+          manual_payment_status_at: string | null
+          manual_payment_status_by: string | null
           notes: string | null
           original_eur: number
           services: Json
@@ -135,6 +138,9 @@ export type Database = {
           ghl_contact_id?: string | null
           id?: string
           internal_note?: string | null
+          manual_payment_status?: string | null
+          manual_payment_status_at?: string | null
+          manual_payment_status_by?: string | null
           notes?: string | null
           original_eur?: number
           services?: Json
@@ -161,6 +167,9 @@ export type Database = {
           ghl_contact_id?: string | null
           id?: string
           internal_note?: string | null
+          manual_payment_status?: string | null
+          manual_payment_status_at?: string | null
+          manual_payment_status_by?: string | null
           notes?: string | null
           original_eur?: number
           services?: Json
