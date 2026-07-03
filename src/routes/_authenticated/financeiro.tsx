@@ -358,6 +358,14 @@ function AdminView({
                   <div className="text-sm font-semibold text-emerald-600">{formatCurrency(r.studioEur)}</div>
                 </div>
               </div>
+              {r.sellerName ? (
+                <div className="flex items-center justify-between border-t border-border pt-2 text-[11px]">
+                  <span className="text-muted-foreground">Vendedor · {r.sellerName}</span>
+                  <span className="font-semibold text-amber-600">
+                    {formatCurrency(r.sellerCommissionEur)}
+                  </span>
+                </div>
+              ) : null}
             </article>
           ))}
         </section>
