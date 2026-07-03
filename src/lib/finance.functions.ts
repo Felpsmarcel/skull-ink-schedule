@@ -19,6 +19,9 @@ export interface AdminAppointmentRow extends ArtistAppointmentRow {
   totalEur: number;
   studioEur: number;
   artistId: string;
+  sellerId: string | null;
+  sellerName: string | null;
+  sellerCommissionEur: number;
 }
 
 export interface ArtistSummary {
@@ -37,6 +40,7 @@ export interface AdminSummary {
   pago: number;
   pendente: number;
   aReceber: number;
+  vendedorComissaoTotal: number;
   rows: AdminAppointmentRow[];
 }
 
@@ -151,12 +155,12 @@ export const getFinanceSummary = createServerFn({ method: "GET" })
     const { data, error } = await supabase
       .from("appointments" as never)
       .select(
-        "id,artist_id,start_at,end_at,status,contact_name,total_eur,commission_pct,services,manual_payment_status",
+        "id,artist_id,start_at,end_at,status,contact_name,total_eur,commission_pct,services,manual_payment_status,seller_id",
       )
       .order("start_at", { ascending: false });
     if (error) throw new Error(error.message);
 
-    const rows: AdminAppointmentRow[] = (
+    const rawRows = (
       (data ?? []) as Array<{
         id: string;
         artist_id: string;
@@ -168,12 +172,36 @@ export const getFinanceSummary = createServerFn({ method: "GET" })
         commission_pct: number | string;
         services: Array<{ name?: string }>;
         manual_payment_status: string | null;
+        seller_id: string | null;
       }>
-    ).map((r) => {
+    );
+
+    // Fetch sellers referenced
+    const sellerIds = Array.from(
+      new Set(rawRows.map((r) => r.seller_id).filter((x): x is string => !!x)),
+    );
+    const sellersMap = new Map<string, { name: string; pct: number }>();
+    if (sellerIds.length > 0) {
+      const { data: sellerRows } = await (supabase as any)
+        .from("sellers" as never)
+        .select("id, name, commission_pct")
+        .in("id", sellerIds);
+      for (const s of ((sellerRows ?? []) as Array<{
+        id: string;
+        name: string;
+        commission_pct: number | string;
+      }>)) {
+        sellersMap.set(s.id, { name: s.name, pct: Number(s.commission_pct) });
+      }
+    }
+
+    const rows: AdminAppointmentRow[] = rawRows.map((r) => {
       const total = Number(r.total_eur);
       const pct = Number(r.commission_pct);
       const commission = round2((total * pct) / 100);
       const studio = round2(total - commission);
+      const seller = r.seller_id ? sellersMap.get(r.seller_id) ?? null : null;
+      const sellerCommission = seller ? round2((total * seller.pct) / 100) : 0;
       return {
         id: r.id,
         artistId: r.artist_id,
@@ -190,6 +218,9 @@ export const getFinanceSummary = createServerFn({ method: "GET" })
         studioEur: studio,
         bucket: deriveBucket(r.start_at, paidIds.has(r.id), r.manual_payment_status),
         manualOverride: parseManualBucket(r.manual_payment_status) !== null,
+        sellerId: r.seller_id,
+        sellerName: seller?.name ?? null,
+        sellerCommissionEur: sellerCommission,
       };
     });
 
@@ -199,10 +230,12 @@ export const getFinanceSummary = createServerFn({ method: "GET" })
     let pago = 0;
     let pendente = 0;
     let aReceber = 0;
+    let vendedorComissaoTotal = 0;
     for (const r of rows) {
       totalBruto += r.totalEur;
       comissaoTotal += r.commissionEur;
       estudioTotal += r.studioEur;
+      vendedorComissaoTotal += r.sellerCommissionEur;
       if (r.bucket === "pago") pago += r.totalEur;
       else if (r.bucket === "pendente") pendente += r.totalEur;
       else aReceber += r.totalEur;
@@ -216,6 +249,7 @@ export const getFinanceSummary = createServerFn({ method: "GET" })
       pago: round2(pago),
       pendente: round2(pendente),
       aReceber: round2(aReceber),
+      vendedorComissaoTotal: round2(vendedorComissaoTotal),
       rows,
     };
   });

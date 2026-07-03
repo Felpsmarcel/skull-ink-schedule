@@ -315,6 +315,15 @@ function AdminView({
         <StatCard label="Pendente" value={formatCurrency(data.pendente)} tone="warn" />
         <StatCard label="A receber" value={formatCurrency(data.aReceber)} />
       </section>
+      {data.vendedorComissaoTotal > 0 ? (
+        <section className="grid grid-cols-1 gap-2">
+          <StatCard
+            label="Comissão vendedores"
+            value={formatCurrency(data.vendedorComissaoTotal)}
+            tone="warn"
+          />
+        </section>
+      ) : null}
 
       {rows.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground sm:hidden">
@@ -349,6 +358,14 @@ function AdminView({
                   <div className="text-sm font-semibold text-emerald-600">{formatCurrency(r.studioEur)}</div>
                 </div>
               </div>
+              {r.sellerName ? (
+                <div className="flex items-center justify-between border-t border-border pt-2 text-[11px]">
+                  <span className="text-muted-foreground">Vendedor · {r.sellerName}</span>
+                  <span className="font-semibold text-amber-600">
+                    {formatCurrency(r.sellerCommissionEur)}
+                  </span>
+                </div>
+              ) : null}
             </article>
           ))}
         </section>
@@ -363,13 +380,15 @@ function AdminView({
               <th className="px-3 py-2 text-right">Total</th>
               <th className="px-3 py-2 text-right">Comissão 40%</th>
               <th className="px-3 py-2 text-right">Estúdio 60%</th>
+              <th className="px-3 py-2 text-left">Vendedor</th>
+              <th className="px-3 py-2 text-right">Com. vend.</th>
               <th className="px-3 py-2 text-right">Status</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-3 py-6 text-center text-muted-foreground">
+                <td colSpan={8} className="px-3 py-6 text-center text-muted-foreground">
                   {emptyMsg}
                 </td>
               </tr>
@@ -387,6 +406,10 @@ function AdminView({
                   </td>
                   <td className="px-3 py-2 text-right text-emerald-600">
                     {formatCurrency(r.studioEur)}
+                  </td>
+                  <td className="px-3 py-2 text-muted-foreground">{r.sellerName ?? "—"}</td>
+                  <td className="px-3 py-2 text-right text-amber-600">
+                    {r.sellerName ? formatCurrency(r.sellerCommissionEur) : "—"}
                   </td>
                   <td className="px-3 py-2 text-right">
                     <StatusBadge variant={bucketToVariant(r.bucket)}>

@@ -8,6 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
 import { useArtists } from "@/hooks/use-artists";
@@ -18,6 +25,9 @@ import {
   totalOriginalEur,
 } from "@/stores/appointment-draft";
 import { useFinalizeAppointment } from "@/hooks/use-finalize-appointment";
+import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
+import { listSellers } from "@/lib/sellers.functions";
 
 export const Route = createFileRoute("/_authenticated/appointments/new/checkout")({
   head: () => ({
@@ -36,6 +46,13 @@ function CheckoutPage() {
   const { data: artists = [] } = useArtists();
   const staff = artists.find((s) => s.calendarId === draft.calendarId) ?? null;
   const { run, saving } = useFinalizeAppointment();
+  const fetchSellers = useServerFn(listSellers);
+  const sellersQ = useQuery({
+    queryKey: ["sellers", "active"],
+    queryFn: () => fetchSellers({ data: {} }),
+    staleTime: 5 * 60_000,
+  });
+  const sellers = sellersQ.data ?? [];
   const startLabel = useMemo(() => {
     if (!draft.startISO) return "—";
     return new Intl.DateTimeFormat("pt-PT", {
@@ -128,6 +145,26 @@ function CheckoutPage() {
           <div className="mt-1 flex items-center justify-between">
             <span className="text-muted-foreground">{t("appt.staff")}</span>
             <span className="font-medium">{staff?.name ?? "—"}</span>
+          </div>
+          <div className="mt-2">
+            <Label className="text-[11px] text-muted-foreground">Vendedor</Label>
+            <Select
+              value={draft.sellerId ?? "none"}
+              onValueChange={(v) => draft.setSeller(v === "none" ? null : v)}
+            >
+              <SelectTrigger className="mt-1 h-9 text-sm">
+                <SelectValue placeholder="Nenhum" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Nenhum</SelectItem>
+                {sellers.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name}
+                    {s.commissionPct > 0 ? ` (${s.commissionPct}%)` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </section>
 

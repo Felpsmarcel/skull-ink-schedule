@@ -24,6 +24,7 @@ const CreateInputSchema = z.object({
     .enum(["pending", "confirmed", "cancelled", "completed", "no_show"])
     .default("confirmed"),
   services: z.array(ServiceLineSchema).min(1),
+  sellerId: z.string().uuid().nullish(),
 });
 
 export type CreateAppointmentInput = z.infer<typeof CreateInputSchema>;
@@ -189,6 +190,7 @@ export const createAppointmentRecord = createServerFn({ method: "POST" })
       commission_pct: commissionPct,
       services: lines,
       notes: data.notes ?? null,
+      seller_id: data.sellerId ?? null,
     };
     const { data: ins, error: insErr } = await supabaseAdmin
       .from("appointments" as never)
@@ -275,6 +277,12 @@ export interface AppointmentFinanceView {
   paidTotalEur: number;
   balanceEur: number | null;
   manualPaymentStatus: PaymentBucket | null;
+  seller: {
+    id: string;
+    name: string;
+    commissionPct: number;
+    commissionEur: number;
+  } | null;
 }
 
 async function authorizeArtistOrAdmin(
@@ -305,7 +313,7 @@ export const getAppointmentFinanceByGhlId = createServerFn({ method: "GET" })
     const { data: apptRow, error: apptErr } = await supabase
       .from("appointments" as never)
       .select(
-        "id, artist_id, total_eur, original_eur, discount_eur, commission_pct, services, manual_payment_status",
+        "id, artist_id, total_eur, original_eur, discount_eur, commission_pct, services, manual_payment_status, seller_id",
       )
       .eq("ghl_appointment_id", data.ghlEventId)
       .maybeSingle();
@@ -320,6 +328,7 @@ export const getAppointmentFinanceByGhlId = createServerFn({ method: "GET" })
           commission_pct: number | string | null;
           services: unknown;
           manual_payment_status: string | null;
+          seller_id: string | null;
         }
       | null;
 
@@ -339,6 +348,7 @@ export const getAppointmentFinanceByGhlId = createServerFn({ method: "GET" })
         paidTotalEur: 0,
         balanceEur: null,
         manualPaymentStatus: null,
+        seller: null,
       };
     }
 
@@ -359,6 +369,7 @@ export const getAppointmentFinanceByGhlId = createServerFn({ method: "GET" })
         paidTotalEur: 0,
         balanceEur: null,
         manualPaymentStatus: null,
+        seller: null,
       };
     }
 
@@ -430,6 +441,25 @@ export const getAppointmentFinanceByGhlId = createServerFn({ method: "GET" })
     );
     const balanceEur = totalEur == null ? null : round2(totalEur - paidTotalEur);
 
+    let seller: AppointmentFinanceView["seller"] = null;
+    if (appt.seller_id) {
+      const { data: sellerRow } = await (supabase as any)
+        .from("sellers" as never)
+        .select("id, name, commission_pct")
+        .eq("id", appt.seller_id)
+        .maybeSingle();
+      if (sellerRow) {
+        const s = sellerRow as { id: string; name: string; commission_pct: number | string };
+        const pct = Number(s.commission_pct);
+        seller = {
+          id: s.id,
+          name: s.name,
+          commissionPct: pct,
+          commissionEur: totalEur != null ? round2((totalEur * pct) / 100) : 0,
+        };
+      }
+    }
+
     return {
       visible: true,
       appointmentId: appt.id,
@@ -445,6 +475,7 @@ export const getAppointmentFinanceByGhlId = createServerFn({ method: "GET" })
       paidTotalEur,
       balanceEur,
       manualPaymentStatus: parseManualBucket(appt.manual_payment_status),
+      seller,
     };
   });
 
@@ -735,4 +766,38 @@ export const setAppointmentPaymentStatus = createServerFn({ method: "POST" })
     if (updErr) throw new Error(updErr.message);
 
     return { appointmentId: appt.id, manualPaymentStatus: data.status };
+  });
+
+const SetSellerSchema = z.object({
+  ghlEventId: z.string().min(1),
+  sellerId: z.string().uuid().nullable(),
+});
+
+export const setAppointmentSeller = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => SetSellerSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const me = await authorizeArtistOrAdmin(supabase, userId);
+
+    const { data: apptRow, error: apptErr } = await supabase
+      .from("appointments" as never)
+      .select("id, artist_id")
+      .eq("ghl_appointment_id", data.ghlEventId)
+      .maybeSingle();
+    if (apptErr) throw new Error(apptErr.message);
+    const appt = apptRow as { id: string; artist_id: string } | null;
+    if (!appt) throw new Error("Agendamento não encontrado no banco.");
+    if (me.role !== "admin" && appt.artist_id !== me.artistId) {
+      throw new Error("Forbidden: não é seu agendamento");
+    }
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error: updErr } = await supabaseAdmin
+      .from("appointments" as never)
+      .update({ seller_id: data.sellerId } as never)
+      .eq("id", appt.id);
+    if (updErr) throw new Error(updErr.message);
+
+    return { appointmentId: appt.id, sellerId: data.sellerId };
   });

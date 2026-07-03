@@ -37,6 +37,7 @@ import { Route as ApiPublicHooksSendRemindersRouteImport } from './routes/api/pu
 import { Route as AuthenticatedAppointmentsNewServicesRouteImport } from './routes/_authenticated/appointments.new.services'
 import { Route as AuthenticatedAppointmentsNewCheckoutRouteImport } from './routes/_authenticated/appointments.new.checkout'
 import { Route as AuthenticatedAdminRelatoriosAgendamentosRouteImport } from './routes/_authenticated/_admin/relatorios.agendamentos'
+import { Route as AuthenticatedAdminAdminVendedoresRouteImport } from './routes/_authenticated/_admin/admin.vendedores'
 import { Route as AuthenticatedAdminAdminEquipeRouteImport } from './routes/_authenticated/_admin/admin.equipe'
 
 const UnsubscribeRoute = UnsubscribeRouteImport.update({
@@ -188,6 +189,12 @@ const AuthenticatedAdminRelatoriosAgendamentosRoute =
     path: '/relatorios/agendamentos',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
+const AuthenticatedAdminAdminVendedoresRoute =
+  AuthenticatedAdminAdminVendedoresRouteImport.update({
+    id: '/admin/vendedores',
+    path: '/admin/vendedores',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
 const AuthenticatedAdminAdminEquipeRoute =
   AuthenticatedAdminAdminEquipeRouteImport.update({
     id: '/admin/equipe',
@@ -212,6 +219,7 @@ export interface FileRoutesByFullPath {
   '/appointments/new': typeof AuthenticatedAppointmentsNewRouteWithChildren
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
+  '/admin/vendedores': typeof AuthenticatedAdminAdminVendedoresRoute
   '/relatorios/agendamentos': typeof AuthenticatedAdminRelatoriosAgendamentosRoute
   '/appointments/new/checkout': typeof AuthenticatedAppointmentsNewCheckoutRoute
   '/appointments/new/services': typeof AuthenticatedAppointmentsNewServicesRoute
@@ -240,6 +248,7 @@ export interface FileRoutesByTo {
   '/reconciliar': typeof AuthenticatedAdminReconciliarRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
+  '/admin/vendedores': typeof AuthenticatedAdminAdminVendedoresRoute
   '/relatorios/agendamentos': typeof AuthenticatedAdminRelatoriosAgendamentosRoute
   '/appointments/new/checkout': typeof AuthenticatedAppointmentsNewCheckoutRoute
   '/appointments/new/services': typeof AuthenticatedAppointmentsNewServicesRoute
@@ -272,6 +281,7 @@ export interface FileRoutesById {
   '/_authenticated/appointments/new': typeof AuthenticatedAppointmentsNewRouteWithChildren
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/_authenticated/_admin/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
+  '/_authenticated/_admin/admin/vendedores': typeof AuthenticatedAdminAdminVendedoresRoute
   '/_authenticated/_admin/relatorios/agendamentos': typeof AuthenticatedAdminRelatoriosAgendamentosRoute
   '/_authenticated/appointments/new/checkout': typeof AuthenticatedAppointmentsNewCheckoutRoute
   '/_authenticated/appointments/new/services': typeof AuthenticatedAppointmentsNewServicesRoute
@@ -303,6 +313,7 @@ export interface FileRouteTypes {
     | '/appointments/new'
     | '/lovable/email/suppression'
     | '/admin/equipe'
+    | '/admin/vendedores'
     | '/relatorios/agendamentos'
     | '/appointments/new/checkout'
     | '/appointments/new/services'
@@ -331,6 +342,7 @@ export interface FileRouteTypes {
     | '/reconciliar'
     | '/lovable/email/suppression'
     | '/admin/equipe'
+    | '/admin/vendedores'
     | '/relatorios/agendamentos'
     | '/appointments/new/checkout'
     | '/appointments/new/services'
@@ -362,6 +374,7 @@ export interface FileRouteTypes {
     | '/_authenticated/appointments/new'
     | '/lovable/email/suppression'
     | '/_authenticated/_admin/admin/equipe'
+    | '/_authenticated/_admin/admin/vendedores'
     | '/_authenticated/_admin/relatorios/agendamentos'
     | '/_authenticated/appointments/new/checkout'
     | '/_authenticated/appointments/new/services'
@@ -591,6 +604,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRelatoriosAgendamentosRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
+    '/_authenticated/_admin/admin/vendedores': {
+      id: '/_authenticated/_admin/admin/vendedores'
+      path: '/admin/vendedores'
+      fullPath: '/admin/vendedores'
+      preLoaderRoute: typeof AuthenticatedAdminAdminVendedoresRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
     '/_authenticated/_admin/admin/equipe': {
       id: '/_authenticated/_admin/admin/equipe'
       path: '/admin/equipe'
@@ -605,6 +625,7 @@ interface AuthenticatedAdminRouteRouteChildren {
   AuthenticatedAdminGhlTestRoute: typeof AuthenticatedAdminGhlTestRoute
   AuthenticatedAdminReconciliarRoute: typeof AuthenticatedAdminReconciliarRoute
   AuthenticatedAdminAdminEquipeRoute: typeof AuthenticatedAdminAdminEquipeRoute
+  AuthenticatedAdminAdminVendedoresRoute: typeof AuthenticatedAdminAdminVendedoresRoute
   AuthenticatedAdminRelatoriosAgendamentosRoute: typeof AuthenticatedAdminRelatoriosAgendamentosRoute
 }
 
@@ -613,6 +634,8 @@ const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren
     AuthenticatedAdminGhlTestRoute: AuthenticatedAdminGhlTestRoute,
     AuthenticatedAdminReconciliarRoute: AuthenticatedAdminReconciliarRoute,
     AuthenticatedAdminAdminEquipeRoute: AuthenticatedAdminAdminEquipeRoute,
+    AuthenticatedAdminAdminVendedoresRoute:
+      AuthenticatedAdminAdminVendedoresRoute,
     AuthenticatedAdminRelatoriosAgendamentosRoute:
       AuthenticatedAdminRelatoriosAgendamentosRoute,
   }

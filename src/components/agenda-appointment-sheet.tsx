@@ -36,8 +36,10 @@ import {
   upsertAppointmentFinance,
   registerAppointmentPayment,
   setAppointmentPaymentStatus,
+  setAppointmentSeller,
   type AppointmentFinanceView,
 } from "@/lib/appointments.functions";
+import { listSellers } from "@/lib/sellers.functions";
 import { listAllServices } from "@/lib/services.functions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -331,6 +333,12 @@ function FinanceBody({
         onChanged={onOverrideChanged}
       />
 
+      <SellerPicker
+        ghlEventId={ghlEventId}
+        current={data.seller?.id ?? null}
+        onChanged={onOverrideChanged}
+      />
+
       <div className="grid grid-cols-2 gap-2 rounded border border-border bg-muted/30 p-2 text-xs">
         <div>
           <div className="text-[9px] uppercase tracking-wider text-muted-foreground">
@@ -364,6 +372,16 @@ function FinanceBody({
             {currency(locale, data.commissionEur)}
           </div>
         </div>
+        {data.seller ? (
+          <div className="col-span-2">
+            <div className="text-[9px] uppercase tracking-wider text-muted-foreground">
+              Comissão vendedor · {data.seller.name} ({data.seller.commissionPct}%)
+            </div>
+            <div className="text-sm font-semibold tabular-nums">
+              {currency(locale, data.seller.commissionEur)}
+            </div>
+          </div>
+        ) : null}
       </div>
 
       {data.services.length > 0 ? (
@@ -925,6 +943,67 @@ function PaymentStatusPicker({
       {current ? (
         <Lock className="h-3 w-3 text-muted-foreground" aria-label="Status manual" />
       ) : null}
+      {mut.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+    </div>
+  );
+}
+
+function SellerPicker({
+  ghlEventId,
+  current,
+  onChanged,
+}: {
+  ghlEventId: string;
+  current: string | null;
+  onChanged: () => void;
+}) {
+  const setSeller = useServerFn(setAppointmentSeller);
+  const fetchSellers = useServerFn(listSellers);
+  const sellersQ = useQuery({
+    queryKey: ["sellers", "active"],
+    queryFn: () => fetchSellers({ data: {} }),
+    staleTime: 5 * 60_000,
+  });
+  const mut = useMutation({
+    mutationFn: async (sellerId: string | null) =>
+      setSeller({ data: { ghlEventId, sellerId } }),
+    onSuccess: () => {
+      toast.success("Vendedor atualizado");
+      onChanged();
+    },
+    onError: (err: unknown) =>
+      toast.error(err instanceof Error ? err.message : "Falha ao atualizar"),
+  });
+
+  const sellers = sellersQ.data ?? [];
+  const value = current ?? "none";
+
+  return (
+    <div className="flex items-center gap-2 rounded border border-border bg-muted/20 p-2">
+      <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+        Vendedor
+      </Label>
+      <Select
+        value={value}
+        onValueChange={(v) => {
+          const next = v === "none" ? null : v;
+          mut.mutate(next);
+        }}
+        disabled={mut.isPending || sellersQ.isLoading}
+      >
+        <SelectTrigger className="h-7 flex-1 text-[11px]">
+          <SelectValue placeholder="Nenhum" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="none">Nenhum</SelectItem>
+          {sellers.map((s) => (
+            <SelectItem key={s.id} value={s.id}>
+              {s.name}
+              {s.commissionPct > 0 ? ` (${s.commissionPct}%)` : ""}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
       {mut.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
     </div>
   );
