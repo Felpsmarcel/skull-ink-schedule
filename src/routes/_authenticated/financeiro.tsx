@@ -315,6 +315,15 @@ function AdminView({
         <StatCard label="Pendente" value={formatCurrency(data.pendente)} tone="warn" />
         <StatCard label="A receber" value={formatCurrency(data.aReceber)} />
       </section>
+      {data.vendedorComissaoTotal > 0 ? (
+        <section className="grid grid-cols-1 gap-2">
+          <StatCard
+            label="Comissão vendedores"
+            value={formatCurrency(data.vendedorComissaoTotal)}
+            tone="warn"
+          />
+        </section>
+      ) : null}
 
       {rows.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground sm:hidden">
