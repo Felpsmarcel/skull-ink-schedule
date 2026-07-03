@@ -876,3 +876,56 @@ function formatDuration(min: number): string {
   if (h) return `${h}h`;
   return `${m}min`;
 }
+
+function PaymentStatusPicker({
+  ghlEventId,
+  current,
+  onChanged,
+}: {
+  ghlEventId: string;
+  current: "pago" | "pendente" | "a_receber" | null;
+  onChanged: () => void;
+}) {
+  const setStatus = useServerFn(setAppointmentPaymentStatus);
+  const mut = useMutation({
+    mutationFn: async (status: "pago" | "pendente" | "a_receber" | null) =>
+      setStatus({ data: { ghlEventId, status } }),
+    onSuccess: () => {
+      toast.success("Status atualizado");
+      onChanged();
+    },
+    onError: (err: unknown) =>
+      toast.error(err instanceof Error ? err.message : "Falha ao atualizar"),
+  });
+
+  const value = current ?? "auto";
+  return (
+    <div className="flex items-center gap-2 rounded border border-border bg-muted/20 p-2">
+      <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+        Status
+      </Label>
+      <Select
+        value={value}
+        onValueChange={(v) => {
+          const next = v === "auto" ? null : (v as "pago" | "pendente" | "a_receber");
+          mut.mutate(next);
+        }}
+        disabled={mut.isPending}
+      >
+        <SelectTrigger className="h-7 flex-1 text-[11px]">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="auto">Automático</SelectItem>
+          <SelectItem value="pago">Pago</SelectItem>
+          <SelectItem value="pendente">Pendente</SelectItem>
+          <SelectItem value="a_receber">A receber</SelectItem>
+        </SelectContent>
+      </Select>
+      {current ? (
+        <Lock className="h-3 w-3 text-muted-foreground" aria-label="Status manual" />
+      ) : null}
+      {mut.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+    </div>
+  );
+}
