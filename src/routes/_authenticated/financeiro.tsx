@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { AlertTriangle, ArrowLeft, Wallet } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Wallet, Lock } from "lucide-react";
 import { useState } from "react";
 import { useFinanceSummary } from "@/hooks/use-finance";
 import { useIsAdmin } from "@/hooks/use-current-user";
@@ -240,6 +240,7 @@ function ArtistView({
                   <div className="text-[11px] text-muted-foreground">{formatDateTime(r.startAt)}</div>
                 </div>
                 <StatusBadge variant={bucketToVariant(r.bucket)} className="shrink-0">
+                  {r.manualOverride ? <Lock className="h-3 w-3" /> : null}
                   {bucketLabel(r.bucket)}
                 </StatusBadge>
               </div>
@@ -279,6 +280,7 @@ function ArtistView({
                   </td>
                   <td className="px-3 py-2 text-right">
                     <StatusBadge variant={bucketToVariant(r.bucket)}>
+                      {r.manualOverride ? <Lock className="h-3 w-3" /> : null}
                       {bucketLabel(r.bucket)}
                     </StatusBadge>
                   </td>
@@ -329,6 +331,7 @@ function AdminView({
                   <div className="text-[11px] text-muted-foreground">{formatDateTime(r.startAt)}</div>
                 </div>
                 <StatusBadge variant={bucketToVariant(r.bucket)} className="shrink-0">
+                  {r.manualOverride ? <Lock className="h-3 w-3" /> : null}
                   {bucketLabel(r.bucket)}
                 </StatusBadge>
               </div>
@@ -387,6 +390,7 @@ function AdminView({
                   </td>
                   <td className="px-3 py-2 text-right">
                     <StatusBadge variant={bucketToVariant(r.bucket)}>
+                      {r.manualOverride ? <Lock className="h-3 w-3" /> : null}
                       {bucketLabel(r.bucket)}
                     </StatusBadge>
                   </td>
