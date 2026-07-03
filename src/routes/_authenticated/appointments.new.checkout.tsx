@@ -146,6 +146,26 @@ function CheckoutPage() {
             <span className="text-muted-foreground">{t("appt.staff")}</span>
             <span className="font-medium">{staff?.name ?? "—"}</span>
           </div>
+          <div className="mt-2">
+            <Label className="text-[11px] text-muted-foreground">Vendedor</Label>
+            <Select
+              value={draft.sellerId ?? "none"}
+              onValueChange={(v) => draft.setSeller(v === "none" ? null : v)}
+            >
+              <SelectTrigger className="mt-1 h-9 text-sm">
+                <SelectValue placeholder="Nenhum" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Nenhum</SelectItem>
+                {sellers.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name}
+                    {s.commissionPct > 0 ? ` (${s.commissionPct}%)` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </section>
 
         {/* Services */}
