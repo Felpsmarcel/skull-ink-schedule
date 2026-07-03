@@ -46,6 +46,13 @@ function CheckoutPage() {
   const { data: artists = [] } = useArtists();
   const staff = artists.find((s) => s.calendarId === draft.calendarId) ?? null;
   const { run, saving } = useFinalizeAppointment();
+  const fetchSellers = useServerFn(listSellers);
+  const sellersQ = useQuery({
+    queryKey: ["sellers", "active"],
+    queryFn: () => fetchSellers({ data: {} }),
+    staleTime: 5 * 60_000,
+  });
+  const sellers = sellersQ.data ?? [];
   const startLabel = useMemo(() => {
     if (!draft.startISO) return "—";
     return new Intl.DateTimeFormat("pt-PT", {
