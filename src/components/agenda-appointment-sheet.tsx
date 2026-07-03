@@ -333,6 +333,12 @@ function FinanceBody({
         onChanged={onOverrideChanged}
       />
 
+      <SellerPicker
+        ghlEventId={ghlEventId}
+        current={data.seller?.id ?? null}
+        onChanged={onOverrideChanged}
+      />
+
       <div className="grid grid-cols-2 gap-2 rounded border border-border bg-muted/30 p-2 text-xs">
         <div>
           <div className="text-[9px] uppercase tracking-wider text-muted-foreground">
@@ -366,6 +372,16 @@ function FinanceBody({
             {currency(locale, data.commissionEur)}
           </div>
         </div>
+        {data.seller ? (
+          <div className="col-span-2">
+            <div className="text-[9px] uppercase tracking-wider text-muted-foreground">
+              Comissão vendedor · {data.seller.name} ({data.seller.commissionPct}%)
+            </div>
+            <div className="text-sm font-semibold tabular-nums">
+              {currency(locale, data.seller.commissionEur)}
+            </div>
+          </div>
+        ) : null}
       </div>
 
       {data.services.length > 0 ? (
