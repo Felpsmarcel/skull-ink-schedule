@@ -32,7 +32,7 @@ export const Route = createFileRoute("/email/unsubscribe")({
         // Look up the token
         const { data: tokenRecord, error: lookupError } = await supabase
           .from('email_unsubscribe_tokens')
-          .select('*')
+          .select('email, used_at')
           .eq('token', token)
           .maybeSingle()
 
@@ -41,10 +41,10 @@ export const Route = createFileRoute("/email/unsubscribe")({
         }
 
         if (tokenRecord.used_at) {
-          return Response.json({ valid: false, reason: 'already_unsubscribed' })
+          return Response.json({ valid: false, used: true, reason: 'already_unsubscribed' })
         }
 
-        return Response.json({ valid: true })
+        return Response.json({ valid: true, used: false, email: tokenRecord.email })
       },
 
       POST: async ({ request }) => {
