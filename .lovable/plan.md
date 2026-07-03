@@ -1,44 +1,58 @@
-# Agenda — Semana e Mês com todos os tatuadores + avatares
+## Objetivo
 
-Confirmado: o **calendário** de todos os tatuadores é visível para todos os usuários (inclusive artistas vendo colegas). Apenas **dados financeiros** de outros tatuadores continuam bloqueados — isso já é garantido pelo `financeiro.tsx` / RPCs; não mexemos.
+Tornar `WeekView` e `MonthView` mobile-first no `/agenda`, mantendo a barra lateral de avatares e os cards de agendamento sempre legíveis em telas ≤390px, sem alterar a lógica de dados (`useStaffRangeAgenda`, RLS, hooks) nem o Day view.
 
-## Escopo (somente `src/routes/_authenticated/agenda.tsx`)
+## Escopo
 
-Remover `restrictArtistId` das views **Semana** e **Mês** — passar sempre `artistId: null` para `useStaffRangeAgenda` nesses dois modos, para que artistas logados também vejam agendamentos dos colegas. Day view continua respeitando `restrictArtistId` (mantém o foco atual).
+Somente `src/routes/_authenticated/agenda.tsx` — `WeekView` (linhas 700–873) e `MonthView` (877–1043). Zero mudanças em backend, hooks, tipos, ou no `financeiro.tsx`.
 
-## Semana — linhas de tatuadores estilo GHL
+## Semana (WeekView)
 
-Trocar o layout atual `[coluna de horas | 7 dias]` por `[sidebar de tatuadores | 7 dias]`:
+Problema atual: grade `min-w-[720px]` força scroll horizontal, cada célula (7 colunas × N artistas) fica com ~40px de largura no mobile, cortando nome do cliente e hora.
 
-```text
-        Seg 30  Ter 01  Qua 02  Qui 03  Sex 04  Sáb 05  Dom 06
-[👤 Ana ]  ██              ██              ██
-[👤 Bru ]          ██              ██
-[👤 Caio]  ██              ██                      ██
-```
+Mudanças:
 
-- Sidebar esquerda (`w-32 sm:w-40`): uma linha por artista com `<Avatar>` (usa `staff.avatarUrl` + fallback `staff.initials`), nome curto e contador `bookedCount` do dia/semana.
-- Colunas: 7 dias no cabeçalho (já existente, mantido).
-- Cada célula (linha do artista × dia): lista compacta empilhada dos eventos daquele artista naquele dia — card com faixa colorida `staff.color`, nome do cliente e horário `HH:mm`. Clique no card abre o `AgendaAppointmentSheet` (mesmo handler atual).
-- Fonte de dados: iterar `agendas` (já vem por artista via `useStaffRangeAgenda`) em vez de `allEvents.flatMap`. Elimina a grade `WEEK_PX_PER_HOUR` (linhas de horas) na semana — ganha densidade e legibilidade em mobile.
-- Mobile (`< sm`): sidebar reduz para `w-14` mostrando só o avatar (nome vira `title`/tooltip). Grade rolável horizontalmente se necessário (`min-w-[720px]`).
+1. **Layout adaptativo por breakpoint**
+   - Mobile (`< sm`): trocar a grade de 7 dias por um **carrossel horizontal por dia** — usar `Tabs` (shadcn) com uma aba por dia da semana (Seg 03, Ter 04, …) e mostrar somente 1 dia por vez. Ativa por padrão o dia atual (ou o dia selecionado via header do calendário).
+   - Cada painel do dia lista os **artistas em linhas verticais empilhadas**, com avatar + nome à esquerda (largura livre, sem `w-32`) e a coluna de agendamentos ocupando o restante.
+   - Desktop (`sm+`): mantém a grade 7 colunas × N artistas atual (comportamento inalterado).
 
-## Mês — mesma grade + pilha de avatares
+2. **Sidebar de artistas no mobile**
+   - Cabeçalho de cada linha de artista: `Avatar` 32px + `shortName` (visível no mobile também) + contador de agendamentos daquele dia. Usar `flex items-center gap-2 min-w-0` com `truncate` no nome.
 
-Manter a grade 7×N atual. Dentro de cada célula de dia:
-- Substituir o texto "N agendamentos" por uma **pilha de avatares** (`flex -space-x-2`) — um `<Avatar className="h-5 w-5 border border-background">` por artista com agendamento nesse dia, no máximo 3 visíveis + badge `+N`.
-- Manter os `StatusBadge` (pago / a receber / pendente) no rodapé da célula.
-- Ordenação dos avatares: pela ordem em `agendas` (estável).
+3. **Cards de agendamento**
+   - Mobile: cards em largura total do painel do dia (`w-full`), fonte `text-xs` (não `text-[10px]`), hora + cliente em duas linhas com `truncate`, badge de status inline.
+   - Desktop: mantém compacto atual.
 
-## Fora do escopo
+4. **Loading/empty states**: manter mensagens existentes, apenas ajustar padding.
 
-- Nenhuma mudança em Day view, hooks (`useStaffRangeAgenda`, `useArtists`), RLS, RPCs ou tabela `appointments`.
-- Nenhuma mudança em `financeiro.tsx` — dados financeiros de outros artistas continuam protegidos pelas policies e pelo RPC `get_my_artist_appointments`.
-- Sem alteração de cores/tokens do design system.
+## Mês (MonthView)
+
+Problema atual: grid 7 colunas em 390px = ~52px por célula; avatares 20px + contador + 3 badges não cabem, sobrepõem.
+
+Mudanças:
+
+1. **Célula compacta no mobile**
+   - Mobile: dentro de cada célula, mostrar apenas: número do dia + **um único indicador** — bolinha colorida no canto quando há agendamentos + contador total (`3`) em `text-[10px]`. Remover a fileira de avatares e as 3 badges de status separadas nesta viewport.
+   - Adicionar um **dot color-coded** por status dominante (verde/amarelo/vermelho) no rodapé da célula.
+   - Desktop (`sm+`): mantém avatares empilhados + badges como está hoje.
+
+2. **Header dos dias da semana**
+   - Manter `grid-cols-7`, mas usar iniciais de 1 letra no mobile (S T Q Q S S D) e `text-[9px]`, para não empurrar largura.
+
+3. **Drill-down (já existe)**: tocar num dia continua abrindo o Day view daquele dia — no mobile essa é a forma principal de ver detalhes, então nenhuma info crítica se perde ao simplificar a célula.
+
+## Detalhes técnicos
+
+- Usar utilitários Tailwind responsivos já presentes no projeto (`sm:`), sem novos breakpoints.
+- Reutilizar `Tabs`, `TabsList`, `TabsTrigger`, `TabsContent` de `@/components/ui/tabs` (já usado no arquivo — confirmar no import block; se não estiver, adicionar apenas o import).
+- Padrão responsivo do design system (`responsive-layout-patterns`): todo container flex com texto usa `min-w-0`; avatares/ícones fixos usam `shrink-0`; nomes usam `truncate`.
+- `restrictArtistId` continua ignorado (visibilidade total mantida).
+- Nenhuma alteração em `useStaffRangeAgenda`, `useRangeAppointmentStatuses`, `AgendaAppointmentSheet` ou nas RPCs.
 
 ## Validação
 
-1. Logar como artista → abrir `/agenda?view=week` → ver linhas de todos os artistas ativos, com os próprios agendamentos e os dos colegas.
-2. `/agenda?view=month` → cada dia com agendamentos mostra avatares empilhados dos artistas envolvidos.
-3. Day view inalterada (artista vê só a própria coluna).
-4. `/financeiro` como artista continua mostrando só as próprias comissões (sem regressão).
+- Preview em 390×844: Week mostra tabs de dias, um dia visível por vez, artistas em linhas legíveis, cards com nome + hora sem cortar.
+- Preview em 390×844: Month cabe 7 colunas sem overflow horizontal, cada célula mostra dia + contador + dot de status.
+- Preview em desktop (≥ sm): layouts atuais preservados sem regressão.
+- Day view, header do calendário, filtros e navegação de datas: sem mudanças.
