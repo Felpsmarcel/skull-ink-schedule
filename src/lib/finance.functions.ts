@@ -12,6 +12,7 @@ export interface ArtistAppointmentRow {
   servicesSummary: string | null;
   commissionEur: number;
   bucket: PaymentBucket;
+  manualOverride: boolean;
 }
 
 export interface AdminAppointmentRow extends ArtistAppointmentRow {
@@ -44,11 +45,23 @@ export type FinanceSummary = ArtistSummary | AdminSummary;
 export function deriveBucket(
   startAt: string,
   hasPayment: boolean,
+  manualOverride?: string | null,
 ): PaymentBucket {
+  const override = parseManualBucket(manualOverride);
+  if (override) return override;
   if (hasPayment) return "pago";
   const start = new Date(startAt).getTime();
   if (start < Date.now()) return "pendente";
   return "a_receber";
+}
+
+export function parseManualBucket(
+  value: string | null | undefined,
+): PaymentBucket | null {
+  if (value === "pago" || value === "pendente" || value === "a_receber") {
+    return value;
+  }
+  return null;
 }
 
 export const getFinanceSummary = createServerFn({ method: "GET" })
