@@ -8,6 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
 import { useArtists } from "@/hooks/use-artists";
@@ -18,6 +25,9 @@ import {
   totalOriginalEur,
 } from "@/stores/appointment-draft";
 import { useFinalizeAppointment } from "@/hooks/use-finalize-appointment";
+import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
+import { listSellers } from "@/lib/sellers.functions";
 
 export const Route = createFileRoute("/_authenticated/appointments/new/checkout")({
   head: () => ({
