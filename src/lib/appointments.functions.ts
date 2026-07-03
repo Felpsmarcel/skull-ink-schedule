@@ -24,6 +24,7 @@ const CreateInputSchema = z.object({
     .enum(["pending", "confirmed", "cancelled", "completed", "no_show"])
     .default("confirmed"),
   services: z.array(ServiceLineSchema).min(1),
+  sellerId: z.string().uuid().nullish(),
 });
 
 export type CreateAppointmentInput = z.infer<typeof CreateInputSchema>;
