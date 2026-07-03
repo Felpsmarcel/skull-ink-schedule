@@ -761,7 +761,48 @@ function WeekView({
     month: "short",
   });
 
+  const [openEvent, setOpenEvent] = useState<{
+    slot: GridSlot;
+    staffName: string;
+    calendarId: string;
+  } | null>(null);
+
+  const openFromEvent = (
+    ev: GhlEvent,
+    staff: (typeof agendas)[number]["staff"],
+  ) => {
+    const s = new Date(ev.startTime).getTime();
+    const e = new Date(ev.endTime).getTime();
+    const name =
+      ev.contact?.name ||
+      [ev.contact?.firstName, ev.contact?.lastName].filter(Boolean).join(" ") ||
+      undefined;
+    const slot: GridSlot = {
+      startMs: s,
+      label: fmtHHmm(s),
+      status: "booked",
+      contactName: name,
+      contactId: ev.contactId ?? ev.contact?.id,
+      ghlEventId: ev.id,
+      appointmentStatus: ev.appointmentStatus,
+      eventStartMs: s,
+      eventEndMs: e,
+      isFirstSlot: true,
+      spanSlots: 1,
+      serviceName: ev.title,
+    };
+    setOpenEvent({ slot, staffName: staff.name, calendarId: staff.calendarId });
+  };
+
+  const tooltipTimeFmt = new Intl.DateTimeFormat(locale, {
+    timeZone: "Europe/Brussels",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+
   return (
+    <TooltipProvider delayDuration={200}>
     <div className="flex-1 overflow-auto">
       {isFetching && totalEvents === 0 ? (
         <div className="p-4 text-xs text-muted-foreground">{t("common.loading")}</div>
@@ -849,9 +890,11 @@ function WeekView({
                           t("agenda.booked");
                         const s = new Date(ev.startTime).getTime();
                         return (
-                          <div
+                          <button
                             key={ev.id}
-                            className="flex items-center gap-2 px-2 py-1.5"
+                            type="button"
+                            onClick={() => openFromEvent(ev, a.staff)}
+                            className="flex w-full items-center gap-2 px-2 py-2 text-left hover:bg-muted/50 active:bg-muted"
                             title={`${name}${ev.title ? " — " + ev.title : ""}`}
                           >
                             <span
@@ -864,8 +907,15 @@ function WeekView({
                             <span className="w-10 shrink-0 text-xs tabular-nums text-muted-foreground">
                               {fmtHHmm(s)}
                             </span>
-                            <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
-                              {name}
+                            <span className="flex min-w-0 flex-1 flex-col">
+                              <span className="truncate text-xs font-medium text-foreground">
+                                {name}
+                              </span>
+                              {ev.title ? (
+                                <span className="truncate text-[10px] text-muted-foreground">
+                                  {ev.title}
+                                </span>
+                              ) : null}
                             </span>
                             {bucket ? (
                               <StatusBadge
@@ -875,7 +925,11 @@ function WeekView({
                                 {bucketLabel(bucket)}
                               </StatusBadge>
                             ) : null}
-                          </div>
+                            <ChevronRight
+                              className="h-3 w-3 shrink-0 text-muted-foreground"
+                              aria-hidden
+                            />
+                          </button>
                         );
                       })}
                     </div>
@@ -979,32 +1033,56 @@ function WeekView({
                           .join(" ") ||
                         t("agenda.booked");
                       const s = new Date(ev.startTime).getTime();
+                      const e = new Date(ev.endTime).getTime();
                       return (
-                        <div
-                          key={ev.id}
-                          title={`${name}${ev.title ? " — " + ev.title : ""}`}
-                          className="overflow-hidden rounded border-l-2 border-foreground bg-background px-1 py-0.5 text-[10px] shadow-sm"
-                        >
-                          <div className="flex items-center gap-1 text-[9px] tabular-nums text-muted-foreground">
-                            <span
-                              className={cn(
-                                "inline-block h-1.5 w-1.5 rounded-full",
-                                a.staff.color,
-                              )}
-                              aria-hidden
-                            />
-                            {fmtHHmm(s)}
-                          </div>
-                          <div className="truncate font-semibold text-foreground">{name}</div>
-                          {bucket ? (
-                            <StatusBadge
-                              variant={bucketToVariant(bucket)}
-                              className="mt-0.5 px-1 py-0 text-[8px]"
+                        <Tooltip key={ev.id}>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              onClick={() => openFromEvent(ev, a.staff)}
+                              className="w-full overflow-hidden rounded border-l-2 border-foreground bg-background px-1 py-0.5 text-left text-[10px] shadow-sm hover:bg-muted focus:outline-none focus:ring-1 focus:ring-foreground/40"
                             >
-                              {bucketLabel(bucket)}
-                            </StatusBadge>
-                          ) : null}
-                        </div>
+                              <div className="flex items-center gap-1 text-[9px] tabular-nums text-muted-foreground">
+                                <span
+                                  className={cn(
+                                    "inline-block h-1.5 w-1.5 shrink-0 rounded-full",
+                                    a.staff.color,
+                                  )}
+                                  aria-hidden
+                                />
+                                <span className="truncate">{fmtHHmm(s)}</span>
+                              </div>
+                              <div className="truncate font-semibold text-foreground">
+                                {name}
+                              </div>
+                              {bucket ? (
+                                <StatusBadge
+                                  variant={bucketToVariant(bucket)}
+                                  className="mt-0.5 px-1 py-0 text-[8px]"
+                                >
+                                  {bucketLabel(bucket)}
+                                </StatusBadge>
+                              ) : null}
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-[240px]">
+                            <div className="flex flex-col gap-0.5">
+                              <div className="text-[11px] font-semibold">
+                                {tooltipTimeFmt.format(new Date(s))}–
+                                {tooltipTimeFmt.format(new Date(e))}
+                              </div>
+                              <div className="text-[11px]">{name}</div>
+                              {ev.title ? (
+                                <div className="text-[10px] opacity-80 line-clamp-2">
+                                  {ev.title}
+                                </div>
+                              ) : null}
+                              <div className="mt-1 text-[9px] uppercase tracking-wide opacity-70">
+                                {a.staff.shortName}
+                              </div>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
                       );
                     })}
                   </div>
@@ -1020,6 +1098,21 @@ function WeekView({
         ) : null}
       </div>
     </div>
+    <AgendaAppointmentSheet
+      open={Boolean(openEvent)}
+      onOpenChange={(o) => {
+        if (!o) setOpenEvent(null);
+      }}
+      slot={openEvent?.slot ?? null}
+      staffName={openEvent?.staffName ?? ""}
+      calendarId={openEvent?.calendarId ?? ""}
+      bucket={
+        openEvent?.slot.ghlEventId
+          ? statusMap.get(openEvent.slot.ghlEventId)
+          : undefined
+      }
+    />
+    </TooltipProvider>
   );
 }
 
