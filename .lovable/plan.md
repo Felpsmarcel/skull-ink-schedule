@@ -1,112 +1,89 @@
-## O que muda para o usuário
+# Vendedores no sistema
 
-Hoje o status ("Pendente", "A receber", "Pago") é **calculado automaticamente**:
+Adicionar o papel "Vendedor" (Leonardo, Juliane, Nívia, Felipe Fernandes) ao sistema. Toda venda de tatuagem pode ter um vendedor associado, com comissão em % fixa por vendedor, aparecendo no Financeiro.
 
-- tem pagamento registrado → **Pago**
-- sem pagamento e horário já passou → **Pendente**
-- sem pagamento e horário no futuro → **A receber**
+## Escopo
 
-Você quer poder **forçar** um desses status direto no agendamento, sem depender de pagamento. Por exemplo: marcar como "Pago" mesmo sem lançar pagamento, ou marcar um agendamento passado como "A receber" porque o cliente vai pagar depois.
+- **Cadastro** de vendedores (nome, % de comissão, ativo) — gerenciado apenas pelo admin.
+- **Seleção** de vendedor no momento de criar o agendamento e também no sheet de um agendamento existente. Admin e tatuador podem escolher.
+- **Financeiro**: mostrar o vendedor e a comissão dele em cada linha, e somar o total de comissão de vendedores.
+- **Semente inicial**: 4 vendedores com 0% (admin ajusta depois).
 
-## Como vai funcionar
+Fora de escopo: login para vendedor, split automático de pagamento, relatório dedicado por vendedor (fica para depois).
 
-No sheet do agendamento (Agenda), na seção **Financeiro**, adiciono um controle novo:
+## Modelo de dados
 
-```text
-Status do pagamento:  [ Automático ▾ ]
-                        Automático (padrão)
-                        Pago
-                        Pendente
-                        A receber
-```
+Nova tabela `public.sellers`:
 
-- **Automático** = usa a regra atual (baseada em pagamentos + data).
-- **Pago / Pendente / A receber** = trava aquele status, ignorando a regra.
+- `name` (text, único)
+- `commission_pct` (numeric, default 0, 0–100)
+- `active` (boolean, default true)
 
-O badge no topo do sheet, na grade da Agenda (semana/dia/mês) e nas listas do Financeiro passam a mostrar o status forçado quando existir; se estiver em "Automático", nada muda em relação a hoje.
+Coluna nova em `public.appointments`:
 
-Um pequeno ícone (ex.: cadeado) aparece no badge quando o status foi definido manualmente, para diferenciar do calculado.
+- `seller_id` (uuid null, FK `sellers.id` ON DELETE SET NULL)
 
-## Permissões
+Regras de acesso:
+- `sellers`: SELECT para `authenticated` (todos precisam listar no dropdown); INSERT/UPDATE/DELETE só para admin (via `current_user_role()`).
+- `appointments.seller_id`: já coberto pelas policies existentes de appointments.
 
-- **Admin**: pode mudar qualquer agendamento.
-- **Tatuador**: pode mudar apenas os seus próprios agendamentos (mesma regra do restante do financeiro).
+Comissão do vendedor por agendamento é calculada em tempo real:
+`seller_commission_eur = round(total_eur * sellers.commission_pct / 100, 2)`
+(não persistimos — segue a % atual do cadastro, igual ao padrão já usado em `commission_pct` do tatuador via `get_monthly_report`).
 
-## Detalhes técnicos
+## Backend (server functions)
 
-### 1. Banco — nova coluna em `appointments`
+Novo arquivo `src/lib/sellers.functions.ts`:
 
-Migration adiciona:
+- `listSellers()` — todos autenticados; retorna ativos (com opção de incluir inativos para admin).
+- `createSeller({ name, commission_pct })` — admin.
+- `updateSeller({ id, name?, commission_pct?, active? })` — admin.
+- `deleteSeller({ id })` — admin (soft: seta active=false; não apaga se houver appointments referenciando).
 
-- `manual_payment_status text NULL` com CHECK `IN ('pago','pendente','a_receber')`.
-- `manual_payment_status_by uuid NULL` (auth.uid de quem definiu, para auditoria).
-- `manual_payment_status_at timestamptz NULL`.
+Ajustes em `src/lib/appointments.functions.ts`:
 
-Sem alteração de RLS (as policies atuais de `appointments` já cobrem UPDATE por admin/tatuador dono).
+- Server fn existente de criação de agendamento passa a aceitar `seller_id` opcional.
+- Nova `setAppointmentSeller({ ghlAppointmentId, seller_id | null })` (mesmo padrão de `setAppointmentPaymentStatus`, com checagem admin/artista).
+- `getAppointmentFinanceByGhlId` retorna `seller: { id, name, commission_pct, commission_eur }` quando houver.
 
-### 2. Lógica de derivação — `src/lib/finance.functions.ts`
+Ajustes em `src/lib/agenda-status.functions.ts` e `finance.functions.ts` para trazer `seller_id`, `seller_name` e `seller_commission_eur` nas listagens que alimentam Agenda e Financeiro.
 
-`deriveBucket()` passa a aceitar um terceiro parâmetro opcional `override`:
+## UI
 
-```ts
-export function deriveBucket(
-  startAt: string,
-  hasPayment: boolean,
-  override?: PaymentBucket | null,
-): PaymentBucket {
-  if (override) return override;
-  if (hasPayment) return "pago";
-  return new Date(startAt).getTime() < Date.now() ? "pendente" : "a_receber";
-}
-```
+**Novo: admin > Vendedores** (`src/routes/_authenticated/_admin/admin.vendedores.tsx`)
+- Tabela simples com nome, % comissão, ativo, ações (editar/desativar).
+- Botão "Novo vendedor".
+- Link no menu admin ao lado de "Equipe".
 
-Todos os call sites que hoje chamam `deriveBucket(startAt, hasPayment)` passam a ler também `manual_payment_status` da linha e repassar. Arquivos tocados:
+**Novo agendamento** (`appointments.new.checkout.tsx` ou passo apropriado)
+- Campo `<Select>` "Vendedor" (opcional, com "Nenhum").
 
-- `src/lib/finance.functions.ts` (resumo do Financeiro — admin e artista)
-- `src/lib/agenda-status.functions.ts` (mapa de status da Agenda)
-- `src/lib/appointments.functions.ts` (`getAppointmentFinanceByGhlId` — badge do sheet)
+**Sheet do agendamento** (`agenda-appointment-sheet.tsx`, seção Financeiro)
+- `<Select>` "Vendedor" abaixo do status manual. Chama `setAppointmentSeller` via `useServerFn`, invalida caches de agenda/financeiro.
+- Quando houver vendedor, mostra "Comissão vendedor: € X,XX (Y%)".
 
-### 3. Nova server function — `setAppointmentPaymentStatus`
+**Financeiro** (`src/routes/_authenticated/financeiro.tsx`)
+- Nova coluna "Vendedor" (nome ou "—").
+- Nova coluna "Comissão vend." (€).
+- Totalizador no rodapé soma a comissão de vendedores do período filtrado.
+- (Sem filtro por vendedor nesta iteração — pode entrar em fase 2 se quiser.)
 
-Em `src/lib/appointments.functions.ts`, com `requireSupabaseAuth`:
+## Migração
 
-- Input: `{ ghlAppointmentId, status: 'pago' | 'pendente' | 'a_receber' | null }` (null = voltar para Automático).
-- Verifica papel: admin passa; tatuador só se `artist_id === current_artist_id()`.
-- Faz `update appointments set manual_payment_status = ?, manual_payment_status_by = auth.uid(), manual_payment_status_at = now() where ghl_appointment_id = ?` via `supabaseAdmin` (após checagem de permissão).
-- Retorna o novo bucket efetivo.
+Uma migration cria `sellers` com GRANTs + RLS + policies, adiciona `seller_id` em `appointments`, e insere os 4 vendedores iniciais com `commission_pct = 0`.
 
-**Não** cria nem apaga registros em `payments`. É apenas um override de exibição/classificação.
+## Arquivos a criar/editar
 
-### 4. UI — `src/components/agenda-appointment-sheet.tsx`
+- criar: `supabase/migrations/<timestamp>_sellers.sql`
+- criar: `src/lib/sellers.functions.ts`
+- criar: `src/routes/_authenticated/_admin/admin.vendedores.tsx`
+- editar: `src/lib/appointments.functions.ts`, `src/lib/finance.functions.ts`, `src/lib/agenda-status.functions.ts`
+- editar: `src/components/agenda-appointment-sheet.tsx`
+- editar: fluxo `appointments.new.*` (passo de checkout)
+- editar: `src/routes/_authenticated/financeiro.tsx`
+- editar: menu admin para incluir link "Vendedores"
 
-Na `FinanceSection`, acima do bloco "Registrar valor / Registrar pagamento", adiciono um `<Select>` com as 4 opções (Automático + 3 status). Ao mudar:
+## Perguntas antes de aprovar
 
-- Chama `setAppointmentPaymentStatus` via `useServerFn`.
-- Invalida `['appointment-finance', ghlId]`, `['finance']`, `['agenda-status']` — igual ao que já é feito nas outras ações do sheet.
-- Toast de sucesso/erro.
-
-O `StatusBadge` do topo do sheet ganha um ícone `Lock` (lucide) quando `manual_payment_status` está preenchido.
-
-### 5. Agenda e Financeiro — badge com indicador
-
-Em `src/routes/_authenticated/agenda.tsx` e `src/routes/_authenticated/financeiro.tsx`, o `StatusBadge` passa a receber opcionalmente um `icon={<Lock className="h-3 w-3" />}` quando a linha vier com `manualOverride: true`. Requer adicionar `manualOverride: boolean` ao shape das linhas em `finance.functions.ts` e `agenda-status.functions.ts`.
-
-Nenhuma mudança nos rótulos ("Pendente", "A receber", "Pago") nem nas cores.
-
-## Arquivos afetados
-
-- `supabase/migrations/<nova>.sql` (colunas de override)
-- `src/lib/finance.functions.ts`
-- `src/lib/agenda-status.functions.ts`
-- `src/lib/appointments.functions.ts` (nova server fn + leitura do override)
-- `src/hooks/use-agenda-status.ts` (repassar `manualOverride`)
-- `src/components/agenda-appointment-sheet.tsx` (Select + ícone)
-- `src/routes/_authenticated/agenda.tsx` (ícone no badge)
-- `src/routes/_authenticated/financeiro.tsx` (ícone no badge)
-
-## Fora do escopo
-
-- Não renomeia os status (continuam "Pendente", "A receber", "Pago").
-- Não muda cores.
-- Não cria/apaga pagamentos automaticamente ao mudar o status.
-- Não adiciona histórico visível de mudanças (só grava quem/quando no banco para auditoria futura).
+1. Confirma **0% inicial** para todos os 4 (você ajusta depois no admin)? Ou já quer definir os %?
+2. Comissão do vendedor **entra como despesa/dedução no total do estúdio** no Financeiro, ou é só informativa (não afeta nenhum outro cálculo hoje)?
