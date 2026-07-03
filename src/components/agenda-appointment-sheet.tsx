@@ -272,6 +272,8 @@ function FinanceSection({
           onPay={() => setShowPaymentForm((v) => !v)}
           editing={showValueForm}
           paying={showPaymentForm}
+          ghlEventId={ghlEventId}
+          onOverrideChanged={invalidateAll}
         />
       )}
 
