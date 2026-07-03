@@ -190,6 +190,7 @@ export const createAppointmentRecord = createServerFn({ method: "POST" })
       commission_pct: commissionPct,
       services: lines,
       notes: data.notes ?? null,
+      seller_id: data.sellerId ?? null,
     };
     const { data: ins, error: insErr } = await supabaseAdmin
       .from("appointments" as never)
