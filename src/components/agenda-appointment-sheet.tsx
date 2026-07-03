@@ -36,8 +36,10 @@ import {
   upsertAppointmentFinance,
   registerAppointmentPayment,
   setAppointmentPaymentStatus,
+  setAppointmentSeller,
   type AppointmentFinanceView,
 } from "@/lib/appointments.functions";
+import { listSellers } from "@/lib/sellers.functions";
 import { listAllServices } from "@/lib/services.functions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
