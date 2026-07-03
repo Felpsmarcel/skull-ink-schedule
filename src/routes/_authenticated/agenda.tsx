@@ -697,12 +697,9 @@ function fmtHHmm(ms: number): string {
 
 /* ============================ WEEK VIEW ============================ */
 
-const WEEK_HOURS = DEFAULT_END_HOUR - DEFAULT_START_HOUR;
-const WEEK_PX_PER_HOUR = 48;
-
 function WeekView({
   date,
-  restrictArtistId,
+  restrictArtistId: _restrictArtistId,
   meReady,
   onPickDay,
 }: {
@@ -717,13 +714,17 @@ function WeekView({
   const endMs = brusselsWeekEndMs(date);
   const days = enumerateBrusselsDays(startMs, endMs + 1);
 
+  // Show ALL artists in week view — calendar visibility is not restricted.
   const { agendas, isFetching } = useStaffRangeAgenda(startMs, endMs, {
-    artistId: restrictArtistId,
+    artistId: null,
     enabled: meReady,
   });
   const { map: statusMap } = useRangeAppointmentStatuses(startMs, endMs, meReady);
 
-  const allEvents = useMemo(() => agendas.flatMap((a) => a.events), [agendas]);
+  const totalEvents = useMemo(
+    () => agendas.reduce((n, a) => n + a.events.length, 0),
+    [agendas],
+  );
 
   const dayFmt = new Intl.DateTimeFormat(locale, {
     timeZone: "Europe/Brussels",
@@ -738,122 +739,135 @@ function WeekView({
 
   return (
     <div className="flex-1 overflow-auto">
-      {isFetching && allEvents.length === 0 ? (
+      {isFetching && totalEvents === 0 ? (
         <div className="p-4 text-xs text-muted-foreground">{t("common.loading")}</div>
       ) : null}
-      <div className="grid min-w-[760px] grid-cols-[56px_repeat(7,minmax(0,1fr))] border-b border-border">
-        <div className="border-r border-border" />
-        {days.map((dayMs) => {
-          const d = new Date(dayMs);
-          const key = brusselsDayKey(d);
-          return (
-            <button
-              key={key}
-              type="button"
-              onClick={() => onPickDay(d)}
-              className={cn(
-                "flex flex-col items-center gap-0.5 border-r border-border px-1 py-2 text-xs uppercase tracking-wide hover:bg-muted",
-                key === todayKey && "bg-muted",
-              )}
-            >
-              <span className="text-[10px] text-muted-foreground">{dayFmt.format(d)}</span>
-              <span className="text-sm font-semibold">{numFmt.format(d)}</span>
-            </button>
-          );
-        })}
-      </div>
-      <div className="relative grid min-w-[760px] grid-cols-[56px_repeat(7,minmax(0,1fr))]">
-        {/* hour column */}
-        <div className="border-r border-border">
-          {Array.from({ length: WEEK_HOURS }).map((_, i) => {
-            const h = DEFAULT_START_HOUR + i;
+      <div className="min-w-[720px]">
+        {/* Header row: sidebar spacer + 7 day headers */}
+        <div className="sticky top-0 z-10 grid grid-cols-[56px_repeat(7,minmax(0,1fr))] border-b border-border bg-background sm:grid-cols-[160px_repeat(7,minmax(0,1fr))]">
+          <div className="border-r border-border" />
+          {days.map((dayMs) => {
+            const d = new Date(dayMs);
+            const key = brusselsDayKey(d);
             return (
-              <div
-                key={h}
-                style={{ height: WEEK_PX_PER_HOUR }}
-                className="flex items-start justify-center pt-1 text-[10px] text-muted-foreground"
+              <button
+                key={key}
+                type="button"
+                onClick={() => onPickDay(d)}
+                className={cn(
+                  "flex flex-col items-center gap-0.5 border-r border-border px-1 py-2 text-xs uppercase tracking-wide hover:bg-muted",
+                  key === todayKey && "bg-muted",
+                )}
               >
-                {String(h).padStart(2, "0")}:00
-              </div>
+                <span className="text-[10px] text-muted-foreground">{dayFmt.format(d)}</span>
+                <span className="text-sm font-semibold">{numFmt.format(d)}</span>
+              </button>
             );
           })}
         </div>
-        {days.map((dayMs) => (
-          <WeekDayColumn
-            key={dayMs}
-            dayStartMs={dayMs}
-            events={allEvents.filter(
-              (e) => brusselsDayKey(new Date(e.startTime)) === brusselsDayKey(new Date(dayMs)),
-            )}
-            statusMap={statusMap}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
 
-function WeekDayColumn({
-  dayStartMs: _dayStartMs,
-  events,
-  statusMap,
-}: {
-  dayStartMs: number;
-  events: GhlEvent[];
-  statusMap: Map<string, PaymentBucket>;
-}) {
-  const { t } = useTranslation();
-  return (
-    <div className="relative border-r border-border">
-      {Array.from({ length: WEEK_HOURS }).map((_, i) => (
-        <div
-          key={i}
-          style={{ height: WEEK_PX_PER_HOUR }}
-          className="border-b border-border/30"
-        />
-      ))}
-      {events.map((ev) => {
-        const s = new Date(ev.startTime).getTime();
-        const e = new Date(ev.endTime).getTime();
-        if (!Number.isFinite(s) || !Number.isFinite(e)) return null;
-        const [sh, sm] = new Intl.DateTimeFormat("en-GB", {
-          timeZone: "Europe/Brussels",
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: false,
-        })
-          .format(new Date(s))
-          .split(":")
-          .map(Number);
-        const startMin = sh * 60 + sm;
-        const durMin = Math.max(15, Math.round((e - s) / 60000));
-        const top = ((startMin - DEFAULT_START_HOUR * 60) / 60) * WEEK_PX_PER_HOUR;
-        const height = (durMin / 60) * WEEK_PX_PER_HOUR;
-        if (top + height <= 0 || top >= WEEK_HOURS * WEEK_PX_PER_HOUR) return null;
-        const bucket = statusMap.get(ev.id);
-        const name =
-          ev.contact?.name ||
-          [ev.contact?.firstName, ev.contact?.lastName].filter(Boolean).join(" ") ||
-          t("agenda.booked");
-        return (
-          <div
-            key={ev.id}
-            title={`${name}${ev.title ? " — " + ev.title : ""}`}
-            style={{ top, height: Math.max(height, 20) }}
-            className="absolute left-0.5 right-0.5 overflow-hidden rounded border-l-4 border-foreground bg-muted px-1 py-0.5 text-[10px]"
-          >
-            <div className="truncate font-semibold">{name}</div>
-            {bucket ? (
-              <StatusBadge
-                variant={bucketToVariant(bucket)}
-                className="mt-0.5 px-1 py-0 text-[8px]"
+        {/* Artist rows */}
+        {agendas.map((a) => {
+          const eventsByDay = new Map<string, GhlEvent[]>();
+          for (const ev of a.events) {
+            const k = brusselsDayKey(new Date(ev.startTime));
+            const arr = eventsByDay.get(k) ?? [];
+            arr.push(ev);
+            eventsByDay.set(k, arr);
+          }
+          for (const arr of eventsByDay.values()) {
+            arr.sort(
+              (x, y) => new Date(x.startTime).getTime() - new Date(y.startTime).getTime(),
+            );
+          }
+          return (
+            <div
+              key={a.staff.id}
+              className="grid grid-cols-[56px_repeat(7,minmax(0,1fr))] border-b border-border sm:grid-cols-[160px_repeat(7,minmax(0,1fr))]"
+            >
+              {/* Sidebar */}
+              <div
+                className="flex items-center gap-2 border-r border-border bg-muted/30 px-1 py-2 sm:px-3"
+                title={a.staff.name}
               >
-                {bucketLabel(bucket)}
-              </StatusBadge>
-            ) : null}
+                <Avatar className="h-8 w-8 shrink-0">
+                  {a.staff.avatarUrl ? (
+                    <AvatarImage src={a.staff.avatarUrl} alt={a.staff.name} />
+                  ) : null}
+                  <AvatarFallback className={cn("text-[10px] text-white", a.staff.color)}>
+                    {a.staff.initials}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="hidden min-w-0 flex-col sm:flex">
+                  <span className="truncate text-xs font-semibold text-foreground">
+                    {a.staff.shortName}
+                  </span>
+                  <span className="text-[10px] tabular-nums text-muted-foreground">
+                    {a.events.length} {t("agenda.month.appts")}
+                  </span>
+                </div>
+              </div>
+              {/* Day cells */}
+              {days.map((dayMs) => {
+                const key = brusselsDayKey(new Date(dayMs));
+                const evs = eventsByDay.get(key) ?? [];
+                return (
+                  <div
+                    key={dayMs}
+                    className={cn(
+                      "min-h-[64px] space-y-1 border-r border-border p-1",
+                      key === todayKey && "bg-muted/40",
+                    )}
+                  >
+                    {evs.map((ev) => {
+                      const bucket = statusMap.get(ev.id);
+                      const name =
+                        ev.contact?.name ||
+                        [ev.contact?.firstName, ev.contact?.lastName]
+                          .filter(Boolean)
+                          .join(" ") ||
+                        t("agenda.booked");
+                      const s = new Date(ev.startTime).getTime();
+                      return (
+                        <div
+                          key={ev.id}
+                          title={`${name}${ev.title ? " — " + ev.title : ""}`}
+                          className="overflow-hidden rounded border-l-2 border-foreground bg-background px-1 py-0.5 text-[10px] shadow-sm"
+                        >
+                          <div className="flex items-center gap-1 text-[9px] tabular-nums text-muted-foreground">
+                            <span
+                              className={cn(
+                                "inline-block h-1.5 w-1.5 rounded-full",
+                                a.staff.color,
+                              )}
+                              aria-hidden
+                            />
+                            {fmtHHmm(s)}
+                          </div>
+                          <div className="truncate font-semibold text-foreground">{name}</div>
+                          {bucket ? (
+                            <StatusBadge
+                              variant={bucketToVariant(bucket)}
+                              className="mt-0.5 px-1 py-0 text-[8px]"
+                            >
+                              {bucketLabel(bucket)}
+                            </StatusBadge>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
+        {agendas.length === 0 && !isFetching ? (
+          <div className="p-4 text-center text-xs text-muted-foreground">
+            {t("common.loading")}
           </div>
-        );
-      })}
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -862,7 +876,7 @@ function WeekDayColumn({
 
 function MonthView({
   date,
-  restrictArtistId,
+  restrictArtistId: _restrictArtistId,
   meReady,
   onPickDay,
 }: {
@@ -884,8 +898,9 @@ function MonthView({
   );
   const days = enumerateBrusselsDays(gridStart, gridEndExclusive);
 
+  // Show ALL artists in month view — calendar visibility is not restricted.
   const { agendas } = useStaffRangeAgenda(gridStart, gridEndExclusive - 1, {
-    artistId: restrictArtistId,
+    artistId: null,
     enabled: meReady,
   });
   const { map: statusMap } = useRangeAppointmentStatuses(
@@ -894,14 +909,24 @@ function MonthView({
     meReady,
   );
 
-  const eventsByDay = useMemo(() => {
-    const m = new Map<string, GhlEvent[]>();
+  type DayInfo = {
+    events: GhlEvent[];
+    artists: Array<{ staff: (typeof agendas)[number]["staff"]; count: number }>;
+  };
+  const infoByDay = useMemo(() => {
+    const m = new Map<string, DayInfo>();
     for (const a of agendas) {
+      const perDay = new Map<string, number>();
       for (const ev of a.events) {
         const key = brusselsDayKey(new Date(ev.startTime));
-        const arr = m.get(key) ?? [];
-        arr.push(ev);
-        m.set(key, arr);
+        perDay.set(key, (perDay.get(key) ?? 0) + 1);
+        const info = m.get(key) ?? { events: [], artists: [] };
+        info.events.push(ev);
+        m.set(key, info);
+      }
+      for (const [key, count] of perDay) {
+        const info = m.get(key)!;
+        info.artists.push({ staff: a.staff, count });
       }
     }
     return m;
@@ -935,7 +960,9 @@ function MonthView({
           const d = new Date(dayMs);
           const key = brusselsDayKey(d);
           const inMonth = key.slice(0, 7) === monthKey;
-          const evs = eventsByDay.get(key) ?? [];
+          const info = infoByDay.get(key);
+          const evs = info?.events ?? [];
+          const artistsHere = info?.artists ?? [];
           const buckets = { paid: 0, pending: 0, error: 0 } as Record<string, number>;
           for (const ev of evs) {
             const b = statusMap.get(ev.id);
@@ -944,6 +971,8 @@ function MonthView({
             else if (b === "pendente") buckets.error++;
             else buckets.pending++;
           }
+          const visibleArtists = artistsHere.slice(0, 3);
+          const extraArtists = artistsHere.length - visibleArtists.length;
           return (
             <button
               key={key}
@@ -956,10 +985,33 @@ function MonthView({
               )}
             >
               <span className="text-xs font-semibold">{numFmt.format(d)}</span>
-              {evs.length > 0 ? (
-                <div className="flex flex-wrap gap-1">
-                  <span className="text-[10px] font-medium text-foreground">
-                    {evs.length} {t("agenda.month.appts")}
+              {artistsHere.length > 0 ? (
+                <div className="flex items-center gap-1">
+                  <div className="flex -space-x-1.5">
+                    {visibleArtists.map((entry) => (
+                      <Avatar
+                        key={entry.staff.id}
+                        className="h-5 w-5 border border-background"
+                        title={`${entry.staff.name} — ${entry.count}`}
+                      >
+                        {entry.staff.avatarUrl ? (
+                          <AvatarImage src={entry.staff.avatarUrl} alt={entry.staff.name} />
+                        ) : null}
+                        <AvatarFallback
+                          className={cn("text-[8px] text-white", entry.staff.color)}
+                        >
+                          {entry.staff.initials}
+                        </AvatarFallback>
+                      </Avatar>
+                    ))}
+                  </div>
+                  {extraArtists > 0 ? (
+                    <span className="text-[9px] font-semibold tabular-nums text-muted-foreground">
+                      +{extraArtists}
+                    </span>
+                  ) : null}
+                  <span className="ml-1 text-[10px] font-medium tabular-nums text-foreground">
+                    {evs.length}
                   </span>
                 </div>
               ) : null}
