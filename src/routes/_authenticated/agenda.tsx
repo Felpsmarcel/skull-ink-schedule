@@ -47,6 +47,7 @@ import type { GhlEvent } from "@/lib/ghl";
 import { AgendaAppointmentSheet } from "@/components/agenda-appointment-sheet";
 import type { GridSlot } from "@/lib/agenda-grid";
 import { AlertTriangle as AlertTriangleIcon } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 type View = "day" | "week" | "month";
 
