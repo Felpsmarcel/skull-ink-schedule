@@ -466,8 +466,13 @@ function ValueForm({
   );
 
   const mutation = useMutation({
-    mutationFn: (payload: Parameters<typeof upsert>[0]["data"]) =>
-      upsert({ data: payload }),
+    mutationFn: (payload: {
+      ghlEventId: string;
+      totalEur: number | null;
+      discountEur: number;
+      commissionPct: number | null;
+      services: Array<{ serviceId: string; quantity: number }>;
+    }) => upsert({ data: payload }),
     onSuccess: () => {
       toast.success("Valor salvo.");
       onSaved();
@@ -657,8 +662,15 @@ function PaymentForm({
   const [notes, setNotes] = useState("");
 
   const mutation = useMutation({
-    mutationFn: (payload: Parameters<typeof register>[0]["data"]) =>
-      register({ data: payload }),
+    mutationFn: (payload: {
+      ghlEventId: string;
+      amountEur: number;
+      type: "deposit" | "final" | "refund";
+      method: "cash" | "card" | "transfer" | "payconiq" | "other";
+      status: "pending" | "paid" | "refunded";
+      paidAtISO: string;
+      notes: string | null;
+    }) => register({ data: payload }),
     onSuccess: () => {
       toast.success("Pagamento registrado.");
       onSaved();
