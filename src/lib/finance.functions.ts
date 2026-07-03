@@ -223,3 +223,30 @@ export const getFinanceSummary = createServerFn({ method: "GET" })
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
+
+async function fetchOverrideMap(
+  supabase: { from: (t: never) => unknown },
+  ids: string[],
+): Promise<Map<string, string | null>> {
+  const map = new Map<string, string | null>();
+  if (ids.length === 0) return map;
+  const { data, error } = await (supabase as {
+    from: (t: string) => {
+      select: (s: string) => {
+        in: (
+          k: string,
+          v: string[],
+        ) => Promise<{ data: Array<{ id: string; manual_payment_status: string | null }> | null; error: { message: string } | null }>;
+      };
+    };
+  })
+    .from("appointments")
+    .select("id, manual_payment_status")
+    .in("id", ids);
+  if (error) {
+    console.warn("finance fetchOverrideMap failed", error.message);
+    return map;
+  }
+  for (const r of data ?? []) map.set(r.id, r.manual_payment_status);
+  return map;
+}
