@@ -19,6 +19,9 @@ export interface AdminAppointmentRow extends ArtistAppointmentRow {
   totalEur: number;
   studioEur: number;
   artistId: string;
+  sellerId: string | null;
+  sellerName: string | null;
+  sellerCommissionEur: number;
 }
 
 export interface ArtistSummary {
@@ -37,6 +40,7 @@ export interface AdminSummary {
   pago: number;
   pendente: number;
   aReceber: number;
+  vendedorComissaoTotal: number;
   rows: AdminAppointmentRow[];
 }
 
