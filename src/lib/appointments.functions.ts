@@ -313,7 +313,7 @@ export const getAppointmentFinanceByGhlId = createServerFn({ method: "GET" })
     const { data: apptRow, error: apptErr } = await supabase
       .from("appointments" as never)
       .select(
-        "id, artist_id, total_eur, original_eur, discount_eur, commission_pct, services, manual_payment_status",
+        "id, artist_id, total_eur, original_eur, discount_eur, commission_pct, services, manual_payment_status, seller_id",
       )
       .eq("ghl_appointment_id", data.ghlEventId)
       .maybeSingle();
@@ -328,6 +328,7 @@ export const getAppointmentFinanceByGhlId = createServerFn({ method: "GET" })
           commission_pct: number | string | null;
           services: unknown;
           manual_payment_status: string | null;
+          seller_id: string | null;
         }
       | null;
 
@@ -347,6 +348,7 @@ export const getAppointmentFinanceByGhlId = createServerFn({ method: "GET" })
         paidTotalEur: 0,
         balanceEur: null,
         manualPaymentStatus: null,
+        seller: null,
       };
     }
 
@@ -367,6 +369,7 @@ export const getAppointmentFinanceByGhlId = createServerFn({ method: "GET" })
         paidTotalEur: 0,
         balanceEur: null,
         manualPaymentStatus: null,
+        seller: null,
       };
     }
 
