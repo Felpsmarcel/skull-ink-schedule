@@ -380,13 +380,15 @@ function AdminView({
               <th className="px-3 py-2 text-right">Total</th>
               <th className="px-3 py-2 text-right">Comissão 40%</th>
               <th className="px-3 py-2 text-right">Estúdio 60%</th>
+              <th className="px-3 py-2 text-left">Vendedor</th>
+              <th className="px-3 py-2 text-right">Com. vend.</th>
               <th className="px-3 py-2 text-right">Status</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-3 py-6 text-center text-muted-foreground">
+                <td colSpan={8} className="px-3 py-6 text-center text-muted-foreground">
                   {emptyMsg}
                 </td>
               </tr>
@@ -404,6 +406,10 @@ function AdminView({
                   </td>
                   <td className="px-3 py-2 text-right text-emerald-600">
                     {formatCurrency(r.studioEur)}
+                  </td>
+                  <td className="px-3 py-2 text-muted-foreground">{r.sellerName ?? "—"}</td>
+                  <td className="px-3 py-2 text-right text-amber-600">
+                    {r.sellerName ? formatCurrency(r.sellerCommissionEur) : "—"}
                   </td>
                   <td className="px-3 py-2 text-right">
                     <StatusBadge variant={bucketToVariant(r.bucket)}>
