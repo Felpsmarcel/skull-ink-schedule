@@ -619,29 +619,66 @@ export const registerAppointmentPayment = createServerFn({ method: "POST" })
 
     const { data: apptRow, error: apptErr } = await supabase
       .from("appointments" as never)
-      .select("id, artist_id, contact_id")
+      .select("id, artist_id, contact_id, ghl_contact_id, contact_name, contact_email, contact_phone")
       .eq("ghl_appointment_id", data.ghlEventId)
       .maybeSingle();
     if (apptErr) throw new Error(apptErr.message);
     const appt = apptRow as
-      | { id: string; artist_id: string; contact_id: string | null }
+      | {
+          id: string;
+          artist_id: string;
+          contact_id: string | null;
+          ghl_contact_id: string | null;
+          contact_name: string | null;
+          contact_email: string | null;
+          contact_phone: string | null;
+        }
       | null;
     if (!appt) throw new Error("Agendamento não encontrado no banco.");
     if (me.role !== "admin" && appt.artist_id !== me.artistId) {
       throw new Error("Forbidden: não é seu agendamento");
     }
-    if (!appt.contact_id) {
-      throw new Error(
-        "Agendamento sem contato vinculado no banco — não é possível registrar pagamento.",
-      );
-    }
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Resolve contact_id (backfill if missing) so we can insert the payment.
+    let contactId = appt.contact_id;
+    if (!contactId) {
+      if (!appt.ghl_contact_id) {
+        throw new Error(
+          "Agendamento sem contato vinculado — vincule um cliente antes de registrar o pagamento.",
+        );
+      }
+      const { data: upserted, error: upsertErr } = await supabaseAdmin
+        .from("contacts" as never)
+        .upsert(
+          {
+            ghl_contact_id: appt.ghl_contact_id,
+            name: appt.contact_name?.trim() || "Sem nome",
+            email: appt.contact_email ?? null,
+            phone: appt.contact_phone ?? null,
+          } as never,
+          { onConflict: "ghl_contact_id" },
+        )
+        .select("id")
+        .single();
+      if (upsertErr || !upserted) {
+        throw new Error(
+          `Falha ao vincular contato: ${upsertErr?.message ?? "sem dado"}`,
+        );
+      }
+      contactId = (upserted as { id: string }).id;
+      await supabaseAdmin
+        .from("appointments" as never)
+        .update({ contact_id: contactId } as never)
+        .eq("id", appt.id);
+    }
+
     const { data: ins, error: insErr } = await supabaseAdmin
       .from("payments" as never)
       .insert({
         appointment_id: appt.id,
-        contact_id: appt.contact_id,
+        contact_id: contactId,
         amount_eur: round2(data.amountEur),
         type: data.type,
         method: data.method,

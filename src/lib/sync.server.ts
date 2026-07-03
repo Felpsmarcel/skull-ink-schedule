@@ -134,6 +134,65 @@ export async function syncGhlAppointments(opts?: {
     fetched += res.events.length;
     if (res.events.length === 0) continue;
 
+    // Ensure a contacts row exists for every event that carries a GHL contact.
+    // Without this, appointments.contact_id stays NULL and payments (which
+    // require contact_id NOT NULL) cannot be recorded.
+    const contactIdMap = new Map<string, string>(); // ghl_contact_id -> contacts.id
+    const contactUpserts: Array<{
+      ghl_contact_id: string;
+      name: string;
+      email: string | null;
+      phone: string | null;
+    }> = [];
+    const seenGhl = new Set<string>();
+    for (const e of res.events) {
+      const gid = e.contactId ?? e.contact?.id;
+      if (!gid || seenGhl.has(gid)) continue;
+      seenGhl.add(gid);
+      const name =
+        e.contact?.name?.trim() ||
+        [e.contact?.firstName, e.contact?.lastName].filter(Boolean).join(" ").trim() ||
+        "Sem nome";
+      contactUpserts.push({
+        ghl_contact_id: gid,
+        name,
+        email: null,
+        phone: null,
+      });
+    }
+    if (contactUpserts.length > 0) {
+      const { data: cRows, error: cErr } = await supabaseAdmin
+        .from("contacts" as never)
+        .upsert(contactUpserts as never, {
+          onConflict: "ghl_contact_id",
+          ignoreDuplicates: false,
+        })
+        .select("id, ghl_contact_id");
+      if (cErr) {
+        errors.push(`contacts upsert: ${cErr.message}`);
+      } else {
+        for (const r of (cRows ?? []) as Array<{ id: string; ghl_contact_id: string }>) {
+          contactIdMap.set(r.ghl_contact_id, r.id);
+        }
+      }
+      // Fallback: fetch any that upsert.select didn't return.
+      const missing = contactUpserts
+        .map((c) => c.ghl_contact_id)
+        .filter((g) => !contactIdMap.has(g));
+      if (missing.length > 0) {
+        const { data: fetchRows } = await supabaseAdmin
+          .from("contacts" as never)
+          .select("id, ghl_contact_id")
+          .in("ghl_contact_id", missing);
+        for (const r of (fetchRows ?? []) as Array<{
+          id: string;
+          ghl_contact_id: string;
+        }>) {
+          contactIdMap.set(r.ghl_contact_id, r.id);
+        }
+      }
+    }
+
     // Concurrent runs (cron + manual admin click) can race the read-then-insert
     // pattern and trip the unique index on ghl_appointment_id. Split into:
     //   - upsert(ignoreDuplicates) for net-new rows: safe under concurrency, and
@@ -162,6 +221,10 @@ export async function syncGhlAppointments(opts?: {
       const rows = toInsert.map((e) => ({
         ghl_appointment_id: e.id,
         ghl_contact_id: e.contactId ?? null,
+        contact_id:
+          (e.contactId && contactIdMap.get(e.contactId)) ??
+          (e.contact?.id && contactIdMap.get(e.contact.id)) ??
+          null,
         artist_id: artist.id,
         calendar_id: calId,
         contact_name:
@@ -200,6 +263,10 @@ export async function syncGhlAppointments(opts?: {
     for (const e of toUpdate) {
       // Only refresh non-sensitive fields. NEVER overwrite total_eur,
       // commission_pct, or services — those belong to checkout.
+      const linkedContactId =
+        (e.contactId && contactIdMap.get(e.contactId)) ??
+        (e.contact?.id && contactIdMap.get(e.contact.id)) ??
+        null;
       const { error: upErr } = await supabaseAdmin
         .from("appointments" as never)
         .update(
@@ -211,6 +278,7 @@ export async function syncGhlAppointments(opts?: {
               e.contact?.name ??
               ([e.contact?.firstName, e.contact?.lastName].filter(Boolean).join(" ") || null),
             ghl_contact_id: e.contactId ?? null,
+            ...(linkedContactId ? { contact_id: linkedContactId } : {}),
             calendar_id: calId,
           } as never,
         )
