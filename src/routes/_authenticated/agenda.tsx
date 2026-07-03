@@ -1191,6 +1191,12 @@ function MonthView({
     timeZone: "Europe/Brussels",
     weekday: "narrow",
   });
+  const monthTimeFmt = new Intl.DateTimeFormat(locale, {
+    timeZone: "Europe/Brussels",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
 
   const headerDays = days.slice(0, 7);
 
@@ -1236,11 +1242,31 @@ function MonthView({
               : dominant === "error"
                 ? "bg-red-500"
                 : "bg-amber-500";
+          const sortedEvs = [...evs].sort(
+            (x, y) =>
+              new Date(x.startTime).getTime() - new Date(y.startTime).getTime(),
+          );
+          const summaryLines = sortedEvs.slice(0, 8).map((ev) => {
+            const nm =
+              ev.contact?.name ||
+              [ev.contact?.firstName, ev.contact?.lastName]
+                .filter(Boolean)
+                .join(" ") ||
+              t("agenda.booked");
+            return `${monthTimeFmt.format(new Date(ev.startTime))} · ${nm}`;
+          });
+          const extraLines = sortedEvs.length - summaryLines.length;
+          const dayTitle =
+            summaryLines.length > 0
+              ? summaryLines.join("\n") +
+                (extraLines > 0 ? `\n+${extraLines}` : "")
+              : undefined;
           return (
             <button
               key={key}
               type="button"
               onClick={() => onPickDay(d)}
+              title={dayTitle}
               className={cn(
                 "flex min-h-[56px] flex-col items-start gap-1 border-b border-r border-border p-1 text-left transition-colors hover:bg-muted sm:min-h-[88px] sm:p-1.5",
                 !inMonth && "bg-background/50 text-muted-foreground/60",
