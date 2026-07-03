@@ -13,6 +13,7 @@ import {
   Wallet,
   Plus,
   Loader2,
+  Lock,
 } from "lucide-react";
 
 import {
@@ -34,6 +35,7 @@ import {
   getAppointmentFinanceByGhlId,
   upsertAppointmentFinance,
   registerAppointmentPayment,
+  setAppointmentPaymentStatus,
   type AppointmentFinanceView,
 } from "@/lib/appointments.functions";
 import { listAllServices } from "@/lib/services.functions";
