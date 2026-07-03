@@ -1,44 +1,44 @@
+# Agenda — Semana e Mês com todos os tatuadores + avatares
 
-## Objetivo
-No mobile (≤640px), o dashboard da Agenda hoje mostra várias colunas de tatuadores lado a lado com `min-w-[120px]`, obrigando scroll horizontal e deixando nomes/cards apertados e cortados. Vamos reorganizar o layout apenas em mobile, sem mexer em desktop nem em lógica de dados.
+Confirmado: o **calendário** de todos os tatuadores é visível para todos os usuários (inclusive artistas vendo colegas). Apenas **dados financeiros** de outros tatuadores continuam bloqueados — isso já é garantido pelo `financeiro.tsx` / RPCs; não mexemos.
 
-## Mudanças (somente `src/routes/_authenticated/agenda.tsx` + `src/lib/agenda-grid.ts` se necessário para nada além de larguras)
+## Escopo (somente `src/routes/_authenticated/agenda.tsx`)
 
-### 1. Escolha de "coluna ativa" no mobile (Day view)
-- Em `< sm`, em vez de renderizar todas as colunas de artistas ao mesmo tempo, mostrar **uma coluna por vez**, ocupando 100% da largura útil (menos a coluna de horas).
-- Adicionar um seletor horizontal rolável (chips) acima da grid com o nome curto de cada artista + contagem (`3 · 12`).
-  - Estado local `activeStaffId` no `DayView`; default = primeiro artista (ou o do usuário se `restrictArtistId`).
-  - Chip ativo: fundo `foreground`, texto `background`. Inativo: borda hairline.
-- Em `sm:`+ manter o comportamento atual (todas as colunas visíveis, sem chips).
+Remover `restrictArtistId` das views **Semana** e **Mês** — passar sempre `artistId: null` para `useStaffRangeAgenda` nesses dois modos, para que artistas logados também vejam agendamentos dos colegas. Day view continua respeitando `restrictArtistId` (mantém o foco atual).
 
-### 2. Dimensionamento das colunas
-- Trocar `COL_WIDTH = "min-w-[120px] basis-0 grow"` por classes responsivas:
-  - Mobile: `w-full` (coluna única ocupa todo o espaço).
-  - `sm:` em diante: `sm:min-w-[140px] sm:basis-0 sm:grow` (comportamento atual).
-- Coluna de horas: reduzir de `w-14` para `w-10` no mobile (`w-10 sm:w-14`) e diminuir a fonte para `text-[9px] sm:text-[10px]`.
+## Semana — linhas de tatuadores estilo GHL
 
-### 3. Cards de eventos legíveis no mobile
-- Nos cards renderizados dentro de `StaffColumn` (bloco de evento):
-  - Padding `p-1.5 sm:p-2`.
-  - Título: `text-[11px] sm:text-[12px] font-semibold`, `line-clamp-2`.
-  - Faixa de horário: `text-[10px]` com `tabular-nums`.
-  - Esconder `StatusBadge` quando a duração < 60 min (já existe lógica parcial; garantir threshold no mobile em 45 min).
-  - Rail lateral: manter, largura `w-1`.
+Trocar o layout atual `[coluna de horas | 7 dias]` por `[sidebar de tatuadores | 7 dias]`:
 
-### 4. Header e KPI ribbon
-- Header: reduzir gap para `gap-2` no mobile, esconder o botão "Hoje" (já está `sm:inline-flex`), garantir que Tabs (`Day/Week/Month`) quebrem para linha própria quando não couberem: envolver em `w-full sm:w-auto` na Tabs e `justify-between` no wrapper.
-- KPI ribbon: já é `flex-wrap`; reduzir `text-[11px]` para `text-[10px]` no mobile e ajustar `gap-x-4`.
+```text
+        Seg 30  Ter 01  Qua 02  Qui 03  Sex 04  Sáb 05  Dom 06
+[👤 Ana ]  ██              ██              ██
+[👤 Bru ]          ██              ██
+[👤 Caio]  ██              ██                      ██
+```
 
-### 5. Week/Month views
-- Não afetadas por este ajuste (já são grids semanais/mensais). Apenas revisar se algum `min-w-` força overflow horizontal indesejado; se sim, trocar por `w-full` no mobile.
+- Sidebar esquerda (`w-32 sm:w-40`): uma linha por artista com `<Avatar>` (usa `staff.avatarUrl` + fallback `staff.initials`), nome curto e contador `bookedCount` do dia/semana.
+- Colunas: 7 dias no cabeçalho (já existente, mantido).
+- Cada célula (linha do artista × dia): lista compacta empilhada dos eventos daquele artista naquele dia — card com faixa colorida `staff.color`, nome do cliente e horário `HH:mm`. Clique no card abre o `AgendaAppointmentSheet` (mesmo handler atual).
+- Fonte de dados: iterar `agendas` (já vem por artista via `useStaffRangeAgenda`) em vez de `allEvents.flatMap`. Elimina a grade `WEEK_PX_PER_HOUR` (linhas de horas) na semana — ganha densidade e legibilidade em mobile.
+- Mobile (`< sm`): sidebar reduz para `w-14` mostrando só o avatar (nome vira `title`/tooltip). Grade rolável horizontalmente se necessário (`min-w-[720px]`).
+
+## Mês — mesma grade + pilha de avatares
+
+Manter a grade 7×N atual. Dentro de cada célula de dia:
+- Substituir o texto "N agendamentos" por uma **pilha de avatares** (`flex -space-x-2`) — um `<Avatar className="h-5 w-5 border border-background">` por artista com agendamento nesse dia, no máximo 3 visíveis + badge `+N`.
+- Manter os `StatusBadge` (pago / a receber / pendente) no rodapé da célula.
+- Ordenação dos avatares: pela ordem em `agendas` (estável).
 
 ## Fora do escopo
-- Alterações em hooks, queries, GHL ou payloads.
-- Mudanças de design system, cores ou tipografia.
-- Refatoração de `AgendaAppointmentSheet`.
+
+- Nenhuma mudança em Day view, hooks (`useStaffRangeAgenda`, `useArtists`), RLS, RPCs ou tabela `appointments`.
+- Nenhuma mudança em `financeiro.tsx` — dados financeiros de outros artistas continuam protegidos pelas policies e pelo RPC `get_my_artist_appointments`.
+- Sem alteração de cores/tokens do design system.
 
 ## Validação
-1. Preview em 390×844 (mobile atual do usuário): uma coluna por vez, chips no topo, sem scroll horizontal na grid.
-2. Preview em 768px+: layout atual preservado (todas as colunas visíveis).
-3. Clicar num card ainda abre o `AgendaAppointmentSheet`.
-4. Trocar de artista pelos chips mantém o mesmo dia/hora selecionado.
+
+1. Logar como artista → abrir `/agenda?view=week` → ver linhas de todos os artistas ativos, com os próprios agendamentos e os dos colegas.
+2. `/agenda?view=month` → cada dia com agendamentos mostra avatares empilhados dos artistas envolvidos.
+3. Day view inalterada (artista vê só a própria coluna).
+4. `/financeiro` como artista continua mostrando só as próprias comissões (sem regressão).
