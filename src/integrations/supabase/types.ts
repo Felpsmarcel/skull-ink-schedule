@@ -114,6 +114,7 @@ export type Database = {
           manual_payment_status_by: string | null
           notes: string | null
           original_eur: number
+          seller_id: string | null
           services: Json
           start_at: string
           status: Database["public"]["Enums"]["appt_status"]
@@ -143,6 +144,7 @@ export type Database = {
           manual_payment_status_by?: string | null
           notes?: string | null
           original_eur?: number
+          seller_id?: string | null
           services?: Json
           start_at: string
           status?: Database["public"]["Enums"]["appt_status"]
@@ -172,6 +174,7 @@ export type Database = {
           manual_payment_status_by?: string | null
           notes?: string | null
           original_eur?: number
+          seller_id?: string | null
           services?: Json
           start_at?: string
           status?: Database["public"]["Enums"]["appt_status"]
@@ -200,6 +203,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "sellers"
             referencedColumns: ["id"]
           },
         ]
@@ -669,6 +679,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      sellers: {
+        Row: {
+          active: boolean
+          commission_pct: number
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          commission_pct?: number
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          commission_pct?: number
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       services: {
         Row: {
