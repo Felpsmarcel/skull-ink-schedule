@@ -277,6 +277,12 @@ export interface AppointmentFinanceView {
   paidTotalEur: number;
   balanceEur: number | null;
   manualPaymentStatus: PaymentBucket | null;
+  seller: {
+    id: string;
+    name: string;
+    commissionPct: number;
+    commissionEur: number;
+  } | null;
 }
 
 async function authorizeArtistOrAdmin(
