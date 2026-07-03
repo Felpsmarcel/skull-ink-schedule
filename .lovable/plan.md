@@ -1,50 +1,55 @@
-## Resumo
+## Diagnóstico
 
-Boa notícia: o esquema para conectar valores do agendamento ao Financeiro **já existe** no banco. O que falta é a UI para exibir/editar o valor a partir do agendamento e a sincronização quando o valor for informado no momento do agendamento (não só depois no /financeiro).
+O erro `"Agendamento sem contato vinculado no banco — não é possível registrar pagamento."` vem de `registerAppointmentPayment` em `src/lib/appointments.functions.ts`, que exige `appointments.contact_id` (uuid) para inserir em `payments` (a coluna `payments.contact_id` é `NOT NULL`).
 
-## Como está hoje
+Verifiquei no banco:
 
-- `public.appointments` já tem `total_eur`, `original_eur`, `discount_eur`, `commission_pct`, `services jsonb`, `ghl_appointment_id` (link com o evento do calendário mostrado na Agenda).
-- `public.appointment_services` guarda linhas de serviço com `price_eur`, `duration_min`, `quantity`.
-- `public.payments` guarda recebimentos (`amount_eur`, `type`, `method`, `status`, `paid_at`) com FK a `appointment_id`.
-- `src/lib/finance.functions.ts` já lê de `appointments.total_eur` para produzir os relatórios do Financeiro.
-- `src/lib/sync.server.ts` já faz upsert de eventos do GHL para `appointments` (via `ghl_appointment_id`), então cada card do calendário tem uma linha correspondente no banco.
+- `appointments.contact_id` (uuid, FK para `contacts.id`) está **NULL em todos os registros**.
+- A tabela `appointments` só está guardando `ghl_contact_id` (texto vindo do GHL).
+- A sincronização `src/lib/sync.server.ts` faz upsert do agendamento com `ghl_contact_id`, mas **nunca cria/vincula a linha em `public.contacts`** nem preenche `appointments.contact_id`.
+- A tabela `contacts` existe e tem `ghl_contact_id` — é onde o `contact_id` deveria apontar.
 
-Ou seja, os dados já falam a mesma língua — falta ligar as duas telas na interface.
+Ou seja: o pagamento falha porque o "elo" entre agendamento e contato no banco nunca foi criado. Não é bug do formulário, é dado ausente.
 
-## O que fazer (3 partes)
+## Como resolver
 
-### 1. Mostrar o valor no sheet de detalhes do agendamento
-- No `AgendaAppointmentSheet`, buscar por `ghl_appointment_id` a linha em `appointments` (novo server fn `getAppointmentByGhlId` em `src/lib/appointments.functions.ts`, com `requireSupabaseAuth`).
-- Exibir bloco **"Financeiro"** com: `total_eur`, `original_eur`, `discount_eur`, `commission_pct`, resumo de serviços (`services jsonb`) e status de pagamento (o `bucket` já vem do `useRangeAppointmentStatuses`).
-- Restrição já discutida: mostrar valores APENAS quando o `artist_id` da linha for o próprio usuário logado (ou admin). Para os demais tatuadores, esconder o bloco financeiro e mostrar apenas "Valor não visível".
+Duas correções complementares — a primeira desbloqueia agora, a segunda evita repetir o problema.
 
-### 2. Adicionar/editar valor a partir do sheet
-- Botão "Registrar valor" abre um mini-form (dentro do próprio sheet ou num sub-dialog):
-  - `total_eur` (obrigatório), `discount_eur` (opcional), `commission_pct` (default do artista).
-  - Seleção de serviços (multi-select de `public.services`) → grava linhas em `appointment_services` e recalcula `total_eur` automaticamente.
-- Salvar chama um server fn `upsertAppointmentFinance` (`requireSupabaseAuth` + policy `artist_id = auth.uid()` ou admin) que:
-  1. Garante que existe row em `appointments` (se ainda não sincronizada, cria via `ghl_appointment_id` + dados do evento).
-  2. Atualiza `total_eur`, `original_eur`, `discount_eur`, `commission_pct`, `services jsonb`.
-  3. Substitui `appointment_services` do agendamento.
-- Após salvar, invalidar `["finance", ...]` e `["appointment", ghlId]` no react-query — o /financeiro atualiza automaticamente.
+### 1. Resolver o contato na hora de registrar o pagamento (desbloqueio imediato)
 
-### 3. (Opcional, mesma tela) Registrar pagamento
-- Botão secundário "Registrar pagamento" abre form curto: `amount_eur`, `method`, `type` (sinal/final/etc.), `paid_at` → insere em `payments`.
-- Isso alimenta o bucket de status (pago/a receber/pendente) já usado pelo `StatusBadge` na Agenda.
+Em `registerAppointmentPayment` (`src/lib/appointments.functions.ts`), quando `appt.contact_id` for `null`:
 
-## Escopo técnico
+1. Ler `appt.ghl_contact_id`, `contact_name`, `contact_phone`, `contact_email` do próprio agendamento.
+2. Fazer `upsert` em `public.contacts` por `ghl_contact_id` (com nome/telefone/e-mail que já temos) usando `supabaseAdmin`, retornando o `id`.
+3. Fazer `update` em `appointments.contact_id = <novo id>` (backfill, para próximas vezes ser instantâneo).
+4. Inserir o `payments` com esse `contact_id`.
 
-- **Sem mudança de schema** — todas as colunas já existem.
-- Novos arquivos: `src/lib/appointments.functions.ts` (já existe, adicionar 2 funções), possivelmente `src/components/appointment-finance-form.tsx`.
-- Alteração: `src/components/agenda-appointment-sheet.tsx` (novo bloco Financeiro + botões).
-- RLS: usar policies já existentes de `appointments` / `appointment_services` / `payments`; validar via read query se `artist_id = auth.uid()` está coberto (senão, adicionar policy owner-scoped na mesma migração).
-- Nenhuma alteração no /financeiro — ele passa a mostrar o valor automaticamente porque lê da mesma tabela.
+Se `appt.ghl_contact_id` também for null (agendamento manual sem contato), aí sim mostrar mensagem clara pedindo pra vincular um contato.
 
-## Perguntas antes de implementar
+### 2. Corrigir a sincronização (para novos agendamentos nascerem vinculados)
 
-1. **Quem pode registrar valor?** Só o próprio tatuador do agendamento, ou também admin/dono do estúdio pode registrar por qualquer artista?
-2. **Serviços obrigatórios ou valor livre?** Preferir "escolher serviços do catálogo (`services`) e somar" ou permitir digitar um valor livre sem serviços?
-3. **Pagamento no mesmo fluxo ou depois?** Registrar valor + pagamento juntos no sheet, ou apenas valor na Agenda e pagamento continua sendo feito na tela /financeiro?
+Em `src/lib/sync.server.ts`, dentro do loop que faz upsert de eventos GHL, antes de gravar o `appointments`:
 
-Responda essas 3 e eu implemento no próximo turno.
+- Se `e.contactId` existir, fazer `upsert` em `public.contacts` (por `ghl_contact_id`) com os dados de contato do evento e recuperar o `id`.
+- Gravar esse `id` em `appointments.contact_id` junto com `ghl_contact_id`.
+
+Assim todo agendamento novo já sai com o link pronto e o botão "Registrar pagamento" funciona de primeira, sem fallback.
+
+### 3. (Opcional, mesma migração) Backfill único dos agendamentos existentes
+
+Migration SQL que, para cada `appointments` com `contact_id IS NULL AND ghl_contact_id IS NOT NULL`:
+
+- Insere em `contacts` (`ON CONFLICT (ghl_contact_id) DO NOTHING`) usando `contact_name/phone/email` do próprio agendamento.
+- `UPDATE appointments a SET contact_id = c.id FROM contacts c WHERE c.ghl_contact_id = a.ghl_contact_id AND a.contact_id IS NULL`.
+
+Com isso, os agendamentos que já existem (incluindo o do print, Thomas Watt) passam a aceitar pagamento sem precisar de upsert em runtime.
+
+## Escopo
+
+- **Editado:** `src/lib/appointments.functions.ts` (fallback em `registerAppointmentPayment`), `src/lib/sync.server.ts` (upsert de contact + link).
+- **Migração:** backfill de `appointments.contact_id` + garantir índice único em `contacts.ghl_contact_id` se ainda não existir.
+- **Sem mudanças de UI** — o sheet e o formulário continuam iguais; só o backend passa a resolver o contato sozinho.
+
+## Confirme antes de eu implementar
+
+Quer que eu faça as 3 partes (fix imediato + fix da sync + backfill) ou só o fix imediato agora?
