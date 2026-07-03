@@ -698,3 +698,41 @@ export const registerAppointmentPayment = createServerFn({ method: "POST" })
     if (insErr || !ins) throw new Error(insErr?.message ?? "Falha ao registrar pagamento");
     return { paymentId: (ins as { id: string }).id };
   });
+
+const SetStatusSchema = z.object({
+  ghlEventId: z.string().min(1),
+  status: z.enum(["pago", "pendente", "a_receber"]).nullable(),
+});
+
+export const setAppointmentPaymentStatus = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => SetStatusSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const me = await authorizeArtistOrAdmin(supabase, userId);
+
+    const { data: apptRow, error: apptErr } = await supabase
+      .from("appointments" as never)
+      .select("id, artist_id")
+      .eq("ghl_appointment_id", data.ghlEventId)
+      .maybeSingle();
+    if (apptErr) throw new Error(apptErr.message);
+    const appt = apptRow as { id: string; artist_id: string } | null;
+    if (!appt) throw new Error("Agendamento não encontrado no banco.");
+    if (me.role !== "admin" && appt.artist_id !== me.artistId) {
+      throw new Error("Forbidden: não é seu agendamento");
+    }
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error: updErr } = await supabaseAdmin
+      .from("appointments" as never)
+      .update({
+        manual_payment_status: data.status,
+        manual_payment_status_by: data.status ? userId : null,
+        manual_payment_status_at: data.status ? new Date().toISOString() : null,
+      } as never)
+      .eq("id", appt.id);
+    if (updErr) throw new Error(updErr.message);
+
+    return { appointmentId: appt.id, manualPaymentStatus: data.status };
+  });
