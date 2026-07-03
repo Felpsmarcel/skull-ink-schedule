@@ -95,7 +95,7 @@ export const getFinanceSummary = createServerFn({ method: "GET" })
         "get_my_artist_appointments" as never,
       );
       if (error) throw new Error(error.message);
-      const rows: ArtistAppointmentRow[] = (
+      const rpcRows = (
         (data ?? []) as Array<{
           id: string;
           start_at: string;
@@ -105,10 +105,17 @@ export const getFinanceSummary = createServerFn({ method: "GET" })
           services_summary: string | null;
           commission_eur: number | string;
         }>
-      )
-        .sort((a, b) => (a.start_at < b.start_at ? 1 : -1))
+      ).sort((a, b) => (a.start_at < b.start_at ? 1 : -1));
+
+      const overrideMap = await fetchOverrideMap(
+        supabase,
+        rpcRows.map((r) => r.id),
+      );
+
+      const rows: ArtistAppointmentRow[] = rpcRows
         .map((r) => {
         const commission = Number(r.commission_eur);
+        const manualRaw = overrideMap.get(r.id) ?? null;
         return {
           id: r.id,
           startAt: r.start_at,
@@ -117,7 +124,8 @@ export const getFinanceSummary = createServerFn({ method: "GET" })
           contactName: r.contact_name,
           servicesSummary: r.services_summary,
           commissionEur: commission,
-          bucket: deriveBucket(r.start_at, paidIds.has(r.id)),
+          bucket: deriveBucket(r.start_at, paidIds.has(r.id), manualRaw),
+          manualOverride: parseManualBucket(manualRaw) !== null,
         };
       });
 
@@ -143,7 +151,7 @@ export const getFinanceSummary = createServerFn({ method: "GET" })
     const { data, error } = await supabase
       .from("appointments" as never)
       .select(
-        "id,artist_id,start_at,end_at,status,contact_name,total_eur,commission_pct,services",
+        "id,artist_id,start_at,end_at,status,contact_name,total_eur,commission_pct,services,manual_payment_status",
       )
       .order("start_at", { ascending: false });
     if (error) throw new Error(error.message);
@@ -159,6 +167,7 @@ export const getFinanceSummary = createServerFn({ method: "GET" })
         total_eur: number | string;
         commission_pct: number | string;
         services: Array<{ name?: string }>;
+        manual_payment_status: string | null;
       }>
     ).map((r) => {
       const total = Number(r.total_eur);
@@ -179,7 +188,8 @@ export const getFinanceSummary = createServerFn({ method: "GET" })
         totalEur: round2(total),
         commissionEur: commission,
         studioEur: studio,
-        bucket: deriveBucket(r.start_at, paidIds.has(r.id)),
+        bucket: deriveBucket(r.start_at, paidIds.has(r.id), r.manual_payment_status),
+        manualOverride: parseManualBucket(r.manual_payment_status) !== null,
       };
     });
 
