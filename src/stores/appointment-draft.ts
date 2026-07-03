@@ -16,6 +16,7 @@ export interface AppointmentDraft {
   startISO: string | null;
   services: DraftServiceLine[];
   notes: string;
+  sellerId: string | null;
 }
 
 interface State extends AppointmentDraft {
@@ -26,6 +27,7 @@ interface State extends AppointmentDraft {
   removeService: (id: string) => void;
   setDiscount: (serviceId: string, pct: number) => void;
   setNotes: (n: string) => void;
+  setSeller: (id: string | null) => void;
   reset: () => void;
 }
 
@@ -35,6 +37,7 @@ const initial: AppointmentDraft = {
   startISO: null,
   services: [],
   notes: "",
+  sellerId: null,
 };
 
 export const useAppointmentDraft = create<State>()(
@@ -61,11 +64,12 @@ export const useAppointmentDraft = create<State>()(
           ),
         })),
       setNotes: (notes) => set({ notes: notes.slice(0, 1000) }),
+      setSeller: (sellerId) => set({ sellerId }),
       reset: () => set({ ...initial }),
     }),
     {
       name: "gf-appointment-draft",
-      version: 2,
+      version: 3,
       storage: createJSONStorage(() =>
         typeof window !== "undefined" ? sessionStorage : (undefined as unknown as Storage),
       ),
