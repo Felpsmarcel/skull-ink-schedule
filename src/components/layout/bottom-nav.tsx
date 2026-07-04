@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { CalendarDays, Plus, User as UserIcon, Wallet } from "lucide-react";
+import { haptic } from "@/lib/haptics";
 
 export function BottomNav() {
   const { t } = useTranslation();
@@ -11,9 +12,12 @@ export function BottomNav() {
       <NavLink to="/financeiro" icon={<Wallet className="h-5 w-5" />} label={t("nav.financeiro", { defaultValue: "Financeiro" })} />
       <button
         type="button"
-        onClick={() => navigate({ to: "/appointments/new" })}
+        onClick={() => {
+          haptic("tap");
+          navigate({ to: "/appointments/new" });
+        }}
         aria-label={t("nav.new")}
-        className="-mt-6 grid h-14 w-14 place-items-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 ring-4 ring-background"
+        className="-mt-6 grid h-14 w-14 place-items-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 ring-4 ring-background transition-transform duration-100 active:scale-90"
       >
         <Plus className="h-7 w-7" />
       </button>
@@ -27,7 +31,8 @@ function NavLink({ to, icon, label }: { to: string; icon: React.ReactNode; label
     <Link
       to={to}
       activeOptions={{ exact: false }}
-      className="flex flex-1 flex-col items-center gap-0.5 py-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground data-[status=active]:text-primary"
+      onClick={() => haptic("tap")}
+      className="flex flex-1 flex-col items-center gap-0.5 py-1 text-[10px] uppercase tracking-wider text-muted-foreground transition-transform duration-100 hover:text-foreground active:scale-95 data-[status=active]:text-primary"
     >
       {icon}
       {label}
