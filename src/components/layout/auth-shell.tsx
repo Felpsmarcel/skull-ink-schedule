@@ -19,7 +19,9 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-svh flex-col bg-background">
       <TopBar />
-      <div className="flex-1">{children}</div>
+      <div key={pathname} data-route-fade className="flex-1">
+        {children}
+      </div>
       <BottomNav />
     </div>
   );

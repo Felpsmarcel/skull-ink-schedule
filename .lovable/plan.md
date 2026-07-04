@@ -1,50 +1,84 @@
+# App mais fluido no mobile (iPhone-first)
 
-# Ajustes no bloco Financeiro do agendamento
+Foco: **Agenda + fluidez de base + PWA instalável**, priorizando os três atritos que você marcou (registrar pagamento, ver "a receber", criar agendamento com cliente conhecido).
 
-## Objetivo
-Deixar o painel de pagamentos claro (Total, Pago, Falta) e evitar cadastros incorretos que geram saldo negativo como o do print (Total 1.000 €, Recebido 1.300 €, Saldo −300 €).
+Não é redesenho visual — é comportamento, densidade e polimento nativo-like. Vou entregar em **3 fases**, cada uma independente. Você aprova uma por vez.
 
-## O que muda
+---
 
-### 1. Formulário "Registrar pagamento"
-- **Valor**: campo começa **vazio** (hoje vem pré-preenchido com o saldo).
-- **Tipo**: dropdown manual com opções **Sinal / Final / Reembolso** (hoje é decidido automaticamente).
-- **Método**: mantém como está (cash, transfer, card, etc.).
-- **Data**: mantém como está.
-- **Validação de overpagamento**:
-  - Se `Pago + novo valor > Total`, mostra aviso amarelo dentro do formulário:
-    *"Este pagamento excede o total em X €. Confirmar mesmo assim?"*
-  - Botão "Salvar" fica desabilitado até o usuário marcar uma checkbox **"Confirmo o valor excedente"**.
-  - Reembolso e valores dentro do total não disparam o aviso.
+## Fase 1 — Base iPhone-like (fundação para tudo o resto)
 
-### 2. Grade de resumo (mantida, com destaques)
-Mesmos 5 blocos de hoje: **Total · Sinal · Recebido · Saldo · Comissão** (+ Comissão vendedor quando existir).
-Muda apenas a cor do bloco **Saldo / Saldo restante**:
+Sem isso as próximas fases parecem "site em telefone".
 
-| Situação | Rótulo | Cor do valor |
-|---|---|---|
-| `balance > 0` | "Falta a receber" | vermelho (`text-destructive`) |
-| `balance = 0` | "Quitado" | verde (`text-emerald-600`) |
-| `balance < 0` (overpago) | "Crédito do cliente" | âmbar (`text-amber-600`) com ícone de aviso |
+1. **PWA instalável** (sem offline, conforme pediu):
+  - `public/manifest.webmanifest` com nome, `display: standalone`, theme/background color, ícones 192/512 e maskable.
+  - Meta tags no `__root.tsx`: `apple-touch-icon`, `apple-mobile-web-app-capable`, `theme-color`, `viewport` com `viewport-fit=cover`.
+  - Ícones gerados a partir do logo atual (fundo escuro do studio).
+  - Sem service worker.
+2. **Safe area do iPhone** (notch/Dynamic Island + home indicator):
+  - `env(safe-area-inset-*)` no `bottom-nav`, headers sticky e FAB "+".
+  - `body { min-height: 100dvh }` (troca `100vh` que dá o famoso corte).
+3. **Sem zoom acidental em inputs iOS**:
+  - Regra global: inputs com `font-size: 16px` (Safari só evita zoom acima disso).
+4. **Feedback tátil e press-states**:
+  - `active:scale-[0.97] transition-transform` nos botões primários e cards clicáveis.
+  - Helper `haptic()` chamando `navigator.vibrate(10)` em: abrir sheet do agendamento, confirmar pagamento, salvar novo agendamento. (No-op onde não suportado — Safari iOS ignora silenciosamente, sem quebrar.)
+5. **Skeletons em vez de spinners** nas listas principais (agenda, financeiro, serviços) — percepção de velocidade.
+6. **Transição de rota** curta (fade 120ms) — remove o "flash" branco.
 
-### 3. Lista de "Pagamentos"
-Sem mudança estrutural. Cada linha continua mostrando `Tipo · Método · Data · Valor`. Reembolso segue com sinal negativo.
+---
+
+## Fase 2 — Agenda mais fluida
+
+Foco na tela mais usada.
+
+1. **Swipe horizontal entre dias** (view Day):
+  - Framer Motion `drag="x"` com snap + threshold; ao passar do limite, chama `nextDay()`/`prevDay()` já existente.
+  - Setas ← → continuam funcionando.
+2. **Header compacto e "sticky-shrink"**:
+  - Ao rolar, o header (data + Day/Week/Month + chips de artista) encolhe para uma barra fina só com data + artista ativo. Ganha altura útil.
+  - Chips de artistas com `snap-x` no scroll horizontal e o ativo se auto-centraliza.
+3. **Long-press em slot vazio → novo agendamento naquele horário**:
+  - 400ms de press → abre `/appointments/new` com `startISO` e `artistId` pré-preenchidos.
+  - Um tap continua fazendo o que faz hoje.
+4. **Pull-to-refresh** na agenda (react-use-gesture ou implementação leve com touch events) que dispara `queryClient.invalidateQueries(['agenda'])`.
+5. **Botão "+" flutuante já existe** — vou aumentar target para 56px e adicionar sombra elevada + `active:scale`.
+6. **Contadores dos chips** (`0·0`, `18·0`) — legenda discreta abaixo: "reservados · livres" (hoje é críptico).
+
+---
+
+## Fase 3 — Atalhos para os 3 momentos de atrito
+
+1. **Registrar pagamento em ≤ 3 taps**:
+  - No sheet do agendamento, mover "Registrar pagamento" para botão primário grande no rodapé fixo do sheet.
+  - Dentro do formulário: 3 chips de valor rápido — **Total** · **Saldo** · **Metade** — que preenchem o campo. (Campo continua editável e vazio por padrão, como definido.)
+  - Método "Dinheiro" fica pré-selecionado (mais comum). Tipo continua manual.
+2. **Widget "A receber" sempre visível**:
+  - No topo do Menu/Profile, card com valor **A receber hoje** e **A receber total** (usa `useFinanceSummary` que já existe).
+  - Toque no card → abre `/financeiro` com filtro `bucket=a_receber` já aplicado.
+3. **Cliente conhecido em 1 tap**:
+  - No `/appointments/new`, seção Client, mostrar **"Recentes"** — últimos 5 clientes atendidos pelo artista logado (query nas `appointments` mais recentes).
+  - Tap em um recente pula o autocomplete do GHL.
+
+---
 
 ## Detalhes técnicos
 
-**Arquivos afetados:**
-- `src/components/agenda-appointment-sheet.tsx`
-  - `PaymentForm`: trocar `useState(String(suggestedAmount))` por `useState("")`; adicionar `<Select>` para `type` (default vazio, obrigatório); adicionar lógica de aviso de overpagamento + checkbox de confirmação.
-  - `FinanceBody`: rótulo e cor dinâmica no bloco Saldo conforme tabela acima.
-- `src/lib/appointments.functions.ts`
-  - `registerAppointmentPayment`: aceitar `type` vindo do cliente (hoje é inferido). Manter fallback automático se o cliente não enviar (compatibilidade). Sem validação server-side de overpagamento — decisão é do usuário no cliente conforme escolhido.
+**Dependências novas:** apenas `framer-motion` (leve, ~30KB gz) para swipe/drag. Nada mais.
 
-**Sem migrações de banco.** Os campos `payments.type` e `payments.amount_eur` já existem e aceitam os três tipos.
+**Arquivos principais afetados:**
 
-**Sem alteração em:**
-- Checkout de novo agendamento (sinal no momento da criação continua igual).
-- Cálculo de comissão.
-- Status manual, seller picker, edição de valor.
+- Fase 1: `public/manifest.webmanifest` (novo), `public/icons/*` (novo), `src/routes/__root.tsx`, `src/styles.css`, `src/components/layout/bottom-nav.tsx`, novo `src/lib/haptics.ts`, novo `src/components/ui/skeleton-*.tsx` (usar shadcn existente).
+- Fase 2: `src/routes/_authenticated/agenda.tsx`, `src/hooks/use-agenda.ts` (invalidação para pull-to-refresh), `src/lib/agenda-grid.ts` (long-press).
+- Fase 3: `src/components/agenda-appointment-sheet.tsx` (chips de valor rápido + rodapé fixo), `src/routes/_authenticated/menu.tsx` (widget), `src/routes/_authenticated/appointments.new.index.tsx` (recentes), nova server fn `listRecentClients` em `src/lib/appointments.functions.ts`.
 
-## Fora do escopo
-- Corrigir automaticamente o agendamento do print (300 € a mais). Depois do deploy, você pode ajustar manualmente via "Reembolso" de 300 €, ou eu apago um dos pagamentos duplicados se preferir — me avise após aprovar o plano.
+**Sem alteração em:** cálculo financeiro, sync GHL, autenticação, banco de dados (fase 3 só lê tabelas existentes).
+
+**Fora do escopo desta rodada:** offline real (precisa service worker + estratégia de sync), notificações push, arrastar agendamento para remarcar (drag-and-drop de eventos exige refazer o grid).
+
+---
+
+## Como quer prosseguir?
+
+Sugiro implementar **Fase 1** primeiro (é o que muda a sensação geral e habilita a instalação no iPhone). Depois você testa 1-2 dias no seu iPhone e me diz se seguimos com Fase 2 ou ajustamos. Se preferir, posso fazer as 3 de uma vez — só é uma mudança maior para revisar.  
+**Fase 1** primeiro ok

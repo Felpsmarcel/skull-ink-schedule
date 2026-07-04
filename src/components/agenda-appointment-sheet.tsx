@@ -43,6 +43,7 @@ import { listSellers } from "@/lib/sellers.functions";
 import { listAllServices } from "@/lib/services.functions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { haptic } from "@/lib/haptics";
 import {
   Select,
   SelectContent,
@@ -744,6 +745,7 @@ function PaymentForm({
       notes: string | null;
     }) => register({ data: payload }),
     onSuccess: () => {
+      haptic("success");
       toast.success("Pagamento registrado.");
       onSaved();
     },
