@@ -16,6 +16,8 @@ export interface Service {
   description_short: string | null;
   sort_order: number;
   active: boolean;
+  /** When true, price is not fixed — value must be entered manually at checkout. */
+  price_on_request: boolean;
 }
 
 interface RawServiceRow {
@@ -30,6 +32,7 @@ interface RawServiceRow {
   description_short: string | null;
   sort_order: number | null;
   active: boolean;
+  price_on_request: boolean | null;
 }
 
 export async function fetchActiveServices(): Promise<Service[]> {
@@ -52,7 +55,7 @@ export async function fetchActiveServices(): Promise<Service[]> {
   })
     .from("services")
     .select(
-      "id,name,category,duration_min,modality,price_eur,price_max_eur,description,description_short,sort_order,active",
+      "id,name,category,duration_min,modality,price_eur,price_max_eur,description,description_short,sort_order,active,price_on_request",
     )
     .eq("active", true)
     .order("category", { ascending: true })
@@ -76,6 +79,7 @@ export async function fetchActiveServices(): Promise<Service[]> {
     description_short: r.description_short,
     sort_order: r.sort_order ?? 0,
     active: r.active,
+    price_on_request: Boolean(r.price_on_request),
   }));
 }
 
@@ -89,6 +93,14 @@ export function formatPrice(eur: number): string {
 export function formatPriceRange(min: number, max: number | null): string {
   if (max == null || max === min) return formatPrice(min);
   return `${formatPrice(min)} – ${formatPrice(max)}`;
+}
+
+/** Human label for a service price, honoring the "sob consulta" flag. */
+export function formatServicePrice(
+  s: Pick<Service, "price_eur" | "price_max_eur" | "price_on_request">,
+): string {
+  if (s.price_on_request) return "Sob consulta";
+  return formatPriceRange(s.price_eur, s.price_max_eur);
 }
 
 const MODALITY_LABELS: Record<ServiceModality, string> = {
