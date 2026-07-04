@@ -17,6 +17,7 @@ export interface FinalizeInput {
   status?: "pending" | "confirmed" | "cancelled" | "completed" | "no_show";
   services: DraftServiceLine[];
   sellerId?: string | null;
+  depositEur?: number;
 }
 
 export type FinalizeResult = CreateAppointmentResult;
@@ -46,8 +47,10 @@ export async function finalizeAppointment(input: FinalizeInput): Promise<Finaliz
       services: input.services.map((l) => ({
         id: l.service.id,
         discountPct: l.discountPct,
+        overridePriceEur: l.overridePriceEur ?? null,
       })),
       sellerId: input.sellerId ?? null,
+      depositEur: input.depositEur ?? 0,
     },
   });
 }

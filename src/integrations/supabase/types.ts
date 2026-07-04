@@ -103,6 +103,7 @@ export type Database = {
           contact_phone: string | null
           created_at: string
           created_by: string | null
+          deposit_eur: number
           discount_eur: number | null
           end_at: string
           ghl_appointment_id: string | null
@@ -133,6 +134,7 @@ export type Database = {
           contact_phone?: string | null
           created_at?: string
           created_by?: string | null
+          deposit_eur?: number
           discount_eur?: number | null
           end_at: string
           ghl_appointment_id?: string | null
@@ -163,6 +165,7 @@ export type Database = {
           contact_phone?: string | null
           created_at?: string
           created_by?: string | null
+          deposit_eur?: number
           discount_eur?: number | null
           end_at?: string
           ghl_appointment_id?: string | null
@@ -720,6 +723,7 @@ export type Database = {
           name: string
           price_eur: number
           price_max_eur: number | null
+          price_on_request: boolean
           sort_order: number | null
         }
         Insert: {
@@ -734,6 +738,7 @@ export type Database = {
           name: string
           price_eur: number
           price_max_eur?: number | null
+          price_on_request?: boolean
           sort_order?: number | null
         }
         Update: {
@@ -748,6 +753,7 @@ export type Database = {
           name?: string
           price_eur?: number
           price_max_eur?: number | null
+          price_on_request?: boolean
           sort_order?: number | null
         }
         Relationships: []

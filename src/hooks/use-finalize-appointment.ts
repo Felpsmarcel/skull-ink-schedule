@@ -53,6 +53,7 @@ export function useFinalizeAppointment() {
         status: "confirmed",
         services,
         sellerId: draft.sellerId ?? null,
+        depositEur: draft.depositEur ?? 0,
       });
 
       await queryClient.invalidateQueries({ queryKey: ["agenda"] });

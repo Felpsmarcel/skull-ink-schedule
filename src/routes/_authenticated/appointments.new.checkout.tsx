@@ -21,6 +21,9 @@ import { useArtists } from "@/hooks/use-artists";
 import { formatPrice, modalityLabel } from "@/lib/services";
 import {
   useAppointmentDraft,
+  balanceEur,
+  draftValuesComplete,
+  linePriceEur,
   totalFinalEur,
   totalOriginalEur,
 } from "@/stores/appointment-draft";
@@ -68,12 +71,17 @@ function CheckoutPage() {
   const original = totalOriginalEur(draft);
   const final = totalFinalEur(draft);
   const hasDiscount = final < original;
+  const deposit = Math.min(Math.max(0, draft.depositEur || 0), final);
+  const balance = balanceEur(draft);
+  const valuesComplete = draftValuesComplete(draft);
   const canFinalize = Boolean(
     draft.contact &&
       draft.calendarId &&
       staff &&
       draft.startISO &&
-      draft.services.length > 0,
+      draft.services.length > 0 &&
+      valuesComplete &&
+      deposit <= final,
   );
 
   return (
@@ -178,8 +186,10 @@ function CheckoutPage() {
           ) : (
             <ul className="space-y-2">
               {draft.services.map((l) => {
-                const lineFinal = l.service.price_eur * (1 - l.discountPct / 100);
+                const base = linePriceEur(l);
+                const lineFinal = base * (1 - l.discountPct / 100);
                 const hasDisc = l.discountPct > 0;
+                const onRequest = l.service.price_on_request;
                 return (
                   <li
                     key={l.service.id}
@@ -193,14 +203,38 @@ function CheckoutPage() {
                         </div>
                       </div>
                       <div className="text-right">
-                        {hasDisc ? (
+                        {hasDisc && base > 0 ? (
                           <div className="text-[10px] text-muted-foreground line-through">
-                            {formatPrice(l.service.price_eur)}
+                            {formatPrice(base)}
                           </div>
                         ) : null}
-                        <div className="text-sm font-semibold">{formatPrice(lineFinal)}</div>
+                        <div className="text-sm font-semibold">
+                          {onRequest && base === 0 ? "—" : formatPrice(lineFinal)}
+                        </div>
                       </div>
                     </div>
+                    {onRequest ? (
+                      <div className="mt-2 flex items-center gap-2">
+                        <Label className="text-[11px] text-muted-foreground">
+                          Valor (€)
+                        </Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={l.overridePriceEur ?? ""}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            draft.setOverridePrice(
+                              l.service.id,
+                              v === "" ? null : Number(v),
+                            );
+                          }}
+                          placeholder="0,00"
+                          className="h-7 w-28 text-xs"
+                        />
+                      </div>
+                    ) : null}
                     <div className="mt-2 flex items-center gap-2">
                       <Label className="text-[11px] text-muted-foreground">
                         {t("appt.discount")} %
@@ -246,7 +280,7 @@ function CheckoutPage() {
         </section>
 
         {/* Totals */}
-        <section className="rounded-lg border border-border bg-card p-3 text-sm">
+        <section className="space-y-2 rounded-lg border border-border bg-card p-3 text-sm">
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">{t("appt.total")}</span>
             <div className="text-right">
@@ -258,6 +292,43 @@ function CheckoutPage() {
               <div className="text-lg font-bold">{formatPrice(final)}</div>
             </div>
           </div>
+
+          <div className="flex items-center justify-between gap-3">
+            <Label htmlFor="deposit" className="text-muted-foreground">
+              Sinal pago (€)
+            </Label>
+            <Input
+              id="deposit"
+              type="number"
+              min={0}
+              step="0.01"
+              value={draft.depositEur || ""}
+              onChange={(e) => {
+                const v = e.target.value;
+                draft.setDeposit(v === "" ? 0 : Number(v));
+              }}
+              placeholder="0,00"
+              className="h-8 w-32 text-right text-sm"
+            />
+          </div>
+
+          {deposit > 0 ? (
+            <div className="flex items-center justify-between border-t border-border pt-2">
+              <span className="font-semibold">Saldo restante</span>
+              <span className="text-lg font-bold">{formatPrice(balance)}</span>
+            </div>
+          ) : null}
+
+          {draft.depositEur > final && final > 0 ? (
+            <p className="text-[11px] text-destructive">
+              O sinal não pode ser maior que o total.
+            </p>
+          ) : null}
+          {!valuesComplete ? (
+            <p className="text-[11px] text-destructive">
+              Informe o valor dos serviços marcados como “sob consulta”.
+            </p>
+          ) : null}
         </section>
       </main>
 

@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { formatPriceRange, type ServiceModality } from "@/lib/services";
+import { formatServicePrice, type ServiceModality } from "@/lib/services";
 import { listAllServices, createService, updateService, toggleServiceActive } from "@/lib/services.functions";
 import { cn } from "@/lib/utils";
 
@@ -150,7 +150,11 @@ function ServicesPage() {
                           )}
                           <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                             <span className="font-medium text-foreground">
-                              {formatPriceRange(toNum(s.price_eur), toNum(s.price_max_eur))}
+                              {formatServicePrice({
+                                price_eur: toNum(s.price_eur),
+                                price_max_eur: toNum(s.price_max_eur),
+                                price_on_request: Boolean(s.price_on_request),
+                              })}
                             </span>
                             <span>{s.duration_min} min</span>
                           </div>
@@ -211,6 +215,9 @@ function ServiceForm({ initial, onDone }: { initial: Row | null; onDone: () => v
   const [descShort, setDescShort] = useState(initial?.description_short ?? "");
   const [desc, setDesc] = useState(initial?.description ?? "");
   const [active, setActive] = useState(initial?.active ?? true);
+  const [priceOnRequest, setPriceOnRequest] = useState(
+    Boolean(initial?.price_on_request),
+  );
 
   const saveMut = useMutation({
     mutationFn: async () => {
@@ -219,11 +226,16 @@ function ServiceForm({ initial, onDone }: { initial: Row | null; onDone: () => v
         category: category.trim(),
         duration_min: Number(duration) || 0,
         modality,
-        price_eur: Number(priceMin) || 0,
-        price_max_eur: priceMax.trim() === "" ? null : Number(priceMax),
+        price_eur: priceOnRequest ? 0 : Number(priceMin) || 0,
+        price_max_eur: priceOnRequest
+          ? null
+          : priceMax.trim() === ""
+            ? null
+            : Number(priceMax),
         description: desc.trim() || null,
         description_short: descShort.trim() || null,
         active,
+        price_on_request: priceOnRequest,
       };
       if (initial) {
         await update({ data: { id: initial.id, patch: payload } });
@@ -278,13 +290,21 @@ function ServiceForm({ initial, onDone }: { initial: Row | null; onDone: () => v
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label htmlFor="sf-pmin">Preço (€)</Label>
-          <Input id="sf-pmin" type="number" step="0.01" value={priceMin} onChange={(e) => setPriceMin(e.target.value)} required />
+          <Input id="sf-pmin" type="number" step="0.01" value={priceMin} onChange={(e) => setPriceMin(e.target.value)} required={!priceOnRequest} disabled={priceOnRequest} />
         </div>
         <div>
           <Label htmlFor="sf-pmax">Preço máx (€)</Label>
-          <Input id="sf-pmax" type="number" step="0.01" value={priceMax} onChange={(e) => setPriceMax(e.target.value)} placeholder="—" />
+          <Input id="sf-pmax" type="number" step="0.01" value={priceMax} onChange={(e) => setPriceMax(e.target.value)} placeholder="—" disabled={priceOnRequest} />
         </div>
       </div>
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={priceOnRequest}
+          onChange={(e) => setPriceOnRequest(e.target.checked)}
+        />
+        Preço sob consulta (valor digitado no agendamento)
+      </label>
       <div>
         <Label htmlFor="sf-ds">Descrição curta</Label>
         <Input id="sf-ds" value={descShort ?? ""} onChange={(e) => setDescShort(e.target.value)} maxLength={200} />
