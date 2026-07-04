@@ -367,14 +367,36 @@ function FinanceBody({
             {currency(locale, data.paidTotalEur)}
           </div>
         </div>
-        <div>
-          <div className="text-[9px] uppercase tracking-wider text-muted-foreground">
-            {data.depositEur > 0 ? "Saldo restante" : "Saldo"}
-          </div>
-          <div className="text-sm font-semibold tabular-nums">
-            {currency(locale, data.balanceEur)}
-          </div>
-        </div>
+        {(() => {
+          const bal = data.balanceEur;
+          let label = data.depositEur > 0 ? "Saldo restante" : "Saldo";
+          let cls = "text-sm font-semibold tabular-nums";
+          let icon: React.ReactNode = null;
+          if (bal != null) {
+            if (bal > 0.005) {
+              label = "Falta a receber";
+              cls += " text-destructive";
+            } else if (bal < -0.005) {
+              label = "Crédito do cliente";
+              cls += " text-amber-600";
+              icon = <AlertTriangle className="inline h-3 w-3 mr-1" />;
+            } else {
+              label = "Quitado";
+              cls += " text-emerald-600";
+            }
+          }
+          return (
+            <div>
+              <div className="text-[9px] uppercase tracking-wider text-muted-foreground">
+                {label}
+              </div>
+              <div className={cls}>
+                {icon}
+                {currency(locale, bal)}
+              </div>
+            </div>
+          );
+        })()}
         <div>
           <div className="text-[9px] uppercase tracking-wider text-muted-foreground">
             Comissão ({data.commissionPct ?? "—"}%)
