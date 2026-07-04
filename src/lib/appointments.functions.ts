@@ -322,6 +322,7 @@ export interface AppointmentFinanceView {
   discountEur: number | null;
   commissionPct: number | null;
   commissionEur: number | null;
+  depositEur: number;
   services: AppointmentFinanceLine[];
   payments: Array<{
     id: string;
@@ -371,7 +372,7 @@ export const getAppointmentFinanceByGhlId = createServerFn({ method: "GET" })
     const { data: apptRow, error: apptErr } = await supabase
       .from("appointments" as never)
       .select(
-        "id, artist_id, total_eur, original_eur, discount_eur, commission_pct, services, manual_payment_status, seller_id",
+        "id, artist_id, total_eur, original_eur, discount_eur, commission_pct, services, manual_payment_status, seller_id, deposit_eur",
       )
       .eq("ghl_appointment_id", data.ghlEventId)
       .maybeSingle();
@@ -387,6 +388,7 @@ export const getAppointmentFinanceByGhlId = createServerFn({ method: "GET" })
           services: unknown;
           manual_payment_status: string | null;
           seller_id: string | null;
+          deposit_eur: number | string | null;
         }
       | null;
 
@@ -401,6 +403,7 @@ export const getAppointmentFinanceByGhlId = createServerFn({ method: "GET" })
         discountEur: null,
         commissionPct: null,
         commissionEur: null,
+        depositEur: 0,
         services: [],
         payments: [],
         paidTotalEur: 0,
@@ -422,6 +425,7 @@ export const getAppointmentFinanceByGhlId = createServerFn({ method: "GET" })
         discountEur: null,
         commissionPct: null,
         commissionEur: null,
+        depositEur: 0,
         services: [],
         payments: [],
         paidTotalEur: 0,
@@ -528,6 +532,7 @@ export const getAppointmentFinanceByGhlId = createServerFn({ method: "GET" })
       discountEur,
       commissionPct,
       commissionEur,
+      depositEur: appt.deposit_eur == null ? 0 : Number(appt.deposit_eur),
       services,
       payments,
       paidTotalEur,
