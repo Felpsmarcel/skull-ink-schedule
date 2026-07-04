@@ -348,6 +348,16 @@ function FinanceBody({
             {currency(locale, data.totalEur)}
           </div>
         </div>
+        {data.depositEur > 0 ? (
+          <div>
+            <div className="text-[9px] uppercase tracking-wider text-muted-foreground">
+              Sinal
+            </div>
+            <div className="text-sm font-semibold tabular-nums">
+              {currency(locale, data.depositEur)}
+            </div>
+          </div>
+        ) : null}
         <div>
           <div className="text-[9px] uppercase tracking-wider text-muted-foreground">
             Recebido
@@ -358,7 +368,7 @@ function FinanceBody({
         </div>
         <div>
           <div className="text-[9px] uppercase tracking-wider text-muted-foreground">
-            Saldo
+            {data.depositEur > 0 ? "Saldo restante" : "Saldo"}
           </div>
           <div className="text-sm font-semibold tabular-nums">
             {currency(locale, data.balanceEur)}
