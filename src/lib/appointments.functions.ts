@@ -6,6 +6,7 @@ import { parseManualBucket, type PaymentBucket } from "@/lib/finance.functions";
 const ServiceLineSchema = z.object({
   id: z.string().uuid(),
   discountPct: z.number().min(0).max(100).default(0),
+  overridePriceEur: z.number().min(0).max(1_000_000).nullable().optional(),
 });
 
 const CreateInputSchema = z.object({
@@ -25,6 +26,7 @@ const CreateInputSchema = z.object({
     .default("confirmed"),
   services: z.array(ServiceLineSchema).min(1),
   sellerId: z.string().uuid().nullish(),
+  depositEur: z.number().min(0).max(1_000_000).default(0),
 });
 
 export type CreateAppointmentInput = z.infer<typeof CreateInputSchema>;
@@ -107,12 +109,12 @@ export const createAppointmentRecord = createServerFn({ method: "POST" })
     const ids = data.services.map((s) => s.id);
     const { data: svcRows, error: svcErr } = await supabase
       .from("services" as never)
-      .select("id, name, duration_min, modality, price_eur")
+      .select("id, name, duration_min, modality, price_eur, price_on_request")
       .in("id", ids);
     if (svcErr) throw new Error(svcErr.message);
     const svcMap = new Map<
       string,
-      { id: string; name: string; duration_min: number; modality: string; price_eur: number }
+      { id: string; name: string; duration_min: number; modality: string; price_eur: number; price_on_request: boolean }
     >();
     for (const r of (svcRows ?? []) as Array<{
       id: string;
@@ -120,8 +122,13 @@ export const createAppointmentRecord = createServerFn({ method: "POST" })
       duration_min: number;
       modality: string;
       price_eur: number | string;
+      price_on_request: boolean | null;
     }>) {
-      svcMap.set(r.id, { ...r, price_eur: Number(r.price_eur) });
+      svcMap.set(r.id, {
+        ...r,
+        price_eur: Number(r.price_eur),
+        price_on_request: Boolean(r.price_on_request),
+      });
     }
     for (const s of data.services) {
       if (!svcMap.has(s.id)) throw new Error(`Serviço inexistente: ${s.id}`);
@@ -129,19 +136,27 @@ export const createAppointmentRecord = createServerFn({ method: "POST" })
 
     const lines = data.services.map((s) => {
       const svc = svcMap.get(s.id)!;
-      const finalEur = round2(svc.price_eur * (1 - s.discountPct / 100));
+      const basePrice = svc.price_on_request
+        ? Number(s.overridePriceEur ?? 0)
+        : Number(s.overridePriceEur ?? svc.price_eur);
+      if (svc.price_on_request && !(basePrice > 0)) {
+        throw new Error(`Informe o valor do serviço "${svc.name}"`);
+      }
+      const finalEur = round2(basePrice * (1 - s.discountPct / 100));
       return {
         id: svc.id,
         name: svc.name,
         duration_min: svc.duration_min,
         modality: svc.modality,
-        price_eur: svc.price_eur,
+        price_eur: basePrice,
         discount_pct: s.discountPct,
         final_eur: finalEur,
       };
     });
     const originalEur = round2(lines.reduce((acc, l) => acc + l.price_eur, 0));
     const totalEur = round2(lines.reduce((acc, l) => acc + l.final_eur, 0));
+
+    const depositEur = round2(Math.max(0, Math.min(data.depositEur ?? 0, totalEur)));
 
     // 4. Create event in GHL.
     const token = process.env.GHL_TOKEN;
@@ -191,6 +206,7 @@ export const createAppointmentRecord = createServerFn({ method: "POST" })
       services: lines,
       notes: data.notes ?? null,
       seller_id: data.sellerId ?? null,
+      deposit_eur: depositEur,
     };
     const { data: ins, error: insErr } = await supabaseAdmin
       .from("appointments" as never)
@@ -234,6 +250,48 @@ export const createAppointmentRecord = createServerFn({ method: "POST" })
     }
 
     const inserted = ins as { id: string };
+
+    // If the client already paid a deposit, register it as a partial payment.
+    if (depositEur > 0) {
+      try {
+        // Ensure a contacts row exists so payments.contact_id can be set.
+        let contactId: string | null = null;
+        const { data: upserted } = await supabaseAdmin
+          .from("contacts" as never)
+          .upsert(
+            {
+              ghl_contact_id: data.contactId,
+              name: data.contactName?.trim() || "Sem nome",
+              email: data.contactEmail ?? null,
+              phone: data.contactPhone ?? null,
+            } as never,
+            { onConflict: "ghl_contact_id" },
+          )
+          .select("id")
+          .single();
+        contactId = (upserted as { id: string } | null)?.id ?? null;
+        if (contactId) {
+          await supabaseAdmin
+            .from("appointments" as never)
+            .update({ contact_id: contactId } as never)
+            .eq("id", inserted.id);
+          await supabaseAdmin.from("payments" as never).insert({
+            appointment_id: inserted.id,
+            contact_id: contactId,
+            amount_eur: depositEur,
+            type: "deposit",
+            method: "other",
+            status: "paid",
+            paid_at: new Date().toISOString(),
+            notes: "Sinal registrado no agendamento",
+            created_by: userId,
+          } as never);
+        }
+      } catch (depErr) {
+        console.error("[createAppointmentRecord] deposit registration failed", depErr);
+      }
+    }
+
     return {
       appointmentId: inserted.id,
       ghlEventId,
