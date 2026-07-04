@@ -13,8 +13,9 @@ const ServiceInput = z.object({
   description_short: z.string().max(200).nullable().optional(),
   sort_order: z.number().int().optional(),
   active: z.boolean().optional(),
+  price_on_request: z.boolean().optional(),
 }).refine(
-  (v) => v.price_max_eur == null || v.price_max_eur >= v.price_eur,
+  (v) => v.price_on_request === true || v.price_max_eur == null || v.price_max_eur >= v.price_eur,
   { message: "price_max_eur deve ser >= price_eur", path: ["price_max_eur"] },
 );
 
@@ -66,8 +67,10 @@ export const updateService = createServerFn({ method: "POST" })
         description_short: z.string().max(200).nullable().optional(),
         sort_order: z.number().int().optional(),
         active: z.boolean().optional(),
+        price_on_request: z.boolean().optional(),
       }).refine(
         (v) =>
+          v.price_on_request === true ||
           v.price_max_eur == null ||
           v.price_eur == null ||
           v.price_max_eur >= v.price_eur,
@@ -103,7 +106,7 @@ export const listAllServices = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("services" as never)
-      .select("id,name,category,duration_min,modality,price_eur,price_max_eur,description,description_short,sort_order,active")
+      .select("id,name,category,duration_min,modality,price_eur,price_max_eur,description,description_short,sort_order,active,price_on_request")
       .order("category", { ascending: true })
       .order("sort_order", { ascending: true });
     if (error) throw new Error(error.message);
@@ -119,5 +122,6 @@ export const listAllServices = createServerFn({ method: "GET" })
       description_short: string | null;
       sort_order: number | null;
       active: boolean;
+      price_on_request: boolean | null;
     }>;
   });
