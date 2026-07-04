@@ -18,6 +18,7 @@ import {
 } from "@/lib/appointment-draft-validate";
 import { formatPrice } from "@/lib/services";
 import { sendTransactionalEmail } from "@/lib/email/send";
+import { haptic } from "@/lib/haptics";
 
 export function useFinalizeAppointment() {
   const { t } = useTranslation();
@@ -59,6 +60,7 @@ export function useFinalizeAppointment() {
       await queryClient.invalidateQueries({ queryKey: ["agenda"] });
       await queryClient.invalidateQueries({ queryKey: ["finance-summary"] });
       const final = totalFinalEur(draft);
+      haptic("success");
       toast.success(`${t("appt.created")} · ${formatPrice(final)}`);
       if (res.warning) toast.warning(res.warning);
 
