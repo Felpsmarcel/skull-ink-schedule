@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { LoadingState } from "@/components/ui/loading-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { cn } from "@/lib/utils";
-import { fetchActiveServices, formatPriceRange, type Service } from "@/lib/services";
+import { fetchActiveServices, formatServicePrice, type Service } from "@/lib/services";
 import { useAppointmentDraft } from "@/stores/appointment-draft";
 
 export const Route = createFileRoute("/_authenticated/appointments/new/services")({
@@ -139,7 +139,7 @@ function ServicesPage() {
                       </div>
                     </div>
                     <span className="whitespace-nowrap text-sm font-semibold">
-                      {formatPriceRange(s.price_eur, s.price_max_eur)}
+                      {formatServicePrice(s)}
                     </span>
                   </button>
                 );
