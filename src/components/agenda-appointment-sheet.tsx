@@ -294,7 +294,8 @@ function FinanceSection({
       {financeQ.data?.visible && financeQ.data.appointmentId && showPaymentForm ? (
         <PaymentForm
           ghlEventId={ghlEventId}
-          suggestedAmount={financeQ.data.balanceEur ?? 0}
+          totalEur={financeQ.data.totalEur ?? 0}
+          paidTotalEur={financeQ.data.paidTotalEur ?? 0}
           onSaved={() => {
             setShowPaymentForm(false);
             invalidateAll();
