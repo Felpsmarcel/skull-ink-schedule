@@ -9,18 +9,13 @@ export function haptic(kind: HapticKind = "tap"): void {
   if (typeof navigator === "undefined") return;
   const v = (navigator as Navigator & { vibrate?: (p: number | number[]) => boolean }).vibrate;
   if (typeof v !== "function") return;
+  const patterns: Record<HapticKind, number | number[]> = {
+    tap: 8,
+    success: [10, 40, 10],
+    warning: [20, 60, 20],
+  };
   try {
-    switch (kind) {
-      case "tap":
-        v.call(navigator, 8);
-        break;
-      case "success":
-        v.call(navigator, [10, 40, 10]);
-        break;
-      case "warning":
-        v.call(navigator, [20, 60, 20]);
-        break;
-    }
+    v.call(navigator, patterns[kind] as number[]);
   } catch {
     // ignore
   }
