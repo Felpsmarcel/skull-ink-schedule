@@ -215,6 +215,9 @@ function ServiceForm({ initial, onDone }: { initial: Row | null; onDone: () => v
   const [descShort, setDescShort] = useState(initial?.description_short ?? "");
   const [desc, setDesc] = useState(initial?.description ?? "");
   const [active, setActive] = useState(initial?.active ?? true);
+  const [priceOnRequest, setPriceOnRequest] = useState(
+    Boolean(initial?.price_on_request),
+  );
 
   const saveMut = useMutation({
     mutationFn: async () => {
@@ -223,11 +226,16 @@ function ServiceForm({ initial, onDone }: { initial: Row | null; onDone: () => v
         category: category.trim(),
         duration_min: Number(duration) || 0,
         modality,
-        price_eur: Number(priceMin) || 0,
-        price_max_eur: priceMax.trim() === "" ? null : Number(priceMax),
+        price_eur: priceOnRequest ? 0 : Number(priceMin) || 0,
+        price_max_eur: priceOnRequest
+          ? null
+          : priceMax.trim() === ""
+            ? null
+            : Number(priceMax),
         description: desc.trim() || null,
         description_short: descShort.trim() || null,
         active,
+        price_on_request: priceOnRequest,
       };
       if (initial) {
         await update({ data: { id: initial.id, patch: payload } });
