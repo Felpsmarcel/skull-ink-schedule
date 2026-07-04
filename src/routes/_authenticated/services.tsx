@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { formatPriceRange, type ServiceModality } from "@/lib/services";
+import { formatServicePrice, type ServiceModality } from "@/lib/services";
 import { listAllServices, createService, updateService, toggleServiceActive } from "@/lib/services.functions";
 import { cn } from "@/lib/utils";
 
@@ -150,7 +150,11 @@ function ServicesPage() {
                           )}
                           <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                             <span className="font-medium text-foreground">
-                              {formatPriceRange(toNum(s.price_eur), toNum(s.price_max_eur))}
+                              {formatServicePrice({
+                                price_eur: toNum(s.price_eur),
+                                price_max_eur: toNum(s.price_max_eur),
+                                price_on_request: Boolean(s.price_on_request),
+                              })}
                             </span>
                             <span>{s.duration_min} min</span>
                           </div>
