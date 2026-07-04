@@ -1,28 +1,50 @@
-## Status do que foi implementado
 
-Verifiquei os arquivos e sim, o essencial do plano anterior está implantado:
+# Ajustes no bloco Financeiro do agendamento
 
-**Concluído**
-- Coluna `services.price_on_request` + coluna `appointments.deposit_eur` (migração aplicada).
-- Cadastro de serviço com opção "Preço sob consulta" e listagem mostrando "Sob consulta".
-- Tela de seleção de serviços mostrando "Sob consulta" no lugar do preço.
-- Draft (`appointment-draft.ts`) com `depositEur`, `overridePriceEur`, `linePriceEur`, `balanceEur`, `draftValuesComplete`.
-- Checkout com:
-  - Input "Valor (€)" por serviço sob consulta (bloqueia "Confirmar" enquanto vazio).
-  - Campo "Sinal pago (€)" com "Saldo restante" e validação sinal ≤ total.
-- `createAppointmentRecord` grava `deposit_eur` e, se > 0, cria linha em `payments` com `type = 'deposit'` (aparece no Financeiro).
-- `useFinalizeAppointment` propaga `depositEur` para o servidor.
+## Objetivo
+Deixar o painel de pagamentos claro (Total, Pago, Falta) e evitar cadastros incorretos que geram saldo negativo como o do print (Total 1.000 €, Recebido 1.300 €, Saldo −300 €).
 
-**Pendências reais (2 ajustes finos que não foram feitos)**
+## O que muda
 
-1. **Agenda sheet — linha explícita de Sinal/Saldo.** Hoje o `agenda-appointment-sheet.tsx` mostra Total / Recebido / Saldo e o sinal aparece dentro da lista de "Pagamentos". O plano pedia três linhas dedicadas (Total, Sinal, Saldo) quando `deposit_eur > 0`. Funciona, mas não está com o layout combinado.
+### 1. Formulário "Registrar pagamento"
+- **Valor**: campo começa **vazio** (hoje vem pré-preenchido com o saldo).
+- **Tipo**: dropdown manual com opções **Sinal / Final / Reembolso** (hoje é decidido automaticamente).
+- **Método**: mantém como está (cash, transfer, card, etc.).
+- **Data**: mantém como está.
+- **Validação de overpagamento**:
+  - Se `Pago + novo valor > Total`, mostra aviso amarelo dentro do formulário:
+    *"Este pagamento excede o total em X €. Confirmar mesmo assim?"*
+  - Botão "Salvar" fica desabilitado até o usuário marcar uma checkbox **"Confirmo o valor excedente"**.
+  - Reembolso e valores dentro do total não disparam o aviso.
 
-2. **Registro de saldo na finalização.** O plano previa lançar automaticamente o saldo restante ao concluir o agendamento. Hoje o pagamento final continua manual (via "Registrar pagamento" no sheet). Como é manual, não há risco de cobrança em dobro — mas também não há automação. Precisamos decidir:
-   - (a) manter manual como está (recomendo, dá mais controle ao operador), ou
-   - (b) implementar lançamento automático do saldo ao mudar status para "concluído".
+### 2. Grade de resumo (mantida, com destaques)
+Mesmos 5 blocos de hoje: **Total · Sinal · Recebido · Saldo · Comissão** (+ Comissão vendedor quando existir).
+Muda apenas a cor do bloco **Saldo / Saldo restante**:
 
-## Próximo passo proposto
+| Situação | Rótulo | Cor do valor |
+|---|---|---|
+| `balance > 0` | "Falta a receber" | vermelho (`text-destructive`) |
+| `balance = 0` | "Quitado" | verde (`text-emerald-600`) |
+| `balance < 0` (overpago) | "Crédito do cliente" | âmbar (`text-amber-600`) com ícone de aviso |
 
-Fazer só o ajuste (1) — adicionar linha "Sinal" e "Saldo restante" no sheet da agenda quando `deposit_eur > 0`, mantendo Total/Recebido/Comissão como estão. E confirmar com você se quer também o (2) automático ou se deixamos manual.
+### 3. Lista de "Pagamentos"
+Sem mudança estrutural. Cada linha continua mostrando `Tipo · Método · Data · Valor`. Reembolso segue com sinal negativo.
 
-Confirma que quero seguir por aqui?
+## Detalhes técnicos
+
+**Arquivos afetados:**
+- `src/components/agenda-appointment-sheet.tsx`
+  - `PaymentForm`: trocar `useState(String(suggestedAmount))` por `useState("")`; adicionar `<Select>` para `type` (default vazio, obrigatório); adicionar lógica de aviso de overpagamento + checkbox de confirmação.
+  - `FinanceBody`: rótulo e cor dinâmica no bloco Saldo conforme tabela acima.
+- `src/lib/appointments.functions.ts`
+  - `registerAppointmentPayment`: aceitar `type` vindo do cliente (hoje é inferido). Manter fallback automático se o cliente não enviar (compatibilidade). Sem validação server-side de overpagamento — decisão é do usuário no cliente conforme escolhido.
+
+**Sem migrações de banco.** Os campos `payments.type` e `payments.amount_eur` já existem e aceitam os três tipos.
+
+**Sem alteração em:**
+- Checkout de novo agendamento (sinal no momento da criação continua igual).
+- Cálculo de comissão.
+- Status manual, seller picker, edição de valor.
+
+## Fora do escopo
+- Corrigir automaticamente o agendamento do print (300 € a mais). Depois do deploy, você pode ajustar manualmente via "Reembolso" de 300 €, ou eu apago um dos pagamentos duplicados se preferir — me avise após aprovar o plano.

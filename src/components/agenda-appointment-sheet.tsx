@@ -294,7 +294,8 @@ function FinanceSection({
       {financeQ.data?.visible && financeQ.data.appointmentId && showPaymentForm ? (
         <PaymentForm
           ghlEventId={ghlEventId}
-          suggestedAmount={financeQ.data.balanceEur ?? 0}
+          totalEur={financeQ.data.totalEur ?? 0}
+          paidTotalEur={financeQ.data.paidTotalEur ?? 0}
           onSaved={() => {
             setShowPaymentForm(false);
             invalidateAll();
@@ -366,14 +367,36 @@ function FinanceBody({
             {currency(locale, data.paidTotalEur)}
           </div>
         </div>
-        <div>
-          <div className="text-[9px] uppercase tracking-wider text-muted-foreground">
-            {data.depositEur > 0 ? "Saldo restante" : "Saldo"}
-          </div>
-          <div className="text-sm font-semibold tabular-nums">
-            {currency(locale, data.balanceEur)}
-          </div>
-        </div>
+        {(() => {
+          const bal = data.balanceEur;
+          let label = data.depositEur > 0 ? "Saldo restante" : "Saldo";
+          let cls = "text-sm font-semibold tabular-nums";
+          let icon: React.ReactNode = null;
+          if (bal != null) {
+            if (bal > 0.005) {
+              label = "Falta a receber";
+              cls += " text-destructive";
+            } else if (bal < -0.005) {
+              label = "Crédito do cliente";
+              cls += " text-amber-600";
+              icon = <AlertTriangle className="inline h-3 w-3 mr-1" />;
+            } else {
+              label = "Quitado";
+              cls += " text-emerald-600";
+            }
+          }
+          return (
+            <div>
+              <div className="text-[9px] uppercase tracking-wider text-muted-foreground">
+                {label}
+              </div>
+              <div className={cls}>
+                {icon}
+                {currency(locale, bal)}
+              </div>
+            </div>
+          );
+        })()}
         <div>
           <div className="text-[9px] uppercase tracking-wider text-muted-foreground">
             Comissão ({data.commissionPct ?? "—"}%)
@@ -684,24 +707,31 @@ function ValueForm({
 
 function PaymentForm({
   ghlEventId,
-  suggestedAmount,
+  totalEur,
+  paidTotalEur,
   onSaved,
   onCancel,
 }: {
   ghlEventId: string;
-  suggestedAmount: number;
+  totalEur: number;
+  paidTotalEur: number;
   onSaved: () => void;
   onCancel: () => void;
 }) {
   const register = useServerFn(registerAppointmentPayment);
-  const [amountStr, setAmountStr] = useState(
-    suggestedAmount > 0 ? String(suggestedAmount) : "",
-  );
+  const [amountStr, setAmountStr] = useState("");
   const [type, setType] = useState<"deposit" | "final" | "refund">("final");
   const [method, setMethod] = useState<
     "cash" | "card" | "transfer" | "payconiq" | "other"
   >("cash");
   const [notes, setNotes] = useState("");
+  const [confirmOver, setConfirmOver] = useState(false);
+
+  const amount = Number(amountStr) || 0;
+  const projectedPaid =
+    type === "refund" ? paidTotalEur - amount : paidTotalEur + amount;
+  const excess = totalEur > 0 ? projectedPaid - totalEur : 0;
+  const overpay = type !== "refund" && amount > 0 && totalEur > 0 && excess > 0.005;
 
   const mutation = useMutation({
     mutationFn: (payload: {
@@ -722,9 +752,12 @@ function PaymentForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const amount = Number(amountStr);
     if (!amount || amount <= 0) {
       toast.error("Informe um valor válido.");
+      return;
+    }
+    if (overpay && !confirmOver) {
+      toast.error("Confirme o valor excedente para continuar.");
       return;
     }
     mutation.mutate({
@@ -793,6 +826,27 @@ function PaymentForm({
           />
         </div>
       </div>
+      {overpay ? (
+        <div className="rounded border border-amber-500/50 bg-amber-500/10 p-2 text-[11px] text-amber-800 dark:text-amber-300">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <div className="space-y-1">
+              <div>
+                Este pagamento excede o total em{" "}
+                <strong>€{excess.toFixed(2)}</strong>.
+              </div>
+              <label className="flex items-center gap-1.5">
+                <input
+                  type="checkbox"
+                  checked={confirmOver}
+                  onChange={(e) => setConfirmOver(e.target.checked)}
+                />
+                <span>Confirmo o valor excedente</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      ) : null}
       <div className="flex justify-end gap-2">
         <Button
           type="button"
@@ -807,7 +861,7 @@ function PaymentForm({
           type="submit"
           size="sm"
           className="h-8 text-[11px]"
-          disabled={mutation.isPending}
+          disabled={mutation.isPending || (overpay && !confirmOver)}
         >
           {mutation.isPending ? (
             <Loader2 className="mr-1 h-3 w-3 animate-spin" />
