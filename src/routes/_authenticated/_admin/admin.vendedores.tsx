@@ -216,3 +216,147 @@ function VendedoresPage() {
     </div>
   );
 }
+
+function SellerCard({
+  seller,
+  onEdit,
+  onDelete,
+  canDelete,
+  invite,
+  repair,
+  onRefresh,
+}: {
+  seller: SellerWithUsers;
+  onEdit: () => void;
+  onDelete: () => void;
+  canDelete: boolean;
+  invite: ReturnType<typeof useServerFn<typeof inviteSeller>>;
+  repair: ReturnType<typeof useServerFn<typeof repairSellerLink>>;
+  onRefresh: () => void;
+}) {
+  const [email, setEmail] = useState(seller.users[0]?.email ?? "");
+
+  const inviteM = useMutation({
+    mutationFn: async () =>
+      invite({
+        data: {
+          sellerId: seller.id,
+          email: email.trim(),
+          redirectTo: `${window.location.origin}/auth/update-password`,
+        },
+      }),
+    onSuccess: (r) => {
+      if (!r.linkOk) {
+        toast.error(
+          `Convite enviado mas vínculo falhou: ${r.linkError ?? "erro desconhecido"}. Use "Reparar vínculo".`,
+        );
+      } else {
+        toast.success(r.reused ? "Vinculado a usuário existente." : "Convite enviado.");
+      }
+      onRefresh();
+    },
+    onError: (e) => {
+      const msg = e instanceof Error ? e.message : "Falha ao convidar";
+      if (msg.toLowerCase().includes("already registered")) {
+        toast.error('Usuário já existe. Use "Reparar vínculo" para vincular.');
+      } else {
+        toast.error(msg);
+      }
+    },
+  });
+
+  const repairM = useMutation({
+    mutationFn: async () => repair({ data: { sellerId: seller.id, email: email.trim() } }),
+    onSuccess: () => {
+      toast.success("Vínculo reparado.");
+      onRefresh();
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Falha ao reparar"),
+  });
+
+  const linkedEmails = seller.users.map((u) => u.email ?? u.id.slice(0, 8));
+
+  return (
+    <li className="rounded-lg border border-border bg-card p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm font-semibold">{seller.name}</p>
+            <StatusBadge variant={seller.active ? "info" : "neutral"}>
+              {seller.active ? "ativo" : "inativo"}
+            </StatusBadge>
+            <StatusBadge variant={seller.users.length > 0 ? "success" : "warning"}>
+              {seller.users.length > 0 ? "vinculado" : "sem usuário"}
+            </StatusBadge>
+          </div>
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            comissão {seller.commissionPct}%
+          </p>
+          <p className="text-[11px] text-muted-foreground">
+            {linkedEmails.length === 0 ? "Nenhum usuário vinculado" : linkedEmails.join(", ")}
+          </p>
+        </div>
+        <div className="flex gap-1">
+          <Button size="sm" variant="outline" onClick={onEdit}>
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+          {canDelete ? (
+            <Button size="sm" variant="outline" onClick={onDelete} aria-label="Desativar">
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+        <Input
+          type="email"
+          autoComplete="email"
+          placeholder="email@dominio.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="sm:max-w-xs"
+        />
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            onClick={() => {
+              if (!email.trim()) {
+                toast.error("Informe o email.");
+                return;
+              }
+              inviteM.mutate();
+            }}
+            disabled={inviteM.isPending}
+          >
+            {inviteM.isPending ? (
+              <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Send className="mr-2 h-3.5 w-3.5" />
+            )}
+            {seller.users.length > 0 ? "Reenviar" : "Convidar"}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              if (!email.trim()) {
+                toast.error("Informe o email.");
+                return;
+              }
+              repairM.mutate();
+            }}
+            disabled={repairM.isPending}
+          >
+            {repairM.isPending ? (
+              <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Link2 className="mr-2 h-3.5 w-3.5" />
+            )}
+            Reparar vínculo
+          </Button>
+        </div>
+      </div>
+    </li>
+  );
+}
