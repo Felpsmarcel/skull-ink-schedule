@@ -108,17 +108,10 @@ export async function searchContacts(locationId: string, query: string) {
     body: {
       locationId,
       pageLimit: 25,
-      filters: query
-        ? [
-            {
-              field: "searchAfter",
-              operator: "contains",
-              value: query,
-            },
-          ]
-        : [],
-      // Fallback simple search if filter shape isn't supported
-      query,
+      // Top-level `query` is GHL's free-text search across name/email/phone.
+      // Do NOT use `searchAfter` as a filter field — it's a pagination cursor
+      // and causes 400 "Invalid field searchAfter".
+      query: query || undefined,
     },
   });
 }
