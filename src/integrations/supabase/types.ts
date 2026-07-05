@@ -20,18 +20,21 @@ export type Database = {
           created_at: string
           id: string
           role: Database["public"]["Enums"]["user_role"]
+          seller_id: string | null
         }
         Insert: {
           artist_id?: string | null
           created_at?: string
           id: string
           role?: Database["public"]["Enums"]["user_role"]
+          seller_id?: string | null
         }
         Update: {
           artist_id?: string | null
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["user_role"]
+          seller_id?: string | null
         }
         Relationships: [
           {
@@ -46,6 +49,13 @@ export type Database = {
             columns: ["artist_id"]
             isOneToOne: false
             referencedRelation: "artists_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "app_users_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "sellers"
             referencedColumns: ["id"]
           },
         ]
@@ -915,7 +925,7 @@ export type Database = {
       payment_type: "deposit" | "final" | "refund"
       quote_status: "draft" | "sent" | "accepted" | "rejected" | "expired"
       service_modality: "presencial" | "consulta_online" | "hibrido"
-      user_role: "admin" | "artist"
+      user_role: "admin" | "artist" | "seller"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1055,7 +1065,7 @@ export const Constants = {
       payment_type: ["deposit", "final", "refund"],
       quote_status: ["draft", "sent", "accepted", "rejected", "expired"],
       service_modality: ["presencial", "consulta_online", "hibrido"],
-      user_role: ["admin", "artist"],
+      user_role: ["admin", "artist", "seller"],
     },
   },
 } as const
