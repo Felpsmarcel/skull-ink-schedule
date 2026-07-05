@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Loader2, UserPlus, Pencil, Trash2 } from "lucide-react";
+import { Loader2, UserPlus, Pencil, Trash2, Send, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,10 +15,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import {
   createSeller,
   deleteSeller,
-  listSellers,
   updateSeller,
-  type Seller,
 } from "@/lib/sellers.functions";
+import {
+  inviteSeller,
+  listSellersWithUsers,
+  repairSellerLink,
+  type SellerWithUsers,
+} from "@/lib/sellers-invite.functions";
 
 export const Route = createFileRoute("/_authenticated/_admin/admin/vendedores")({
   head: () => ({
@@ -41,15 +45,17 @@ type FormState = {
 const EMPTY_FORM: FormState = { name: "", commissionPct: 0, active: true };
 
 function VendedoresPage() {
-  const list = useServerFn(listSellers);
+  const list = useServerFn(listSellersWithUsers);
   const create = useServerFn(createSeller);
   const update = useServerFn(updateSeller);
   const remove = useServerFn(deleteSeller);
+  const invite = useServerFn(inviteSeller);
+  const repair = useServerFn(repairSellerLink);
   const qc = useQueryClient();
 
   const q = useQuery({
-    queryKey: ["sellers", "all"],
-    queryFn: () => list({ data: { includeInactive: true } }),
+    queryKey: ["sellers", "with-users"],
+    queryFn: () => list(),
   });
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -97,7 +103,7 @@ function VendedoresPage() {
     setForm(EMPTY_FORM);
     setDialogOpen(true);
   }
-  function openEdit(s: Seller) {
+  function openEdit(s: SellerWithUsers) {
     setForm({ id: s.id, name: s.name, commissionPct: s.commissionPct, active: s.active });
     setDialogOpen(true);
   }
@@ -133,38 +139,16 @@ function VendedoresPage() {
       ) : (
         <ul className="space-y-2">
           {sellers.map((s) => (
-            <li
+            <SellerCard
               key={s.id}
-              className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card p-3"
-            >
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold">{s.name}</p>
-                  <StatusBadge variant={s.active ? "success" : "neutral"}>
-                    {s.active ? "ativo" : "inativo"}
-                  </StatusBadge>
-                </div>
-                <p className="mt-0.5 text-[11px] text-muted-foreground">
-                  Comissão: {s.commissionPct}%
-                </p>
-              </div>
-              <div className="flex gap-1">
-                <Button size="sm" variant="outline" onClick={() => openEdit(s)}>
-                  <Pencil className="h-3.5 w-3.5" />
-                </Button>
-                {s.active ? (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => deleteM.mutate(s.id)}
-                    disabled={deleteM.isPending}
-                    aria-label="Desativar"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                ) : null}
-              </div>
-            </li>
+              seller={s}
+              onEdit={() => openEdit(s)}
+              onDelete={() => deleteM.mutate(s.id)}
+              canDelete={s.active && !deleteM.isPending}
+              invite={invite}
+              repair={repair}
+              onRefresh={() => qc.invalidateQueries({ queryKey: ["sellers"] })}
+            />
           ))}
         </ul>
       )}
