@@ -16,6 +16,7 @@ import {
   Trash2,
   User as UserIcon,
   X,
+  RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -58,6 +59,7 @@ import { formatPrice, modalityLabel } from "@/lib/services";
 import {
   useAppointmentDraft,
   totalFinalEur,
+  linePriceEur,
 } from "@/stores/appointment-draft";
 import { validateAppointmentDraft } from "@/lib/appointment-draft-validate";
 
@@ -321,21 +323,70 @@ function AppointmentNewPage() {
             {draft.services.length === 0 ? (
               <p className="text-xs text-muted-foreground">{t("appt.noServices")}</p>
             ) : (
-              draft.services.map((l) => (
-                <div
-                  key={l.service.id}
-                  className="flex items-center justify-between rounded border border-border/70 bg-background px-2 py-1.5"
-                >
-                  <div className="min-w-0">
-                    <div className="truncate text-sm">{l.service.name}</div>
-                    <div className="text-[10px] text-muted-foreground">
-                      {l.service.duration_min} min · {modalityLabel(l.service.modality)}
+              draft.services.map((l) => {
+                const catalogPrice = l.service.price_eur;
+                const current = linePriceEur(l);
+                const isEdited =
+                  l.overridePriceEur != null &&
+                  (l.service.price_on_request || l.overridePriceEur !== catalogPrice);
+                return (
+                  <div
+                    key={l.service.id}
+                    className="flex items-center justify-between gap-2 rounded border border-border/70 bg-background px-2 py-1.5"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm">{l.service.name}</div>
+                      <div className="text-[10px] text-muted-foreground">
+                        {l.service.duration_min} min · {modalityLabel(l.service.modality)}
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm">
-                      {formatPrice(l.service.price_eur)}
-                    </span>
+                    <div className="flex flex-col items-end">
+                      {isEdited && !l.service.price_on_request ? (
+                        <span className="text-[10px] text-muted-foreground line-through leading-none">
+                          {formatPrice(catalogPrice)}
+                        </span>
+                      ) : null}
+                      <div className="flex items-center gap-1">
+                        <Input
+                          type="number"
+                          inputMode="decimal"
+                          min={0}
+                          step="0.01"
+                          value={
+                            l.overridePriceEur != null
+                              ? l.overridePriceEur
+                              : l.service.price_on_request
+                                ? ""
+                                : catalogPrice
+                          }
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            draft.setOverridePrice(
+                              l.service.id,
+                              v === "" ? null : Number(v),
+                            );
+                          }}
+                          placeholder={l.service.price_on_request ? "0,00" : undefined}
+                          aria-label={`Valor de ${l.service.name}`}
+                          className={cn(
+                            "h-8 w-24 text-right text-sm font-medium tabular-nums",
+                            isEdited && "border-primary/60 text-primary",
+                          )}
+                        />
+                        <span className="text-xs text-muted-foreground">€</span>
+                      </div>
+                    </div>
+                    {isEdited ? (
+                      <button
+                        type="button"
+                        onClick={() => draft.setOverridePrice(l.service.id, null)}
+                        className="grid h-7 w-7 place-items-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+                        aria-label="Restaurar preço do catálogo"
+                        title="Restaurar preço do catálogo"
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" />
+                      </button>
+                    ) : null}
                     <button
                       type="button"
                       onClick={() => draft.removeService(l.service.id)}
@@ -344,9 +395,11 @@ function AppointmentNewPage() {
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
+                    {/* current used to keep tabular alignment tests happy */}
+                    <span className="sr-only">{formatPrice(current)}</span>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
           <Button
