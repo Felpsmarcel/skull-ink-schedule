@@ -2,13 +2,14 @@ import { createServerFn } from "@tanstack/react-start";
 import { redirect } from "@tanstack/react-router";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-export type AppRole = "admin" | "artist";
+export type AppRole = "admin" | "artist" | "seller";
 
 export interface MyProfile {
   userId: string;
   email: string | null;
   role: AppRole | null;
   artistId: string | null;
+  sellerId: string | null;
 }
 
 export const getMyProfile = createServerFn({ method: "GET" })
@@ -17,16 +18,21 @@ export const getMyProfile = createServerFn({ method: "GET" })
     const { supabase, userId, claims } = context;
     const { data, error } = await supabase
       .from("app_users" as never)
-      .select("role, artist_id")
+      .select("role, artist_id, seller_id")
       .eq("id", userId)
       .maybeSingle();
     if (error) throw new Error(error.message);
-    const row = (data ?? null) as { role: AppRole | null; artist_id: string | null } | null;
+    const row = (data ?? null) as {
+      role: AppRole | null;
+      artist_id: string | null;
+      seller_id: string | null;
+    } | null;
     return {
       userId,
       email: (claims as { email?: string | null }).email ?? null,
       role: row?.role ?? null,
       artistId: row?.artist_id ?? null,
+      sellerId: row?.seller_id ?? null,
     };
   });
 
