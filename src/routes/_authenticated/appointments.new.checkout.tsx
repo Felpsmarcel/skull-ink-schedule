@@ -81,7 +81,7 @@ function CheckoutPage() {
       draft.startISO &&
       draft.services.length > 0 &&
       valuesComplete &&
-      deposit <= final,
+      (draft.depositEur || 0) <= final,
   );
 
   return (
