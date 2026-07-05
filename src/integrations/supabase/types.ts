@@ -20,18 +20,21 @@ export type Database = {
           created_at: string
           id: string
           role: Database["public"]["Enums"]["user_role"]
+          seller_id: string | null
         }
         Insert: {
           artist_id?: string | null
           created_at?: string
           id: string
           role?: Database["public"]["Enums"]["user_role"]
+          seller_id?: string | null
         }
         Update: {
           artist_id?: string | null
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["user_role"]
+          seller_id?: string | null
         }
         Relationships: [
           {
@@ -46,6 +49,13 @@ export type Database = {
             columns: ["artist_id"]
             isOneToOne: false
             referencedRelation: "artists_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "app_users_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "sellers"
             referencedColumns: ["id"]
           },
         ]
@@ -823,6 +833,7 @@ export type Database = {
     }
     Functions: {
       current_artist_id: { Args: never; Returns: string }
+      current_seller_id: { Args: never; Returns: string }
       current_user_role: {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
@@ -882,6 +893,28 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_my_seller_appointments: {
+        Args: never
+        Returns: {
+          artist_id: string
+          calendar_id: string
+          commission_eur: number
+          commission_pct: number
+          contact_id: string
+          contact_name: string
+          created_at: string
+          end_at: string
+          ghl_appointment_id: string
+          id: string
+          notes: string
+          seller_id: string
+          services_summary: string
+          start_at: string
+          status: string
+          total_eur: number
+          updated_at: string
+        }[]
+      }
       ghl_sync_status: { Args: never; Returns: Json }
       move_to_dlq: {
         Args: {
@@ -915,7 +948,7 @@ export type Database = {
       payment_type: "deposit" | "final" | "refund"
       quote_status: "draft" | "sent" | "accepted" | "rejected" | "expired"
       service_modality: "presencial" | "consulta_online" | "hibrido"
-      user_role: "admin" | "artist"
+      user_role: "admin" | "artist" | "seller"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1055,7 +1088,7 @@ export const Constants = {
       payment_type: ["deposit", "final", "refund"],
       quote_status: ["draft", "sent", "accepted", "rejected", "expired"],
       service_modality: ["presencial", "consulta_online", "hibrido"],
-      user_role: ["admin", "artist"],
+      user_role: ["admin", "artist", "seller"],
     },
   },
 } as const

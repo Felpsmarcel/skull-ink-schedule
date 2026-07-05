@@ -79,14 +79,29 @@ export const createAppointmentRecord = createServerFn({ method: "POST" })
     // 1. Authorize: admin OR artist who owns this artistId.
     const { data: meRow, error: meErr } = await supabase
       .from("app_users" as never)
-      .select("role, artist_id")
+      .select("role, artist_id, seller_id")
       .eq("id", userId)
       .maybeSingle();
     if (meErr) throw new Error(meErr.message);
-    const me = meRow as { role: "admin" | "artist"; artist_id: string | null } | null;
+    const me = meRow as {
+      role: "admin" | "artist" | "seller";
+      artist_id: string | null;
+      seller_id: string | null;
+    } | null;
     if (!me) throw new Error("Forbidden: sem perfil");
-    if (me.role !== "admin" && !(me.role === "artist" && me.artist_id === data.artistId)) {
-      throw new Error("Forbidden: artistId não pertence ao usuário");
+    if (me.role === "artist") {
+      if (me.artist_id !== data.artistId) {
+        throw new Error("Forbidden: artistId não pertence ao usuário");
+      }
+    } else if (me.role === "seller") {
+      if (!me.seller_id) throw new Error("Forbidden: vendedor sem vínculo");
+      // Trava: vendedor só cria em nome dele mesmo.
+      if (data.sellerId && data.sellerId !== me.seller_id) {
+        throw new Error("Forbidden: sellerId não confere com o vendedor logado");
+      }
+      data.sellerId = me.seller_id;
+    } else if (me.role !== "admin") {
+      throw new Error("Forbidden");
     }
 
     // 2. Resolve commission_pct from artist (defaults to 40).

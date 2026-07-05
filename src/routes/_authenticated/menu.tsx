@@ -24,7 +24,14 @@ function MenuPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const isAdmin = me?.role === "admin";
-  const roleLabel = me?.role === "admin" ? "Admin" : me?.role === "artist" ? "Tatuador" : "—";
+  const roleLabel =
+    me?.role === "admin"
+      ? "Admin"
+      : me?.role === "artist"
+        ? "Tatuador"
+        : me?.role === "seller"
+          ? "Vendedor"
+          : "—";
   const initials = (me?.email ?? "?").slice(0, 2).toUpperCase();
 
   async function handleSignOut() {

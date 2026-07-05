@@ -1,51 +1,60 @@
-## Objetivo
+# Dar acesso à plataforma para Vendedores
 
-Trocar a **Semana** mobile (rota `/agenda?view=week`) para o formato da segunda imagem: uma **grade artistas × 7 dias**, com avatar/nome do tatuador à esquerda, colunas por dia da semana, e cada agendamento renderizado como um **chip compacto de horário** dentro da célula do dia daquele artista.
+Hoje `sellers` é só um cadastro para atribuir vendas em appointments. Vou transformar cada vendedor em um usuário da plataforma (login por email), com um escopo próprio de leitura/escrita.
 
-Escopo: só o bloco mobile do `WeekView` em `src/routes/_authenticated/agenda.tsx` (bloco `sm:hidden`). Desktop e Dia/Mês permanecem iguais.
+## 1. Banco de dados (migração única)
 
-## Layout final (mobile, semana)
+- Adicionar valor `'seller'` ao enum `public.user_role`.
+- Adicionar coluna `seller_id uuid references public.sellers(id)` em `public.app_users` (nullable, unique parcial para 1 user ↔ 1 seller).
+- Nova função `public.current_seller_id()` (STABLE SECURITY DEFINER) análoga a `current_artist_id()`.
+- Ajustar policies:
+  - `appointments SELECT`: permitir `current_user_role() = 'seller' AND seller_id = current_seller_id()` (somente leitura).
+  - `appointments INSERT`: manter admin livre; permitir seller se `seller_id = current_seller_id()`.
+  - `appointment_services SELECT`: idem via join.
+  - `payments SELECT`: seller enxerga pagamentos dos appointments dele.
+  - `sellers SELECT`: seller enxerga o próprio registro.
+- Atualizar `get_monthly_report` e `get_my_artist_appointments`:
+  - Aceitar `seller` como novo caminho: quando `current_user_role() = 'seller'`, filtrar por `a.seller_id = current_seller_id()`.
+  - Nova RPC `get_my_seller_appointments()` espelhando `get_my_artist_appointments()` (sem revelar `commission_pct` do artista; expondo apenas comissão do vendedor).
 
-```
-        seg 20  ter 21  qua 22  qui 23  sex 24  sáb 25  dom 26
-      ┌───────┬───────┬───────┬───────┬───────┬───────┬───────┐
-[JC]  │ 10:00 │       │       │ 10:00 │       │       │ 10:00 │
-Joyce │       │       │       │       │       │       │       │
-      ├───────┼───────┼───────┼───────┼───────┼───────┼───────┤
-[AP]  │ 10:00 │       │       │       │ 11:00 │       │ 10:30 │
-Andre │       │       │       │       │       │       │       │
-      ├───────┼───────┼───────┼───────┼───────┼───────┼───────┤
-[GF]  │       │       │       │ 11:00 │ 13:10 │       │ 11:00 │
-Gabri │       │       │       │ 16:00 │       │       │       │
-      │       │       │       │ 16:30 │       │       │       │
-      └───────┴───────┴───────┴───────┴───────┴───────┴───────┘
-```
+## 2. Backend (server functions)
 
-- Coluna esquerda fixa (`sticky left-0`, ~56px): avatar redondo com anel na cor do artista + nome curto abaixo (2 linhas, `text-[10px]`).
-- Cabeçalho superior fixo (`sticky top-0`): 7 colunas com dia da semana (`seg`, `ter`, …) + número; coluna do dia de hoje realçada; dias fora do horário/fim-de-semana com fundo listrado sutil (opcional).
-- Célula (artista × dia): flex-col com chips empilhados verticalmente, ordenados por horário. Cada chip = botão pequeno com `HH:mm` (`text-[10px]`, `tabular-nums`) e um traço/fundo suave usando a cor do artista. Overflow vertical se >3 chips (mostrar `+N` compacto).
-- Larguras: 7 colunas iguais dividindo o viewport (`grid-cols-[56px_repeat(7,minmax(0,1fr))]`), sem scroll horizontal em iPhone (390px → ~47px por dia, cabe 1 chip `10:00` por linha).
-- Tap no chip abre o mesmo `AgendaAppointmentSheet` já usado (via `openFromEvent`).
-- Tap em célula vazia: opcional — pré-preenche `draft` (calendar do artista, dia às 10:00) e vai para `/appointments/new` (mesmo padrão do slot livre do Dia). Confirmo abaixo.
+- `src/lib/auth.functions.ts`: incluir `seller` em `AppRole` e `sellerId` no `MyProfile`.
+- `src/lib/team.functions.ts` continua só para artistas. Novo `src/lib/sellers-invite.functions.ts` com:
+  - `inviteSeller({ sellerId, email })` — reaproveita o fluxo `inviteArtist` (auth admin invite, insert em `app_users` com `role='seller'` e `seller_id`), com template dedicado ou reaproveitando `team-welcome`.
+  - `repairSellerLink({ sellerId, email })`.
+- Ajustar `listSellers` para admin retornar também `users: [{ id, email }]` (join simplificado com `app_users`), igual a `listTeam`.
 
-## Mudanças técnicas
+## 3. UI
 
-Arquivo único: `src/routes/_authenticated/agenda.tsx`, substituir o bloco `<div className="sm:hidden">` dentro de `WeekView` (linhas ~812–947) por:
+- **`admin.vendedores.tsx`**: adicionar cards estilo `admin.equipe.tsx` — badge "vinculado/sem usuário", campo de email, botões "Convidar" / "Reenviar" chamando `inviteSeller`.
+- **Menu / roles**: `menu.tsx` mostra "Vendedor" quando `role === 'seller'`; itens visíveis:
+  - Agenda (somente leitura)
+  - Novo agendamento
+  - Meu financeiro
+  - Relatório mensal (filtrado)
+- **`AuthShell` topbar + `BottomNav`**: mesmos itens do artista; esconder ações admin.
+- **Agenda (`agenda.tsx`)**: quando role=seller, chips não abrem sheet de edição — apenas visualização (usar sheet em modo readonly já existente ou desabilitar botões de status/finalizar).
+- **Fluxo `/appointments/new`**:
+  - Se `role === 'seller'`, pré-seleciona `sellerId = me.sellerId` e trava o seletor de vendedor (readonly).
+  - Envia normalmente pelo `createAppointment` server fn (RLS garante `seller_id`).
+- **Financeiro (`financeiro.tsx`) e Relatório (`relatorios.agendamentos.tsx`)**:
+  - Detectar `role='seller'`, chamar as RPCs com filtro por `seller_id`.
+  - Exibir apenas comissão do vendedor (`sellers.commission_pct` sobre `total_eur`), ocultando comissão do artista.
 
-1. Grid CSS com `grid-template-columns: 56px repeat(7, minmax(0,1fr))`.
-2. Linha de cabeçalho (8 células): vazia + 7 dias, com `dayFmt`/`numFmt` já existentes; realce quando `key === todayKey`.
-3. Para cada `agenda` em `agendas`: linha com célula de artista (Avatar + nome) + 7 células de dia. Para montar as células, pré-agrupar `a.events` em `Map<dayKey, GhlEvent[]>` ordenado por `startTime` (feito uma vez por artista via `useMemo`).
-4. Chip = `<button>` compacto, `onClick={() => openFromEvent(ev, a.staff)}`, com `title` completo (`nome — serviço`). Usar `a.staff.color` como faixa lateral esquerda (`border-l-2`) e fundo `bg-muted/40`.
-5. Manter `openEvent` state + `AgendaAppointmentSheet` já existente (nenhuma alteração fora do bloco mobile).
-6. Remover o seletor de dia atual (`mobileDayKey`) do caminho mobile-week — deixa de ser necessário porque a semana inteira aparece. Estado e `useMemo` associados podem ficar (não incomodam) ou ser removidos junto.
+## 4. Guardas de rota
 
-Sem mudanças em: `use-agenda-range.ts`, `agenda-grid.ts`, componentes de sheet, dia/mês.
+- Criar `src/routes/_authenticated/_seller/route.tsx` análogo a `_admin` para gate quando necessário (ex.: bloquear rotas de admin). Alternativa mais simples: filtro no `menu.tsx`/`AuthShell` + redirecionamentos em `_admin` já existentes cobrem o essencial.
 
-## Ponto para confirmar
+## Detalhes técnicos
 
-Quando o tatuador tocar em uma **célula vazia** (artista × dia sem agendamento), o que fazer?
+- Enum: `ALTER TYPE public.user_role ADD VALUE IF NOT EXISTS 'seller';` (fora de transação — migração dedicada só para o enum antes das demais).
+- Grants: `GRANT SELECT ON public.sellers TO authenticated` já existe; garantir `GRANT EXECUTE ON FUNCTION public.current_seller_id() TO authenticated`.
+- Backwards compat: sellers sem `app_users` linkado continuam funcionando como hoje (apenas cadastro).
+- Convite reaproveita `inviteArtist` via helper compartilhado (`inviteUserWithRole({ email, role, linkColumn, linkValue })`) para evitar duplicação.
 
-- **(a)** Nada (só chips clicáveis) — mais limpo visualmente, evita toques acidentais na grade densa.
-- **(b)** Abrir novo agendamento pré-preenchido com aquele artista + aquele dia (hora padrão 10:00), igual ao "+" do slot livre do Dia.
+## Fora do escopo
 
-Meu default seria **(a)** por causa da densidade em 390px; confirma?
+- Editar/cancelar agendamentos pelo vendedor (fica somente leitura).
+- Vendedor ver appointments de outros vendedores.
+- Notificações push/email extras além do convite inicial.
