@@ -907,12 +907,13 @@ function WeekView({
                             type="button"
                             onClick={() => openFromEvent(ev, a.staff)}
                             title={`${name}${ev.title ? " — " + ev.title : ""}`}
-                            className={cn(
-                              "flex items-center rounded-[3px] border-l-2 bg-muted/50 px-1 py-0.5 text-[10px] font-semibold tabular-nums leading-none text-foreground shadow-sm active:bg-muted",
-                              a.staff.color.replace(/^bg-/, "border-l-"),
-                            )}
+                            className="flex items-stretch gap-1 overflow-hidden rounded-[3px] bg-muted/60 pr-1 text-[10px] font-semibold tabular-nums leading-none text-foreground shadow-sm active:bg-muted"
                           >
-                            {fmtHHmm(s)}
+                            <span
+                              className={cn("w-[3px] shrink-0", a.staff.color)}
+                              aria-hidden
+                            />
+                            <span className="py-1">{fmtHHmm(s)}</span>
                           </button>
                         );
                       })}
