@@ -808,142 +808,131 @@ function WeekView({
         <div className="p-4 text-xs text-muted-foreground">{t("common.loading")}</div>
       ) : null}
 
-      {/* ============== MOBILE: single-day, stacked artists ============== */}
+      {/* ============== MOBILE: artists × 7 days grid ============== */}
       <div className="sm:hidden">
-        <div className="sticky top-0 z-10 flex gap-1 overflow-x-auto border-b border-border bg-background px-2 py-2">
+        <div
+          className="grid border-b border-border bg-background"
+          style={{ gridTemplateColumns: "44px repeat(7, minmax(0, 1fr))" }}
+        >
+          {/* header row */}
+          <div className="sticky left-0 z-10 border-b border-r border-border bg-background" />
           {days.map((dayMs) => {
             const d = new Date(dayMs);
             const key = brusselsDayKey(d);
-            const isActive = key === activeMobileKey;
             const isToday = key === todayKey;
             return (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setMobileDayKey(key)}
+              <div
+                key={`h-${key}`}
                 className={cn(
-                  "flex min-w-[44px] shrink-0 flex-col items-center gap-0.5 rounded-md border px-2 py-1.5 text-xs",
-                  isActive
-                    ? "border-foreground bg-foreground text-background"
-                    : "border-border bg-background text-foreground hover:bg-muted",
-                  !isActive && isToday && "ring-1 ring-foreground/40",
+                  "flex flex-col items-center gap-0.5 border-b border-l border-border px-0.5 py-1.5 text-center",
+                  isToday && "bg-foreground/5",
                 )}
               >
-                <span className="text-[9px] uppercase tracking-wide opacity-70">
-                  {dayFmt.format(d)}
+                <span
+                  className={cn(
+                    "text-[9px] uppercase tracking-wide text-muted-foreground",
+                    isToday && "text-foreground",
+                  )}
+                >
+                  {dayFmt.format(d).replace(".", "")}
                 </span>
-                <span className="text-sm font-semibold tabular-nums">{numFmt.format(d)}</span>
-              </button>
+                <span
+                  className={cn(
+                    "text-[13px] font-semibold tabular-nums leading-none",
+                    isToday ? "text-foreground" : "text-foreground/80",
+                  )}
+                >
+                  {numFmt.format(d)}
+                </span>
+              </div>
             );
           })}
-        </div>
-        <div className="p-2">
-          <div className="mb-2 text-[11px] uppercase tracking-wide text-muted-foreground">
-            {dayLongFmt.format(
-              new Date(
-                days.find((d) => brusselsDayKey(new Date(d)) === activeMobileKey) ?? startMs,
-              ),
-            )}
-          </div>
-          <div className="space-y-2">
-            {agendas.map((a) => {
-              const evs = a.events
-                .filter((ev) => brusselsDayKey(new Date(ev.startTime)) === activeMobileKey)
-                .sort(
-                  (x, y) =>
-                    new Date(x.startTime).getTime() - new Date(y.startTime).getTime(),
-                );
-              return (
-                <div
-                  key={a.staff.id}
-                  className="rounded-md border border-border bg-background"
-                >
-                  <div className="flex items-center gap-2 border-b border-border bg-muted/40 px-2 py-1.5">
-                    <Avatar className="h-7 w-7 shrink-0">
-                      {a.staff.avatarUrl ? (
-                        <AvatarImage src={a.staff.avatarUrl} alt={a.staff.name} />
-                      ) : null}
-                      <AvatarFallback className={cn("text-[10px] text-white", a.staff.color)}>
-                        {a.staff.initials}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-xs font-semibold text-foreground">
-                        {a.staff.shortName}
-                      </div>
-                    </div>
-                    <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">
-                      {evs.length} {t("agenda.month.appts")}
-                    </span>
-                  </div>
-                  {evs.length === 0 ? (
-                    <div className="px-2 py-2 text-[11px] text-muted-foreground">—</div>
-                  ) : (
-                    <div className="divide-y divide-border">
-                      {evs.map((ev) => {
-                        const bucket = statusMap.get(ev.id);
+
+          {/* artist rows */}
+          {agendas.map((a) => {
+            const byDay = new Map<string, GhlEvent[]>();
+            for (const ev of a.events) {
+              const k = brusselsDayKey(new Date(ev.startTime));
+              const list = byDay.get(k);
+              if (list) list.push(ev);
+              else byDay.set(k, [ev]);
+            }
+            for (const list of byDay.values()) {
+              list.sort(
+                (x, y) =>
+                  new Date(x.startTime).getTime() - new Date(y.startTime).getTime(),
+              );
+            }
+            return (
+              <div key={a.staff.id} className="contents">
+                <div className="sticky left-0 z-10 flex flex-col items-center justify-center gap-1 border-b border-r border-border bg-background px-0.5 py-2">
+                  <Avatar className="h-8 w-8 shrink-0 ring-2 ring-offset-1 ring-offset-background" style={{ boxShadow: "none" }}>
+                    {a.staff.avatarUrl ? (
+                      <AvatarImage src={a.staff.avatarUrl} alt={a.staff.name} />
+                    ) : null}
+                    <AvatarFallback className={cn("text-[9px] text-white", a.staff.color)}>
+                      {a.staff.initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="line-clamp-2 text-center text-[9px] font-semibold uppercase tracking-tight leading-tight text-foreground">
+                    {a.staff.shortName}
+                  </span>
+                </div>
+                {days.map((dayMs) => {
+                  const d = new Date(dayMs);
+                  const key = brusselsDayKey(d);
+                  const isToday = key === todayKey;
+                  const evs = byDay.get(key) ?? [];
+                  const visible = evs.slice(0, 3);
+                  const extra = evs.length - visible.length;
+                  return (
+                    <div
+                      key={`${a.staff.id}-${key}`}
+                      className={cn(
+                        "flex min-h-[64px] flex-col gap-0.5 border-b border-l border-border p-0.5",
+                        isToday && "bg-foreground/[0.03]",
+                      )}
+                    >
+                      {visible.map((ev) => {
+                        const s = new Date(ev.startTime).getTime();
                         const name =
                           ev.contact?.name ||
                           [ev.contact?.firstName, ev.contact?.lastName]
                             .filter(Boolean)
                             .join(" ") ||
                           t("agenda.booked");
-                        const s = new Date(ev.startTime).getTime();
                         return (
                           <button
                             key={ev.id}
                             type="button"
                             onClick={() => openFromEvent(ev, a.staff)}
-                            className="flex w-full items-center gap-2 px-2 py-2 text-left hover:bg-muted/50 active:bg-muted"
                             title={`${name}${ev.title ? " — " + ev.title : ""}`}
+                            className={cn(
+                              "flex items-center rounded-[3px] border-l-2 bg-muted/50 px-1 py-0.5 text-[10px] font-semibold tabular-nums leading-none text-foreground shadow-sm active:bg-muted",
+                              a.staff.color.replace(/^bg-/, "border-l-"),
+                            )}
                           >
-                            <span
-                              className={cn(
-                                "inline-block h-2 w-2 shrink-0 rounded-full",
-                                a.staff.color,
-                              )}
-                              aria-hidden
-                            />
-                            <span className="w-10 shrink-0 text-xs tabular-nums text-muted-foreground">
-                              {fmtHHmm(s)}
-                            </span>
-                            <span className="flex min-w-0 flex-1 flex-col">
-                              <span className="truncate text-xs font-medium text-foreground">
-                                {name}
-                              </span>
-                              {ev.title ? (
-                                <span className="truncate text-[10px] text-muted-foreground">
-                                  {ev.title}
-                                </span>
-                              ) : null}
-                            </span>
-                            {bucket ? (
-                              <StatusBadge
-                                variant={bucketToVariant(bucket)}
-                                className="shrink-0 px-1 py-0 text-[9px]"
-                              >
-                                {bucketLabel(bucket)}
-                              </StatusBadge>
-                            ) : null}
-                            <ChevronRight
-                              className="h-3 w-3 shrink-0 text-muted-foreground"
-                              aria-hidden
-                            />
+                            {fmtHHmm(s)}
                           </button>
                         );
                       })}
+                      {extra > 0 ? (
+                        <span className="px-1 text-[9px] font-medium text-muted-foreground">
+                          +{extra}
+                        </span>
+                      ) : null}
                     </div>
-                  )}
-                </div>
-              );
-            })}
-            {agendas.length === 0 && !isFetching ? (
-              <div className="p-4 text-center text-xs text-muted-foreground">
-                {t("common.loading")}
+                  );
+                })}
               </div>
-            ) : null}
-          </div>
+            );
+          })}
         </div>
+        {agendas.length === 0 && !isFetching ? (
+          <div className="p-4 text-center text-xs text-muted-foreground">
+            {t("common.loading")}
+          </div>
+        ) : null}
       </div>
 
       {/* ============== DESKTOP: full 7-day grid ============== */}
