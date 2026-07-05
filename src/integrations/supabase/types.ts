@@ -833,6 +833,7 @@ export type Database = {
     }
     Functions: {
       current_artist_id: { Args: never; Returns: string }
+      current_seller_id: { Args: never; Returns: string }
       current_user_role: {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
@@ -889,6 +890,28 @@ export type Database = {
           services_summary: string
           start_at: string
           status: string
+          updated_at: string
+        }[]
+      }
+      get_my_seller_appointments: {
+        Args: never
+        Returns: {
+          artist_id: string
+          calendar_id: string
+          commission_eur: number
+          commission_pct: number
+          contact_id: string
+          contact_name: string
+          created_at: string
+          end_at: string
+          ghl_appointment_id: string
+          id: string
+          notes: string
+          seller_id: string
+          services_summary: string
+          start_at: string
+          status: string
+          total_eur: number
           updated_at: string
         }[]
       }
