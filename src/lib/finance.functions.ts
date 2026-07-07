@@ -32,6 +32,14 @@ export interface ArtistSummary {
   rows: ArtistAppointmentRow[];
 }
 
+export interface SellerSummary {
+  role: "seller";
+  aReceber: number;
+  pendente: number;
+  pago: number;
+  rows: ArtistAppointmentRow[];
+}
+
 export interface AdminSummary {
   role: "admin";
   totalBruto: number;
@@ -44,7 +52,7 @@ export interface AdminSummary {
   rows: AdminAppointmentRow[];
 }
 
-export type FinanceSummary = ArtistSummary | AdminSummary;
+export type FinanceSummary = ArtistSummary | SellerSummary | AdminSummary;
 
 export function deriveBucket(
   startAt: string,
@@ -75,11 +83,15 @@ export const getFinanceSummary = createServerFn({ method: "GET" })
 
     const { data: meRow, error: meErr } = await supabase
       .from("app_users" as never)
-      .select("role, artist_id")
+      .select("role, artist_id, seller_id")
       .eq("id", userId)
       .maybeSingle();
     if (meErr) throw new Error(meErr.message);
-    const me = meRow as { role: "admin" | "artist"; artist_id: string | null } | null;
+    const me = meRow as {
+      role: "admin" | "artist" | "seller";
+      artist_id: string | null;
+      seller_id: string | null;
+    } | null;
     if (!me) throw new Error("Sem perfil");
 
     // Fetch payments map (only paid ones matter for bucket).
@@ -144,6 +156,62 @@ export const getFinanceSummary = createServerFn({ method: "GET" })
 
       return {
         role: "artist",
+        aReceber: round2(aReceber),
+        pendente: round2(pendente),
+        pago: round2(pago),
+        rows,
+      };
+    }
+
+    if (me.role === "seller") {
+      const { data, error } = await supabase.rpc(
+        "get_my_seller_appointments" as never,
+      );
+      if (error) throw new Error(error.message);
+      const rpcRows = (
+        (data ?? []) as Array<{
+          id: string;
+          start_at: string;
+          end_at: string;
+          status: string;
+          contact_name: string | null;
+          services_summary: string | null;
+          commission_eur: number | string;
+        }>
+      ).sort((a, b) => (a.start_at < b.start_at ? 1 : -1));
+
+      const overrideMap = await fetchOverrideMap(
+        supabase,
+        rpcRows.map((r) => r.id),
+      );
+
+      const rows: ArtistAppointmentRow[] = rpcRows.map((r) => {
+        const commission = Number(r.commission_eur);
+        const manualRaw = overrideMap.get(r.id) ?? null;
+        return {
+          id: r.id,
+          startAt: r.start_at,
+          endAt: r.end_at,
+          status: r.status,
+          contactName: r.contact_name,
+          servicesSummary: r.services_summary,
+          commissionEur: commission,
+          bucket: deriveBucket(r.start_at, paidIds.has(r.id), manualRaw),
+          manualOverride: parseManualBucket(manualRaw) !== null,
+        };
+      });
+
+      let aReceber = 0;
+      let pendente = 0;
+      let pago = 0;
+      for (const r of rows) {
+        if (r.bucket === "pago") pago += r.commissionEur;
+        else if (r.bucket === "pendente") pendente += r.commissionEur;
+        else aReceber += r.commissionEur;
+      }
+
+      return {
+        role: "seller",
         aReceber: round2(aReceber),
         pendente: round2(pendente),
         pago: round2(pago),
