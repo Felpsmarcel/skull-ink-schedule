@@ -175,6 +175,12 @@ function FinanceiroPage() {
                 rows={filterRows(data.rows, period, bucket)}
                 emptyMsg={emptyMsg}
               />
+            ) : data.role === "seller" ? (
+              <SellerView
+                data={data}
+                rows={filterRows(data.rows, period, bucket)}
+                emptyMsg={emptyMsg}
+              />
             ) : (
               <AdminView
                 data={data}
