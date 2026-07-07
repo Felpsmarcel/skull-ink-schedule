@@ -432,3 +432,93 @@ function AdminView({
     </>
   );
 }
+
+function SellerView({
+  data,
+  rows,
+  emptyMsg,
+}: {
+  data: Extract<ReturnType<typeof useFinanceSummary>["data"], { role: "seller" }>;
+  rows: Extract<ReturnType<typeof useFinanceSummary>["data"], { role: "seller" }>["rows"];
+  emptyMsg: string;
+}) {
+  return (
+    <>
+      <section className="grid grid-cols-3 gap-2">
+        <StatCard label="A receber" value={formatCurrency(data.aReceber)} />
+        <StatCard label="Pendente" value={formatCurrency(data.pendente)} tone="warn" />
+        <StatCard label="Pago" value={formatCurrency(data.pago)} tone="good" />
+      </section>
+      <p className="text-[11px] text-muted-foreground">
+        Valores exibidos são a sua comissão como vendedor sobre os agendamentos que você vendeu.
+      </p>
+
+      {rows.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground sm:hidden">
+          {emptyMsg}
+        </div>
+      ) : (
+        <section className="space-y-2 sm:hidden">
+          {rows.map((r) => (
+            <article key={r.id} className="rounded-lg border border-border bg-card p-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-medium">
+                    {r.servicesSummary || r.contactName || "—"}
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">{formatDateTime(r.startAt)}</div>
+                </div>
+                <StatusBadge variant={bucketToVariant(r.bucket)} className="shrink-0">
+                  {r.manualOverride ? <Lock className="h-3 w-3" /> : null}
+                  {bucketLabel(r.bucket)}
+                </StatusBadge>
+              </div>
+              <div className="mt-2 flex items-baseline justify-between">
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Minha comissão</span>
+                <span className="text-sm font-semibold">{formatCurrency(r.commissionEur)}</span>
+              </div>
+            </article>
+          ))}
+        </section>
+      )}
+
+      <section className="hidden overflow-hidden rounded-lg border border-border sm:block">
+        <table className="w-full text-sm">
+          <thead className="bg-muted/50 text-[10px] uppercase tracking-wider text-muted-foreground">
+            <tr>
+              <th className="px-3 py-2 text-left">Data</th>
+              <th className="px-3 py-2 text-left">Cliente / Serviço</th>
+              <th className="px-3 py-2 text-right">Minha comissão</th>
+              <th className="px-3 py-2 text-right">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="px-3 py-6 text-center text-muted-foreground">
+                  {emptyMsg}
+                </td>
+              </tr>
+            ) : (
+              rows.map((r) => (
+                <tr key={r.id} className="border-t border-border">
+                  <td className="px-3 py-2">{formatDateTime(r.startAt)}</td>
+                  <td className="px-3 py-2">{r.servicesSummary || r.contactName || "—"}</td>
+                  <td className="px-3 py-2 text-right font-semibold">
+                    {formatCurrency(r.commissionEur)}
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    <StatusBadge variant={bucketToVariant(r.bucket)}>
+                      {r.manualOverride ? <Lock className="h-3 w-3" /> : null}
+                      {bucketLabel(r.bucket)}
+                    </StatusBadge>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </section>
+    </>
+  );
+}
