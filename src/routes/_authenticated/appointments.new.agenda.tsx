@@ -197,7 +197,7 @@ function AgendaStep() {
         </section>
       </main>
       <WizardFooter
-        backTo="/appointments/new/cliente"
+        showBack
         primary={primary}
         primaryDisabled={!canContinue}
         onPrimary={() => navigate({ to: "/appointments/new/servicos" })}

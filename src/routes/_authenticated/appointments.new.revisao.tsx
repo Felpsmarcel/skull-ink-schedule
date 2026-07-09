@@ -317,7 +317,7 @@ function RevisaoStep() {
         </section>
       </main>
       <WizardFooter
-        backTo="/appointments/new/servicos"
+        showBack
         primary={
           <span className="flex items-center gap-2">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}

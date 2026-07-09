@@ -229,7 +229,7 @@ function ServicosStep() {
         )}
       </main>
       <WizardFooter
-        backTo="/appointments/new/agenda"
+        showBack
         primary={
           canContinue ? (
             <span className="flex items-center gap-2">
