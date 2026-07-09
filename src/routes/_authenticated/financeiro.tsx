@@ -135,7 +135,7 @@ function FinanceiroPage() {
   const setSearch = (patch: Partial<{ period: string; bucket: string; artist: string; seller: string }>) => {
     navigate({
       to: "/financeiro",
-      search: (prev) => ({ ...prev, ...patch }),
+      search: (prev: Record<string, unknown>) => ({ ...prev, ...patch }),
       replace: true,
     });
   };
