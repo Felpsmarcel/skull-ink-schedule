@@ -115,7 +115,10 @@ export function AgendaAppointmentSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-md">
+      <SheetContent
+        side="right"
+        className="w-full pt-[max(1rem,env(safe-area-inset-top))] pb-[env(safe-area-inset-bottom)] sm:max-w-md sm:pt-6"
+      >
         <SheetHeader className="text-left">
           <div className="flex items-start justify-between gap-3">
             <SheetTitle className="truncate font-display text-lg uppercase tracking-wide">
