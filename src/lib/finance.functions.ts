@@ -19,6 +19,7 @@ export interface AdminAppointmentRow extends ArtistAppointmentRow {
   totalEur: number;
   studioEur: number;
   artistId: string;
+  artistName: string | null;
   sellerId: string | null;
   sellerName: string | null;
   sellerCommissionEur: number;
@@ -50,6 +51,8 @@ export interface AdminSummary {
   aReceber: number;
   vendedorComissaoTotal: number;
   rows: AdminAppointmentRow[];
+  artists: Array<{ id: string; name: string }>;
+  sellers: Array<{ id: string; name: string }>;
 }
 
 export type FinanceSummary = ArtistSummary | SellerSummary | AdminSummary;
