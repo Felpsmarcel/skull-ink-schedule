@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Copy,
   Phone,
@@ -73,6 +74,7 @@ export function AgendaAppointmentSheet({
 }: Props) {
   const { t, i18n } = useTranslation();
   const locale = resolveIntlLocale(i18n.language);
+  const isMobile = useIsMobile();
 
   const contactId = slot?.contactId ?? null;
 
@@ -116,10 +118,17 @@ export function AgendaAppointmentSheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
-        side="right"
-        className="w-full pt-[max(1rem,env(safe-area-inset-top))] pb-[env(safe-area-inset-bottom)] sm:max-w-md sm:pt-6"
+        side={isMobile ? "bottom" : "right"}
+        className={
+          isMobile
+            ? "flex h-[92dvh] w-full flex-col rounded-t-2xl p-0 pt-3 pb-[env(safe-area-inset-bottom)]"
+            : "w-full pt-[max(1rem,env(safe-area-inset-top))] pb-[env(safe-area-inset-bottom)] sm:max-w-md sm:pt-6"
+        }
       >
-        <SheetHeader className="text-left">
+        {isMobile ? (
+          <div className="mx-auto mb-2 h-1 w-10 shrink-0 rounded-full bg-border" aria-hidden />
+        ) : null}
+        <SheetHeader className={isMobile ? "shrink-0 px-4 text-left" : "text-left"}>
           <div className="flex items-start justify-between gap-3">
             <SheetTitle className="truncate font-display text-lg uppercase tracking-wide">
               {displayName}
@@ -136,7 +145,13 @@ export function AgendaAppointmentSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <div className="mt-6 space-y-5 overflow-y-auto pb-6 text-sm">
+        <div
+          className={
+            isMobile
+              ? "mt-4 flex-1 space-y-5 overflow-y-auto px-4 pb-6 text-sm"
+              : "mt-6 space-y-5 overflow-y-auto pb-6 text-sm"
+          }
+        >
           {slot?.hasOverlap ? (
             <div className="flex items-start gap-2 rounded border border-border bg-muted p-2 text-[12px] text-foreground">
               <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
