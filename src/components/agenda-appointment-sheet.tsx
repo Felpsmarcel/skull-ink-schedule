@@ -1067,6 +1067,9 @@ function ArtistPicker({
       setPendingId(null);
       queryClient.invalidateQueries({ queryKey: ["agenda"] });
       queryClient.invalidateQueries({ queryKey: ["agenda-status"] });
+      queryClient.invalidateQueries({ queryKey: ["agenda-range"] });
+      queryClient.invalidateQueries({ queryKey: ["agenda-status-range"] });
+      queryClient.invalidateQueries({ queryKey: ["finance-summary"] });
       queryClient.invalidateQueries({ queryKey: ["appointment-finance", ghlEventId] });
     },
     onError: (err: unknown) => {
