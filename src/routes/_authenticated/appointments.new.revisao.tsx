@@ -1,10 +1,9 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, Loader2, Mail, Phone, Trash2 } from "lucide-react";
+import { Loader2, Mail, Phone, Trash2 } from "lucide-react";
 import "@/i18n";
 
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -31,19 +30,19 @@ import { useFinalizeAppointment } from "@/hooks/use-finalize-appointment";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { listSellers } from "@/lib/sellers.functions";
+import { WizardFooter } from "@/components/appointment-wizard/wizard-footer";
 
-export const Route = createFileRoute("/_authenticated/appointments/new/checkout")({
+export const Route = createFileRoute("/_authenticated/appointments/new/revisao")({
   head: () => ({
     meta: [
-      { title: "Revisar agendamento — GF Tattoo Studio" },
-      { name: "description", content: "Revise e confirme o agendamento." },
+      { title: "Revisar — Novo agendamento" },
       { name: "robots", content: "noindex,nofollow" },
     ],
   }),
-  component: CheckoutPage,
+  component: RevisaoStep,
 });
 
-function CheckoutPage() {
+function RevisaoStep() {
   const { t } = useTranslation();
   const draft = useAppointmentDraft();
   const { data: artists = [] } = useArtists();
@@ -85,19 +84,8 @@ function CheckoutPage() {
   );
 
   return (
-    <div className="flex min-h-dvh flex-col bg-background pb-28">
-      <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-border bg-background/95 px-3 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] backdrop-blur">
-        <Link
-          to="/appointments/new"
-          className="grid h-9 w-9 place-items-center rounded-md hover:bg-muted"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
-        <h1 className="font-display text-lg uppercase tracking-wide">{t("appt.checkoutTitle")}</h1>
-      </header>
-
-      <main className="flex-1 space-y-4 p-4">
-        {/* Contact header */}
+    <>
+      <main className="flex-1 space-y-4 p-4 pb-4">
         <section className="flex items-center gap-3 rounded-lg border border-border bg-card p-3">
           <div className="grid h-12 w-12 place-items-center rounded-full bg-muted text-base font-semibold text-foreground">
             {(draft.contact?.contactName ?? draft.contact?.firstName ?? "?")
@@ -144,7 +132,6 @@ function CheckoutPage() {
           </div>
         </section>
 
-        {/* Date + staff */}
         <section className="rounded-lg border border-border bg-card p-3 text-sm">
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">{t("appt.dateTime")}</span>
@@ -176,7 +163,6 @@ function CheckoutPage() {
           </div>
         </section>
 
-        {/* Services */}
         <section className="rounded-lg border border-border bg-card p-3">
           <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             {t("appt.services")}
@@ -215,9 +201,7 @@ function CheckoutPage() {
                     </div>
                     {onRequest ? (
                       <div className="mt-2 flex items-center gap-2">
-                        <Label className="text-[11px] text-muted-foreground">
-                          Valor (€)
-                        </Label>
+                        <Label className="text-[11px] text-muted-foreground">Valor (€)</Label>
                         <Input
                           type="number"
                           min={0}
@@ -265,9 +249,11 @@ function CheckoutPage() {
           )}
         </section>
 
-        {/* Notes */}
         <section className="rounded-lg border border-border bg-card p-3">
-          <Label htmlFor="notes" className="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <Label
+            htmlFor="notes"
+            className="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+          >
             {t("appt.notes")}
           </Label>
           <Textarea
@@ -279,7 +265,6 @@ function CheckoutPage() {
           />
         </section>
 
-        {/* Totals */}
         <section className="space-y-2 rounded-lg border border-border bg-card p-3 text-sm">
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">{t("appt.total")}</span>
@@ -331,16 +316,19 @@ function CheckoutPage() {
           ) : null}
         </section>
       </main>
-
-      <footer className="fixed inset-x-0 bottom-0 z-40 mx-auto flex max-w-md items-center gap-2 border-t border-border bg-background/95 px-3 pt-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur">
-        <Button className="w-full" onClick={() => void run()} disabled={saving || !canFinalize}>
-          {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-          {t("appt.finalize")}
-          {final > 0 ? (
-            <span className="ml-2 text-xs opacity-80">{formatPrice(final)}</span>
-          ) : null}
-        </Button>
-      </footer>
-    </div>
+      <WizardFooter
+        showBack
+        primary={
+          <span className="flex items-center gap-2">
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            {t("appt.finalize")}
+            {final > 0 ? <span className="text-xs opacity-80">· {formatPrice(final)}</span> : null}
+          </span>
+        }
+        primaryDisabled={!canFinalize}
+        primaryLoading={saving}
+        onPrimary={() => void run()}
+      />
+    </>
   );
 }

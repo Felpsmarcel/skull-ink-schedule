@@ -124,6 +124,14 @@
         "noCalendar": "Choisissez un tatoueur.",
         "noStart": "Choisissez un créneau.",
         "slotTaken": "Ce créneau vient d'être pris. Choisissez-en un autre."
+      },
+      "wizard": {
+        "back": "Retour",
+        "next": "Continuer",
+        "step1": "Client",
+        "step2": "Agenda",
+        "step3": "Services",
+        "step4": "Vérifier"
       }
     }
   }

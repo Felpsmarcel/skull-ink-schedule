@@ -124,6 +124,14 @@
         "noCalendar": "Escolha um tatuador.",
         "noStart": "Escolha um horário.",
         "slotTaken": "Esse horário já foi ocupado. Escolha outro."
+      },
+      "wizard": {
+        "back": "Voltar",
+        "next": "Continuar",
+        "step1": "Cliente",
+        "step2": "Agenda",
+        "step3": "Serviços",
+        "step4": "Revisão"
       }
     }
   }

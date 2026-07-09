@@ -124,6 +124,14 @@
         "noCalendar": "Pick an artist.",
         "noStart": "Pick a time.",
         "slotTaken": "That slot was just taken. Pick another."
+      },
+      "wizard": {
+        "back": "Back",
+        "next": "Continue",
+        "step1": "Client",
+        "step2": "When",
+        "step3": "Services",
+        "step4": "Review"
       }
     }
   }
