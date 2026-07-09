@@ -38,10 +38,12 @@ import {
   registerAppointmentPayment,
   setAppointmentPaymentStatus,
   setAppointmentSeller,
+  reassignAppointmentArtist,
   type AppointmentFinanceView,
 } from "@/lib/appointments.functions";
 import { listSellers } from "@/lib/sellers.functions";
 import { listAllServices } from "@/lib/services.functions";
+import { useArtists } from "@/hooks/use-artists";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { haptic } from "@/lib/haptics";
@@ -159,7 +161,15 @@ export function AgendaAppointmentSheet({
             </div>
           ) : null}
 
-          <Row label={t("agenda.details.artist")} value={staffName} />
+          {slot?.ghlEventId ? (
+            <ArtistPicker
+              ghlEventId={slot.ghlEventId}
+              currentCalendarId={calendarId}
+              currentName={staffName}
+            />
+          ) : (
+            <Row label={t("agenda.details.artist")} value={staffName} />
+          )}
           <Row
             label={t("agenda.details.service")}
             value={slot?.serviceName || t("agenda.booked")}
@@ -1028,6 +1038,97 @@ function PaymentStatusPicker({
         <Lock className="h-3 w-3 text-muted-foreground" aria-label="Status manual" />
       ) : null}
       {mut.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+    </div>
+  );
+}
+
+function ArtistPicker({
+  ghlEventId,
+  currentCalendarId,
+  currentName,
+}: {
+  ghlEventId: string;
+  currentCalendarId: string;
+  currentName: string;
+}) {
+  const queryClient = useQueryClient();
+  const reassign = useServerFn(reassignAppointmentArtist);
+  const artistsQ = useArtists();
+  const artists = artistsQ.data ?? [];
+  const currentArtist = artists.find((a) => a.calendarId === currentCalendarId);
+  const [pendingId, setPendingId] = useState<string | null>(null);
+
+  const mut = useMutation({
+    mutationFn: async (newArtistId: string) =>
+      reassign({ data: { ghlEventId, newArtistId } }),
+    onSuccess: () => {
+      haptic("success");
+      toast.success("Tatuador atualizado");
+      setPendingId(null);
+      queryClient.invalidateQueries({ queryKey: ["agenda"] });
+      queryClient.invalidateQueries({ queryKey: ["agenda-status"] });
+      queryClient.invalidateQueries({ queryKey: ["appointment-finance", ghlEventId] });
+    },
+    onError: (err: unknown) => {
+      setPendingId(null);
+      toast.error(err instanceof Error ? err.message : "Falha ao reatribuir");
+    },
+  });
+
+  return (
+    <div>
+      <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        Tatuador
+      </div>
+      <div className="flex items-center gap-2">
+        <Select
+          value={currentArtist?.id ?? ""}
+          onValueChange={(v) => {
+            if (!currentArtist || v === currentArtist.id) return;
+            setPendingId(v);
+          }}
+          disabled={mut.isPending || artistsQ.isLoading}
+        >
+          <SelectTrigger className="h-9 flex-1 text-xs">
+            <SelectValue placeholder={currentName} />
+          </SelectTrigger>
+          <SelectContent>
+            {artists.map((a) => (
+              <SelectItem key={a.id} value={a.id}>
+                {a.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {mut.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+      </div>
+      {pendingId && !mut.isPending ? (
+        <div className="mt-2 flex items-center justify-between gap-2 rounded border border-amber-500/50 bg-amber-500/10 p-2 text-[11px]">
+          <span>
+            Reatribuir para{" "}
+            <strong>{artists.find((a) => a.id === pendingId)?.name}</strong>?
+          </span>
+          <div className="flex gap-1">
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-7 px-2 text-[11px]"
+              onClick={() => setPendingId(null)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              className="h-7 px-2 text-[11px]"
+              onClick={() => mut.mutate(pendingId)}
+            >
+              Confirmar
+            </Button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
