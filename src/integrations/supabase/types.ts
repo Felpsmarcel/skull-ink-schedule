@@ -886,6 +886,7 @@ export type Database = {
           end_at: string
           ghl_appointment_id: string
           id: string
+          manual_payment_status: string
           notes: string
           services_summary: string
           start_at: string
@@ -906,6 +907,7 @@ export type Database = {
           end_at: string
           ghl_appointment_id: string
           id: string
+          manual_payment_status: string
           notes: string
           seller_id: string
           services_summary: string

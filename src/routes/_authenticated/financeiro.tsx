@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { AlertTriangle, ArrowLeft, Wallet, Lock } from "lucide-react";
-import { useState } from "react";
+import { zodValidator, fallback } from "@tanstack/zod-adapter";
+import { z } from "zod";
 import { useFinanceSummary } from "@/hooks/use-finance";
 import { useIsAdmin } from "@/hooks/use-current-user";
 import { formatCurrency, formatDateTime } from "@/lib/format";
@@ -13,10 +14,19 @@ import type { PaymentBucket } from "@/lib/finance.functions";
 type Period = "today" | "week" | "month" | "all";
 type BucketFilter = "all" | PaymentBucket;
 
-function filterRows<T extends { startAt: string; bucket: PaymentBucket }>(
+function filterRows<
+  T extends {
+    startAt: string;
+    bucket: PaymentBucket;
+    artistId?: string;
+    sellerId?: string | null;
+  },
+>(
   rows: T[],
   period: Period,
   bucket: BucketFilter,
+  artistId: string,
+  sellerId: string,
 ): T[] {
   const now = new Date();
   const startOfToday = new Date(now);
@@ -36,6 +46,12 @@ function filterRows<T extends { startAt: string; bucket: PaymentBucket }>(
   return rows.filter((r) => {
     if (bucket !== "all" && r.bucket !== bucket) return false;
     if (from !== null && new Date(r.startAt).getTime() < from) return false;
+    if (artistId !== "all" && r.artistId !== artistId) return false;
+    if (sellerId !== "all") {
+      if (sellerId === "none") {
+        if (r.sellerId) return false;
+      } else if (r.sellerId !== sellerId) return false;
+    }
     return true;
   });
 }
@@ -79,7 +95,15 @@ function FilterRow<V extends string>({
   );
 }
 
+const financeSearchSchema = z.object({
+  period: fallback(z.string(), "all").default("all"),
+  bucket: fallback(z.string(), "all").default("all"),
+  artist: fallback(z.string(), "all").default("all"),
+  seller: fallback(z.string(), "all").default("all"),
+});
+
 export const Route = createFileRoute("/_authenticated/financeiro")({
+  validateSearch: zodValidator(financeSearchSchema),
   head: () => ({
     meta: [
       { title: "Financeiro — GF Tattoo Studio" },
@@ -90,15 +114,39 @@ export const Route = createFileRoute("/_authenticated/financeiro")({
   component: FinanceiroPage,
 });
 
+const ALLOWED_PERIODS: Period[] = ["today", "week", "month", "all"];
+const ALLOWED_BUCKETS: BucketFilter[] = ["all", "pago", "pendente", "a_receber"];
+
 function FinanceiroPage() {
   const navigate = useNavigate();
   const { data, isLoading, error, refetch } = useFinanceSummary();
   const isAdmin = useIsAdmin();
 
-  const [period, setPeriod] = useState<Period>("all");
-  const [bucket, setBucket] = useState<BucketFilter>("all");
+  const search = Route.useSearch();
+  const period: Period = (ALLOWED_PERIODS as string[]).includes(search.period)
+    ? (search.period as Period)
+    : "all";
+  const bucket: BucketFilter = (ALLOWED_BUCKETS as string[]).includes(search.bucket)
+    ? (search.bucket as BucketFilter)
+    : "all";
+  const artistId = search.artist || "all";
+  const sellerId = search.seller || "all";
+
+  const setSearch = (patch: Partial<{ period: string; bucket: string; artist: string; seller: string }>) => {
+    navigate({
+      to: "/financeiro",
+      search: (prev: Record<string, unknown>) => ({ ...prev, ...patch }),
+      replace: true,
+    });
+  };
+  const setPeriod = (v: Period) => setSearch({ period: v });
+  const setBucket = (v: BucketFilter) => setSearch({ bucket: v });
+  const setArtist = (v: string) => setSearch({ artist: v });
+  const setSeller = (v: string) => setSearch({ seller: v });
+
   const filtersActive = period !== "all" || bucket !== "all";
-  const emptyMsg = filtersActive
+  const anyFilter = filtersActive || artistId !== "all" || sellerId !== "all";
+  const emptyMsg = anyFilter
     ? "Nenhum agendamento com os filtros aplicados."
     : "Sem agendamentos.";
 
@@ -168,23 +216,57 @@ function FinanceiroPage() {
                   { v: "a_receber", l: "A receber" },
                 ]}
               />
+              {data.role === "admin" ? (
+                <>
+                  <FilterRow
+                    label="Artista"
+                    value={artistId}
+                    onChange={setArtist}
+                    options={[
+                      { v: "all", l: "Todos" },
+                      ...data.artists.map((a) => ({ v: a.id, l: a.name })),
+                    ]}
+                  />
+                  <FilterRow
+                    label="Vendedor"
+                    value={sellerId}
+                    onChange={setSeller}
+                    options={[
+                      { v: "all", l: "Todos" },
+                      { v: "none", l: "Sem vendedor" },
+                      ...data.sellers.map((s) => ({ v: s.id, l: s.name })),
+                    ]}
+                  />
+                </>
+              ) : null}
+              {anyFilter ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSearch({ period: "all", bucket: "all", artist: "all", seller: "all" })
+                  }
+                  className="self-start rounded-full border border-border px-3 py-1 text-[11px] text-muted-foreground hover:bg-muted"
+                >
+                  Limpar filtros
+                </button>
+              ) : null}
             </section>
             {data.role === "artist" ? (
               <ArtistView
                 data={data}
-                rows={filterRows(data.rows, period, bucket)}
+                rows={filterRows(data.rows, period, bucket, "all", "all")}
                 emptyMsg={emptyMsg}
               />
             ) : data.role === "seller" ? (
               <SellerView
                 data={data}
-                rows={filterRows(data.rows, period, bucket)}
+                rows={filterRows(data.rows, period, bucket, "all", "all")}
                 emptyMsg={emptyMsg}
               />
             ) : (
               <AdminView
                 data={data}
-                rows={filterRows(data.rows, period, bucket)}
+                rows={filterRows(data.rows, period, bucket, artistId, sellerId)}
                 emptyMsg={emptyMsg}
               />
             )}

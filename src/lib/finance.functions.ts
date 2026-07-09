@@ -19,6 +19,7 @@ export interface AdminAppointmentRow extends ArtistAppointmentRow {
   totalEur: number;
   studioEur: number;
   artistId: string;
+  artistName: string | null;
   sellerId: string | null;
   sellerName: string | null;
   sellerCommissionEur: number;
@@ -50,6 +51,8 @@ export interface AdminSummary {
   aReceber: number;
   vendedorComissaoTotal: number;
   rows: AdminAppointmentRow[];
+  artists: Array<{ id: string; name: string }>;
+  sellers: Array<{ id: string; name: string }>;
 }
 
 export type FinanceSummary = ArtistSummary | SellerSummary | AdminSummary;
@@ -94,17 +97,20 @@ export const getFinanceSummary = createServerFn({ method: "GET" })
     } | null;
     if (!me) throw new Error("Sem perfil");
 
-    // Fetch payments map (only paid ones matter for bucket).
-    const { data: payRows, error: payErr } = await supabase
-      .from("payments" as never)
-      .select("appointment_id, status")
-      .eq("status", "paid");
-    if (payErr) throw new Error(payErr.message);
-    const paidIds = new Set(
-      ((payRows ?? []) as Array<{ appointment_id: string | null }>)
-        .map((r) => r.appointment_id)
-        .filter((x): x is string => Boolean(x)),
-    );
+    const fetchPaidIds = async (ids: string[]): Promise<Set<string>> => {
+      if (ids.length === 0) return new Set();
+      const { data: payRows, error: payErr } = await (supabase as any)
+        .from("payments" as never)
+        .select("appointment_id, status")
+        .eq("status", "paid")
+        .in("appointment_id", ids);
+      if (payErr) throw new Error(payErr.message);
+      return new Set(
+        ((payRows ?? []) as Array<{ appointment_id: string | null }>)
+          .map((r) => r.appointment_id)
+          .filter((x): x is string => Boolean(x)),
+      );
+    };
 
     if (me.role === "artist") {
       const { data, error } = await supabase.rpc(
@@ -120,18 +126,16 @@ export const getFinanceSummary = createServerFn({ method: "GET" })
           contact_name: string | null;
           services_summary: string | null;
           commission_eur: number | string;
+          manual_payment_status: string | null;
         }>
       ).sort((a, b) => (a.start_at < b.start_at ? 1 : -1));
 
-      const overrideMap = await fetchOverrideMap(
-        supabase,
-        rpcRows.map((r) => r.id),
-      );
+      const paidIds = await fetchPaidIds(rpcRows.map((r) => r.id));
 
       const rows: ArtistAppointmentRow[] = rpcRows
         .map((r) => {
         const commission = Number(r.commission_eur);
-        const manualRaw = overrideMap.get(r.id) ?? null;
+        const manualRaw = r.manual_payment_status ?? null;
         return {
           id: r.id,
           startAt: r.start_at,
@@ -177,17 +181,15 @@ export const getFinanceSummary = createServerFn({ method: "GET" })
           contact_name: string | null;
           services_summary: string | null;
           commission_eur: number | string;
+          manual_payment_status: string | null;
         }>
       ).sort((a, b) => (a.start_at < b.start_at ? 1 : -1));
 
-      const overrideMap = await fetchOverrideMap(
-        supabase,
-        rpcRows.map((r) => r.id),
-      );
+      const paidIds = await fetchPaidIds(rpcRows.map((r) => r.id));
 
       const rows: ArtistAppointmentRow[] = rpcRows.map((r) => {
         const commission = Number(r.commission_eur);
-        const manualRaw = overrideMap.get(r.id) ?? null;
+        const manualRaw = r.manual_payment_status ?? null;
         return {
           id: r.id,
           startAt: r.start_at,
@@ -244,23 +246,35 @@ export const getFinanceSummary = createServerFn({ method: "GET" })
       }>
     );
 
+    const paidIds = await fetchPaidIds(rawRows.map((r) => r.id));
+
     // Fetch sellers referenced
     const sellerIds = Array.from(
       new Set(rawRows.map((r) => r.seller_id).filter((x): x is string => !!x)),
     );
     const sellersMap = new Map<string, { name: string; pct: number }>();
-    if (sellerIds.length > 0) {
-      const { data: sellerRows } = await (supabase as any)
-        .from("sellers" as never)
-        .select("id, name, commission_pct")
-        .in("id", sellerIds);
-      for (const s of ((sellerRows ?? []) as Array<{
-        id: string;
-        name: string;
-        commission_pct: number | string;
-      }>)) {
-        sellersMap.set(s.id, { name: s.name, pct: Number(s.commission_pct) });
-      }
+    const [{ data: sellerRows }, { data: artistRows }] = await Promise.all([
+      sellerIds.length > 0
+        ? (supabase as any)
+            .from("sellers" as never)
+            .select("id, name, commission_pct")
+            .in("id", sellerIds)
+        : Promise.resolve({ data: [] as Array<{ id: string; name: string; commission_pct: number | string }> }),
+      (supabase as any)
+        .from("artists" as never)
+        .select("id, name")
+        .order("name"),
+    ]);
+    for (const s of ((sellerRows ?? []) as Array<{
+      id: string;
+      name: string;
+      commission_pct: number | string;
+    }>)) {
+      sellersMap.set(s.id, { name: s.name, pct: Number(s.commission_pct) });
+    }
+    const artistsMap = new Map<string, string>();
+    for (const a of ((artistRows ?? []) as Array<{ id: string; name: string }>)) {
+      artistsMap.set(a.id, a.name);
     }
 
     const rows: AdminAppointmentRow[] = rawRows.map((r) => {
@@ -273,6 +287,7 @@ export const getFinanceSummary = createServerFn({ method: "GET" })
       return {
         id: r.id,
         artistId: r.artist_id,
+        artistName: artistsMap.get(r.artist_id) ?? null,
         startAt: r.start_at,
         endAt: r.end_at,
         status: r.status,
@@ -319,36 +334,11 @@ export const getFinanceSummary = createServerFn({ method: "GET" })
       aReceber: round2(aReceber),
       vendedorComissaoTotal: round2(vendedorComissaoTotal),
       rows,
+      artists: Array.from(artistsMap.entries()).map(([id, name]) => ({ id, name })),
+      sellers: Array.from(sellersMap.entries()).map(([id, s]) => ({ id, name: s.name })),
     };
   });
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
-}
-
-async function fetchOverrideMap(
-  supabase: { from: (t: never) => unknown },
-  ids: string[],
-): Promise<Map<string, string | null>> {
-  const map = new Map<string, string | null>();
-  if (ids.length === 0) return map;
-  const { data, error } = await (supabase as {
-    from: (t: string) => {
-      select: (s: string) => {
-        in: (
-          k: string,
-          v: string[],
-        ) => Promise<{ data: Array<{ id: string; manual_payment_status: string | null }> | null; error: { message: string } | null }>;
-      };
-    };
-  })
-    .from("appointments")
-    .select("id, manual_payment_status")
-    .in("id", ids);
-  if (error) {
-    console.warn("finance fetchOverrideMap failed", error.message);
-    return map;
-  }
-  for (const r of data ?? []) map.set(r.id, r.manual_payment_status);
-  return map;
 }
