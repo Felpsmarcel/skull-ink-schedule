@@ -3,6 +3,13 @@ import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { WIZARD_STEPS, type WizardStep } from "@/lib/appointment-draft-validate";
 
+const STEP_PATH = {
+  cliente: "/appointments/new/cliente",
+  agenda: "/appointments/new/agenda",
+  servicos: "/appointments/new/servicos",
+  revisao: "/appointments/new/revisao",
+} as const;
+
 export interface StepperProps {
   /** Which steps are already completed (used to allow jumping back). */
   completed: Record<WizardStep, boolean>;
@@ -58,7 +65,7 @@ export function WizardStepper({ completed }: StepperProps) {
           return (
             <li key={step} className="min-w-0 flex-1">
               {reachable ? (
-                <Link to={`/appointments/new/${step}`} className={cls}>
+                <Link to={STEP_PATH[step]} className={cls}>
                   {inner}
                 </Link>
               ) : (
