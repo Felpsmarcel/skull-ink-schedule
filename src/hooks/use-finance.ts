@@ -7,6 +7,6 @@ export function useFinanceSummary() {
   return useQuery<FinanceSummary>({
     queryKey: ["finance-summary"],
     queryFn: () => fetcher(),
-    staleTime: 30_000,
+    staleTime: 5 * 60_000,
   });
 }
