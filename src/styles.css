@@ -4,6 +4,12 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Keep focused wizard inputs above the fixed footer and iOS keyboard. */
+.wizard-scope input:focus,
+.wizard-scope textarea:focus {
+  scroll-margin-bottom: 6rem;
+}
+
 /*
  * Design system definition.
  *
