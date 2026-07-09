@@ -85,7 +85,7 @@ function RevisaoStep() {
 
   return (
     <>
-      <main className="flex-1 space-y-4 p-4 pb-4">
+      <main className="flex-1 space-y-4 p-4 pb-0">
         <section className="flex items-center gap-3 rounded-lg border border-border bg-card p-3">
           <div className="grid h-12 w-12 place-items-center rounded-full bg-muted text-base font-semibold text-foreground">
             {(draft.contact?.contactName ?? draft.contact?.firstName ?? "?")
@@ -202,7 +202,7 @@ function RevisaoStep() {
                     {onRequest ? (
                       <div className="mt-2 flex items-center gap-2">
                         <Label className="text-[11px] text-muted-foreground">Valor (€)</Label>
-                        <Input
+                         <Input
                           type="number"
                           min={0}
                           step="0.01"
@@ -215,7 +215,7 @@ function RevisaoStep() {
                             );
                           }}
                           placeholder="0,00"
-                          className="h-9 w-28 text-sm"
+                          className="h-10 w-28 text-sm"
                         />
                       </div>
                     ) : null}
@@ -231,12 +231,12 @@ function RevisaoStep() {
                         onChange={(e) =>
                           draft.setDiscount(l.service.id, Number(e.target.value) || 0)
                         }
-                        className="h-9 w-20 text-sm"
+                        className="h-10 w-20 text-sm"
                       />
                       <button
                         type="button"
                         onClick={() => draft.removeService(l.service.id)}
-                        className="ml-auto grid h-9 w-9 place-items-center rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        className="ml-auto grid h-11 w-11 place-items-center rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                         aria-label={t("appt.removeService")}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -293,7 +293,7 @@ function RevisaoStep() {
                 draft.setDeposit(v === "" ? 0 : Number(v));
               }}
               placeholder="0,00"
-              className="h-9 w-32 text-right text-sm"
+              className="h-10 w-32 text-right text-sm"
             />
           </div>
 

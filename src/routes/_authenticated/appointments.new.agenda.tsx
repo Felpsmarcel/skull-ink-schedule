@@ -105,7 +105,7 @@ function AgendaStep() {
 
   return (
     <>
-      <main className="flex-1 space-y-4 p-4">
+      <main className="flex-1 space-y-4 p-4 pb-0">
         <section className="rounded-lg border border-border bg-card p-3">
           <Label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             {t("appt.staff")}
@@ -171,7 +171,7 @@ function AgendaStep() {
             ) : (slotsQuery.data ?? []).length === 0 ? (
               <p className="text-xs text-muted-foreground">{t("appt.noSlots")}</p>
             ) : (
-              <div className="grid grid-cols-4 gap-1.5">
+              <div className="grid grid-cols-4 gap-2">
                 {(slotsQuery.data ?? []).map((ms) => {
                   const iso = new Date(ms).toISOString();
                   const active = draft.startISO === iso;
@@ -181,7 +181,7 @@ function AgendaStep() {
                       key={ms}
                       onClick={() => draft.setStart(iso)}
                       className={cn(
-                        "h-10 rounded border px-2 text-xs font-medium",
+                        "h-11 rounded border px-2 text-sm font-medium",
                         active
                           ? "border-primary bg-primary text-primary-foreground"
                           : "border-border bg-background hover:border-primary/60",

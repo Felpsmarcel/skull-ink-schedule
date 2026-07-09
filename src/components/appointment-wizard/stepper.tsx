@@ -30,7 +30,7 @@ export function WizardStepper({ completed }: StepperProps) {
   return (
     <nav
       aria-label="Progresso do agendamento"
-      className="border-b border-border bg-card/40 px-3 py-2"
+      className="border-b border-border bg-card/40 px-3 py-2.5"
     >
       <ol className="flex items-center gap-1.5">
         {WIZARD_STEPS.map((step, i) => {
@@ -38,7 +38,7 @@ export function WizardStepper({ completed }: StepperProps) {
           const done = completed[step] && !active;
           const reachable = done || active || i <= currentIdx;
           const cls = cn(
-            "flex min-w-0 flex-1 items-center gap-1.5 rounded-full border px-2 py-1 text-[11px] uppercase tracking-wider transition",
+            "flex min-h-9 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full border px-2 py-1.5 text-[11px] uppercase tracking-wider transition",
             active
               ? "border-primary bg-primary/10 text-foreground"
               : done
@@ -59,7 +59,9 @@ export function WizardStepper({ completed }: StepperProps) {
               >
                 {done ? <Check className="h-2.5 w-2.5" /> : i + 1}
               </span>
-              <span className="truncate">{LABELS[step]}</span>
+              <span className="hidden truncate [@media(min-width:360px)]:inline">
+                {LABELS[step]}
+              </span>
             </>
           );
           return (

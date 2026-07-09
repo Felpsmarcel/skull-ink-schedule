@@ -26,7 +26,7 @@ function WizardLayout() {
     revisao: false,
   };
   return (
-    <div className="flex min-h-dvh flex-col bg-background pb-24">
+    <div className="wizard-scope flex min-h-dvh flex-col bg-background pb-[calc(env(safe-area-inset-bottom)+6.5rem)]">
       <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-border bg-background/95 px-3 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] backdrop-blur">
         <Link
           to="/agenda"
