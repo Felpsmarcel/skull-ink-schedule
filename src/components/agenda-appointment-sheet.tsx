@@ -38,10 +38,12 @@ import {
   registerAppointmentPayment,
   setAppointmentPaymentStatus,
   setAppointmentSeller,
+  reassignAppointmentArtist,
   type AppointmentFinanceView,
 } from "@/lib/appointments.functions";
 import { listSellers } from "@/lib/sellers.functions";
 import { listAllServices } from "@/lib/services.functions";
+import { useArtists } from "@/hooks/use-artists";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { haptic } from "@/lib/haptics";
@@ -159,7 +161,15 @@ export function AgendaAppointmentSheet({
             </div>
           ) : null}
 
-          <Row label={t("agenda.details.artist")} value={staffName} />
+          {slot?.ghlEventId ? (
+            <ArtistPicker
+              ghlEventId={slot.ghlEventId}
+              currentCalendarId={calendarId}
+              currentName={staffName}
+            />
+          ) : (
+            <Row label={t("agenda.details.artist")} value={staffName} />
+          )}
           <Row
             label={t("agenda.details.service")}
             value={slot?.serviceName || t("agenda.booked")}
