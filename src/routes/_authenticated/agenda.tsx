@@ -157,7 +157,12 @@ function AgendaPage() {
 
   return (
     <div className="flex min-h-dvh flex-col bg-muted/40 pb-20">
-      <Toaster theme="light" position="top-center" />
+      <Toaster
+        theme="light"
+        position="top-center"
+        offset="calc(env(safe-area-inset-top) + 0.5rem)"
+        mobileOffset="calc(env(safe-area-inset-top) + 0.5rem)"
+      />
 
       {/* Header — editorial monochrome */}
       <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur">
