@@ -56,3 +56,29 @@ export function reasonToI18nKey(r: DraftValidationReason): string {
       return "appt.noServices";
   }
 }
+
+export type WizardStep = "cliente" | "agenda" | "servicos" | "revisao";
+
+export const WIZARD_STEPS: WizardStep[] = ["cliente", "agenda", "servicos", "revisao"];
+
+export function reasonToStep(r: DraftValidationReason): WizardStep {
+  switch (r) {
+    case "noContact":
+      return "cliente";
+    case "noCalendar":
+    case "noStaff":
+    case "noStart":
+      return "agenda";
+    case "noServices":
+      return "servicos";
+  }
+}
+
+/** First pending step for a draft, or "revisao" when everything is filled. */
+export function firstPendingStep(
+  draft: import("@/stores/appointment-draft").AppointmentDraft,
+  artists: StaffMember[],
+): WizardStep {
+  const v = validateAppointmentDraft(draft, artists);
+  return v.ok ? "revisao" : reasonToStep(v.reason);
+}
