@@ -1,12 +1,12 @@
 import type { ReactNode } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { useRouter } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface WizardFooterProps {
-  /** Route to navigate to on back. Omit to hide the back button. */
-  backTo?: string;
+  /** Whether to show the back button (uses browser history). */
+  showBack?: boolean;
   primary: ReactNode;
   onPrimary?: () => void;
   primaryDisabled?: boolean;
@@ -14,13 +14,13 @@ interface WizardFooterProps {
 }
 
 export function WizardFooter({
-  backTo,
+  showBack,
   primary,
   onPrimary,
   primaryDisabled,
   primaryLoading,
 }: WizardFooterProps) {
-  const navigate = useNavigate();
+  const router = useRouter();
   return (
     <footer
       className={cn(
@@ -28,11 +28,11 @@ export function WizardFooter({
         "pb-[max(0.5rem,env(safe-area-inset-bottom))]",
       )}
     >
-      {backTo ? (
+      {showBack ? (
         <Button
           variant="outline"
           className="h-11 shrink-0"
-          onClick={() => navigate({ to: backTo })}
+          onClick={() => router.history.back()}
           aria-label="Voltar"
         >
           <ArrowLeft className="h-4 w-4" />
