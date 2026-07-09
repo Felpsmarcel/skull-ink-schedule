@@ -44,7 +44,7 @@ function MenuPage() {
   return (
     <div className="min-h-svh bg-background pb-24 text-foreground">
       <Toaster position="top-center" />
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-background/95 px-4 py-3 backdrop-blur">
+      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-background/95 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] backdrop-blur">
         <div className="flex items-center gap-2">
           <img src={gfMark} alt="" className="h-7 w-7 object-contain" />
           <h1 className="text-base font-bold uppercase tracking-wider">Menu</h1>

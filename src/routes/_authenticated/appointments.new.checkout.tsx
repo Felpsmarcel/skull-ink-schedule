@@ -86,7 +86,7 @@ function CheckoutPage() {
 
   return (
     <div className="flex min-h-dvh flex-col bg-background pb-28">
-      <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-border bg-background/95 px-3 py-3 backdrop-blur">
+      <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-border bg-background/95 px-3 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] backdrop-blur">
         <Link
           to="/appointments/new"
           className="grid h-9 w-9 place-items-center rounded-md hover:bg-muted"
@@ -231,7 +231,7 @@ function CheckoutPage() {
                             );
                           }}
                           placeholder="0,00"
-                          className="h-7 w-28 text-xs"
+                          className="h-9 w-28 text-sm"
                         />
                       </div>
                     ) : null}
@@ -247,12 +247,12 @@ function CheckoutPage() {
                         onChange={(e) =>
                           draft.setDiscount(l.service.id, Number(e.target.value) || 0)
                         }
-                        className="h-7 w-20 text-xs"
+                        className="h-9 w-20 text-sm"
                       />
                       <button
                         type="button"
                         onClick={() => draft.removeService(l.service.id)}
-                        className="ml-auto grid h-7 w-7 place-items-center rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        className="ml-auto grid h-9 w-9 place-items-center rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                         aria-label={t("appt.removeService")}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -308,7 +308,7 @@ function CheckoutPage() {
                 draft.setDeposit(v === "" ? 0 : Number(v));
               }}
               placeholder="0,00"
-              className="h-8 w-32 text-right text-sm"
+              className="h-9 w-32 text-right text-sm"
             />
           </div>
 

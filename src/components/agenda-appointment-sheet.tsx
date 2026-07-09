@@ -999,7 +999,7 @@ function PaymentStatusPicker({
         }}
         disabled={mut.isPending}
       >
-        <SelectTrigger className="h-7 flex-1 text-[11px]">
+        <SelectTrigger className="h-9 flex-1 text-xs">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -1060,7 +1060,7 @@ function SellerPicker({
         }}
         disabled={mut.isPending || sellersQ.isLoading}
       >
-        <SelectTrigger className="h-7 flex-1 text-[11px]">
+        <SelectTrigger className="h-9 flex-1 text-xs">
           <SelectValue placeholder="Nenhum" />
         </SelectTrigger>
         <SelectContent>
