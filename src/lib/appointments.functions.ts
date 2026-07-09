@@ -879,3 +879,93 @@ export const setAppointmentSeller = createServerFn({ method: "POST" })
 
     return { appointmentId: appt.id, sellerId: data.sellerId };
   });
+
+const ReassignArtistSchema = z.object({
+  ghlEventId: z.string().min(1),
+  newArtistId: z.string().uuid(),
+});
+
+export const reassignAppointmentArtist = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => ReassignArtistSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const me = await authorizeArtistOrAdmin(supabase, userId);
+
+    // Load appointment; artist can only reassign own appointments.
+    const { data: apptRow, error: apptErr } = await supabase
+      .from("appointments" as never)
+      .select("id, artist_id, ghl_appointment_id")
+      .eq("ghl_appointment_id", data.ghlEventId)
+      .maybeSingle();
+    if (apptErr) throw new Error(apptErr.message);
+    const appt = apptRow as
+      | { id: string; artist_id: string; ghl_appointment_id: string | null }
+      | null;
+    if (!appt) throw new Error("Agendamento não encontrado no banco.");
+    if (me.role !== "admin" && appt.artist_id !== me.artistId) {
+      throw new Error("Forbidden: não é seu agendamento");
+    }
+    if (!appt.ghl_appointment_id) {
+      throw new Error("Agendamento sem ID GHL — não pode ser reatribuído.");
+    }
+
+    // Load target artist.
+    const { data: artistRow, error: artistErr } = await supabase
+      .from("artists" as never)
+      .select("id, ghl_calendar_id, ghl_user_id, active")
+      .eq("id", data.newArtistId)
+      .maybeSingle();
+    if (artistErr) throw new Error(artistErr.message);
+    const artist = artistRow as
+      | {
+          id: string;
+          ghl_calendar_id: string | null;
+          ghl_user_id: string | null;
+          active: boolean;
+        }
+      | null;
+    if (!artist) throw new Error("Tatuador não encontrado.");
+    if (!artist.active) throw new Error("Tatuador inativo.");
+    if (!artist.ghl_calendar_id) {
+      throw new Error("Tatuador sem calendário GHL configurado.");
+    }
+
+    if (artist.id === appt.artist_id) {
+      return { appointmentId: appt.id, artistId: artist.id };
+    }
+
+    // Update GHL event: move to new calendar (+ assigned user when present).
+    const token = process.env.GHL_TOKEN;
+    if (!token) throw new Error("GHL_TOKEN ausente no servidor");
+
+    const ghlBody: Record<string, unknown> = {
+      calendarId: artist.ghl_calendar_id,
+      ignoreFreeSlotValidation: true,
+    };
+    if (artist.ghl_user_id) ghlBody.assignedUserId = artist.ghl_user_id;
+
+    const ghlRes = await ghlFetch(
+      `/calendars/events/appointments/${appt.ghl_appointment_id}`,
+      { method: "PUT", token, body: ghlBody },
+    );
+    if (!ghlRes.ok) {
+      const msg =
+        (ghlRes.data as { message?: string } | null)?.message ??
+        `GHL ${ghlRes.status}: ${JSON.stringify(ghlRes.data)}`;
+      throw new Error(msg);
+    }
+
+    // Mirror change in Supabase (service role, bypasses RLS).
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error: updErr } = await supabaseAdmin
+      .from("appointments" as never)
+      .update({
+        artist_id: artist.id,
+        calendar_id: artist.ghl_calendar_id,
+      } as never)
+      .eq("id", appt.id);
+    if (updErr) throw new Error(updErr.message);
+
+    return { appointmentId: appt.id, artistId: artist.id };
+  });
