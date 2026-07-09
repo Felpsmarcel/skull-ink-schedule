@@ -34,6 +34,7 @@ import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/em
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as ApiPublicHooksSyncGhlRouteImport } from './routes/api/public/hooks/sync-ghl'
 import { Route as ApiPublicHooksSendRemindersRouteImport } from './routes/api/public/hooks/send-reminders'
+import { Route as AuthenticatedAppointmentsNewServicosRouteImport } from './routes/_authenticated/appointments.new.servicos'
 import { Route as AuthenticatedAppointmentsNewClienteRouteImport } from './routes/_authenticated/appointments.new.cliente'
 import { Route as AuthenticatedAppointmentsNewAgendaRouteImport } from './routes/_authenticated/appointments.new.agenda'
 import { Route as AuthenticatedAdminRelatoriosAgendamentosRouteImport } from './routes/_authenticated/_admin/relatorios.agendamentos'
@@ -171,6 +172,12 @@ const ApiPublicHooksSendRemindersRoute =
     path: '/api/public/hooks/send-reminders',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AuthenticatedAppointmentsNewServicosRoute =
+  AuthenticatedAppointmentsNewServicosRouteImport.update({
+    id: '/servicos',
+    path: '/servicos',
+    getParentRoute: () => AuthenticatedAppointmentsNewRoute,
+  } as any)
 const AuthenticatedAppointmentsNewClienteRoute =
   AuthenticatedAppointmentsNewClienteRouteImport.update({
     id: '/cliente',
@@ -223,6 +230,7 @@ export interface FileRoutesByFullPath {
   '/relatorios/agendamentos': typeof AuthenticatedAdminRelatoriosAgendamentosRoute
   '/appointments/new/agenda': typeof AuthenticatedAppointmentsNewAgendaRoute
   '/appointments/new/cliente': typeof AuthenticatedAppointmentsNewClienteRoute
+  '/appointments/new/servicos': typeof AuthenticatedAppointmentsNewServicosRoute
   '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
   '/api/public/hooks/sync-ghl': typeof ApiPublicHooksSyncGhlRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -252,6 +260,7 @@ export interface FileRoutesByTo {
   '/relatorios/agendamentos': typeof AuthenticatedAdminRelatoriosAgendamentosRoute
   '/appointments/new/agenda': typeof AuthenticatedAppointmentsNewAgendaRoute
   '/appointments/new/cliente': typeof AuthenticatedAppointmentsNewClienteRoute
+  '/appointments/new/servicos': typeof AuthenticatedAppointmentsNewServicosRoute
   '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
   '/api/public/hooks/sync-ghl': typeof ApiPublicHooksSyncGhlRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -285,6 +294,7 @@ export interface FileRoutesById {
   '/_authenticated/_admin/relatorios/agendamentos': typeof AuthenticatedAdminRelatoriosAgendamentosRoute
   '/_authenticated/appointments/new/agenda': typeof AuthenticatedAppointmentsNewAgendaRoute
   '/_authenticated/appointments/new/cliente': typeof AuthenticatedAppointmentsNewClienteRoute
+  '/_authenticated/appointments/new/servicos': typeof AuthenticatedAppointmentsNewServicosRoute
   '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
   '/api/public/hooks/sync-ghl': typeof ApiPublicHooksSyncGhlRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -317,6 +327,7 @@ export interface FileRouteTypes {
     | '/relatorios/agendamentos'
     | '/appointments/new/agenda'
     | '/appointments/new/cliente'
+    | '/appointments/new/servicos'
     | '/api/public/hooks/send-reminders'
     | '/api/public/hooks/sync-ghl'
     | '/lovable/email/auth/preview'
@@ -346,6 +357,7 @@ export interface FileRouteTypes {
     | '/relatorios/agendamentos'
     | '/appointments/new/agenda'
     | '/appointments/new/cliente'
+    | '/appointments/new/servicos'
     | '/api/public/hooks/send-reminders'
     | '/api/public/hooks/sync-ghl'
     | '/lovable/email/auth/preview'
@@ -378,6 +390,7 @@ export interface FileRouteTypes {
     | '/_authenticated/_admin/relatorios/agendamentos'
     | '/_authenticated/appointments/new/agenda'
     | '/_authenticated/appointments/new/cliente'
+    | '/_authenticated/appointments/new/servicos'
     | '/api/public/hooks/send-reminders'
     | '/api/public/hooks/sync-ghl'
     | '/lovable/email/auth/preview'
@@ -583,6 +596,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksSendRemindersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/appointments/new/servicos': {
+      id: '/_authenticated/appointments/new/servicos'
+      path: '/servicos'
+      fullPath: '/appointments/new/servicos'
+      preLoaderRoute: typeof AuthenticatedAppointmentsNewServicosRouteImport
+      parentRoute: typeof AuthenticatedAppointmentsNewRoute
+    }
     '/_authenticated/appointments/new/cliente': {
       id: '/_authenticated/appointments/new/cliente'
       path: '/cliente'
@@ -648,6 +668,7 @@ const AuthenticatedAdminRouteRouteWithChildren =
 interface AuthenticatedAppointmentsNewRouteChildren {
   AuthenticatedAppointmentsNewAgendaRoute: typeof AuthenticatedAppointmentsNewAgendaRoute
   AuthenticatedAppointmentsNewClienteRoute: typeof AuthenticatedAppointmentsNewClienteRoute
+  AuthenticatedAppointmentsNewServicosRoute: typeof AuthenticatedAppointmentsNewServicosRoute
   AuthenticatedAppointmentsNewIndexRoute: typeof AuthenticatedAppointmentsNewIndexRoute
 }
 
@@ -657,6 +678,8 @@ const AuthenticatedAppointmentsNewRouteChildren: AuthenticatedAppointmentsNewRou
       AuthenticatedAppointmentsNewAgendaRoute,
     AuthenticatedAppointmentsNewClienteRoute:
       AuthenticatedAppointmentsNewClienteRoute,
+    AuthenticatedAppointmentsNewServicosRoute:
+      AuthenticatedAppointmentsNewServicosRoute,
     AuthenticatedAppointmentsNewIndexRoute:
       AuthenticatedAppointmentsNewIndexRoute,
   }

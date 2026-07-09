@@ -16,7 +16,7 @@ import {
   modalityLabel,
   type Service,
 } from "@/lib/services";
-import { useAppointmentDraft, linePriceEur, totalFinalEur } from "@/stores/appointment-draft";
+import { useAppointmentDraft, totalFinalEur } from "@/stores/appointment-draft";
 import { WizardFooter } from "@/components/appointment-wizard/wizard-footer";
 
 export const Route = createFileRoute("/_authenticated/appointments/new/servicos")({
@@ -248,5 +248,3 @@ function ServicosStep() {
     </>
   );
 }
-// linePriceEur retained for potential future per-line display
-void linePriceEur;
