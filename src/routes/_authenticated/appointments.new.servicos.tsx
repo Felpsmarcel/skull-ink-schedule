@@ -68,7 +68,7 @@ function ServicosStep() {
 
   return (
     <>
-      <main className="flex-1 pb-6">
+      <main className="flex-1">
         {draft.services.length > 0 ? (
           <section className="space-y-2 border-b border-border bg-card/40 p-3">
             <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -120,7 +120,7 @@ function ServicosStep() {
                           placeholder={l.service.price_on_request ? "0,00" : undefined}
                           aria-label={`Valor de ${l.service.name}`}
                           className={cn(
-                            "h-9 w-20 text-right text-sm font-medium tabular-nums",
+                            "h-10 w-24 text-right text-sm font-medium tabular-nums",
                             isEdited && "border-primary/60 text-primary",
                           )}
                         />
@@ -131,7 +131,7 @@ function ServicosStep() {
                       <button
                         type="button"
                         onClick={() => draft.setOverridePrice(l.service.id, null)}
-                        className="grid h-9 w-9 shrink-0 place-items-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+                        className="grid h-11 w-11 shrink-0 place-items-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
                         aria-label="Restaurar preço do catálogo"
                       >
                         <RotateCcw className="h-3.5 w-3.5" />
@@ -140,7 +140,7 @@ function ServicosStep() {
                     <button
                       type="button"
                       onClick={() => draft.removeService(l.service.id)}
-                      className="grid h-9 w-9 shrink-0 place-items-center rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                      className="grid h-11 w-11 shrink-0 place-items-center rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                       aria-label={t("appt.removeService")}
                     >
                       <Trash2 className="h-3.5 w-3.5" />

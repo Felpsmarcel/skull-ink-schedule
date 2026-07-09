@@ -38,7 +38,7 @@ function ClienteStep() {
 
   return (
     <>
-      <main className="flex-1 space-y-4 p-4">
+      <main className="flex-1 space-y-4 p-4 pb-0">
         <section className="rounded-lg border border-border bg-card p-3">
           <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             {t("appt.client")}
@@ -86,7 +86,7 @@ function SelectedContactCard({
       <button
         type="button"
         onClick={onClear}
-        className="grid h-9 w-9 place-items-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+        className="grid h-11 w-11 shrink-0 place-items-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
         aria-label="Trocar cliente"
       >
         <X className="h-4 w-4" />
@@ -164,7 +164,7 @@ function SearchContactsPanel({ onPick }: { onPick: (c: GhlContact) => void }) {
               <button
                 type="button"
                 onClick={() => onPick(c)}
-                className="flex w-full items-center gap-3 p-2 text-left hover:bg-muted"
+                className="flex min-h-14 w-full items-center gap-3 px-2 py-2.5 text-left hover:bg-muted"
               >
                 <div className="grid h-9 w-9 place-items-center rounded-full bg-primary/20 text-sm font-semibold text-primary">
                   {(c.contactName ?? c.firstName ?? "?").slice(0, 1).toUpperCase()}

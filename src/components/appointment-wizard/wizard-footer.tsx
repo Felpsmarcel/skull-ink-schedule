@@ -25,13 +25,14 @@ export function WizardFooter({
     <footer
       className={cn(
         "fixed inset-x-0 bottom-0 z-40 mx-auto flex max-w-md items-center gap-2 border-t border-border bg-background/95 px-3 pt-3 backdrop-blur",
-        "pb-[max(0.5rem,env(safe-area-inset-bottom))]",
+        "shadow-[0_-8px_20px_-12px_rgba(0,0,0,0.4)]",
       )}
+      style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
     >
       {showBack ? (
         <Button
           variant="outline"
-          className="h-11 shrink-0"
+          className="h-12 w-12 shrink-0 p-0"
           onClick={() => router.history.back()}
           aria-label="Voltar"
         >
@@ -39,7 +40,7 @@ export function WizardFooter({
         </Button>
       ) : null}
       <Button
-        className="h-11 flex-1"
+        className="h-12 flex-1 text-base"
         onClick={onPrimary}
         disabled={primaryDisabled || primaryLoading}
       >
