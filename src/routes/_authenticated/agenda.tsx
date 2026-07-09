@@ -156,7 +156,7 @@ function AgendaPage() {
   };
 
   return (
-    <div className="flex min-h-dvh flex-col bg-muted/40 pb-20">
+    <div className="flex min-h-dvh flex-col bg-muted/40 pb-[calc(env(safe-area-inset-bottom)+6rem)] sm:pb-20">
       <Toaster
         theme="light"
         position="top-center"

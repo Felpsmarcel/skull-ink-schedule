@@ -42,7 +42,7 @@ function MenuPage() {
   }
 
   return (
-    <div className="min-h-svh bg-background pb-24 text-foreground">
+    <div className="min-h-svh bg-background pb-[calc(env(safe-area-inset-bottom)+7rem)] text-foreground sm:pb-24">
       <Toaster
         position="top-center"
         offset="calc(env(safe-area-inset-top) + 0.5rem)"
