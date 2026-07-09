@@ -161,7 +161,7 @@ function AppointmentNewPage() {
 
   return (
     <div className="flex min-h-dvh flex-col bg-background pb-24">
-      <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-border bg-background/95 px-3 py-3 backdrop-blur">
+      <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-border bg-background/95 px-3 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] backdrop-blur">
         <Link to="/agenda" className="grid h-9 w-9 place-items-center rounded-md hover:bg-muted">
           <ArrowLeft className="h-5 w-5" />
         </Link>
@@ -369,7 +369,7 @@ function AppointmentNewPage() {
                           placeholder={l.service.price_on_request ? "0,00" : undefined}
                           aria-label={`Valor de ${l.service.name}`}
                           className={cn(
-                            "h-8 w-24 text-right text-sm font-medium tabular-nums",
+                            "h-9 w-24 text-right text-sm font-medium tabular-nums",
                             isEdited && "border-primary/60 text-primary",
                           )}
                         />
@@ -380,7 +380,7 @@ function AppointmentNewPage() {
                       <button
                         type="button"
                         onClick={() => draft.setOverridePrice(l.service.id, null)}
-                        className="grid h-7 w-7 place-items-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+                        className="grid h-9 w-9 place-items-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
                         aria-label="Restaurar preço do catálogo"
                         title="Restaurar preço do catálogo"
                       >
@@ -390,7 +390,7 @@ function AppointmentNewPage() {
                     <button
                       type="button"
                       onClick={() => draft.removeService(l.service.id)}
-                      className="grid h-7 w-7 place-items-center rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                      className="grid h-9 w-9 place-items-center rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                       aria-label={t("appt.removeService")}
                     >
                       <Trash2 className="h-3.5 w-3.5" />

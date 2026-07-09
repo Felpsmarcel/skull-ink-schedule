@@ -157,11 +157,16 @@ function AgendaPage() {
 
   return (
     <div className="flex min-h-dvh flex-col bg-muted/40 pb-20">
-      <Toaster theme="light" position="top-center" />
+      <Toaster
+        theme="light"
+        position="top-center"
+        offset="calc(env(safe-area-inset-top) + 0.5rem)"
+        mobileOffset="calc(env(safe-area-inset-top) + 0.5rem)"
+      />
 
       {/* Header — editorial monochrome */}
       <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-[1400px] flex-wrap items-center justify-between gap-2 px-3 py-3 sm:gap-3 sm:px-6 sm:py-4">
+        <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-2 px-3 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3 sm:px-6 sm:pb-4 sm:pt-4">
           <div className="flex min-w-0 flex-1 items-center gap-1 sm:flex-none sm:gap-2">
             <button
               type="button"
