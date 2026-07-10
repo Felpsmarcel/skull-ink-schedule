@@ -1,77 +1,94 @@
-# Blindagem do fluxo de convite ao tatuador
 
-## Problema
+# Jornada do tatuador após definir a senha
 
-O tatuador que você convidou caiu na tela de onboarding do `lovable.dev` porque o convite foi enviado a partir do **preview do editor**. O `redirectTo` usa `window.location.origin` do admin, então o link do email apontou para o domínio errado.
+Hoje, ao salvar a nova senha em `/auth/update-password`, o tatuador é jogado direto em `/agenda` sem contexto. Nenhum passo de boas-vindas, nenhum preenchimento de perfil, nenhuma orientação sobre o que fazer em seguida. Este plano estrutura a jornada completa.
 
-## Objetivo
+## Visão geral do fluxo
 
-1. Nunca mais gerar convite com link de preview.
-2. Permitir reenviar o convite com 1 clique.
-3. Deixar o email branded (`team-welcome`) claro sobre o próximo passo.
+```text
+Email de convite
+   → /auth/update-password (define senha)
+   → /onboarding/bem-vindo           (tela 1 — boas-vindas + o que esperar)
+   → /onboarding/perfil              (tela 2 — nome, telefone, foto, bio, especialidades)
+   → /onboarding/disponibilidade     (tela 3 — dias/horários que atende)
+   → /onboarding/servicos            (tela 4 — confirma serviços que executa)
+   → /onboarding/pronto              (tela 5 — resumo + próximos passos)
+   → /agenda                         (destino final; tour guiado na 1ª visita)
+```
 
----
+O onboarding é **obrigatório na primeira sessão** e pode ser retomado se abandonado (a flag `onboarded_at` no `artists` controla). Admin nunca vê o fluxo.
 
-## Mudanças
+## Detalhamento das telas
 
-### 1. Forçar domínio de produção no `redirectTo` (backend)
+### 1. `/onboarding/bem-vindo`
+- Mensagem curta ("Bem-vindo à GF Tattoo, {nome}"), o que o app faz por ele (agenda unificada, comissões, lembretes) e tempo estimado do setup (~2 min).
+- Botão único: **Começar**.
 
-**`src/lib/team.functions.ts` — `inviteArtist`**
+### 2. `/onboarding/perfil`
+Edita a linha do `artists` já criada pelo convite:
+- Nome (pré-preenchido), telefone, avatar (upload storage), bio curta, especialidades (chips múltipla escolha: fine line, blackwork, realismo, colorido, oriental, lettering, cover-up).
+- Validação: nome + telefone obrigatórios; avatar recomendado mas opcional.
 
-- Ignorar o `redirectTo` recebido do cliente (que pode ser preview).
-- Hardcode do domínio final: `https://gftattoocalendar.com/auth/update-password`.
-- Manter o parâmetro `redirectTo` no schema por compatibilidade, mas sobrescrever antes de chamar `inviteUserByEmail`.
+### 3. `/onboarding/disponibilidade`
+- Grade semanal simples (Seg–Dom) com horário início/fim por dia + toggle "não atendo".
+- Salva como `availability_blocks` recorrentes (ou tabela nova `artist_weekly_availability` se preferir — ver seção técnica).
+- Botão "Pular por agora" permitido; nesse caso mostra alerta amarelo persistente na agenda até configurar.
 
-Assim, mesmo convidando do preview do Lovable, o email sai apontando para o domínio real.
+### 4. `/onboarding/servicos`
+- Lista o catálogo global de `services` com checkbox "eu executo este serviço".
+- Cria/atualiza `artist_services` (tabela de junção) para filtrar o que aparece no fluxo `/appointments/new`.
+- Botão "Pular" permitido.
 
-### 2. Botão "Reenviar convite" (frontend)
+### 5. `/onboarding/pronto`
+- Confirmação visual + 3 cards de próximas ações:
+  1. **Ver minha agenda** → `/agenda`
+  2. **Criar meu primeiro agendamento** → `/appointments/new`
+  3. **Ver meu financeiro** → `/financeiro`
+- Ao clicar em qualquer um, marca `artists.onboarded_at = now()` e navega.
 
-**`src/components/…` / `src/routes/_authenticated/_admin/admin.equipe.tsx`**
+## Após o onboarding — primeira sessão em `/agenda`
+- **Empty state melhorado**: se não há agendamentos hoje, mostrar card "Sua semana está livre — compartilhe seu link de agendamento" com CTA para copiar link público (`gftattoocalendar.com/book/{artist_slug}` — se já existir).
+- **Tour guiado leve** (3 tooltips sequenciais, dismissível): "Aqui está sua agenda", "Toque em + para novo agendamento", "Menu embaixo tem financeiro e perfil".
+- Estado guardado em `localStorage` (`agenda_tour_seen_v1`).
 
-No card de cada artista:
+## Redirecionamento condicional
 
-- Se o artista **já tem** um usuário vinculado, o botão "Convidar" hoje vira "Reenviar" mas usa o mesmo email do input.
-- Adicionar tratamento explícito: se o Supabase responder "email already registered", em vez de mostrar erro genérico, chamar automaticamente `resend` do Supabase para gerar novo link de invite (`supabase.auth.admin.generateLink({ type: "invite", email, options: { redirectTo } })`).
-- Toast de sucesso: "Novo link de convite enviado para <email>."
+Alterar `auth_/update-password.tsx` e o `beforeLoad` de `/_authenticated`:
+- Após `updateUser({ password })` bem-sucedido, buscar `app_users` + `artists.onboarded_at`.
+- Se role = `artist` e `onboarded_at` for null → navegar para `/onboarding/bem-vindo`.
+- Caso contrário → `/agenda` (comportamento atual).
+- `_authenticated/route.tsx` também redireciona para o onboarding se detectar artist com `onboarded_at` null tentando acessar outra rota (exceto `/onboarding/*` e `/menu`).
 
-### 3. Melhorar o email `team-welcome`
-
-**`src/lib/email-templates/team-welcome.tsx`**
-
-Hoje o email só dá boas-vindas. Adicionar:
-
-- Bloco destacando **"Confira o outro email com o assunto 'You've been invited' para definir sua senha e entrar."**
-- CTA secundário para `/auth` caso ele já tenha definido senha por outro caminho.
-- Manter o tom minimalista atual, sem promoções.
-
-### 4. (Opcional, incluído) — Página `/auth/update-password` mais resiliente
-
-Se o link vier expirado ou já usado, mostrar CTA direto para "Esqueci minha senha" (já existe, mas reforçar copy: "Peça um novo link, ele chega no seu email em segundos.").
-
----
-
-## Fora de escopo (proponho depois se quiser)
-
-- Prevenir duplicação de usuário quando o tatuador entrar por Google antes de aceitar o convite.
-- Botão "Copiar link de convite" (útil para enviar por WhatsApp em vez de email).
-- Painel de "convites pendentes" com data de envio e status (aceito / expirado).
-
----
+## Notificações e comunicação
+- **Email de boas-vindas #2** (transacional, disparado ao completar o onboarding): "Você está pronto — próximos passos", com links diretos para agenda, novo agendamento e link público.
+- **Banner in-app** persistente enquanto disponibilidade estiver vazia.
+- Nada de push por enquanto (fora do escopo).
 
 ## Detalhes técnicos
 
-- Nenhuma migração de banco necessária.
-- Sem alteração em RLS.
-- `PROD_ORIGIN` fica hardcoded no server (`src/lib/team.functions.ts`). Se um dia trocar de domínio, é 1 linha para atualizar.
-- O caminho `/auth/update-password` já existe e trata `type=invite` corretamente via `verifyOtp`.
+- **Migration**:
+  - `alter table artists add column onboarded_at timestamptz null;`
+  - `create table artist_services (artist_id uuid, service_id uuid, primary key(artist_id, service_id))` + GRANTs + RLS (artist lê/escreve os próprios; admin tudo).
+  - (Opcional) `create table artist_weekly_availability (artist_id, weekday smallint 0-6, start_time time, end_time time)` + GRANTs + RLS — mais limpo do que `availability_blocks` recorrentes.
+- **Rotas novas** (arquivos em `src/routes/_authenticated/`):
+  - `onboarding.tsx` (layout com stepper + Outlet)
+  - `onboarding.bem-vindo.tsx`, `onboarding.perfil.tsx`, `onboarding.disponibilidade.tsx`, `onboarding.servicos.tsx`, `onboarding.pronto.tsx`
+- **Server fns novas** em `src/lib/onboarding.functions.ts`:
+  - `getOnboardingStatus`, `updateArtistProfile`, `setWeeklyAvailability`, `setArtistServices`, `completeOnboarding` (todas com `requireSupabaseAuth`).
+- **Upload de avatar**: bucket `artist-avatars` público, RLS de upload restrito ao próprio artist.
+- **Novo template de email** `artist-onboarding-complete.tsx` + registro em `email-templates/registry.ts`, disparado no `completeOnboarding`.
+- **Hook**: `useOnboardingGuard()` usado pelo `_authenticated/route.tsx`.
 
----
+## Fora do escopo (para depois)
+- Portfólio/galeria de trabalhos do tatuador.
+- Página pública do tatuador com booking direto.
+- App mobile / push notifications.
+- Convite de clientes pelo próprio tatuador.
 
-## Como testar
-
-1. Abrir `/admin/equipe` **dentro do preview do Lovable**.
-2. Convidar um email de teste.
-3. Conferir no email recebido que o link começa com `https://gftattoocalendar.com/`.
-4. Clicar → deve cair em `/auth/update-password` do domínio real, com o form de nova senha.
-5. Definir senha → cair em `/agenda`.
-6. Voltar em `/admin/equipe`, clicar "Reenviar" no mesmo artista → novo email chega.
+## Ordem de implementação sugerida
+1. Migration (`onboarded_at`, `artist_services`, `artist_weekly_availability`, bucket) — **passo isolado, precisa aprovação**.
+2. Server fns + guard de redirecionamento.
+3. Telas 1–5 do onboarding.
+4. Ajuste do redirect em `update-password`.
+5. Empty state + tour em `/agenda`.
+6. Email pós-onboarding.
