@@ -247,14 +247,17 @@ function ArtistCard({
       data: {
         artistId: artist.id,
         email: email.trim(),
-        redirectTo: `${window.location.origin}/auth/update-password`,
       },
     }),
     onSuccess: (r) => {
       if (!r.linkOk) {
         toast.error(`Convite enviado mas vínculo falhou: ${r.linkError ?? "erro desconhecido"}. Use "Reparar vínculo".`);
       } else {
-        toast.success(r.reused ? "Vinculado a usuário existente." : "Convite enviado.");
+        toast.success(
+          r.reused
+            ? "Novo link de acesso enviado para o email."
+            : "Convite enviado. Peça para checar a caixa de entrada.",
+        );
       }
       onRefresh();
     },
@@ -325,7 +328,7 @@ function ArtistCard({
             disabled={inviteM.isPending}
           >
             {inviteM.isPending ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Send className="mr-2 h-3.5 w-3.5" />}
-            {artist.users.length > 0 ? "Reenviar" : "Convidar"}
+            {artist.users.length > 0 ? "Reenviar convite" : "Convidar"}
           </Button>
           <Button
             size="sm"

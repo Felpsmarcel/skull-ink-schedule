@@ -15,7 +15,7 @@ const UpsertArtistInput = z.object({
 const InviteInput = z.object({
   artistId: z.string().uuid(),
   email: z.string().email(),
-  redirectTo: z.string().url(),
+  redirectTo: z.string().url().optional(),
 });
 
 const RepairInput = z.object({
@@ -152,6 +152,13 @@ async function findAuthUserByEmail(admin: any, email: string): Promise<{ id: str
   return null;
 }
 
+// Hardcoded para blindar contra chamadas feitas do preview do editor
+// (window.location.origin cairia em id-preview--*.lovable.app e o link
+// do email levaria o tatuador para o site institucional da Lovable).
+// Se um dia trocar de domínio, alterar aqui.
+const PROD_ORIGIN = "https://gftattoocalendar.com";
+const INVITE_REDIRECT_TO = `${PROD_ORIGIN}/auth/update-password`;
+
 export const inviteArtist = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => InviteInput.parse(d))
@@ -170,8 +177,9 @@ export const inviteArtist = createServerFn({ method: "POST" })
 
     let invitedUserId: string | null = null;
     let reused = false;
+    let actionUrl: string | null = null;
     const invite = await supabaseAdmin.auth.admin.inviteUserByEmail(data.email, {
-      redirectTo: data.redirectTo,
+      redirectTo: INVITE_REDIRECT_TO,
       data: { pending_artist_id: data.artistId },
     });
     if (invite.error) {
@@ -179,8 +187,32 @@ export const inviteArtist = createServerFn({ method: "POST" })
       if (!existingUser) throw new Error(invite.error.message);
       invitedUserId = existingUser.id;
       reused = true;
+      // Usuário já existe → gera um magic link de recovery para ele
+      // redefinir/recuperar a senha e cair na tela de update-password.
+      try {
+        const linkRes = await supabaseAdmin.auth.admin.generateLink({
+          type: "recovery",
+          email: data.email,
+          options: { redirectTo: INVITE_REDIRECT_TO },
+        });
+        actionUrl = linkRes.data?.properties?.action_link ?? null;
+      } catch (linkErr) {
+        console.error("[inviteArtist] generateLink failed", linkErr);
+      }
     } else {
       invitedUserId = invite.data.user?.id ?? null;
+      // Para novos convites, também geramos um link paralelo para incluir
+      // no email branded (o email nativo do Supabase segue chegando).
+      try {
+        const linkRes = await supabaseAdmin.auth.admin.generateLink({
+          type: "invite",
+          email: data.email,
+          options: { redirectTo: INVITE_REDIRECT_TO },
+        });
+        actionUrl = linkRes.data?.properties?.action_link ?? null;
+      } catch (linkErr) {
+        console.error("[inviteArtist] generateLink failed", linkErr);
+      }
     }
     if (!invitedUserId) throw new Error("Não foi possível resolver o usuário convidado.");
 
@@ -207,6 +239,8 @@ export const inviteArtist = createServerFn({ method: "POST" })
     }
 
     // Boas-vindas branded (extra ao invite auth email). Falhas não abortam o convite.
+    // Quando temos actionUrl (link de invite/recovery), ele vira o CTA principal
+    // e cada reenvio gera um novo email (message_id inclui timestamp).
     try {
       const { data: artistRow } = await supabaseAdmin
         .from("artists" as never)
@@ -214,22 +248,31 @@ export const inviteArtist = createServerFn({ method: "POST" })
         .eq("id", data.artistId)
         .maybeSingle();
       const artistName = (artistRow as { name?: string } | null)?.name ?? null;
-      const origin = new URL(data.redirectTo).origin;
 
       const { TEMPLATES } = await import("@/lib/email-templates/registry");
       const React = await import("react");
       const { render } = await import("react-email");
       const template = TEMPLATES["team-welcome"];
       if (template) {
-        const messageId = `team-welcome-${invitedUserId}`;
-        const existing = await supabaseAdmin
-          .from("email_send_log" as never)
-          .select("id")
-          .eq("message_id", messageId)
-          .limit(1)
-          .maybeSingle();
+        // Se temos actionUrl (fluxo com link), permitir reenvio; se é apenas
+        // o boas-vindas puro (sem link), manter idempotência para não spammar.
+        const messageId = actionUrl
+          ? `team-welcome-${invitedUserId}-${Date.now()}`
+          : `team-welcome-${invitedUserId}`;
+        const existing = actionUrl
+          ? { data: null }
+          : await supabaseAdmin
+              .from("email_send_log" as never)
+              .select("id")
+              .eq("message_id", messageId)
+              .limit(1)
+              .maybeSingle();
         if (!existing.data) {
-          const props = { artistName, agendaUrl: `${origin}/agenda` };
+          const props: { artistName: string | null; agendaUrl: string; inviteUrl?: string } = {
+            artistName,
+            agendaUrl: `${PROD_ORIGIN}/agenda`,
+          };
+          if (actionUrl) props.inviteUrl = actionUrl;
           const element = React.createElement(template.component, props);
           const html = await render(element);
           const text = await render(element, { plainText: true });
