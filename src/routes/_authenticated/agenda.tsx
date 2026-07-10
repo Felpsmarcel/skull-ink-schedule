@@ -112,7 +112,8 @@ function AgendaPage() {
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const { data: me } = useCurrentUser();
-  const restrictArtistId = me?.role === "artist" ? me.artistId : null;
+  // Tatuadores veem a agenda geral de todos os artistas; filtro é desativado.
+  const restrictArtistId = null;
 
   const dateLabel = useMemo(() => {
     const locale = resolveIntlLocale(i18n.language);
