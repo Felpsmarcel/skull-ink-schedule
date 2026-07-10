@@ -227,6 +227,91 @@ export type Database = {
           },
         ]
       }
+      artist_services: {
+        Row: {
+          artist_id: string
+          created_at: string
+          service_id: string
+        }
+        Insert: {
+          artist_id: string
+          created_at?: string
+          service_id: string
+        }
+        Update: {
+          artist_id?: string
+          created_at?: string
+          service_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "artist_services_artist_id_fkey"
+            columns: ["artist_id"]
+            isOneToOne: false
+            referencedRelation: "artists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "artist_services_artist_id_fkey"
+            columns: ["artist_id"]
+            isOneToOne: false
+            referencedRelation: "artists_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "artist_services_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      artist_weekly_availability: {
+        Row: {
+          artist_id: string
+          created_at: string
+          end_time: string
+          id: string
+          start_time: string
+          updated_at: string
+          weekday: number
+        }
+        Insert: {
+          artist_id: string
+          created_at?: string
+          end_time: string
+          id?: string
+          start_time: string
+          updated_at?: string
+          weekday: number
+        }
+        Update: {
+          artist_id?: string
+          created_at?: string
+          end_time?: string
+          id?: string
+          start_time?: string
+          updated_at?: string
+          weekday?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "artist_weekly_availability_artist_id_fkey"
+            columns: ["artist_id"]
+            isOneToOne: false
+            referencedRelation: "artists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "artist_weekly_availability_artist_id_fkey"
+            columns: ["artist_id"]
+            isOneToOne: false
+            referencedRelation: "artists_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       artists: {
         Row: {
           active: boolean
@@ -239,6 +324,7 @@ export type Database = {
           ghl_user_id: string | null
           id: string
           name: string
+          onboarded_at: string | null
           phone: string | null
           specialties: string[] | null
         }
@@ -253,6 +339,7 @@ export type Database = {
           ghl_user_id?: string | null
           id?: string
           name: string
+          onboarded_at?: string | null
           phone?: string | null
           specialties?: string[] | null
         }
@@ -267,6 +354,7 @@ export type Database = {
           ghl_user_id?: string | null
           id?: string
           name?: string
+          onboarded_at?: string | null
           phone?: string | null
           specialties?: string[] | null
         }
