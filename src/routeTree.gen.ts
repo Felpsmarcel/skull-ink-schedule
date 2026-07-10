@@ -24,6 +24,7 @@ import { Route as AuthenticatedFinanceiroRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAgendaRouteImport } from './routes/_authenticated/agenda'
 import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/_admin/route'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
+import { Route as AuthenticatedOnboardingBemVindoRouteImport } from './routes/_authenticated/onboarding.bem-vindo'
 import { Route as AuthenticatedAppointmentsNewRouteImport } from './routes/_authenticated/appointments.new'
 import { Route as AuthenticatedAdminReconciliarRouteImport } from './routes/_authenticated/_admin/reconciliar'
 import { Route as AuthenticatedAdminGhlTestRouteImport } from './routes/_authenticated/_admin/ghl-test'
@@ -116,6 +117,12 @@ const LovableEmailSuppressionRoute = LovableEmailSuppressionRouteImport.update({
   path: '/lovable/email/suppression',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedOnboardingBemVindoRoute =
+  AuthenticatedOnboardingBemVindoRouteImport.update({
+    id: '/bem-vindo',
+    path: '/bem-vindo',
+    getParentRoute: () => AuthenticatedOnboardingRoute,
+  } as any)
 const AuthenticatedAppointmentsNewRoute =
   AuthenticatedAppointmentsNewRouteImport.update({
     id: '/appointments/new',
@@ -229,7 +236,7 @@ export interface FileRoutesByFullPath {
   '/agenda': typeof AuthenticatedAgendaRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/menu': typeof AuthenticatedMenuRoute
-  '/onboarding': typeof AuthenticatedOnboardingRoute
+  '/onboarding': typeof AuthenticatedOnboardingRouteWithChildren
   '/reviews': typeof AuthenticatedReviewsRoute
   '/services': typeof AuthenticatedServicesRoute
   '/auth/recover': typeof AuthRecoverRoute
@@ -238,6 +245,7 @@ export interface FileRoutesByFullPath {
   '/ghl-test': typeof AuthenticatedAdminGhlTestRoute
   '/reconciliar': typeof AuthenticatedAdminReconciliarRoute
   '/appointments/new': typeof AuthenticatedAppointmentsNewRouteWithChildren
+  '/onboarding/bem-vindo': typeof AuthenticatedOnboardingBemVindoRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
   '/admin/vendedores': typeof AuthenticatedAdminAdminVendedoresRoute
@@ -262,7 +270,7 @@ export interface FileRoutesByTo {
   '/agenda': typeof AuthenticatedAgendaRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/menu': typeof AuthenticatedMenuRoute
-  '/onboarding': typeof AuthenticatedOnboardingRoute
+  '/onboarding': typeof AuthenticatedOnboardingRouteWithChildren
   '/reviews': typeof AuthenticatedReviewsRoute
   '/services': typeof AuthenticatedServicesRoute
   '/auth/recover': typeof AuthRecoverRoute
@@ -270,6 +278,7 @@ export interface FileRoutesByTo {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/ghl-test': typeof AuthenticatedAdminGhlTestRoute
   '/reconciliar': typeof AuthenticatedAdminReconciliarRoute
+  '/onboarding/bem-vindo': typeof AuthenticatedOnboardingBemVindoRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
   '/admin/vendedores': typeof AuthenticatedAdminAdminVendedoresRoute
@@ -297,7 +306,7 @@ export interface FileRoutesById {
   '/_authenticated/agenda': typeof AuthenticatedAgendaRoute
   '/_authenticated/financeiro': typeof AuthenticatedFinanceiroRoute
   '/_authenticated/menu': typeof AuthenticatedMenuRoute
-  '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
+  '/_authenticated/onboarding': typeof AuthenticatedOnboardingRouteWithChildren
   '/_authenticated/reviews': typeof AuthenticatedReviewsRoute
   '/_authenticated/services': typeof AuthenticatedServicesRoute
   '/auth_/recover': typeof AuthRecoverRoute
@@ -306,6 +315,7 @@ export interface FileRoutesById {
   '/_authenticated/_admin/ghl-test': typeof AuthenticatedAdminGhlTestRoute
   '/_authenticated/_admin/reconciliar': typeof AuthenticatedAdminReconciliarRoute
   '/_authenticated/appointments/new': typeof AuthenticatedAppointmentsNewRouteWithChildren
+  '/_authenticated/onboarding/bem-vindo': typeof AuthenticatedOnboardingBemVindoRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/_authenticated/_admin/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
   '/_authenticated/_admin/admin/vendedores': typeof AuthenticatedAdminAdminVendedoresRoute
@@ -341,6 +351,7 @@ export interface FileRouteTypes {
     | '/ghl-test'
     | '/reconciliar'
     | '/appointments/new'
+    | '/onboarding/bem-vindo'
     | '/lovable/email/suppression'
     | '/admin/equipe'
     | '/admin/vendedores'
@@ -373,6 +384,7 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/ghl-test'
     | '/reconciliar'
+    | '/onboarding/bem-vindo'
     | '/lovable/email/suppression'
     | '/admin/equipe'
     | '/admin/vendedores'
@@ -408,6 +420,7 @@ export interface FileRouteTypes {
     | '/_authenticated/_admin/ghl-test'
     | '/_authenticated/_admin/reconciliar'
     | '/_authenticated/appointments/new'
+    | '/_authenticated/onboarding/bem-vindo'
     | '/lovable/email/suppression'
     | '/_authenticated/_admin/admin/equipe'
     | '/_authenticated/_admin/admin/vendedores'
@@ -550,6 +563,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/lovable/email/suppression'
       preLoaderRoute: typeof LovableEmailSuppressionRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/onboarding/bem-vindo': {
+      id: '/_authenticated/onboarding/bem-vindo'
+      path: '/bem-vindo'
+      fullPath: '/onboarding/bem-vindo'
+      preLoaderRoute: typeof AuthenticatedOnboardingBemVindoRouteImport
+      parentRoute: typeof AuthenticatedOnboardingRoute
     }
     '/_authenticated/appointments/new': {
       id: '/_authenticated/appointments/new'
@@ -704,6 +724,20 @@ const AuthenticatedAdminRouteRouteWithChildren =
     AuthenticatedAdminRouteRouteChildren,
   )
 
+interface AuthenticatedOnboardingRouteChildren {
+  AuthenticatedOnboardingBemVindoRoute: typeof AuthenticatedOnboardingBemVindoRoute
+}
+
+const AuthenticatedOnboardingRouteChildren: AuthenticatedOnboardingRouteChildren =
+  {
+    AuthenticatedOnboardingBemVindoRoute: AuthenticatedOnboardingBemVindoRoute,
+  }
+
+const AuthenticatedOnboardingRouteWithChildren =
+  AuthenticatedOnboardingRoute._addFileChildren(
+    AuthenticatedOnboardingRouteChildren,
+  )
+
 interface AuthenticatedAppointmentsNewRouteChildren {
   AuthenticatedAppointmentsNewAgendaRoute: typeof AuthenticatedAppointmentsNewAgendaRoute
   AuthenticatedAppointmentsNewClienteRoute: typeof AuthenticatedAppointmentsNewClienteRoute
@@ -736,7 +770,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAgendaRoute: typeof AuthenticatedAgendaRoute
   AuthenticatedFinanceiroRoute: typeof AuthenticatedFinanceiroRoute
   AuthenticatedMenuRoute: typeof AuthenticatedMenuRoute
-  AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
+  AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRouteWithChildren
   AuthenticatedReviewsRoute: typeof AuthenticatedReviewsRoute
   AuthenticatedServicesRoute: typeof AuthenticatedServicesRoute
   AuthenticatedAppointmentsNewRoute: typeof AuthenticatedAppointmentsNewRouteWithChildren
@@ -747,7 +781,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAgendaRoute: AuthenticatedAgendaRoute,
   AuthenticatedFinanceiroRoute: AuthenticatedFinanceiroRoute,
   AuthenticatedMenuRoute: AuthenticatedMenuRoute,
-  AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
+  AuthenticatedOnboardingRoute: AuthenticatedOnboardingRouteWithChildren,
   AuthenticatedReviewsRoute: AuthenticatedReviewsRoute,
   AuthenticatedServicesRoute: AuthenticatedServicesRoute,
   AuthenticatedAppointmentsNewRoute:
