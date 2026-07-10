@@ -25,6 +25,7 @@ import { Route as AuthenticatedAgendaRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/_admin/route'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
 import { Route as AuthenticatedOnboardingServicosRouteImport } from './routes/_authenticated/onboarding.servicos'
+import { Route as AuthenticatedOnboardingProntoRouteImport } from './routes/_authenticated/onboarding.pronto'
 import { Route as AuthenticatedOnboardingPerfilRouteImport } from './routes/_authenticated/onboarding.perfil'
 import { Route as AuthenticatedOnboardingDisponibilidadeRouteImport } from './routes/_authenticated/onboarding.disponibilidade'
 import { Route as AuthenticatedOnboardingBemVindoRouteImport } from './routes/_authenticated/onboarding.bem-vindo'
@@ -124,6 +125,12 @@ const AuthenticatedOnboardingServicosRoute =
   AuthenticatedOnboardingServicosRouteImport.update({
     id: '/servicos',
     path: '/servicos',
+    getParentRoute: () => AuthenticatedOnboardingRoute,
+  } as any)
+const AuthenticatedOnboardingProntoRoute =
+  AuthenticatedOnboardingProntoRouteImport.update({
+    id: '/pronto',
+    path: '/pronto',
     getParentRoute: () => AuthenticatedOnboardingRoute,
   } as any)
 const AuthenticatedOnboardingPerfilRoute =
@@ -269,6 +276,7 @@ export interface FileRoutesByFullPath {
   '/onboarding/bem-vindo': typeof AuthenticatedOnboardingBemVindoRoute
   '/onboarding/disponibilidade': typeof AuthenticatedOnboardingDisponibilidadeRoute
   '/onboarding/perfil': typeof AuthenticatedOnboardingPerfilRoute
+  '/onboarding/pronto': typeof AuthenticatedOnboardingProntoRoute
   '/onboarding/servicos': typeof AuthenticatedOnboardingServicosRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
@@ -305,6 +313,7 @@ export interface FileRoutesByTo {
   '/onboarding/bem-vindo': typeof AuthenticatedOnboardingBemVindoRoute
   '/onboarding/disponibilidade': typeof AuthenticatedOnboardingDisponibilidadeRoute
   '/onboarding/perfil': typeof AuthenticatedOnboardingPerfilRoute
+  '/onboarding/pronto': typeof AuthenticatedOnboardingProntoRoute
   '/onboarding/servicos': typeof AuthenticatedOnboardingServicosRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
@@ -345,6 +354,7 @@ export interface FileRoutesById {
   '/_authenticated/onboarding/bem-vindo': typeof AuthenticatedOnboardingBemVindoRoute
   '/_authenticated/onboarding/disponibilidade': typeof AuthenticatedOnboardingDisponibilidadeRoute
   '/_authenticated/onboarding/perfil': typeof AuthenticatedOnboardingPerfilRoute
+  '/_authenticated/onboarding/pronto': typeof AuthenticatedOnboardingProntoRoute
   '/_authenticated/onboarding/servicos': typeof AuthenticatedOnboardingServicosRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/_authenticated/_admin/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
@@ -384,6 +394,7 @@ export interface FileRouteTypes {
     | '/onboarding/bem-vindo'
     | '/onboarding/disponibilidade'
     | '/onboarding/perfil'
+    | '/onboarding/pronto'
     | '/onboarding/servicos'
     | '/lovable/email/suppression'
     | '/admin/equipe'
@@ -420,6 +431,7 @@ export interface FileRouteTypes {
     | '/onboarding/bem-vindo'
     | '/onboarding/disponibilidade'
     | '/onboarding/perfil'
+    | '/onboarding/pronto'
     | '/onboarding/servicos'
     | '/lovable/email/suppression'
     | '/admin/equipe'
@@ -459,6 +471,7 @@ export interface FileRouteTypes {
     | '/_authenticated/onboarding/bem-vindo'
     | '/_authenticated/onboarding/disponibilidade'
     | '/_authenticated/onboarding/perfil'
+    | '/_authenticated/onboarding/pronto'
     | '/_authenticated/onboarding/servicos'
     | '/lovable/email/suppression'
     | '/_authenticated/_admin/admin/equipe'
@@ -608,6 +621,13 @@ declare module '@tanstack/react-router' {
       path: '/servicos'
       fullPath: '/onboarding/servicos'
       preLoaderRoute: typeof AuthenticatedOnboardingServicosRouteImport
+      parentRoute: typeof AuthenticatedOnboardingRoute
+    }
+    '/_authenticated/onboarding/pronto': {
+      id: '/_authenticated/onboarding/pronto'
+      path: '/pronto'
+      fullPath: '/onboarding/pronto'
+      preLoaderRoute: typeof AuthenticatedOnboardingProntoRouteImport
       parentRoute: typeof AuthenticatedOnboardingRoute
     }
     '/_authenticated/onboarding/perfil': {
@@ -788,6 +808,7 @@ interface AuthenticatedOnboardingRouteChildren {
   AuthenticatedOnboardingBemVindoRoute: typeof AuthenticatedOnboardingBemVindoRoute
   AuthenticatedOnboardingDisponibilidadeRoute: typeof AuthenticatedOnboardingDisponibilidadeRoute
   AuthenticatedOnboardingPerfilRoute: typeof AuthenticatedOnboardingPerfilRoute
+  AuthenticatedOnboardingProntoRoute: typeof AuthenticatedOnboardingProntoRoute
   AuthenticatedOnboardingServicosRoute: typeof AuthenticatedOnboardingServicosRoute
 }
 
@@ -797,6 +818,7 @@ const AuthenticatedOnboardingRouteChildren: AuthenticatedOnboardingRouteChildren
     AuthenticatedOnboardingDisponibilidadeRoute:
       AuthenticatedOnboardingDisponibilidadeRoute,
     AuthenticatedOnboardingPerfilRoute: AuthenticatedOnboardingPerfilRoute,
+    AuthenticatedOnboardingProntoRoute: AuthenticatedOnboardingProntoRoute,
     AuthenticatedOnboardingServicosRoute: AuthenticatedOnboardingServicosRoute,
   }
 
