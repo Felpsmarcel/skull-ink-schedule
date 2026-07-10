@@ -24,6 +24,7 @@ import { Route as AuthenticatedFinanceiroRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAgendaRouteImport } from './routes/_authenticated/agenda'
 import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/_admin/route'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
+import { Route as AuthenticatedOnboardingServicosRouteImport } from './routes/_authenticated/onboarding.servicos'
 import { Route as AuthenticatedOnboardingPerfilRouteImport } from './routes/_authenticated/onboarding.perfil'
 import { Route as AuthenticatedOnboardingDisponibilidadeRouteImport } from './routes/_authenticated/onboarding.disponibilidade'
 import { Route as AuthenticatedOnboardingBemVindoRouteImport } from './routes/_authenticated/onboarding.bem-vindo'
@@ -119,6 +120,12 @@ const LovableEmailSuppressionRoute = LovableEmailSuppressionRouteImport.update({
   path: '/lovable/email/suppression',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedOnboardingServicosRoute =
+  AuthenticatedOnboardingServicosRouteImport.update({
+    id: '/servicos',
+    path: '/servicos',
+    getParentRoute: () => AuthenticatedOnboardingRoute,
+  } as any)
 const AuthenticatedOnboardingPerfilRoute =
   AuthenticatedOnboardingPerfilRouteImport.update({
     id: '/perfil',
@@ -262,6 +269,7 @@ export interface FileRoutesByFullPath {
   '/onboarding/bem-vindo': typeof AuthenticatedOnboardingBemVindoRoute
   '/onboarding/disponibilidade': typeof AuthenticatedOnboardingDisponibilidadeRoute
   '/onboarding/perfil': typeof AuthenticatedOnboardingPerfilRoute
+  '/onboarding/servicos': typeof AuthenticatedOnboardingServicosRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
   '/admin/vendedores': typeof AuthenticatedAdminAdminVendedoresRoute
@@ -297,6 +305,7 @@ export interface FileRoutesByTo {
   '/onboarding/bem-vindo': typeof AuthenticatedOnboardingBemVindoRoute
   '/onboarding/disponibilidade': typeof AuthenticatedOnboardingDisponibilidadeRoute
   '/onboarding/perfil': typeof AuthenticatedOnboardingPerfilRoute
+  '/onboarding/servicos': typeof AuthenticatedOnboardingServicosRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
   '/admin/vendedores': typeof AuthenticatedAdminAdminVendedoresRoute
@@ -336,6 +345,7 @@ export interface FileRoutesById {
   '/_authenticated/onboarding/bem-vindo': typeof AuthenticatedOnboardingBemVindoRoute
   '/_authenticated/onboarding/disponibilidade': typeof AuthenticatedOnboardingDisponibilidadeRoute
   '/_authenticated/onboarding/perfil': typeof AuthenticatedOnboardingPerfilRoute
+  '/_authenticated/onboarding/servicos': typeof AuthenticatedOnboardingServicosRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/_authenticated/_admin/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
   '/_authenticated/_admin/admin/vendedores': typeof AuthenticatedAdminAdminVendedoresRoute
@@ -374,6 +384,7 @@ export interface FileRouteTypes {
     | '/onboarding/bem-vindo'
     | '/onboarding/disponibilidade'
     | '/onboarding/perfil'
+    | '/onboarding/servicos'
     | '/lovable/email/suppression'
     | '/admin/equipe'
     | '/admin/vendedores'
@@ -409,6 +420,7 @@ export interface FileRouteTypes {
     | '/onboarding/bem-vindo'
     | '/onboarding/disponibilidade'
     | '/onboarding/perfil'
+    | '/onboarding/servicos'
     | '/lovable/email/suppression'
     | '/admin/equipe'
     | '/admin/vendedores'
@@ -447,6 +459,7 @@ export interface FileRouteTypes {
     | '/_authenticated/onboarding/bem-vindo'
     | '/_authenticated/onboarding/disponibilidade'
     | '/_authenticated/onboarding/perfil'
+    | '/_authenticated/onboarding/servicos'
     | '/lovable/email/suppression'
     | '/_authenticated/_admin/admin/equipe'
     | '/_authenticated/_admin/admin/vendedores'
@@ -589,6 +602,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/lovable/email/suppression'
       preLoaderRoute: typeof LovableEmailSuppressionRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/onboarding/servicos': {
+      id: '/_authenticated/onboarding/servicos'
+      path: '/servicos'
+      fullPath: '/onboarding/servicos'
+      preLoaderRoute: typeof AuthenticatedOnboardingServicosRouteImport
+      parentRoute: typeof AuthenticatedOnboardingRoute
     }
     '/_authenticated/onboarding/perfil': {
       id: '/_authenticated/onboarding/perfil'
@@ -768,6 +788,7 @@ interface AuthenticatedOnboardingRouteChildren {
   AuthenticatedOnboardingBemVindoRoute: typeof AuthenticatedOnboardingBemVindoRoute
   AuthenticatedOnboardingDisponibilidadeRoute: typeof AuthenticatedOnboardingDisponibilidadeRoute
   AuthenticatedOnboardingPerfilRoute: typeof AuthenticatedOnboardingPerfilRoute
+  AuthenticatedOnboardingServicosRoute: typeof AuthenticatedOnboardingServicosRoute
 }
 
 const AuthenticatedOnboardingRouteChildren: AuthenticatedOnboardingRouteChildren =
@@ -776,6 +797,7 @@ const AuthenticatedOnboardingRouteChildren: AuthenticatedOnboardingRouteChildren
     AuthenticatedOnboardingDisponibilidadeRoute:
       AuthenticatedOnboardingDisponibilidadeRoute,
     AuthenticatedOnboardingPerfilRoute: AuthenticatedOnboardingPerfilRoute,
+    AuthenticatedOnboardingServicosRoute: AuthenticatedOnboardingServicosRoute,
   }
 
 const AuthenticatedOnboardingRouteWithChildren =
