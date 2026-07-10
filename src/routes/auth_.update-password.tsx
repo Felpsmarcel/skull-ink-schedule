@@ -129,6 +129,33 @@ function UpdatePasswordPage() {
       return;
     }
     setSuccess(true);
+    // Decide destination based on role + onboarding status.
+    try {
+      const { data: userRes } = await supabase.auth.getUser();
+      const uid = userRes.user?.id;
+      if (uid) {
+        const { data: appUser } = await supabase
+          .from("app_users")
+          .select("role, artist_id")
+          .eq("id", uid)
+          .maybeSingle();
+        const row = appUser as { role: string | null; artist_id: string | null } | null;
+        if (row?.role === "artist" && row.artist_id) {
+          const { data: artist } = await supabase
+            .from("artists")
+            .select("onboarded_at")
+            .eq("id", row.artist_id)
+            .maybeSingle();
+          const onboardedAt = (artist as { onboarded_at: string | null } | null)?.onboarded_at ?? null;
+          if (!onboardedAt) {
+            navigate({ to: "/onboarding/bem-vindo", replace: true });
+            return;
+          }
+        }
+      }
+    } catch {
+      /* fall through to /agenda */
+    }
     navigate({ to: "/agenda", replace: true });
   }
 
