@@ -25,6 +25,7 @@ import { Route as AuthenticatedAgendaRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/_admin/route'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
 import { Route as AuthenticatedOnboardingPerfilRouteImport } from './routes/_authenticated/onboarding.perfil'
+import { Route as AuthenticatedOnboardingDisponibilidadeRouteImport } from './routes/_authenticated/onboarding.disponibilidade'
 import { Route as AuthenticatedOnboardingBemVindoRouteImport } from './routes/_authenticated/onboarding.bem-vindo'
 import { Route as AuthenticatedAppointmentsNewRouteImport } from './routes/_authenticated/appointments.new'
 import { Route as AuthenticatedAdminReconciliarRouteImport } from './routes/_authenticated/_admin/reconciliar'
@@ -122,6 +123,12 @@ const AuthenticatedOnboardingPerfilRoute =
   AuthenticatedOnboardingPerfilRouteImport.update({
     id: '/perfil',
     path: '/perfil',
+    getParentRoute: () => AuthenticatedOnboardingRoute,
+  } as any)
+const AuthenticatedOnboardingDisponibilidadeRoute =
+  AuthenticatedOnboardingDisponibilidadeRouteImport.update({
+    id: '/disponibilidade',
+    path: '/disponibilidade',
     getParentRoute: () => AuthenticatedOnboardingRoute,
   } as any)
 const AuthenticatedOnboardingBemVindoRoute =
@@ -253,6 +260,7 @@ export interface FileRoutesByFullPath {
   '/reconciliar': typeof AuthenticatedAdminReconciliarRoute
   '/appointments/new': typeof AuthenticatedAppointmentsNewRouteWithChildren
   '/onboarding/bem-vindo': typeof AuthenticatedOnboardingBemVindoRoute
+  '/onboarding/disponibilidade': typeof AuthenticatedOnboardingDisponibilidadeRoute
   '/onboarding/perfil': typeof AuthenticatedOnboardingPerfilRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
@@ -287,6 +295,7 @@ export interface FileRoutesByTo {
   '/ghl-test': typeof AuthenticatedAdminGhlTestRoute
   '/reconciliar': typeof AuthenticatedAdminReconciliarRoute
   '/onboarding/bem-vindo': typeof AuthenticatedOnboardingBemVindoRoute
+  '/onboarding/disponibilidade': typeof AuthenticatedOnboardingDisponibilidadeRoute
   '/onboarding/perfil': typeof AuthenticatedOnboardingPerfilRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
@@ -325,6 +334,7 @@ export interface FileRoutesById {
   '/_authenticated/_admin/reconciliar': typeof AuthenticatedAdminReconciliarRoute
   '/_authenticated/appointments/new': typeof AuthenticatedAppointmentsNewRouteWithChildren
   '/_authenticated/onboarding/bem-vindo': typeof AuthenticatedOnboardingBemVindoRoute
+  '/_authenticated/onboarding/disponibilidade': typeof AuthenticatedOnboardingDisponibilidadeRoute
   '/_authenticated/onboarding/perfil': typeof AuthenticatedOnboardingPerfilRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/_authenticated/_admin/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
@@ -362,6 +372,7 @@ export interface FileRouteTypes {
     | '/reconciliar'
     | '/appointments/new'
     | '/onboarding/bem-vindo'
+    | '/onboarding/disponibilidade'
     | '/onboarding/perfil'
     | '/lovable/email/suppression'
     | '/admin/equipe'
@@ -396,6 +407,7 @@ export interface FileRouteTypes {
     | '/ghl-test'
     | '/reconciliar'
     | '/onboarding/bem-vindo'
+    | '/onboarding/disponibilidade'
     | '/onboarding/perfil'
     | '/lovable/email/suppression'
     | '/admin/equipe'
@@ -433,6 +445,7 @@ export interface FileRouteTypes {
     | '/_authenticated/_admin/reconciliar'
     | '/_authenticated/appointments/new'
     | '/_authenticated/onboarding/bem-vindo'
+    | '/_authenticated/onboarding/disponibilidade'
     | '/_authenticated/onboarding/perfil'
     | '/lovable/email/suppression'
     | '/_authenticated/_admin/admin/equipe'
@@ -582,6 +595,13 @@ declare module '@tanstack/react-router' {
       path: '/perfil'
       fullPath: '/onboarding/perfil'
       preLoaderRoute: typeof AuthenticatedOnboardingPerfilRouteImport
+      parentRoute: typeof AuthenticatedOnboardingRoute
+    }
+    '/_authenticated/onboarding/disponibilidade': {
+      id: '/_authenticated/onboarding/disponibilidade'
+      path: '/disponibilidade'
+      fullPath: '/onboarding/disponibilidade'
+      preLoaderRoute: typeof AuthenticatedOnboardingDisponibilidadeRouteImport
       parentRoute: typeof AuthenticatedOnboardingRoute
     }
     '/_authenticated/onboarding/bem-vindo': {
@@ -746,12 +766,15 @@ const AuthenticatedAdminRouteRouteWithChildren =
 
 interface AuthenticatedOnboardingRouteChildren {
   AuthenticatedOnboardingBemVindoRoute: typeof AuthenticatedOnboardingBemVindoRoute
+  AuthenticatedOnboardingDisponibilidadeRoute: typeof AuthenticatedOnboardingDisponibilidadeRoute
   AuthenticatedOnboardingPerfilRoute: typeof AuthenticatedOnboardingPerfilRoute
 }
 
 const AuthenticatedOnboardingRouteChildren: AuthenticatedOnboardingRouteChildren =
   {
     AuthenticatedOnboardingBemVindoRoute: AuthenticatedOnboardingBemVindoRoute,
+    AuthenticatedOnboardingDisponibilidadeRoute:
+      AuthenticatedOnboardingDisponibilidadeRoute,
     AuthenticatedOnboardingPerfilRoute: AuthenticatedOnboardingPerfilRoute,
   }
 
