@@ -18,6 +18,7 @@ import { Route as AuthUpdatePasswordRouteImport } from './routes/auth_.update-pa
 import { Route as AuthRecoverRouteImport } from './routes/auth_.recover'
 import { Route as AuthenticatedServicesRouteImport } from './routes/_authenticated/services'
 import { Route as AuthenticatedReviewsRouteImport } from './routes/_authenticated/reviews'
+import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedMenuRouteImport } from './routes/_authenticated/menu'
 import { Route as AuthenticatedFinanceiroRouteImport } from './routes/_authenticated/financeiro'
 import { Route as AuthenticatedAgendaRouteImport } from './routes/_authenticated/agenda'
@@ -84,6 +85,11 @@ const AuthenticatedServicesRoute = AuthenticatedServicesRouteImport.update({
 const AuthenticatedReviewsRoute = AuthenticatedReviewsRouteImport.update({
   id: '/reviews',
   path: '/reviews',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedMenuRoute = AuthenticatedMenuRouteImport.update({
@@ -223,6 +229,7 @@ export interface FileRoutesByFullPath {
   '/agenda': typeof AuthenticatedAgendaRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/menu': typeof AuthenticatedMenuRoute
+  '/onboarding': typeof AuthenticatedOnboardingRoute
   '/reviews': typeof AuthenticatedReviewsRoute
   '/services': typeof AuthenticatedServicesRoute
   '/auth/recover': typeof AuthRecoverRoute
@@ -255,6 +262,7 @@ export interface FileRoutesByTo {
   '/agenda': typeof AuthenticatedAgendaRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/menu': typeof AuthenticatedMenuRoute
+  '/onboarding': typeof AuthenticatedOnboardingRoute
   '/reviews': typeof AuthenticatedReviewsRoute
   '/services': typeof AuthenticatedServicesRoute
   '/auth/recover': typeof AuthRecoverRoute
@@ -289,6 +297,7 @@ export interface FileRoutesById {
   '/_authenticated/agenda': typeof AuthenticatedAgendaRoute
   '/_authenticated/financeiro': typeof AuthenticatedFinanceiroRoute
   '/_authenticated/menu': typeof AuthenticatedMenuRoute
+  '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/reviews': typeof AuthenticatedReviewsRoute
   '/_authenticated/services': typeof AuthenticatedServicesRoute
   '/auth_/recover': typeof AuthRecoverRoute
@@ -323,6 +332,7 @@ export interface FileRouteTypes {
     | '/agenda'
     | '/financeiro'
     | '/menu'
+    | '/onboarding'
     | '/reviews'
     | '/services'
     | '/auth/recover'
@@ -355,6 +365,7 @@ export interface FileRouteTypes {
     | '/agenda'
     | '/financeiro'
     | '/menu'
+    | '/onboarding'
     | '/reviews'
     | '/services'
     | '/auth/recover'
@@ -388,6 +399,7 @@ export interface FileRouteTypes {
     | '/_authenticated/agenda'
     | '/_authenticated/financeiro'
     | '/_authenticated/menu'
+    | '/_authenticated/onboarding'
     | '/_authenticated/reviews'
     | '/_authenticated/services'
     | '/auth_/recover'
@@ -495,6 +507,13 @@ declare module '@tanstack/react-router' {
       path: '/reviews'
       fullPath: '/reviews'
       preLoaderRoute: typeof AuthenticatedReviewsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/onboarding': {
+      id: '/_authenticated/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof AuthenticatedOnboardingRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/menu': {
@@ -717,6 +736,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAgendaRoute: typeof AuthenticatedAgendaRoute
   AuthenticatedFinanceiroRoute: typeof AuthenticatedFinanceiroRoute
   AuthenticatedMenuRoute: typeof AuthenticatedMenuRoute
+  AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedReviewsRoute: typeof AuthenticatedReviewsRoute
   AuthenticatedServicesRoute: typeof AuthenticatedServicesRoute
   AuthenticatedAppointmentsNewRoute: typeof AuthenticatedAppointmentsNewRouteWithChildren
@@ -727,6 +747,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAgendaRoute: AuthenticatedAgendaRoute,
   AuthenticatedFinanceiroRoute: AuthenticatedFinanceiroRoute,
   AuthenticatedMenuRoute: AuthenticatedMenuRoute,
+  AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedReviewsRoute: AuthenticatedReviewsRoute,
   AuthenticatedServicesRoute: AuthenticatedServicesRoute,
   AuthenticatedAppointmentsNewRoute:
