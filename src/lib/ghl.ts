@@ -134,8 +134,26 @@ export async function createContact(input: CreateContactInput) {
     path: "/contacts/",
     method: "POST",
     version: CONTACTS_VERSION,
-    body: input,
+    body: {
+      ...input,
+      firstName: input.firstName.trim(),
+      lastName: input.lastName?.trim() || undefined,
+      phone: input.phone ? sanitizePhone(input.phone) : undefined,
+      email: input.email?.trim() || undefined,
+    },
   });
+}
+
+/**
+ * Remove caracteres invisíveis (bidi/zero-width) que iOS injeta em números
+ * com "+", normaliza espaços e converte prefixo "00" para "+". Sem eles o
+ * GHL rejeita com "Invalid country calling code".
+ */
+export function sanitizePhone(raw: string): string {
+  let s = raw.replace(/[\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/g, "");
+  s = s.replace(/\s+/g, " ").trim();
+  if (/^00\d/.test(s.replace(/\s/g, ""))) s = "+" + s.replace(/^\s*00/, "");
+  return s;
 }
 
 export interface GhlContactDetail extends GhlContact {
