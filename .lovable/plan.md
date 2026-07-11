@@ -1,56 +1,37 @@
-Objetivo: garantir que tatuadores convidados usem o app sem jamais tocar no código-fonte, vejam a agenda geral de todos os artistas, mas acessem apenas o próprio financeiro e nunca as configurações administrativas.
+## Diagnóstico
 
-````text
-Papéis atuais no banco
-----------------------
-- app_users com role="artist" + artist_id vinculado: acesso de tatuador.
-- app_users com role="admin": acesso total.
-- app_users com role="seller": acesso de vendedor (fora do escopo deste ajuste).
+O cadastro está falhando porque o telefone digitado/colado contém **caracteres invisíveis de direção de texto** (U+202A / U+202C — marcadores bidi que o iOS costuma inserir automaticamente em números com "+"). O valor enviado ao GHL foi:
 
-Convites enviados
------------------
-O fluxo `inviteArtist` já cria o usuário com role="artist" e vincula ao artist_id correto. Não concede role admin. Verificarei na base se todos os convites aceitos estão com role="artist".
+```
+"‪+32 472 93 43 28‬"   ← há bytes invisíveis antes do "+" e no fim
+```
 
-Código-fonte
-------------
-Tatuadores acessam apenas a URL publicada do app. Não têm acesso ao repositório, ao editor Lovable nem a variáveis de ambiente/segredos. Nenhuma mudança de código é necessária para isso.
+Resposta do GHL (400):
+```
+"Invalid country calling code"
+```
 
-Ajustes de permissão no app
----------------------------
-1. Agenda geral para tatuadores
-   - Hoje a página `/agenda` filtra para que um artista veja apenas sua própria coluna (`restrictArtistId`).
-   - Remover esse filtro para artistas, mantendo-o opcional para outros usos futuros.
-   - Adicionar policy RLS em `appointments` permitindo artistas autenticados ler todos os agendamentos.
-   - Adicionar policy RLS em `artists` permitindo artistas autenticados listar todos os artistas ativos (necessário para renderizar as colunas da agenda).
-   - Manter as policies existentes que permitem artistas editar apenas seus próprios agendamentos.
+Ou seja, o "+" deixa de ser o primeiro caractere real do número, e o GHL não reconhece o código do país.
 
-2. Financeiro isolado
-   - Hoje `getFinanceSummary` e as policies de `payments` já restringem o artista aos próprios agendamentos/comissões.
-   - Nenhuma alteração necessária.
+## Correção
 
-3. Área administrativa bloqueada
-   - O layout `/_authenticated/_admin` já redireciona não-admins para `/agenda`.
-   - Nenhuma alteração necessária.
+1. **`src/lib/ghl.ts` → `createContact`** (ou helper novo `sanitizePhone`): antes de enviar, limpar o `phone`:
+   - remover caracteres de controle bidi/invisíveis: `\u200B-\u200F`, `\u202A-\u202E`, `\u2066-\u2069`, `\uFEFF`
+   - colapsar espaços múltiplos e dar `trim()`
+   - se o número começar com `00`, converter para `+`
+   
+   Aplicar também ao `email` (só `trim`).
 
-4. Catálogo de serviços
-   - A rota `/services` já é leitura para artistas e edição só para admin.
-   - Nenhuma alteração necessária.
+2. **`src/routes/_authenticated/appointments.new.cliente.tsx`** (`CreateContactPanel`): aplicar a mesma sanitização no `onSubmit` antes de validar, para que a validação do Zod veja o valor limpo, e para o campo mostrar exatamente o que será enviado.
 
-Validação
----------
-- Simular login como um dos artistas convidados.
-- Confirmar que `/agenda` mostra colunas de todos os tatuadores.
-- Confirmar que `/financeiro` mostra apenas comissões do próprio artista.
-- Confirmar que `/menu` não exibe links de admin e que tentar acessar `/admin/equipe` redireciona para `/agenda`.
+3. **Mensagem de erro amigável**: quando `res.data.message === "Invalid country calling code"`, mostrar toast em PT: *"Número de telefone inválido. Verifique o código do país (ex: +32...)."* em vez de exibir o JSON cru.
 
-Arquivos esperados para alteração
----------------------------------
-- `src/routes/_authenticated/agenda.tsx` — remover restrição de artista na agenda.
-- Migration SQL — adicionar policies RLS para leitura geral por artistas em `appointments` e `artists`.
+## Fora do escopo
 
-Não serão alterados
--------------------
-- `src/lib/team.functions.ts` (convites já estão corretos).
-- `src/routes/_authenticated/_admin/route.tsx` (gate já existe).
-- `src/routes/_authenticated/financeiro.tsx` e `src/lib/finance.functions.ts` (já isolam por artista).
-- `src/routes/_authenticated/menu.tsx` (já oculta links de admin).
+- Não mexer no fluxo de agenda, permissões, ou no edge function `ghl-proxy`.
+- Nenhuma mudança de banco de dados.
+
+## Arquivos alterados
+
+- `src/lib/ghl.ts` — nova função `sanitizePhone` + uso em `createContact`.
+- `src/routes/_authenticated/appointments.new.cliente.tsx` — sanitizar no submit e tratar erro do GHL.

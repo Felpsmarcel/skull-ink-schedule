@@ -16,7 +16,7 @@ import { ErrorState } from "@/components/ui/error-state";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { LOCATION_ID } from "@/config/staff";
-import { createContact, searchContacts, type GhlContact } from "@/lib/ghl";
+import { createContact, sanitizePhone, searchContacts, type GhlContact } from "@/lib/ghl";
 import { useAppointmentDraft } from "@/stores/appointment-draft";
 import { WizardFooter } from "@/components/appointment-wizard/wizard-footer";
 
@@ -203,7 +203,13 @@ function CreateContactPanel({ onCreated }: { onCreated: (c: GhlContact) => void 
   });
 
   async function onSubmit(values: CreateContactForm) {
-    const parsed = createContactSchema.safeParse(values);
+    const cleaned = {
+      firstName: values.firstName.trim(),
+      lastName: values.lastName?.trim() ?? "",
+      phone: values.phone ? sanitizePhone(values.phone) : "",
+      email: values.email?.trim() ?? "",
+    };
+    const parsed = createContactSchema.safeParse(cleaned);
     if (!parsed.success) {
       const first = parsed.error.issues[0];
       toast.error(first?.message ?? "Erro de validação");
@@ -219,7 +225,17 @@ function CreateContactPanel({ onCreated }: { onCreated: (c: GhlContact) => void 
         email: parsed.data.email || undefined,
       });
       if (!res.ok) {
-        toast.error(`${res.status}: ${JSON.stringify(res.data)}`);
+        const message =
+          typeof (res.data as { message?: unknown })?.message === "string"
+            ? ((res.data as { message: string }).message)
+            : "";
+        if (/invalid country calling code/i.test(message)) {
+          toast.error(
+            "Número de telefone inválido. Verifique o código do país (ex: +32...).",
+          );
+        } else {
+          toast.error(message || `Erro ${res.status} ao criar contato.`);
+        }
         return;
       }
       const c = res.data.contact;
