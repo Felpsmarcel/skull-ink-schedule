@@ -77,14 +77,22 @@ Deno.serve(async (req) => {
   // --- AuthZ: verifica JWT do Supabase e papel do usuário ----------------
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
   const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const ANON_KEY =
+    Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
   const authHeader = req.headers.get("authorization") ?? "";
-  if (SUPABASE_URL && SERVICE_KEY && authHeader.startsWith("Bearer ")) {
+  if (SUPABASE_URL && SERVICE_KEY && ANON_KEY && authHeader.startsWith("Bearer ")) {
     try {
-      const jwt = authHeader.slice("Bearer ".length);
       const admin = createClient(SUPABASE_URL, SERVICE_KEY, {
         auth: { persistSession: false, autoRefreshToken: false },
       });
-      const { data: userRes, error: userErr } = await admin.auth.getUser(jwt);
+      // User-context client validates the caller's JWT via /auth/v1/user
+      // using the anon/publishable key as apikey. This is more tolerant of
+      // new-format signing keys than passing the raw JWT into an admin client.
+      const userClient = createClient(SUPABASE_URL, ANON_KEY, {
+        auth: { persistSession: false, autoRefreshToken: false },
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data: userRes, error: userErr } = await userClient.auth.getUser();
       if (userErr || !userRes?.user) {
         return json(401, { error: "unauthorized", detail: "JWT inválido." });
       }
