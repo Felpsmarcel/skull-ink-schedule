@@ -1,133 +1,94 @@
 
-# Diagnóstico — Jornada do tatuador no iPhone
+# Etapa 1 — Correções rápidas da Agenda Mobile
 
-Nenhuma alteração de código. Análise focada apenas nas telas usadas pelo tatuador durante o dia (Agenda → detalhe do agendamento).
+Todas as mudanças são de UI/UX na agenda. Nenhuma regra de negócio, integração GHL, financeiro ou schema é tocado.
 
----
+## Arquivos alterados
 
-## Simulação da jornada
+- `src/routes/__root.tsx` — adicionar `<Toaster>` global (uma única vez).
+- `src/routes/_authenticated/agenda.tsx` — todas as demais mudanças abaixo.
 
-### 1) Entrar no aplicativo
-**Funciona:** login guarda sessão; `/` redireciona para `/agenda`, então já cai direto no que importa.
-**Dificulta:** nada relevante além do custo de teclado no login inicial.
-**Toques:** 0 (sessão já ativa) · 3–4 (login com email/senha).
-**Falta/sobra:** nada crítico.
-**Ação escondida:** —
-**Melhoria:** manter sessão longa (já faz) e priorizar botão Face ID/Apple no futuro.
+## 1) Toaster global e remoção do duplicado
 
----
+- Em `__root.tsx`, dentro de `RootComponent`, montar `<Toaster theme="light" position="top-center" offset="calc(env(safe-area-inset-top) + 0.5rem)" mobileOffset="calc(env(safe-area-inset-top) + 0.5rem)" />` uma vez.
+- Em `agenda.tsx`, remover o import `Toaster` (L47) e o bloco `<Toaster ... />` (L161–166). As notificações de outras rotas (menu, admin, onboarding) continuam com seus próprios Toasters — não serão alteradas nesta etapa (fora do escopo).
 
-### 2) Ver os atendimentos de hoje
-**Funciona:** agenda abre no dia corrente; KPI "sessões / livres" no topo; indicador "agora" na grade; auto-refetch a cada 2 min.
-**Dificulta:**
-- **Botão "Hoje" invisível no mobile** — está `hidden ... sm:inline-flex` (`agenda.tsx` L219–225). Para voltar de outro dia é preciso abrir o popover do calendário e escolher. Custo alto com uma mão.
-- **Sem toggle "Minha agenda / Todos"** — o código força `restrictArtistId = null` (L116) com o comentário "Tatuadores veem a agenda geral". O filtro por artista existe apenas como *chips horizontais* no mobile (L409–440). O tatuador precisa rolar/clicar a própria inicial toda vez que abre; não há persistência da última seleção.
-- **Header muito alto no iPhone** — safe-area + linha de data + linha de tabs (Dia/Semana/Mês) + KPI ribbon + chips de artista = ~4 faixas empilhadas antes da primeira linha da grade. Em iPhone padrão sobra pouca grade visível.
-- **Grade horaria começa em `DEFAULT_START_HOUR`** — se o primeiro atendimento é às 14h, o tatuador ainda tem que rolar por horas vazias da manhã.
-- **Coluna de horas de 40px no mobile (`w-10`)** com fonte 9px — legível, mas no limite.
-**Toques para "ver hoje" vindo de outro dia:** 3 (abrir popover → mês → dia). Deveria ser 1.
-**Falta:** botão "Hoje" persistente no header mobile; "pular para próximo atendimento"; memória do último artista selecionado.
-**Sobra:** tabs "Semana/Mês" ocupando linha inteira mesmo quando o tatuador só usa "Dia" no trabalho.
-**Melhoria recomendada:** mover "Hoje" para o header mobile (ao lado das setas ou como pílula à direita) e persistir seleção de artista em localStorage.
+## 2) Botão "Hoje" visível no mobile
 
----
+Em `agenda.tsx` L219–225: substituir `className="ml-1 hidden ... sm:inline-flex"` por uma versão compacta sempre visível:
 
-### 3) Abrir um agendamento
-**Funciona:** tocar em qualquer slot ocupado abre `AgendaAppointmentSheet` (bottom sheet no mobile). Alvo de toque = altura da linha (56px) × largura da coluna — adequado.
-**Dificulta:**
-- Se duas colunas de artistas estão visíveis simultaneamente e há sobreposição de eventos (`hasOverlap`), o toque pode cair no slot errado.
-- Nenhuma indicação visual de "próximo atendimento" na grade (ex.: borda pulsante). O tatuador precisa cruzar o "now line" com os cards.
-**Toques:** 1.
-**Melhoria:** destacar o próximo atendimento do dia com contraste (badge "PRÓXIMO").
+```
+"ml-1 inline-flex shrink-0 rounded-full border border-border bg-card px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:border-foreground hover:text-foreground sm:px-3"
+```
 
----
+Fica ao lado das setas (posição atual no header). O onClick já é `setDate(new Date())`.
 
-### 4) Consultar cliente, horário, projeto, valores, sinal, observações e fotos
-Referência: `src/components/agenda-appointment-sheet.tsx`.
+## 3) Cabeçalho mobile mais enxuto (Semana/Mês em menu)
 
-**Funciona:**
-- Cliente (telefone/e-mail) com atalhos `tel:`/`mailto:` e copiar — excelente para uso com uma mão.
-- Bloco "Financeiro" mostra sinal (`depositEur`), saldo restante e histórico de pagamentos.
-- Bloco de duração e horário no cabeçalho.
-- Troca de artista via `ArtistPicker`.
+Na `<Tabs>` L228–253:
 
-**Dificulta / faltas graves:**
-- **Sem "projeto"/descrição do trabalho** — só aparece `serviceName`. Não há campo para referência visual, descrição do desenho, tamanho, região do corpo.
-- **Sem "observações"** exibidas — o `notes` é gravado ao criar o agendamento e ao criar pagamento, mas **não é lido/exibido** no sheet do dia. O tatuador não consegue rever o briefing.
-- **Sem fotos/referências** — não há upload nem visualização de imagens do projeto. É a maior lacuna funcional para o dia de trabalho.
-- **Status atual apenas como texto cru** (`Row label="Status" value={slot.appointmentStatus}` L177–179) — sem StatusBadge, sem cores, sem tradução PT.
-- **Rolagem interna do sheet** já é longa (contato + finanças + histórico), colocar fotos exigirá cuidado com hierarquia.
-**Toques para "ver observações":** ∞ (não existe).
-**Melhoria:** adicionar 3 blocos no sheet — *Projeto* (descrição + região + tamanho), *Referências* (grid de fotos, tap para lightbox), *Observações* (texto livre). Priorizar antes de Financeiro na ordem visual.
+- Manter as três tabs (`day/week/month`) apenas em `sm:` (adicionar `hidden sm:block` ao wrapper Tabs).
+- No mobile, adicionar ao lado do "Hoje" um `<Popover>` compacto com botão-ícone (`MoreHorizontal` já disponível em lucide) que abre um pequeno menu com dois botões: "Semana" e "Mês". Ao clicar, chama `setView("week")` / `setView("month")`.
+- A view "Dia" é o default no mobile e continua controlada pela URL search; não precisa de tab visível quando já está em Dia. Se o usuário estiver em week/month via URL, mostrar um chip "← voltar ao Dia" no mesmo local.
 
----
+Resultado: no iPhone o header cabe em uma única linha (setas · data · setas · Hoje · ⋯).
 
-### 5) Atualizar o status do atendimento
-**Funciona:** existe a mutação `setStatus` (bucket `pago | pendente | a_receber`), mas ela é chamada apenas via fluxo de pagamento.
-**Dificulta:**
-- **Não existe controle direto** de status do atendimento (agendado → em andamento → concluído → no-show → cancelado). O `slot.appointmentStatus` é apenas leitura.
-- O que hoje muda é o *bucket financeiro*, e mesmo esse controle está escondido dentro do `FinanceSection`, sem um botão claro "Marcar como pago".
-- Nenhum atalho "Cheguei / Iniciar / Encerrar" — comum em apps de agenda usados durante a sessão.
-**Toques para mudar status operacional:** impossível sem passar por criar pagamento.
-**Melhoria:** adicionar um seletor de status operacional no topo do sheet (chips: Confirmado · Em andamento · Concluído · No-show · Cancelado) chamando o server function correspondente.
+## 4) Coluna de horários mais legível no mobile
 
----
+Em L451–459 (time column labels): trocar
+```
+"flex w-10 items-start justify-center border-b border-border/40 pt-1 text-[9px] font-medium tabular-nums text-muted-foreground sm:w-14 sm:text-[10px]"
+```
+por
+```
+"flex w-12 items-start justify-center border-b border-border/40 pt-1 text-[10px] font-medium tabular-nums text-muted-foreground sm:w-14 sm:text-[11px]"
+```
 
-### 6) Finalizar o atendimento
-**Funciona:** o fluxo de "finalizar" existe implicitamente ao registrar o **pagamento final** — `PaymentForm` com `type: "final"` e `status: "paid"` (L752, 798). Isso invalida agenda e finanças.
-**Dificulta:**
-- Não há um botão único "**Finalizar atendimento**" que:
-  1) marque como concluído,
-  2) abra o pagamento final pré-preenchido com o saldo restante,
-  3) confirme e feche.
-  Hoje o tatuador precisa: abrir sheet → rolar até Financeiro → "Adicionar pagamento" → escolher tipo `final` → preencher valor → status `paid` → salvar. **6–7 toques + digitação.**
-- Valor **não vem pré-preenchido** com o saldo restante mostrado logo acima ("Saldo restante").
-- Método de pagamento e observação são opcionais, mas o formulário não sinaliza isso claramente.
-- Sem confirmação háptica/visual de "atendimento encerrado".
-**Toques:** 6–7 (deveriam ser 2: "Finalizar" → "Confirmar").
-**Melhoria:** botão fixo no rodapé do sheet **"Finalizar atendimento"** que abre o `PaymentForm` já preenchido com saldo restante e `type: "final"`, `status: "paid"`.
+Ganho de 2px de largura e +1px de fonte. Os cards continuam ocupando `flex-1` das colunas de artistas — a redução é marginal.
 
----
+## 5) Destaque do próximo atendimento (badge "PRÓXIMO")
 
-## Considerações transversais
+Em `DayView`:
 
-- **Uso com uma mão:** BottomNav e `WizardFooter` estão bem posicionados (área do polegar). O header da agenda, porém, concentra ações críticas (data, navegação, tabs) no topo — longe do polegar no iPhone Pro Max.
-- **Legibilidade:** fontes 9–11px em coluna de horas e KPI ribbon estão no limite mínimo iOS. Adequadas mas frágeis em modo Zoom do iOS.
-- **Rolagem desnecessária:** grade começa às `DEFAULT_START_HOUR` mesmo sem eventos até tarde; sheet não abre ancorado no primeiro conteúdo útil.
-- **Fotos e referências:** ausentes em todo o app.
-- **Toaster** duplicado no arquivo `agenda.tsx` (L161) — em cima do global.
+- Calcular `nextEventId: string | null` — o primeiro `slot.ghlEventId` do dia atual (mesma checagem `brusselsDayKey(now) === brusselsDayKey(date)`) cujo `slot.isFirstSlot === true` e `slot.eventStartMs ?? slot.startMs > Date.now()`. Considerar todas as `agendas` juntas e escolher o de menor `startMs`. Se hoje não estiver visível, `null`.
+- Passar `nextEventId` para `StaffColumn` → `SlotCell`.
+- Em `SlotCell`, se `slot.ghlEventId === nextEventId`, renderizar dentro do card, no canto superior direito, um pequeno badge:
+  ```
+  <span className="absolute right-1 top-1 rounded-sm bg-foreground px-1 py-[1px] text-[8px] font-black uppercase tracking-widest text-background">
+    PRÓXIMO
+  </span>
+  ```
+- Sem animação. Apenas um card por vez recebe o badge (garantido pelo id único).
 
----
+## 6) Auto-scroll inteligente do modo Dia
 
-## As 5 maiores dificuldades do tatuador
+Em `DayView`:
 
-1. **Ausência de fotos/referências e observações** no detalhe do agendamento — impossível revisar o briefing durante o atendimento.
-2. **Sem "Finalizar atendimento" em um toque** — hoje custa 6–7 toques via fluxo financeiro.
-3. **Sem controle direto de status operacional** (só bucket financeiro).
-4. **Botão "Hoje" invisível no mobile** — voltar ao dia atual exige 3 toques no calendário.
-5. **Sem seleção persistente "Minha agenda / Todos"** — chips de artistas resetam e obrigam a re-selecionar toda hora.
+- Adicionar `const scrollRef = useRef<HTMLDivElement | null>(null)` no container `<div className="h-full overflow-auto">` (L445).
+- Adicionar `const didAutoScrollRef = useRef(false)` e `const userScrolledRef = useRef(false)`.
+- Registrar `onScroll` no container que marca `userScrolledRef.current = true` (só depois do primeiro auto-scroll — para não invalidar a si mesmo, comparar timestamp: só marca se `Date.now() - autoScrollAt > 400ms`).
+- `useEffect` disparado quando `rowCount > 0 && !didAutoScrollRef.current`:
+  - `targetPx = (nextEventTopPx ?? nowTopPx)`; onde `nextEventTopPx = ((eventStart - dayStartMs)/60000/SLOT_MINUTES) * ROW_HEIGHT_PX`.
+  - Se ambos `null` (dia futuro, sem eventos), não faz nada.
+  - `scrollRef.current.scrollTo({ top: Math.max(0, targetPx - 80), behavior: "auto" })`.
+  - Marca `didAutoScrollRef.current = true` e `autoScrollAt = Date.now()`.
+- Ao mudar `date` (via effect com `[date]`), zerar ambos os refs para que o próximo dia carregado também role uma vez.
 
-## As 5 melhorias de maior impacto
+## Critérios de conclusão / testes
 
-1. **Blocos "Projeto / Referências / Observações"** no `AgendaAppointmentSheet`, incluindo upload e lightbox de fotos.
-2. **Botão "Finalizar atendimento"** fixo no rodapé do sheet, pré-preenchido com saldo restante e status `paid`.
-3. **Seletor de status operacional** (chips Confirmado / Em andamento / Concluído / No-show / Cancelado) no topo do sheet.
-4. **Toggle "Minha agenda / Todos" persistente** (default = "Minha" para role artist) com memória em localStorage.
-5. **Header mobile enxuto**: pílula "Hoje" sempre visível, tabs Dia/Semana/Mês recolhidas em menu, KPI ribbon opcional.
+- Simular manualmente via ajuste de viewport (375, 390, 430 px) usando `preview_ui--set_preview_device_viewport` na etapa de verificação; conferir:
+  - "Hoje" clicável no header.
+  - Menu compacto Semana/Mês abre e navega.
+  - Coluna de horas legível sem quebrar cards.
+  - Card "PRÓXIMO" com badge no topo.
+  - Ao abrir Agenda, grade rola perto do próximo evento (ou "agora").
+- Desktop (`sm:` breakpoints): comportamento atual preservado — tabs completas, "Hoje" com padding maior, coluna de horas em `w-14`.
 
-## Quick wins (sem mudar regra de negócio)
+## Riscos
 
-- Tornar o botão **"Hoje" visível no mobile** (remover `hidden sm:inline-flex` do L222).
-- Trocar o texto cru de status (L178) por **`<StatusBadge>`** já usado no header.
-- **Exibir `notes` do agendamento** no sheet (dado já persistido pelo `finalizeAppointment`, basta ler).
-- **Pré-preencher `amountEur`** no `PaymentForm` com o saldo restante já calculado no bloco acima.
-- **Persistir a última seleção de artista** dos chips do dia em `localStorage`.
-- **Auto-rolar a grade** para a hora do primeiro evento (ou "agora") ao abrir a agenda no dia.
-- **Remover Toaster duplicado** em `agenda.tsx` L161 (já existe global).
-- Exibir uma **badge "PRÓXIMO"** no card do próximo atendimento do dia.
-- Nas tabs Dia/Semana/Mês do mobile, esconder Semana/Mês atrás de um menu — libera altura útil.
-- Aumentar levemente a coluna de horas no mobile (`w-10` → `w-12`) para 10–11px de fonte.
+- **Toaster global**: se alguma rota já monta seu próprio (menu, admin, onboarding), teremos dois Toasters em cascata. Sonner tolera múltiplos, mas os toasts podem duplicar. **Mitigação**: nesta etapa remover *apenas* o de agenda; consolidar os demais é escopo futuro.
+- **Auto-scroll**: o container pode não ter altura própria em algumas viewports; se `scrollHeight === clientHeight`, a chamada é no-op — sem efeito colateral.
+- **`nextEventId` global entre artistas**: o "próximo" é o mais próximo de qualquer artista; em estúdios com múltiplos tatuadores, cada um vê apenas um badge por dia (o mais próximo do estúdio). Aceitável para esta etapa; refinamento por "meu próximo" fica para a etapa "Minha agenda / Todos" persistente.
+- **Popover no mobile**: garantir `z-index` acima do header sticky (usar `z-40`).
 
----
-
-*Diagnóstico entregue. Nenhum arquivo foi modificado. Aguardando priorização para transformar quick wins e melhorias em plano de implementação.*
+Após implementar, verifico com Playwright em 375/390/430 e reporto arquivos, resumo, riscos e resultados.

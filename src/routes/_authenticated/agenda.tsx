@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ChevronLeft,
@@ -7,6 +7,7 @@ import {
   Calendar as CalendarIcon,
   AlertTriangle,
   Bug,
+  MoreHorizontal,
 } from "lucide-react";
 import "@/i18n";
 
@@ -44,7 +45,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { resolveIntlLocale } from "@/lib/locale";
@@ -158,13 +158,6 @@ function AgendaPage() {
 
   return (
     <div className="flex min-h-dvh flex-col bg-muted/40 pb-[calc(env(safe-area-inset-bottom)+6rem)] sm:pb-20">
-      <Toaster
-        theme="light"
-        position="top-center"
-        offset="calc(env(safe-area-inset-top) + 0.5rem)"
-        mobileOffset="calc(env(safe-area-inset-top) + 0.5rem)"
-      />
-
       {/* Header — editorial monochrome */}
       <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur">
         <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-2 px-3 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3 sm:px-6 sm:pb-4 sm:pt-4">
@@ -219,16 +212,60 @@ function AgendaPage() {
             <button
               type="button"
               onClick={() => setDate(new Date())}
-              className="ml-1 hidden rounded-full border border-border bg-card px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:border-foreground hover:text-foreground sm:inline-flex"
+              className="ml-1 inline-flex shrink-0 rounded-full border border-border bg-card px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:border-foreground hover:text-foreground sm:px-3"
             >
               {t("agenda.today")}
             </button>
+
+            {/* Mobile-only compact view switch */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={t("agenda.view.week") + " / " + t("agenda.view.month")}
+                  className="ml-1 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border bg-card text-muted-foreground hover:border-foreground hover:text-foreground sm:hidden"
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="z-50 w-40 p-1">
+                {view !== "day" ? (
+                  <button
+                    type="button"
+                    onClick={() => setView("day")}
+                    className="flex w-full items-center justify-start rounded-sm px-2 py-1.5 text-xs font-semibold uppercase tracking-wider hover:bg-muted"
+                  >
+                    {t("agenda.view.day")}
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => setView("week")}
+                  className={cn(
+                    "flex w-full items-center justify-start rounded-sm px-2 py-1.5 text-xs font-semibold uppercase tracking-wider hover:bg-muted",
+                    view === "week" && "bg-muted",
+                  )}
+                >
+                  {t("agenda.view.week")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setView("month")}
+                  className={cn(
+                    "flex w-full items-center justify-start rounded-sm px-2 py-1.5 text-xs font-semibold uppercase tracking-wider hover:bg-muted",
+                    view === "month" && "bg-muted",
+                  )}
+                >
+                  {t("agenda.view.month")}
+                </button>
+              </PopoverContent>
+            </Popover>
           </div>
 
           <Tabs
             value={view}
             onValueChange={(v) => setView(v as View)}
-            className="w-full sm:w-auto"
+            className="hidden w-full sm:block sm:w-auto"
           >
             <TabsList className="h-9 rounded-lg bg-muted p-1">
               <TabsTrigger
@@ -362,6 +399,53 @@ function DayView({
     calendarId: string;
   } | null>(null);
 
+  // Next upcoming appointment across all artists (today only)
+  const nextEventInfo = useMemo(() => {
+    const now = Date.now();
+    const isToday = brusselsDayKey(new Date(now)) === brusselsDayKey(date);
+    if (!isToday) return { id: null as string | null, startMs: null as number | null };
+    let bestId: string | null = null;
+    let bestStart = Number.POSITIVE_INFINITY;
+    for (const a of agendas) {
+      for (const s of a.slots) {
+        if (s.status !== "booked" || !s.isFirstSlot || !s.ghlEventId) continue;
+        const start = s.eventStartMs ?? s.startMs;
+        if (start > now && start < bestStart) {
+          bestStart = start;
+          bestId = s.ghlEventId;
+        }
+      }
+    }
+    return { id: bestId, startMs: bestId ? bestStart : null };
+  }, [agendas, date]);
+
+  // Auto-scroll to next event (or "now") once per date
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const didAutoScrollRef = useRef(false);
+  const autoScrollAtRef = useRef(0);
+  const dayKey = brusselsDayKey(date);
+  useEffect(() => {
+    didAutoScrollRef.current = false;
+  }, [dayKey]);
+  useEffect(() => {
+    if (didAutoScrollRef.current) return;
+    if (rowCount === 0) return;
+    const el = scrollRef.current;
+    if (!el) return;
+    let targetPx: number | null = null;
+    if (nextEventInfo.startMs != null) {
+      const dayStartMs = brusselsDayStartMs(date);
+      const offsetMin = (nextEventInfo.startMs - dayStartMs) / 60000;
+      targetPx = (offsetMin / SLOT_MINUTES) * ROW_HEIGHT_PX;
+    } else if (nowTopPx != null) {
+      targetPx = nowTopPx;
+    }
+    if (targetPx == null) return;
+    autoScrollAtRef.current = Date.now();
+    el.scrollTo({ top: Math.max(0, targetPx - 80), behavior: "auto" });
+    didAutoScrollRef.current = true;
+  }, [rowCount, nextEventInfo.startMs, nowTopPx, date]);
+
   return (
     <>
       {debug ? (
@@ -442,7 +526,7 @@ function DayView({
       {/* Grid card */}
       <div className="mx-auto w-full max-w-[1400px] flex-1 px-2 py-4 sm:px-6">
         <div className="h-full overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-          <div className="h-full overflow-auto">
+          <div ref={scrollRef} className="h-full overflow-auto">
             <div className="relative flex w-full min-w-full">
               {/* Time column */}
               <div className="sticky left-0 z-10 shrink-0 border-r border-border bg-card">
@@ -451,7 +535,7 @@ function DayView({
                   <div
                     key={label}
                     className={cn(
-                      "flex w-10 items-start justify-center border-b border-border/40 pt-1 text-[9px] font-medium tabular-nums text-muted-foreground sm:w-14 sm:text-[10px]",
+                      "flex w-12 items-start justify-center border-b border-border/40 pt-1 text-[10px] font-medium tabular-nums text-muted-foreground sm:w-14 sm:text-[11px]",
                       ROW_HEIGHT,
                     )}
                   >
@@ -473,6 +557,7 @@ function DayView({
                       <StaffColumn
                         agenda={a}
                         statusMap={statusMap}
+                        nextEventId={nextEventInfo.id}
                         onOpen={(slot) =>
                           setOpenSlot({
                             slot,
@@ -524,10 +609,12 @@ function DayView({
 function StaffColumn({
   agenda,
   statusMap,
+  nextEventId,
   onOpen,
 }: {
   agenda: ReturnType<typeof useStaffDayAgenda>["agendas"][number];
   statusMap: Map<string, PaymentBucket>;
+  nextEventId: string | null;
   onOpen: (slot: GridSlot) => void;
 }) {
   const { t } = useTranslation();
@@ -589,6 +676,7 @@ function StaffColumn({
               slot={slot}
               calendarId={staff.calendarId}
               statusMap={statusMap}
+              isNext={Boolean(nextEventId && slot.ghlEventId === nextEventId)}
               onOpen={onOpen}
             />
           ))
@@ -602,11 +690,13 @@ function SlotCell({
   slot,
   calendarId,
   statusMap,
+  isNext,
   onOpen,
 }: {
   slot: import("@/lib/agenda-grid").GridSlot;
   calendarId: string;
   statusMap: Map<string, PaymentBucket>;
+  isNext?: boolean;
   onOpen: (slot: GridSlot) => void;
 }) {
   const { t } = useTranslation();
@@ -663,6 +753,11 @@ function SlotCell({
         className="absolute left-[3px] right-[3px] top-[2px] z-[1] flex flex-col justify-start gap-0.5 overflow-hidden rounded-md border border-border border-l-4 border-l-foreground bg-background px-1.5 py-1 text-left text-foreground shadow-sm transition-all hover:-translate-y-[1px] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-foreground/40 sm:px-2 sm:py-1.5"
         style={{ height: cardHeight }}
       >
+        {isNext ? (
+          <span className="pointer-events-none absolute right-1 top-1 rounded-sm bg-foreground px-1 py-[1px] text-[8px] font-black uppercase tracking-widest text-background">
+            {t("agenda.next", { defaultValue: "Próximo" })}
+          </span>
+        ) : null}
         <div className="flex items-center gap-1">
           <span
             className="truncate text-[11px] uppercase leading-tight tracking-tight sm:text-[12px]"
