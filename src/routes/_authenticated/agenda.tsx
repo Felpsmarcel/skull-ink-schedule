@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ChevronLeft,
@@ -7,6 +7,7 @@ import {
   Calendar as CalendarIcon,
   AlertTriangle,
   Bug,
+  MoreHorizontal,
 } from "lucide-react";
 import "@/i18n";
 
@@ -44,7 +45,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { resolveIntlLocale } from "@/lib/locale";
