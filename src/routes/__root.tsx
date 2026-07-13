@@ -13,6 +13,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { supabase } from "@/integrations/supabase/client";
 import { ensureI18n } from "@/i18n";
+import { Toaster } from "@/components/ui/sonner";
 
 ensureI18n();
 
@@ -151,6 +152,12 @@ function RootComponent() {
       <div className="mx-auto w-full max-w-md sm:max-w-3xl lg:max-w-6xl min-h-dvh">
         <Outlet />
       </div>
+      <Toaster
+        theme="light"
+        position="top-center"
+        offset="calc(env(safe-area-inset-top) + 0.5rem)"
+        mobileOffset="calc(env(safe-area-inset-top) + 0.5rem)"
+      />
     </QueryClientProvider>
   );
 }
