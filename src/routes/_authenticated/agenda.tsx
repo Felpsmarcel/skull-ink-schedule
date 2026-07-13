@@ -526,7 +526,7 @@ function DayView({
       {/* Grid card */}
       <div className="mx-auto w-full max-w-[1400px] flex-1 px-2 py-4 sm:px-6">
         <div className="h-full overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-          <div className="h-full overflow-auto">
+          <div ref={scrollRef} className="h-full overflow-auto">
             <div className="relative flex w-full min-w-full">
               {/* Time column */}
               <div className="sticky left-0 z-10 shrink-0 border-r border-border bg-card">
@@ -557,6 +557,7 @@ function DayView({
                       <StaffColumn
                         agenda={a}
                         statusMap={statusMap}
+                        nextEventId={nextEventInfo.id}
                         onOpen={(slot) =>
                           setOpenSlot({
                             slot,
