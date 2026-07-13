@@ -85,8 +85,16 @@ function ProfileStep() {
     setUploading(true);
     try {
       const buf = await file.arrayBuffer();
-      const bin = String.fromCharCode(...new Uint8Array(buf));
-      const base64 = btoa(bin);
+      const bytes = new Uint8Array(buf);
+      let binary = "";
+      const CHUNK = 0x8000;
+      for (let i = 0; i < bytes.length; i += CHUNK) {
+        binary += String.fromCharCode.apply(
+          null,
+          Array.from(bytes.subarray(i, i + CHUNK)),
+        );
+      }
+      const base64 = btoa(binary);
       const ext = file.name.split(".").pop() || "jpg";
       const res = await uploadFn({
         data: { file_base64: base64, content_type: file.type || "image/jpeg", extension: ext },
