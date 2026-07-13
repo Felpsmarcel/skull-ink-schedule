@@ -690,11 +690,13 @@ function SlotCell({
   slot,
   calendarId,
   statusMap,
+  isNext,
   onOpen,
 }: {
   slot: import("@/lib/agenda-grid").GridSlot;
   calendarId: string;
   statusMap: Map<string, PaymentBucket>;
+  isNext?: boolean;
   onOpen: (slot: GridSlot) => void;
 }) {
   const { t } = useTranslation();
@@ -751,6 +753,11 @@ function SlotCell({
         className="absolute left-[3px] right-[3px] top-[2px] z-[1] flex flex-col justify-start gap-0.5 overflow-hidden rounded-md border border-border border-l-4 border-l-foreground bg-background px-1.5 py-1 text-left text-foreground shadow-sm transition-all hover:-translate-y-[1px] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-foreground/40 sm:px-2 sm:py-1.5"
         style={{ height: cardHeight }}
       >
+        {isNext ? (
+          <span className="pointer-events-none absolute right-1 top-1 rounded-sm bg-foreground px-1 py-[1px] text-[8px] font-black uppercase tracking-widest text-background">
+            {t("agenda.next", { defaultValue: "Próximo" })}
+          </span>
+        ) : null}
         <div className="flex items-center gap-1">
           <span
             className="truncate text-[11px] uppercase leading-tight tracking-tight sm:text-[12px]"
