@@ -609,10 +609,12 @@ function DayView({
 function StaffColumn({
   agenda,
   statusMap,
+  nextEventId,
   onOpen,
 }: {
   agenda: ReturnType<typeof useStaffDayAgenda>["agendas"][number];
   statusMap: Map<string, PaymentBucket>;
+  nextEventId: string | null;
   onOpen: (slot: GridSlot) => void;
 }) {
   const { t } = useTranslation();
@@ -674,6 +676,7 @@ function StaffColumn({
               slot={slot}
               calendarId={staff.calendarId}
               statusMap={statusMap}
+              isNext={Boolean(nextEventId && slot.ghlEventId === nextEventId)}
               onOpen={onOpen}
             />
           ))
