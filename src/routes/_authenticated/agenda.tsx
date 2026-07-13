@@ -488,7 +488,7 @@ function DayView({
                   <div
                     key={label}
                     className={cn(
-                      "flex w-10 items-start justify-center border-b border-border/40 pt-1 text-[9px] font-medium tabular-nums text-muted-foreground sm:w-14 sm:text-[10px]",
+                      "flex w-12 items-start justify-center border-b border-border/40 pt-1 text-[10px] font-medium tabular-nums text-muted-foreground sm:w-14 sm:text-[11px]",
                       ROW_HEIGHT,
                     )}
                   >
