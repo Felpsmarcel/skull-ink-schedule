@@ -399,6 +399,53 @@ function DayView({
     calendarId: string;
   } | null>(null);
 
+  // Next upcoming appointment across all artists (today only)
+  const nextEventInfo = useMemo(() => {
+    const now = Date.now();
+    const isToday = brusselsDayKey(new Date(now)) === brusselsDayKey(date);
+    if (!isToday) return { id: null as string | null, startMs: null as number | null };
+    let bestId: string | null = null;
+    let bestStart = Number.POSITIVE_INFINITY;
+    for (const a of agendas) {
+      for (const s of a.slots) {
+        if (s.status !== "booked" || !s.isFirstSlot || !s.ghlEventId) continue;
+        const start = s.eventStartMs ?? s.startMs;
+        if (start > now && start < bestStart) {
+          bestStart = start;
+          bestId = s.ghlEventId;
+        }
+      }
+    }
+    return { id: bestId, startMs: bestId ? bestStart : null };
+  }, [agendas, date]);
+
+  // Auto-scroll to next event (or "now") once per date
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const didAutoScrollRef = useRef(false);
+  const autoScrollAtRef = useRef(0);
+  const dayKey = brusselsDayKey(date);
+  useEffect(() => {
+    didAutoScrollRef.current = false;
+  }, [dayKey]);
+  useEffect(() => {
+    if (didAutoScrollRef.current) return;
+    if (rowCount === 0) return;
+    const el = scrollRef.current;
+    if (!el) return;
+    let targetPx: number | null = null;
+    if (nextEventInfo.startMs != null) {
+      const dayStartMs = brusselsDayStartMs(date);
+      const offsetMin = (nextEventInfo.startMs - dayStartMs) / 60000;
+      targetPx = (offsetMin / SLOT_MINUTES) * ROW_HEIGHT_PX;
+    } else if (nowTopPx != null) {
+      targetPx = nowTopPx;
+    }
+    if (targetPx == null) return;
+    autoScrollAtRef.current = Date.now();
+    el.scrollTo({ top: Math.max(0, targetPx - 80), behavior: "auto" });
+    didAutoScrollRef.current = true;
+  }, [rowCount, nextEventInfo.startMs, nowTopPx, date]);
+
   return (
     <>
       {debug ? (
