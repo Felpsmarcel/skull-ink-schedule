@@ -158,13 +158,6 @@ function AgendaPage() {
 
   return (
     <div className="flex min-h-dvh flex-col bg-muted/40 pb-[calc(env(safe-area-inset-bottom)+6rem)] sm:pb-20">
-      <Toaster
-        theme="light"
-        position="top-center"
-        offset="calc(env(safe-area-inset-top) + 0.5rem)"
-        mobileOffset="calc(env(safe-area-inset-top) + 0.5rem)"
-      />
-
       {/* Header — editorial monochrome */}
       <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur">
         <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-2 px-3 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3 sm:px-6 sm:pb-4 sm:pt-4">
@@ -219,16 +212,60 @@ function AgendaPage() {
             <button
               type="button"
               onClick={() => setDate(new Date())}
-              className="ml-1 hidden rounded-full border border-border bg-card px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:border-foreground hover:text-foreground sm:inline-flex"
+              className="ml-1 inline-flex shrink-0 rounded-full border border-border bg-card px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:border-foreground hover:text-foreground sm:px-3"
             >
               {t("agenda.today")}
             </button>
+
+            {/* Mobile-only compact view switch */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={t("agenda.view.week") + " / " + t("agenda.view.month")}
+                  className="ml-1 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border bg-card text-muted-foreground hover:border-foreground hover:text-foreground sm:hidden"
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="z-50 w-40 p-1">
+                {view !== "day" ? (
+                  <button
+                    type="button"
+                    onClick={() => setView("day")}
+                    className="flex w-full items-center justify-start rounded-sm px-2 py-1.5 text-xs font-semibold uppercase tracking-wider hover:bg-muted"
+                  >
+                    {t("agenda.view.day")}
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => setView("week")}
+                  className={cn(
+                    "flex w-full items-center justify-start rounded-sm px-2 py-1.5 text-xs font-semibold uppercase tracking-wider hover:bg-muted",
+                    view === "week" && "bg-muted",
+                  )}
+                >
+                  {t("agenda.view.week")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setView("month")}
+                  className={cn(
+                    "flex w-full items-center justify-start rounded-sm px-2 py-1.5 text-xs font-semibold uppercase tracking-wider hover:bg-muted",
+                    view === "month" && "bg-muted",
+                  )}
+                >
+                  {t("agenda.view.month")}
+                </button>
+              </PopoverContent>
+            </Popover>
           </div>
 
           <Tabs
             value={view}
             onValueChange={(v) => setView(v as View)}
-            className="w-full sm:w-auto"
+            className="hidden w-full sm:block sm:w-auto"
           >
             <TabsList className="h-9 rounded-lg bg-muted p-1">
               <TabsTrigger
