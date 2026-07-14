@@ -435,8 +435,9 @@ function DayView({
     let targetPx: number | null = null;
     if (nextEventInfo.startMs != null) {
       const dayStartMs = brusselsDayStartMs(date);
-      const offsetMin = (nextEventInfo.startMs - dayStartMs) / 60000;
-      targetPx = (offsetMin / SLOT_MINUTES) * ROW_HEIGHT_PX;
+      const offsetMin =
+        (nextEventInfo.startMs - dayStartMs) / 60000 - DEFAULT_START_HOUR * 60;
+      targetPx = Math.max(0, (offsetMin / SLOT_MINUTES) * ROW_HEIGHT_PX);
     } else if (nowTopPx != null) {
       targetPx = nowTopPx;
     }
