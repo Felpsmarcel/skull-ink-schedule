@@ -6,7 +6,7 @@ import { Banknote, Copy, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { getMySlug } from "@/lib/movimentacao.functions";
 
-const PROD_ORIGIN = "https://gftattoocalendar.com";
+const PROD_ORIGIN = "https://www.gftattoocalendar.com";
 
 export function PaymentLinkCard() {
   const fetchSlug = useServerFn(getMySlug);
