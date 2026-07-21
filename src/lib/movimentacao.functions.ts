@@ -74,14 +74,14 @@ async function resolveSlugOwner(
   if (target.kind === "artist") {
     const { data, error } = await supabaseAdmin
       .from("app_users" as never)
-      .select("id")
+      .select("id, role, created_at")
       .eq("artist_id", target.artistId)
       .eq("role", "artist")
       .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle();
+      .limit(1);
     if (error) throw new Error(error.message);
-    const row = data as { id: string } | null;
+    const rows = (data ?? []) as Array<{ id: string }>;
+    const row = rows[0] ?? null;
     if (!row) {
       throw new Error(
         `Nenhuma conta linkada ao artista ${target.displayName}. Convide-o em /admin/equipe antes de usar este link.`,
@@ -97,14 +97,14 @@ async function resolveSlugOwner(
   // seller
   const { data, error } = await supabaseAdmin
     .from("app_users" as never)
-    .select("id")
+    .select("id, role, created_at")
     .eq("seller_id", target.sellerId)
     .eq("role", "seller")
     .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+    .limit(1);
   if (error) throw new Error(error.message);
-  const row = data as { id: string } | null;
+  const rows = (data ?? []) as Array<{ id: string }>;
+  const row = rows[0] ?? null;
   if (!row) {
     throw new Error(
       `Nenhuma conta linkada a ${target.displayName}. Convide em /admin/vendedores antes de usar este link.`,
