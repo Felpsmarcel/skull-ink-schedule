@@ -11,6 +11,7 @@ export interface MovimentacaoLinkStatus {
   active: boolean;
   linkedUsers: Array<{ id: string; email: string | null }>;
   ready: boolean;
+  failedSyncCount: number;
 }
 
 async function assertAdmin(userId: string) {
@@ -35,7 +36,7 @@ export const getMovimentacaoLinkStatus = createServerFn({ method: "GET" })
     const artistIds = slugs.filter((s) => s.kind === "artist").map((s) => s.artistId);
     const sellerIds = slugs.filter((s) => s.kind === "seller").map((s) => s.sellerId);
 
-    const [artistsRes, sellersRes, artistUsersRes, sellerUsersRes] = await Promise.all([
+    const [artistsRes, sellersRes, artistUsersRes, sellerUsersRes, failedRes] = await Promise.all([
       artistIds.length
         ? supabaseAdmin
             .from("artists" as never)
@@ -62,11 +63,21 @@ export const getMovimentacaoLinkStatus = createServerFn({ method: "GET" })
             .eq("role", "seller")
             .in("seller_id", sellerIds)
         : Promise.resolve({ data: [], error: null }),
+      supabaseAdmin
+        .from("movimentacoes" as never)
+        .select("link_origem")
+        .eq("ghl_sync_status", "failed"),
     ]);
     if (artistsRes.error) throw new Error(artistsRes.error.message);
     if (sellersRes.error) throw new Error(sellersRes.error.message);
     if (artistUsersRes.error) throw new Error(artistUsersRes.error.message);
     if (sellerUsersRes.error) throw new Error(sellerUsersRes.error.message);
+    if (failedRes.error) throw new Error(failedRes.error.message);
+
+    const failedBySlug = new Map<string, number>();
+    for (const r of (failedRes.data ?? []) as Array<{ link_origem: string }>) {
+      failedBySlug.set(r.link_origem, (failedBySlug.get(r.link_origem) ?? 0) + 1);
+    }
 
     const artistById = new Map<string, { active: boolean }>();
     for (const a of (artistsRes.data ?? []) as Array<{ id: string; active: boolean }>) {
@@ -117,6 +128,7 @@ export const getMovimentacaoLinkStatus = createServerFn({ method: "GET" })
         active,
         linkedUsers,
         ready: exists && active && linkedUsers.length > 0,
+        failedSyncCount: failedBySlug.get(s.slug) ?? 0,
       };
     });
   });
