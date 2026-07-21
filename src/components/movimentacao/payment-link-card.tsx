@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Link } from "@tanstack/react-router";
 import { Banknote, Copy, ExternalLink } from "lucide-react";
@@ -16,9 +17,17 @@ export function PaymentLinkCard() {
   });
 
   const slug = data?.slug;
+  const [origin, setOrigin] = useState<string>(PROD_ORIGIN);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const host = window.location.hostname;
+    if (host === "localhost" || host.endsWith(".lovable.app")) {
+      setOrigin(window.location.origin);
+    }
+  }, []);
+
   if (!slug) return null;
 
-  const origin = import.meta.env.DEV ? window.location.origin : PROD_ORIGIN;
   const url = `${origin}/movimentacao/${slug}`;
   const displayUrl = url.replace(/^https?:\/\//, "");
 
