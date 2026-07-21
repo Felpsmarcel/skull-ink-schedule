@@ -1,47 +1,46 @@
 ## Objetivo
 
-Criar uma página admin dedicada que mostre o status de vínculo (`app_users → artist_id`) apenas dos artistas usados em `/movimentacao/{slug}` (Gabriel, Andre, Joyce, Augusto) — mais Nívia (seller). Cada linha indica se o link funciona ou não e oferece um botão rápido para convidar/reparar.
+Adicionar uma ação "Reprocessar sync HighLevel" na página `/admin/movimentacao-links` que reexecuta a sincronização com o HighLevel **apenas** para registros de `movimentacoes` com `ghl_sync_status = 'failed'`.
 
-A página `/admin/equipe` atual já convida qualquer artista, mas mistura toda a equipe e não deixa óbvio quais slugs de `/movimentacao` estão quebrados. Esta nova tela é focada nesse contrato.
+## Escopo
 
-## O que fazer
+Reprocessamento restrito a linhas com `ghl_sync_status = 'failed'`. Nada em `pending` ou `synced` é tocado. Não altera o link de convite/vínculo do artista — é uma ação separada da seção "Convidar/Reparar".
 
-### 1. Nova server function — `getMovimentacaoLinkStatus`
-Arquivo: `src/lib/movimentacao-links.functions.ts` (novo).
+## Implementação
 
-- `createServerFn` com `requireSupabaseAuth` + `assertAdmin` (mesmo padrão de `team.functions.ts`).
-- Itera `MOVIMENTACAO_SLUGS` de `src/config/movimentacao-slugs.ts`.
-- Para cada slug:
-  - Se `kind === "artist"`: busca `artists` pelo id + `app_users` onde `artist_id = id AND role = 'artist'`.
-  - Se `kind === "seller"`: busca `sellers` pelo id + `app_users` onde `seller_id = id AND role = 'seller'`.
-  - Resolve email de cada user via `supabaseAdmin.auth.admin.listUsers` (reusar helper do `team.functions.ts`).
-- Retorna `Array<{ slug, kind, targetId, displayName, exists, active, linkedUsers: [{id,email}], ready: boolean }>` onde `ready = exists && active && linkedUsers.length > 0`.
+### 1. Nova server function — `src/lib/movimentacao.functions.ts`
 
-### 2. Nova rota — `/admin/movimentacao-links`
-Arquivo: `src/routes/_authenticated/_admin/admin.movimentacao-links.tsx` (novo).
+Adicionar `reprocessFailedMovimentacoes` (admin-only, POST, protegida por `requireSupabaseAuth` + verificação `role === 'admin'` via `context.supabase` em `app_users`).
 
-Layout mobile-first, lista de cards um por slug com:
-- Nome, slug, badge de status (`pronto` verde / `sem usuário` amarelo / `inativo` ou `sem cadastro` vermelho).
-- URL prevista (`/movimentacao/{slug}`) com botão de copiar.
-- Se `linkedUsers.length === 0`: input de email + botão "Convidar" que chama `inviteArtist` (artist) ou `inviteSeller` (seller — reusar `sellers-invite.functions.ts`).
-- Se já vinculado: mostra emails vinculados + botão "Reenviar convite" e "Reparar vínculo" (reusa `repairArtistLink`/equivalente de seller).
-- Um resumo no topo: "3 de 5 links prontos".
+Comportamento:
+- Aceita input opcional `{ slug?: MovimentacaoSlug, limit?: number (default 20, max 50) }`. Sem `slug`, processa todos os slugs; com `slug`, filtra por `link_origem = slug`.
+- Carrega até `limit` linhas com `ghl_sync_status = 'failed'` via `supabaseAdmin`, ordenadas por `created_at asc` (mais antigas primeiro).
+- Para cada linha: resolve `artist.name` e `recebido_por` (via `resolveSlugOwner(link_origem)`), chama `syncMovimentacaoToGhl` reutilizando o payload atual, e:
+  - Se `ok`: update para `synced`, `ghl_custom_object_id`, `ghl_last_synced_at = now()`, `ghl_sync_attempts = ghl_sync_attempts + 1`, `ghl_sync_error = null`.
+  - Se erro: mantém `failed`, incrementa `ghl_sync_attempts`, atualiza `ghl_sync_error` (500 chars) e `ghl_last_synced_at`.
+- Retorna `{ processed, succeeded, failed, errors: Array<{ id, error }> }`.
 
-Invalida `["movimentacao-links"]`, `["team"]`, `["sellers"]` no sucesso.
+Idempotência preservada — `syncMovimentacaoToGhl` já usa `externalId = chave_idempotencia`, então se o record foi criado no GHL numa tentativa anterior, o HighLevel dedupa; qualquer erro 4xx específico de duplicata volta como `ok:false` e será tratado (pode-se detectar `status=409` ou mensagem "already exists" e marcar como `synced` — ver Detalhes técnicos).
 
-### 3. Atalho no menu admin
-Arquivo: `src/routes/_authenticated/menu.tsx`.
+### 2. Contagem de failures — `src/lib/movimentacao-links.functions.ts`
 
-Adicionar uma linha na seção admin: `Links de pagamento` → `/admin/movimentacao-links` (ícone `Link2`), logo abaixo de "Vendedores".
+Estender `MovimentacaoLinkStatus` com `failedSyncCount: number`. No handler, agregar via `supabaseAdmin` um `count` por `link_origem` onde `ghl_sync_status = 'failed'` e adicionar ao retorno por slug.
 
-## O que NÃO fazer
+### 3. UI — `src/routes/_authenticated/_admin/admin.movimentacao-links.tsx`
 
-- Não mexer em `team.functions.ts` nem `sellers-invite.functions.ts` — apenas consumir.
-- Não duplicar o fluxo de convite; reusar as mutations existentes.
-- Sem mudanças de banco/RLS.
+Dentro de `LinkCard`, quando `row.failedSyncCount > 0`:
+- Exibir `StatusBadge variant="warning"`: `N falha(s) sync GHL`.
+- Botão "Reprocessar sync" (ícone `RefreshCw`), abaixo da seção convite/reparar, chamando `reprocessFailedMovimentacoes({ slug: row.slug })` via `useServerFn` + `useMutation`.
+- `onSuccess`: toast com `succeeded/processed`; invalidar `["movimentacao-links"]`.
+- `onError`: toast de erro.
+
+Também adicionar no cabeçalho um botão global "Reprocessar todas as falhas" quando `sum(failedSyncCount) > 0`, chamando a mesma função sem `slug`.
 
 ## Detalhes técnicos
 
-- Reuso de `findAuthUserByEmail` de `team.functions.ts`: como está privado, extrair para `src/lib/auth-lookup.server.ts` OU inline-mente uma cópia mínima na nova server fn (paginação `listUsers` já é conhecida). Prefiro extração para evitar drift.
-- A checagem `sellers-invite.functions.ts` já existe (usada por `/admin/vendedores`) — importar `inviteSeller` diretamente.
-- Query React: `useQuery({ queryKey: ["movimentacao-links"], queryFn: getStatus })` com `staleTime: 30_000`.
+- **Duplicatas no GHL**: se o record já foi criado numa tentativa anterior (record existe com o mesmo `externalId`), o POST retorna 4xx. Tratar no `reprocessFailedMovimentacoes` inspecionando o `sync.error` retornado — se contiver `status=409` ou `"already exists"`/`"duplicate"`, marcar como `synced` sem `ghl_custom_object_id` (será resolvido em sync futuro por GET, fora deste escopo).
+- **Autorização**: usar o padrão já presente em `ghl-sync-admin.functions.ts` (checar role via `context.supabase` antes de importar `supabaseAdmin`). Não fazer fallback para admin client na verificação de role.
+- **Rate limit**: processar sequencialmente (não `Promise.all`) para não estourar rate limit do HighLevel; com `limit ≤ 50` isso é rápido o bastante.
+- **Colunas usadas**: `ghl_sync_status`, `ghl_sync_attempts`, `ghl_sync_error`, `ghl_last_synced_at`, `ghl_custom_object_id` já existem na tabela `movimentacoes` (usadas em `createMovimentacao`).
+- **Sem migração** — apenas código de aplicação.
+- **TS**: rodar `tsgo` ao final para garantir zero erros.
