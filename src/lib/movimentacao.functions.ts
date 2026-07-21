@@ -76,6 +76,9 @@ async function resolveSlugOwner(
       .from("app_users" as never)
       .select("id")
       .eq("artist_id", target.artistId)
+      .eq("role", "artist")
+      .order("created_at", { ascending: true })
+      .limit(1)
       .maybeSingle();
     if (error) throw new Error(error.message);
     const row = data as { id: string } | null;
@@ -96,6 +99,9 @@ async function resolveSlugOwner(
     .from("app_users" as never)
     .select("id")
     .eq("seller_id", target.sellerId)
+    .eq("role", "seller")
+    .order("created_at", { ascending: true })
+    .limit(1)
     .maybeSingle();
   if (error) throw new Error(error.message);
   const row = data as { id: string } | null;
