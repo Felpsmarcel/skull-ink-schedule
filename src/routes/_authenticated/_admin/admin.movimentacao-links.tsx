@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Loader2, Send, Link2, Copy, CheckCircle2 } from "lucide-react";
+import { Loader2, Send, Link2, Copy, CheckCircle2, RefreshCw, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Toaster } from "@/components/ui/sonner";
@@ -16,6 +16,7 @@ import {
 } from "@/lib/movimentacao-links.functions";
 import { inviteArtist, repairArtistLink } from "@/lib/team.functions";
 import { inviteSeller, repairSellerLink } from "@/lib/sellers-invite.functions";
+import { reprocessFailedMovimentacoes } from "@/lib/movimentacao.functions";
 
 export const Route = createFileRoute("/_authenticated/_admin/admin/movimentacao-links")({
   head: () => ({
@@ -32,6 +33,8 @@ const PROD_ORIGIN = "https://gftattoocalendar.com";
 
 function MovimentacaoLinksPage() {
   const status = useServerFn(getMovimentacaoLinkStatus);
+  const qc = useQueryClient();
+  const reprocessFn = useServerFn(reprocessFailedMovimentacoes);
   const q = useQuery({
     queryKey: ["movimentacao-links"],
     queryFn: () => status(),
@@ -40,6 +43,18 @@ function MovimentacaoLinksPage() {
 
   const rows = q.data ?? [];
   const readyCount = rows.filter((r) => r.ready).length;
+  const totalFailed = rows.reduce((acc, r) => acc + (r.failedSyncCount ?? 0), 0);
+
+  const reprocessAll = useMutation({
+    mutationFn: () => reprocessFn({ data: { limit: 50 } }),
+    onSuccess: (r) => {
+      toast.success(
+        `Reprocessadas ${r.processed}: ${r.succeeded} ok, ${r.failed} falhou.`,
+      );
+      qc.invalidateQueries({ queryKey: ["movimentacao-links"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Falha ao reprocessar"),
+  });
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6 pb-24">
@@ -55,6 +70,29 @@ function MovimentacaoLinksPage() {
           <p className="mt-2 text-sm">
             <strong>{readyCount}</strong> de <strong>{rows.length}</strong> links prontos.
           </p>
+        )}
+        {totalFailed > 0 && (
+          <div className="mt-3 flex items-center justify-between gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3">
+            <div className="flex items-center gap-2 text-xs">
+              <AlertTriangle className="h-4 w-4 text-amber-500" />
+              <span>
+                <strong>{totalFailed}</strong> registro(s) com sync HighLevel falhado.
+              </span>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => reprocessAll.mutate()}
+              disabled={reprocessAll.isPending}
+            >
+              {reprocessAll.isPending ? (
+                <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <RefreshCw className="mr-2 h-3.5 w-3.5" />
+              )}
+              Reprocessar todas
+            </Button>
+          </div>
         )}
       </header>
 
@@ -99,6 +137,7 @@ function LinkCard({
   const repairArtistFn = useServerFn(repairArtistLink);
   const inviteSellerFn = useServerFn(inviteSeller);
   const repairSellerFn = useServerFn(repairSellerLink);
+  const reprocessFn = useServerFn(reprocessFailedMovimentacoes);
 
   const [email, setEmail] = useState(row.linkedUsers[0]?.email ?? "");
   const url = `${PROD_ORIGIN}/movimentacao/${row.slug}`;
@@ -163,6 +202,17 @@ function LinkCard({
     onError: (e) => toast.error(e instanceof Error ? e.message : "Falha ao reparar"),
   });
 
+  const reprocessM = useMutation({
+    mutationFn: () => reprocessFn({ data: { slug: row.slug, limit: 50 } }),
+    onSuccess: (r) => {
+      toast.success(
+        `Reprocessadas ${r.processed}: ${r.succeeded} ok, ${r.failed} falhou.`,
+      );
+      invalidate();
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Falha ao reprocessar"),
+  });
+
   const canInvite = row.exists && row.active;
   const linkedEmails = row.linkedUsers.map((u) => u.email ?? u.id.slice(0, 8));
 
@@ -174,6 +224,11 @@ function LinkCard({
             <p className="text-sm font-semibold">{row.displayName}</p>
             {statusBadge(row)}
             <StatusBadge variant="neutral">{row.kind === "artist" ? "tatuador" : "vendedor"}</StatusBadge>
+            {row.failedSyncCount > 0 && (
+              <StatusBadge variant="warning">
+                {row.failedSyncCount} falha(s) sync GHL
+              </StatusBadge>
+            )}
           </div>
           <div className="mt-2 flex items-center gap-1">
             <code className="truncate rounded bg-muted px-1.5 py-0.5 text-[11px]">{url}</code>
@@ -249,6 +304,27 @@ function LinkCard({
               Reparar
             </Button>
           </div>
+        </div>
+      )}
+
+      {row.failedSyncCount > 0 && (
+        <div className="mt-3 flex items-center justify-between gap-2 rounded border border-dashed border-amber-500/40 p-2">
+          <p className="text-[11px] text-muted-foreground">
+            {row.failedSyncCount} pagamento(s) não sincronizado(s) com o HighLevel.
+          </p>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => reprocessM.mutate()}
+            disabled={reprocessM.isPending}
+          >
+            {reprocessM.isPending ? (
+              <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <RefreshCw className="mr-2 h-3.5 w-3.5" />
+            )}
+            Reprocessar sync
+          </Button>
         </div>
       )}
     </li>
