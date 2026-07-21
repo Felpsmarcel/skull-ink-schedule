@@ -7,6 +7,7 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "@/components/ui/sonner";
 import gfMark from "@/assets/gf-mark.png";
+import { PaymentLinkCard } from "@/components/movimentacao/payment-link-card";
 
 export const Route = createFileRoute("/_authenticated/menu")({
   head: () => ({
@@ -65,6 +66,8 @@ function MenuPage() {
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{roleLabel}</p>
           </div>
         </div>
+
+        <PaymentLinkCard />
 
         <Section title="Conta">
           <Row to="/financeiro" icon={<Wallet className="h-4 w-4" />} label="Meu financeiro" />
