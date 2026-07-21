@@ -146,7 +146,7 @@ export function MovimentacaoForm({ context, artists, artistsLoading }: Props) {
       setForm(initialState(context));
     },
     onError: (err) => {
-      haptic("error");
+      haptic("warning");
       toast.error(err instanceof Error ? err.message : "Falha ao registar.");
     },
   });
