@@ -13,6 +13,7 @@ import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as MovimentacaoSlugRouteImport } from './routes/movimentacao.$slug'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as AuthUpdatePasswordRouteImport } from './routes/auth_.update-password'
 import { Route as AuthRecoverRouteImport } from './routes/auth_.recover'
@@ -67,6 +68,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MovimentacaoSlugRoute = MovimentacaoSlugRouteImport.update({
+  id: '/movimentacao/$slug',
+  path: '/movimentacao/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
@@ -284,6 +290,7 @@ export interface FileRoutesByFullPath {
   '/auth/recover': typeof AuthRecoverRoute
   '/auth/update-password': typeof AuthUpdatePasswordRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/movimentacao/$slug': typeof MovimentacaoSlugRoute
   '/ghl-test': typeof AuthenticatedAdminGhlTestRoute
   '/reconciliar': typeof AuthenticatedAdminReconciliarRoute
   '/appointments/new': typeof AuthenticatedAppointmentsNewRouteWithChildren
@@ -324,6 +331,7 @@ export interface FileRoutesByTo {
   '/auth/recover': typeof AuthRecoverRoute
   '/auth/update-password': typeof AuthUpdatePasswordRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/movimentacao/$slug': typeof MovimentacaoSlugRoute
   '/ghl-test': typeof AuthenticatedAdminGhlTestRoute
   '/reconciliar': typeof AuthenticatedAdminReconciliarRoute
   '/onboarding/bem-vindo': typeof AuthenticatedOnboardingBemVindoRoute
@@ -366,6 +374,7 @@ export interface FileRoutesById {
   '/auth_/recover': typeof AuthRecoverRoute
   '/auth_/update-password': typeof AuthUpdatePasswordRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/movimentacao/$slug': typeof MovimentacaoSlugRoute
   '/_authenticated/_admin/ghl-test': typeof AuthenticatedAdminGhlTestRoute
   '/_authenticated/_admin/reconciliar': typeof AuthenticatedAdminReconciliarRoute
   '/_authenticated/appointments/new': typeof AuthenticatedAppointmentsNewRouteWithChildren
@@ -408,6 +417,7 @@ export interface FileRouteTypes {
     | '/auth/recover'
     | '/auth/update-password'
     | '/email/unsubscribe'
+    | '/movimentacao/$slug'
     | '/ghl-test'
     | '/reconciliar'
     | '/appointments/new'
@@ -448,6 +458,7 @@ export interface FileRouteTypes {
     | '/auth/recover'
     | '/auth/update-password'
     | '/email/unsubscribe'
+    | '/movimentacao/$slug'
     | '/ghl-test'
     | '/reconciliar'
     | '/onboarding/bem-vindo'
@@ -489,6 +500,7 @@ export interface FileRouteTypes {
     | '/auth_/recover'
     | '/auth_/update-password'
     | '/email/unsubscribe'
+    | '/movimentacao/$slug'
     | '/_authenticated/_admin/ghl-test'
     | '/_authenticated/_admin/reconciliar'
     | '/_authenticated/appointments/new'
@@ -525,6 +537,7 @@ export interface RootRouteChildren {
   AuthRecoverRoute: typeof AuthRecoverRoute
   AuthUpdatePasswordRoute: typeof AuthUpdatePasswordRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
+  MovimentacaoSlugRoute: typeof MovimentacaoSlugRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   ApiPublicHooksSendRemindersRoute: typeof ApiPublicHooksSendRemindersRoute
   ApiPublicHooksSyncGhlRoute: typeof ApiPublicHooksSyncGhlRoute
@@ -563,6 +576,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/movimentacao/$slug': {
+      id: '/movimentacao/$slug'
+      path: '/movimentacao/$slug'
+      fullPath: '/movimentacao/$slug'
+      preLoaderRoute: typeof MovimentacaoSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/email/unsubscribe': {
@@ -933,6 +953,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRecoverRoute: AuthRecoverRoute,
   AuthUpdatePasswordRoute: AuthUpdatePasswordRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
+  MovimentacaoSlugRoute: MovimentacaoSlugRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   ApiPublicHooksSendRemindersRoute: ApiPublicHooksSendRemindersRoute,
   ApiPublicHooksSyncGhlRoute: ApiPublicHooksSyncGhlRoute,
