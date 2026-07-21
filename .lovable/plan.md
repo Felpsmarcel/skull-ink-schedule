@@ -1,161 +1,47 @@
-## Auditoria (o que já existe)
+## Objetivo
 
-- **Auth**: Supabase; `requireSupabaseAuth` injeta `supabase`, `userId` no server. `app_users(id → auth.uid)` liga `role` (`admin`/`artist`/`seller`) + `artist_id` + `seller_id`.
-- **Artistas** (`artists`): Gabriel Fernandes, Andre Pareyn, Joyce Cavalcante, Augusto Santos (mapeado para slug `augusto`), + Neto Mendes e outros.
-- **Nivia**: existe em `sellers` (com acento — "Nívia"), **sem `app_users**`. Precisa de convite para logar.
-- **HighLevel**: só via edge function `ghl-proxy` (calendários/contatos/agendamentos). Não há Custom Object hoje.
-- **Financeiro atual**: tabela `payments` (comissão de agendamentos) + `/financeiro`. Não será alterada.
-- **Sidebar mobile**: `BottomNav` (Agenda / Financeiro / + / Perfil). Menu completo em `/menu`.
+Criar uma página admin dedicada que mostre o status de vínculo (`app_users → artist_id`) apenas dos artistas usados em `/movimentacao/{slug}` (Gabriel, Andre, Joyce, Augusto) — mais Nívia (seller). Cada linha indica se o link funciona ou não e oferece um botão rápido para convidar/reparar.
 
-## Arquivos criados / alterados
+A página `/admin/equipe` atual já convida qualquer artista, mas mistura toda a equipe e não deixa óbvio quais slugs de `/movimentacao` estão quebrados. Esta nova tela é focada nesse contrato.
 
-**Novos**
+## O que fazer
 
-- `src/routes/_authenticated/movimentacao.index.tsx` — redireciona autenticado → seu slug.
-- `src/routes/_authenticated/movimentacao.$slug.tsx` — página do formulário.
-- `src/components/movimentacao/movimentacao-form.tsx` — formulário mobile-first.
-- `src/hooks/use-movimentacao.ts` — mutation + toast + reset.
-- `src/lib/movimentacao.functions.ts` — server fns `createMovimentacao`, `listMovimentacoes`.
-- `src/lib/movimentacao-ghl.server.ts` — cria Custom Object + sync (fora do bundle client).
-- Migração Supabase (tabela + RLS + índices).
+### 1. Nova server function — `getMovimentacaoLinkStatus`
+Arquivo: `src/lib/movimentacao-links.functions.ts` (novo).
 
-**Alterados**
+- `createServerFn` com `requireSupabaseAuth` + `assertAdmin` (mesmo padrão de `team.functions.ts`).
+- Itera `MOVIMENTACAO_SLUGS` de `src/config/movimentacao-slugs.ts`.
+- Para cada slug:
+  - Se `kind === "artist"`: busca `artists` pelo id + `app_users` onde `artist_id = id AND role = 'artist'`.
+  - Se `kind === "seller"`: busca `sellers` pelo id + `app_users` onde `seller_id = id AND role = 'seller'`.
+  - Resolve email de cada user via `supabaseAdmin.auth.admin.listUsers` (reusar helper do `team.functions.ts`).
+- Retorna `Array<{ slug, kind, targetId, displayName, exists, active, linkedUsers: [{id,email}], ready: boolean }>` onde `ready = exists && active && linkedUsers.length > 0`.
 
-- `src/routes/_authenticated/menu.tsx` — item "Registrar pagamento".
-- `src/components/layout/bottom-nav.tsx` — troca "+" central por atalho ao slug do usuário (mantém "novo agendamento" acessível pelo menu).
-- `src/routes/_authenticated/financeiro.tsx` — nova aba/filtro "Movimentações" (admin vê tudo, artist/seller vê o próprio).
-- `src/i18n/locales/pt.json` (+ en/fr) — labels.
+### 2. Nova rota — `/admin/movimentacao-links`
+Arquivo: `src/routes/_authenticated/_admin/admin.movimentacao-links.tsx` (novo).
 
-Nenhum arquivo/tabela existente é apagado ou sobrescrito.
+Layout mobile-first, lista de cards um por slug com:
+- Nome, slug, badge de status (`pronto` verde / `sem usuário` amarelo / `inativo` ou `sem cadastro` vermelho).
+- URL prevista (`/movimentacao/{slug}`) com botão de copiar.
+- Se `linkedUsers.length === 0`: input de email + botão "Convidar" que chama `inviteArtist` (artist) ou `inviteSeller` (seller — reusar `sellers-invite.functions.ts`).
+- Se já vinculado: mostra emails vinculados + botão "Reenviar convite" e "Reparar vínculo" (reusa `repairArtistLink`/equivalente de seller).
+- Um resumo no topo: "3 de 5 links prontos".
 
-## Modelo de dados
+Invalida `["movimentacao-links"]`, `["team"]`, `["sellers"]` no sucesso.
 
-Migração cria `public.movimentacoes` (nova, isolada de `payments`):
+### 3. Atalho no menu admin
+Arquivo: `src/routes/_authenticated/menu.tsx`.
 
-- `id uuid pk`
-- `nome_cliente text not null`
-- `data_pagamento date not null` (Europe/Brussels)
-- `artist_id uuid → artists(id)` **tatuador** (dono financeiro)
-- `recebido_por_app_user_id uuid → app_users(id)` **quem recebeu** (dono do link)
-- `registrado_por_app_user_id uuid → app_users(id)` **quem submeteu** (`auth.uid`)
-- `link_origem text` (`gabriel|andre|joyce|augusto|nivia`)
-- `origem_lancamento text default 'link_individual'`
-- `tipo_movimento` enum (`sinal|sessao|saldo|produto|estorno`)
-- `valor_cartao|valor_dinheiro|valor_sumup|valor_transferencia numeric(10,2) default 0` (≥0)
-- `total numeric(10,2) generated always as (soma) stored`
-- `data_tatuagem date null`
-- `observacoes text null`
-- `chave_idempotencia text unique not null`
-- `ghl_custom_object_id text null`, `ghl_sync_status text` (`pending|synced|failed`), `ghl_sync_error text`, `ghl_sync_attempts int`
-- `created_at`, `updated_at`
+Adicionar uma linha na seção admin: `Links de pagamento` → `/admin/movimentacao-links` (ícone `Link2`), logo abaixo de "Vendedores".
 
-**Constraints**: `check ((valor_cartao=0) or (valor_sumup=0))`; `check (total > 0)`.
+## O que NÃO fazer
 
-**RLS**
+- Não mexer em `team.functions.ts` nem `sellers-invite.functions.ts` — apenas consumir.
+- Não duplicar o fluxo de convite; reusar as mutations existentes.
+- Sem mudanças de banco/RLS.
 
-- Admin: tudo.
-- Autenticado: `SELECT` das próprias linhas (`registrado_por_app_user_id = auth.uid()` ou `recebido_por_app_user_id = auth.uid()` ou artist_id linkado).
-- `INSERT`: só via server fn (registrado_por = `auth.uid`).
+## Detalhes técnicos
 
-## Mapa slug → identidade
-
-Constante em `src/config/movimentacao-slugs.ts`:
-
-```text
-gabriel  → artist  Gabriel Fernandes  (artist_id fixo)
-andre    → artist  Andre Pareyn
-joyce    → artist  Joyce Cavalcante
-augusto  → artist  Augusto Santos     (mesma pessoa; label pt "Augusto")
-nivia    → seller  Nívia              (não é tatuadora — não aparece no select "Tatuador")
-```
-
-## Segurança do link
-
-Rotas ficam sob `_authenticated/` (login obrigatório). No server fn `createMovimentacao`:
-
-1. Valida bearer (`requireSupabaseAuth`).
-2. Resolve `recebido_por_app_user_id` a partir do slug:
-  - Slugs de artista → `app_users.artist_id = ARTIST_ID_DO_SLUG`.
-  - Slug `nivia` → `app_users.seller_id = SELLER_ID_DA_NIVIA`.
-3. Se `auth.uid` ≠ dono do slug e role ≠ `admin` → 403 (e o loader redireciona para o slug correto).
-4. `registrado_por_app_user_id = auth.uid` (nunca vem do cliente).
-
-Admin pode acessar qualquer slug (para suporte). Ninguém consegue "virar Nivia" pela URL.
-
-**Nivia precisa de conta**: se `app_users` da Nivia ainda não existir, envio o convite pelo fluxo já usado em `/admin/equipe` (não faz parte deste plano de código — anoto na entrega).
-
-## UX do formulário (mobile-first)
-
-Header: **"Registro de pagamento — {Nome}"** (do slug).
-
-Campos na ordem do brief. Total é read-only, destaque em `#E11D2A` texto grande. Se `tipo_movimento = sinal`, "Data da sessão agendada" ganha borda de destaque e helper visível. "Recebido por" é read-only sempre. Select "Tatuador":
-
-- Link de artista: pré-selecionado com o próprio, editável (pode receber para outro).
-- Link da Nivia: vazio, obrigatório.
-- Opções: só artistas ativos, exceto os 2 calendários "GF TATTOO (Tattoo/Randevu)".
-
-Validações client + server idênticas (Zod). Idempotência: UUID gerado no client, enviado no payload; server `insert` com `on conflict (chave_idempotencia) do nothing returning *`.
-
-Botão: `A registar…` + spinner, desabilita durante submit. Sucesso: toast verde + reset preservando slug/tatuador padrão/data hoje + botão "Registrar outro pagamento".
-
-## Sincronização HighLevel (Custom Object)
-
-Em `movimentacao-ghl.server.ts` (só server):
-
-1. **Bootstrap idempotente** — no primeiro `createMovimentacao` (ou via job admin one-off em `/admin`), chama `POST /objects/schemas` (v2021-07-28) via `ghl-proxy` criando `custom_objects.movimentacao_financeira` com todos os campos (mesmos nomes do payload). Se retorno for 409/duplicate, ignora. A chave é cacheada em uma linha `settings` no Supabase (`ghl_movimentacao_object_key`) para evitar recriar.
-2. Após o INSERT no Supabase, chama `POST /objects/{objectKey}/records` com o payload completo. Guarda `id` em `ghl_custom_object_id`, marca `synced`.
-3. Se falhar: `ghl_sync_status = 'failed'`, salva `ghl_sync_error`, incrementa `ghl_sync_attempts`. **A movimentação já está salva no Supabase** — sync GHL pode ser reprocessada por um botão admin em `/admin` (fase próxima) sem duplicar (usa `chave_idempotencia` como `externalId` no HL).
-
-Nenhuma credencial GHL sai do backend (o `ghl-proxy` já usa `GHL_TOKEN` do secret).
-
-## Fluxo de submissão
-
-```text
-Client → serverFn createMovimentacao (bearer)
-  ├─ requireSupabaseAuth → userId
-  ├─ resolve slug → recebido_por + valida auth.uid == dono | admin
-  ├─ Zod: campos + total>0 + exclusividade cartão/sumup
-  ├─ Insert em movimentacoes (unique chave_idempotencia)
-  ├─ Best-effort: sync GHL Custom Object
-  └─ return { id, ghl_sync_status }
-```
-
-## Aparecer no financeiro / filtros
-
-Nova aba/filtro "Movimentações" em `/financeiro`:
-
-- **Admin**: todas; filtros tatuador, recebido por, data, tipo, forma de pagamento.
-- **Artist**: só onde `artist_id = current_artist_id()`.
-- **Seller (Nivia)**: só onde `recebido_por_app_user_id = auth.uid()`.
-
-Nenhuma alteração na parte de comissões de agendamentos.
-
-## Links finais
-
-```text
-https://gftattoocalendar.com/movimentacao/gabriel
-https://gftattoocalendar.com/movimentacao/andre
-https://gftattoocalendar.com/movimentacao/joyce
-https://gftattoocalendar.com/movimentacao/augusto
-https://gftattoocalendar.com/movimentacao/nivia
-```
-
-Redirecionamento: `/movimentacao` → slug do usuário logado (ou `/agenda` se não tiver mapeamento).
-
-## Testes de aceite
-
-1. Nivia (logada) abre `/movimentacao/nivia`: "Recebido por: Nivia" bloqueado, tatuador vazio obrigatório.
-2. Nivia abre `/movimentacao/gabriel` → server rejeita e redireciona a `/movimentacao/nivia`.
-3. Link do Gabriel: tatuador pré = Gabriel, editável.
-4. Cartão + SumUp simultâneos → erro "SumUp e Cartão são métodos exclusivos".
-5. Total 0 → erro "O total deve ser superior a €0."
-6. Duplo clique → uma única linha (unique key na `chave_idempotencia`).
-7. Erro do GHL não bloqueia insert; fica `ghl_sync_status=failed`.
-8. Registro aparece em `/financeiro` para o tatuador dono e para o admin.
-
-## Pendências fora deste plano
-
-- Convite/onboarding da Nivia (uso o fluxo `/admin/equipe` existente — não é código novo).
-- Reprocessamento de falhas GHL em massa (fica para uma tela admin depois; base já grava `ghl_sync_attempts` e `chave_idempotencia`).  
-  
-analise essas mudanças antes de criar.  
+- Reuso de `findAuthUserByEmail` de `team.functions.ts`: como está privado, extrair para `src/lib/auth-lookup.server.ts` OU inline-mente uma cópia mínima na nova server fn (paginação `listUsers` já é conhecida). Prefiro extração para evitar drift.
+- A checagem `sellers-invite.functions.ts` já existe (usada por `/admin/vendedores`) — importar `inviteSeller` diretamente.
+- Query React: `useQuery({ queryKey: ["movimentacao-links"], queryFn: getStatus })` com `staleTime: 30_000`.
