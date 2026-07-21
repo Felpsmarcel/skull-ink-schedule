@@ -382,7 +382,7 @@ export const listMovimentacoes = createServerFn({ method: "GET" })
       .select("id, name")
       .in("id", artistIds);
     const artistName = new Map(
-      (((artists ?? []) as Array<{ id: string; name: string }>) ?? []).map((a) => [a.id, a.name]),
+      ((artists ?? []) as Array<{ id: string; name: string }>).map((a) => [a.id, a.name] as const),
     );
 
     return list.map((r) => ({
