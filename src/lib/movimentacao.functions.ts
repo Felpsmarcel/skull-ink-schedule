@@ -253,10 +253,10 @@ export const createMovimentacao = createServerFn({ method: "POST" })
 
     // Desmembra em uma linha por forma de pagamento (>0).
     const forms: Array<{ forma: FormaPagamento; valor: number }> = [
-      { forma: "cartao", valor: data.valor_cartao },
-      { forma: "dinheiro", valor: data.valor_dinheiro },
-      { forma: "sumup", valor: data.valor_sumup },
-      { forma: "transferencia", valor: data.valor_transferencia },
+      { forma: "cartao" as const, valor: data.valor_cartao },
+      { forma: "dinheiro" as const, valor: data.valor_dinheiro },
+      { forma: "sumup" as const, valor: data.valor_sumup },
+      { forma: "transferencia" as const, valor: data.valor_transferencia },
     ].filter((f) => f.valor > 0);
 
     // chave_grupo agrupa linhas do mesmo formulário
