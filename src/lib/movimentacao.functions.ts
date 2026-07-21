@@ -11,12 +11,11 @@ import {
 // ---------------- Types --------------------------------------------------
 
 export type MovimentacaoTipo = "sinal" | "sessao" | "saldo" | "produto" | "estorno";
+export type FormaPagamento = "cartao" | "dinheiro" | "sumup" | "transferencia";
 
 export interface SlugContext {
   slug: MovimentacaoSlug;
   target: SlugTarget;
-  isOwner: boolean;
-  isAdmin: boolean;
   recebidoPorAppUserId: string; // dono do slug
   recebidoPorNome: string;
   defaultArtistId: string | null; // pré-seleção do select "Tatuador"
@@ -118,32 +117,19 @@ async function resolveSlugOwner(
 const SlugInput = z.object({ slug: z.string() });
 
 export const getSlugContext = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => SlugInput.parse(data))
-  .handler(async ({ data, context }): Promise<SlugContext> => {
-    const { supabase, userId } = context;
+  .handler(async ({ data }): Promise<SlugContext> => {
     if (!isMovimentacaoSlug(data.slug)) {
       throw new Error("Link inválido.");
     }
     const slug = data.slug;
     const target = MOVIMENTACAO_SLUGS[slug];
 
-    const me = await getAppUserRow(supabase, userId);
-    const isAdmin = me.role === "admin";
-
     const owner = await resolveSlugOwner(slug);
-    const isOwner = owner.appUserId === userId;
-
-    if (!isAdmin && !isOwner) {
-      // não autorizado neste slug — mas revelamos o slug correto do usuário
-      throw new Error("forbidden_slug");
-    }
 
     return {
       slug,
       target,
-      isOwner,
-      isAdmin,
       recebidoPorAppUserId: owner.appUserId,
       recebidoPorNome: owner.displayName,
       defaultArtistId: owner.defaultArtistId,
@@ -190,10 +176,10 @@ export interface ArtistOption {
 const ARTIST_HIDDEN_NAMES = /gf\s*tattoo/i;
 
 export const listArtistsForSelect = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<ArtistOption[]> => {
-    const { data, error } = await context.supabase
-      .from("artists")
+  .handler(async (): Promise<ArtistOption[]> => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin
+      .from("artists" as never)
       .select("id, name, active")
       .eq("active", true)
       .order("name");
