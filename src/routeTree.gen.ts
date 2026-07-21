@@ -30,6 +30,7 @@ import { Route as AuthenticatedOnboardingProntoRouteImport } from './routes/_aut
 import { Route as AuthenticatedOnboardingPerfilRouteImport } from './routes/_authenticated/onboarding.perfil'
 import { Route as AuthenticatedOnboardingDisponibilidadeRouteImport } from './routes/_authenticated/onboarding.disponibilidade'
 import { Route as AuthenticatedOnboardingBemVindoRouteImport } from './routes/_authenticated/onboarding.bem-vindo'
+import { Route as AuthenticatedMovimentacaoSlugRouteImport } from './routes/_authenticated/movimentacao.$slug'
 import { Route as AuthenticatedAppointmentsNewRouteImport } from './routes/_authenticated/appointments.new'
 import { Route as AuthenticatedAdminReconciliarRouteImport } from './routes/_authenticated/_admin/reconciliar'
 import { Route as AuthenticatedAdminGhlTestRouteImport } from './routes/_authenticated/_admin/ghl-test'
@@ -158,6 +159,12 @@ const AuthenticatedOnboardingBemVindoRoute =
     path: '/bem-vindo',
     getParentRoute: () => AuthenticatedOnboardingRoute,
   } as any)
+const AuthenticatedMovimentacaoSlugRoute =
+  AuthenticatedMovimentacaoSlugRouteImport.update({
+    id: '/movimentacao/$slug',
+    path: '/movimentacao/$slug',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAppointmentsNewRoute =
   AuthenticatedAppointmentsNewRouteImport.update({
     id: '/appointments/new',
@@ -280,6 +287,7 @@ export interface FileRoutesByFullPath {
   '/ghl-test': typeof AuthenticatedAdminGhlTestRoute
   '/reconciliar': typeof AuthenticatedAdminReconciliarRoute
   '/appointments/new': typeof AuthenticatedAppointmentsNewRouteWithChildren
+  '/movimentacao/$slug': typeof AuthenticatedMovimentacaoSlugRoute
   '/onboarding/bem-vindo': typeof AuthenticatedOnboardingBemVindoRoute
   '/onboarding/disponibilidade': typeof AuthenticatedOnboardingDisponibilidadeRoute
   '/onboarding/perfil': typeof AuthenticatedOnboardingPerfilRoute
@@ -318,6 +326,7 @@ export interface FileRoutesByTo {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/ghl-test': typeof AuthenticatedAdminGhlTestRoute
   '/reconciliar': typeof AuthenticatedAdminReconciliarRoute
+  '/movimentacao/$slug': typeof AuthenticatedMovimentacaoSlugRoute
   '/onboarding/bem-vindo': typeof AuthenticatedOnboardingBemVindoRoute
   '/onboarding/disponibilidade': typeof AuthenticatedOnboardingDisponibilidadeRoute
   '/onboarding/perfil': typeof AuthenticatedOnboardingPerfilRoute
@@ -360,6 +369,7 @@ export interface FileRoutesById {
   '/_authenticated/_admin/ghl-test': typeof AuthenticatedAdminGhlTestRoute
   '/_authenticated/_admin/reconciliar': typeof AuthenticatedAdminReconciliarRoute
   '/_authenticated/appointments/new': typeof AuthenticatedAppointmentsNewRouteWithChildren
+  '/_authenticated/movimentacao/$slug': typeof AuthenticatedMovimentacaoSlugRoute
   '/_authenticated/onboarding/bem-vindo': typeof AuthenticatedOnboardingBemVindoRoute
   '/_authenticated/onboarding/disponibilidade': typeof AuthenticatedOnboardingDisponibilidadeRoute
   '/_authenticated/onboarding/perfil': typeof AuthenticatedOnboardingPerfilRoute
@@ -401,6 +411,7 @@ export interface FileRouteTypes {
     | '/ghl-test'
     | '/reconciliar'
     | '/appointments/new'
+    | '/movimentacao/$slug'
     | '/onboarding/bem-vindo'
     | '/onboarding/disponibilidade'
     | '/onboarding/perfil'
@@ -439,6 +450,7 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/ghl-test'
     | '/reconciliar'
+    | '/movimentacao/$slug'
     | '/onboarding/bem-vindo'
     | '/onboarding/disponibilidade'
     | '/onboarding/perfil'
@@ -480,6 +492,7 @@ export interface FileRouteTypes {
     | '/_authenticated/_admin/ghl-test'
     | '/_authenticated/_admin/reconciliar'
     | '/_authenticated/appointments/new'
+    | '/_authenticated/movimentacao/$slug'
     | '/_authenticated/onboarding/bem-vindo'
     | '/_authenticated/onboarding/disponibilidade'
     | '/_authenticated/onboarding/perfil'
@@ -670,6 +683,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/onboarding/bem-vindo'
       preLoaderRoute: typeof AuthenticatedOnboardingBemVindoRouteImport
       parentRoute: typeof AuthenticatedOnboardingRoute
+    }
+    '/_authenticated/movimentacao/$slug': {
+      id: '/_authenticated/movimentacao/$slug'
+      path: '/movimentacao/$slug'
+      fullPath: '/movimentacao/$slug'
+      preLoaderRoute: typeof AuthenticatedMovimentacaoSlugRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/appointments/new': {
       id: '/_authenticated/appointments/new'
@@ -883,6 +903,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedReviewsRoute: typeof AuthenticatedReviewsRoute
   AuthenticatedServicesRoute: typeof AuthenticatedServicesRoute
   AuthenticatedAppointmentsNewRoute: typeof AuthenticatedAppointmentsNewRouteWithChildren
+  AuthenticatedMovimentacaoSlugRoute: typeof AuthenticatedMovimentacaoSlugRoute
   AuthenticatedMovimentacaoIndexRoute: typeof AuthenticatedMovimentacaoIndexRoute
 }
 
@@ -896,6 +917,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedServicesRoute: AuthenticatedServicesRoute,
   AuthenticatedAppointmentsNewRoute:
     AuthenticatedAppointmentsNewRouteWithChildren,
+  AuthenticatedMovimentacaoSlugRoute: AuthenticatedMovimentacaoSlugRoute,
   AuthenticatedMovimentacaoIndexRoute: AuthenticatedMovimentacaoIndexRoute,
 }
 
