@@ -14,6 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
       app_users: {
         Row: {
           artist_id: string | null
@@ -569,6 +587,125 @@ export type Database = {
           },
         ]
       }
+      movimentacoes: {
+        Row: {
+          artist_id: string
+          chave_idempotencia: string
+          created_at: string
+          data_pagamento: string
+          data_tatuagem: string | null
+          ghl_contact_id: string | null
+          ghl_custom_object_id: string | null
+          ghl_last_synced_at: string | null
+          ghl_opportunity_id: string | null
+          ghl_sync_attempts: number
+          ghl_sync_error: string | null
+          ghl_sync_status: Database["public"]["Enums"]["movimentacao_sync_status"]
+          id: string
+          link_origem: string
+          nome_cliente: string
+          observacoes: string | null
+          origem_lancamento: string
+          recebido_por_app_user_id: string
+          referencia: string | null
+          registrado_por_app_user_id: string
+          tipo_movimento: Database["public"]["Enums"]["movimentacao_tipo"]
+          total: number | null
+          updated_at: string
+          valor_cartao: number
+          valor_dinheiro: number
+          valor_sumup: number
+          valor_transferencia: number
+        }
+        Insert: {
+          artist_id: string
+          chave_idempotencia: string
+          created_at?: string
+          data_pagamento: string
+          data_tatuagem?: string | null
+          ghl_contact_id?: string | null
+          ghl_custom_object_id?: string | null
+          ghl_last_synced_at?: string | null
+          ghl_opportunity_id?: string | null
+          ghl_sync_attempts?: number
+          ghl_sync_error?: string | null
+          ghl_sync_status?: Database["public"]["Enums"]["movimentacao_sync_status"]
+          id?: string
+          link_origem: string
+          nome_cliente: string
+          observacoes?: string | null
+          origem_lancamento?: string
+          recebido_por_app_user_id: string
+          referencia?: string | null
+          registrado_por_app_user_id: string
+          tipo_movimento: Database["public"]["Enums"]["movimentacao_tipo"]
+          total?: number | null
+          updated_at?: string
+          valor_cartao?: number
+          valor_dinheiro?: number
+          valor_sumup?: number
+          valor_transferencia?: number
+        }
+        Update: {
+          artist_id?: string
+          chave_idempotencia?: string
+          created_at?: string
+          data_pagamento?: string
+          data_tatuagem?: string | null
+          ghl_contact_id?: string | null
+          ghl_custom_object_id?: string | null
+          ghl_last_synced_at?: string | null
+          ghl_opportunity_id?: string | null
+          ghl_sync_attempts?: number
+          ghl_sync_error?: string | null
+          ghl_sync_status?: Database["public"]["Enums"]["movimentacao_sync_status"]
+          id?: string
+          link_origem?: string
+          nome_cliente?: string
+          observacoes?: string | null
+          origem_lancamento?: string
+          recebido_por_app_user_id?: string
+          referencia?: string | null
+          registrado_por_app_user_id?: string
+          tipo_movimento?: Database["public"]["Enums"]["movimentacao_tipo"]
+          total?: number | null
+          updated_at?: string
+          valor_cartao?: number
+          valor_dinheiro?: number
+          valor_sumup?: number
+          valor_transferencia?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "movimentacoes_artist_id_fkey"
+            columns: ["artist_id"]
+            isOneToOne: false
+            referencedRelation: "artists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_artist_id_fkey"
+            columns: ["artist_id"]
+            isOneToOne: false
+            referencedRelation: "artists_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_recebido_por_app_user_id_fkey"
+            columns: ["recebido_por_app_user_id"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_registrado_por_app_user_id_fkey"
+            columns: ["registrado_por_app_user_id"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payments: {
         Row: {
           amount_eur: number
@@ -1033,6 +1170,8 @@ export type Database = {
         | "cancelled"
         | "completed"
         | "no_show"
+      movimentacao_sync_status: "pending" | "synced" | "failed"
+      movimentacao_tipo: "sinal" | "sessao" | "saldo" | "produto" | "estorno"
       payment_method: "cash" | "card" | "transfer" | "payconiq" | "other"
       payment_status: "pending" | "paid" | "refunded"
       payment_type: "deposit" | "final" | "refund"
@@ -1173,6 +1312,8 @@ export const Constants = {
         "completed",
         "no_show",
       ],
+      movimentacao_sync_status: ["pending", "synced", "failed"],
+      movimentacao_tipo: ["sinal", "sessao", "saldo", "produto", "estorno"],
       payment_method: ["cash", "card", "transfer", "payconiq", "other"],
       payment_status: ["pending", "paid", "refunded"],
       payment_type: ["deposit", "final", "refund"],
