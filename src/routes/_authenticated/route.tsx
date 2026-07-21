@@ -15,7 +15,8 @@ export const Route = createFileRoute("/_authenticated")({
     const path = location.pathname;
     const inOnboarding = path.startsWith("/onboarding");
     const inMenu = path === "/menu";
-    if (!inOnboarding && !inMenu) {
+    const inAdmin = path.startsWith("/admin");
+    if (!inOnboarding && !inMenu && !inAdmin) {
       const { data: appUser } = await supabase
         .from("app_users")
         .select("role, artist_id")
