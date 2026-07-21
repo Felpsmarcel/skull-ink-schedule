@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { ChevronRight, LogOut, Wallet, RefreshCw, Bell, Languages, FileText, Users, UserSquare2 } from "lucide-react";
+import { ChevronRight, LogOut, Wallet, RefreshCw, Bell, Languages, FileText, Users, UserSquare2, Banknote } from "lucide-react";
 import { toast } from "sonner";
 import "@/i18n";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -68,6 +68,7 @@ function MenuPage() {
 
         <Section title="Conta">
           <Row to="/financeiro" icon={<Wallet className="h-4 w-4" />} label="Meu financeiro" />
+          <Row to="/movimentacao" icon={<Banknote className="h-4 w-4" />} label="Registrar pagamento" />
           {isAdmin && (
             <>
               <Row to="/admin/equipe" icon={<Users className="h-4 w-4" />} label="Equipe" />

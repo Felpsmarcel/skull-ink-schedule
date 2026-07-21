@@ -1,94 +1,161 @@
+## Auditoria (o que já existe)
 
-# Etapa 1 — Correções rápidas da Agenda Mobile
+- **Auth**: Supabase; `requireSupabaseAuth` injeta `supabase`, `userId` no server. `app_users(id → auth.uid)` liga `role` (`admin`/`artist`/`seller`) + `artist_id` + `seller_id`.
+- **Artistas** (`artists`): Gabriel Fernandes, Andre Pareyn, Joyce Cavalcante, Augusto Santos (mapeado para slug `augusto`), + Neto Mendes e outros.
+- **Nivia**: existe em `sellers` (com acento — "Nívia"), **sem `app_users**`. Precisa de convite para logar.
+- **HighLevel**: só via edge function `ghl-proxy` (calendários/contatos/agendamentos). Não há Custom Object hoje.
+- **Financeiro atual**: tabela `payments` (comissão de agendamentos) + `/financeiro`. Não será alterada.
+- **Sidebar mobile**: `BottomNav` (Agenda / Financeiro / + / Perfil). Menu completo em `/menu`.
 
-Todas as mudanças são de UI/UX na agenda. Nenhuma regra de negócio, integração GHL, financeiro ou schema é tocado.
+## Arquivos criados / alterados
 
-## Arquivos alterados
+**Novos**
 
-- `src/routes/__root.tsx` — adicionar `<Toaster>` global (uma única vez).
-- `src/routes/_authenticated/agenda.tsx` — todas as demais mudanças abaixo.
+- `src/routes/_authenticated/movimentacao.index.tsx` — redireciona autenticado → seu slug.
+- `src/routes/_authenticated/movimentacao.$slug.tsx` — página do formulário.
+- `src/components/movimentacao/movimentacao-form.tsx` — formulário mobile-first.
+- `src/hooks/use-movimentacao.ts` — mutation + toast + reset.
+- `src/lib/movimentacao.functions.ts` — server fns `createMovimentacao`, `listMovimentacoes`.
+- `src/lib/movimentacao-ghl.server.ts` — cria Custom Object + sync (fora do bundle client).
+- Migração Supabase (tabela + RLS + índices).
 
-## 1) Toaster global e remoção do duplicado
+**Alterados**
 
-- Em `__root.tsx`, dentro de `RootComponent`, montar `<Toaster theme="light" position="top-center" offset="calc(env(safe-area-inset-top) + 0.5rem)" mobileOffset="calc(env(safe-area-inset-top) + 0.5rem)" />` uma vez.
-- Em `agenda.tsx`, remover o import `Toaster` (L47) e o bloco `<Toaster ... />` (L161–166). As notificações de outras rotas (menu, admin, onboarding) continuam com seus próprios Toasters — não serão alteradas nesta etapa (fora do escopo).
+- `src/routes/_authenticated/menu.tsx` — item "Registrar pagamento".
+- `src/components/layout/bottom-nav.tsx` — troca "+" central por atalho ao slug do usuário (mantém "novo agendamento" acessível pelo menu).
+- `src/routes/_authenticated/financeiro.tsx` — nova aba/filtro "Movimentações" (admin vê tudo, artist/seller vê o próprio).
+- `src/i18n/locales/pt.json` (+ en/fr) — labels.
 
-## 2) Botão "Hoje" visível no mobile
+Nenhum arquivo/tabela existente é apagado ou sobrescrito.
 
-Em `agenda.tsx` L219–225: substituir `className="ml-1 hidden ... sm:inline-flex"` por uma versão compacta sempre visível:
+## Modelo de dados
 
+Migração cria `public.movimentacoes` (nova, isolada de `payments`):
+
+- `id uuid pk`
+- `nome_cliente text not null`
+- `data_pagamento date not null` (Europe/Brussels)
+- `artist_id uuid → artists(id)` **tatuador** (dono financeiro)
+- `recebido_por_app_user_id uuid → app_users(id)` **quem recebeu** (dono do link)
+- `registrado_por_app_user_id uuid → app_users(id)` **quem submeteu** (`auth.uid`)
+- `link_origem text` (`gabriel|andre|joyce|augusto|nivia`)
+- `origem_lancamento text default 'link_individual'`
+- `tipo_movimento` enum (`sinal|sessao|saldo|produto|estorno`)
+- `valor_cartao|valor_dinheiro|valor_sumup|valor_transferencia numeric(10,2) default 0` (≥0)
+- `total numeric(10,2) generated always as (soma) stored`
+- `data_tatuagem date null`
+- `observacoes text null`
+- `chave_idempotencia text unique not null`
+- `ghl_custom_object_id text null`, `ghl_sync_status text` (`pending|synced|failed`), `ghl_sync_error text`, `ghl_sync_attempts int`
+- `created_at`, `updated_at`
+
+**Constraints**: `check ((valor_cartao=0) or (valor_sumup=0))`; `check (total > 0)`.
+
+**RLS**
+
+- Admin: tudo.
+- Autenticado: `SELECT` das próprias linhas (`registrado_por_app_user_id = auth.uid()` ou `recebido_por_app_user_id = auth.uid()` ou artist_id linkado).
+- `INSERT`: só via server fn (registrado_por = `auth.uid`).
+
+## Mapa slug → identidade
+
+Constante em `src/config/movimentacao-slugs.ts`:
+
+```text
+gabriel  → artist  Gabriel Fernandes  (artist_id fixo)
+andre    → artist  Andre Pareyn
+joyce    → artist  Joyce Cavalcante
+augusto  → artist  Augusto Santos     (mesma pessoa; label pt "Augusto")
+nivia    → seller  Nívia              (não é tatuadora — não aparece no select "Tatuador")
 ```
-"ml-1 inline-flex shrink-0 rounded-full border border-border bg-card px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:border-foreground hover:text-foreground sm:px-3"
+
+## Segurança do link
+
+Rotas ficam sob `_authenticated/` (login obrigatório). No server fn `createMovimentacao`:
+
+1. Valida bearer (`requireSupabaseAuth`).
+2. Resolve `recebido_por_app_user_id` a partir do slug:
+  - Slugs de artista → `app_users.artist_id = ARTIST_ID_DO_SLUG`.
+  - Slug `nivia` → `app_users.seller_id = SELLER_ID_DA_NIVIA`.
+3. Se `auth.uid` ≠ dono do slug e role ≠ `admin` → 403 (e o loader redireciona para o slug correto).
+4. `registrado_por_app_user_id = auth.uid` (nunca vem do cliente).
+
+Admin pode acessar qualquer slug (para suporte). Ninguém consegue "virar Nivia" pela URL.
+
+**Nivia precisa de conta**: se `app_users` da Nivia ainda não existir, envio o convite pelo fluxo já usado em `/admin/equipe` (não faz parte deste plano de código — anoto na entrega).
+
+## UX do formulário (mobile-first)
+
+Header: **"Registro de pagamento — {Nome}"** (do slug).
+
+Campos na ordem do brief. Total é read-only, destaque em `#E11D2A` texto grande. Se `tipo_movimento = sinal`, "Data da sessão agendada" ganha borda de destaque e helper visível. "Recebido por" é read-only sempre. Select "Tatuador":
+
+- Link de artista: pré-selecionado com o próprio, editável (pode receber para outro).
+- Link da Nivia: vazio, obrigatório.
+- Opções: só artistas ativos, exceto os 2 calendários "GF TATTOO (Tattoo/Randevu)".
+
+Validações client + server idênticas (Zod). Idempotência: UUID gerado no client, enviado no payload; server `insert` com `on conflict (chave_idempotencia) do nothing returning *`.
+
+Botão: `A registar…` + spinner, desabilita durante submit. Sucesso: toast verde + reset preservando slug/tatuador padrão/data hoje + botão "Registrar outro pagamento".
+
+## Sincronização HighLevel (Custom Object)
+
+Em `movimentacao-ghl.server.ts` (só server):
+
+1. **Bootstrap idempotente** — no primeiro `createMovimentacao` (ou via job admin one-off em `/admin`), chama `POST /objects/schemas` (v2021-07-28) via `ghl-proxy` criando `custom_objects.movimentacao_financeira` com todos os campos (mesmos nomes do payload). Se retorno for 409/duplicate, ignora. A chave é cacheada em uma linha `settings` no Supabase (`ghl_movimentacao_object_key`) para evitar recriar.
+2. Após o INSERT no Supabase, chama `POST /objects/{objectKey}/records` com o payload completo. Guarda `id` em `ghl_custom_object_id`, marca `synced`.
+3. Se falhar: `ghl_sync_status = 'failed'`, salva `ghl_sync_error`, incrementa `ghl_sync_attempts`. **A movimentação já está salva no Supabase** — sync GHL pode ser reprocessada por um botão admin em `/admin` (fase próxima) sem duplicar (usa `chave_idempotencia` como `externalId` no HL).
+
+Nenhuma credencial GHL sai do backend (o `ghl-proxy` já usa `GHL_TOKEN` do secret).
+
+## Fluxo de submissão
+
+```text
+Client → serverFn createMovimentacao (bearer)
+  ├─ requireSupabaseAuth → userId
+  ├─ resolve slug → recebido_por + valida auth.uid == dono | admin
+  ├─ Zod: campos + total>0 + exclusividade cartão/sumup
+  ├─ Insert em movimentacoes (unique chave_idempotencia)
+  ├─ Best-effort: sync GHL Custom Object
+  └─ return { id, ghl_sync_status }
 ```
 
-Fica ao lado das setas (posição atual no header). O onClick já é `setDate(new Date())`.
+## Aparecer no financeiro / filtros
 
-## 3) Cabeçalho mobile mais enxuto (Semana/Mês em menu)
+Nova aba/filtro "Movimentações" em `/financeiro`:
 
-Na `<Tabs>` L228–253:
+- **Admin**: todas; filtros tatuador, recebido por, data, tipo, forma de pagamento.
+- **Artist**: só onde `artist_id = current_artist_id()`.
+- **Seller (Nivia)**: só onde `recebido_por_app_user_id = auth.uid()`.
 
-- Manter as três tabs (`day/week/month`) apenas em `sm:` (adicionar `hidden sm:block` ao wrapper Tabs).
-- No mobile, adicionar ao lado do "Hoje" um `<Popover>` compacto com botão-ícone (`MoreHorizontal` já disponível em lucide) que abre um pequeno menu com dois botões: "Semana" e "Mês". Ao clicar, chama `setView("week")` / `setView("month")`.
-- A view "Dia" é o default no mobile e continua controlada pela URL search; não precisa de tab visível quando já está em Dia. Se o usuário estiver em week/month via URL, mostrar um chip "← voltar ao Dia" no mesmo local.
+Nenhuma alteração na parte de comissões de agendamentos.
 
-Resultado: no iPhone o header cabe em uma única linha (setas · data · setas · Hoje · ⋯).
+## Links finais
 
-## 4) Coluna de horários mais legível no mobile
-
-Em L451–459 (time column labels): trocar
-```
-"flex w-10 items-start justify-center border-b border-border/40 pt-1 text-[9px] font-medium tabular-nums text-muted-foreground sm:w-14 sm:text-[10px]"
-```
-por
-```
-"flex w-12 items-start justify-center border-b border-border/40 pt-1 text-[10px] font-medium tabular-nums text-muted-foreground sm:w-14 sm:text-[11px]"
+```text
+https://gftattoocalendar.com/movimentacao/gabriel
+https://gftattoocalendar.com/movimentacao/andre
+https://gftattoocalendar.com/movimentacao/joyce
+https://gftattoocalendar.com/movimentacao/augusto
+https://gftattoocalendar.com/movimentacao/nivia
 ```
 
-Ganho de 2px de largura e +1px de fonte. Os cards continuam ocupando `flex-1` das colunas de artistas — a redução é marginal.
+Redirecionamento: `/movimentacao` → slug do usuário logado (ou `/agenda` se não tiver mapeamento).
 
-## 5) Destaque do próximo atendimento (badge "PRÓXIMO")
+## Testes de aceite
 
-Em `DayView`:
+1. Nivia (logada) abre `/movimentacao/nivia`: "Recebido por: Nivia" bloqueado, tatuador vazio obrigatório.
+2. Nivia abre `/movimentacao/gabriel` → server rejeita e redireciona a `/movimentacao/nivia`.
+3. Link do Gabriel: tatuador pré = Gabriel, editável.
+4. Cartão + SumUp simultâneos → erro "SumUp e Cartão são métodos exclusivos".
+5. Total 0 → erro "O total deve ser superior a €0."
+6. Duplo clique → uma única linha (unique key na `chave_idempotencia`).
+7. Erro do GHL não bloqueia insert; fica `ghl_sync_status=failed`.
+8. Registro aparece em `/financeiro` para o tatuador dono e para o admin.
 
-- Calcular `nextEventId: string | null` — o primeiro `slot.ghlEventId` do dia atual (mesma checagem `brusselsDayKey(now) === brusselsDayKey(date)`) cujo `slot.isFirstSlot === true` e `slot.eventStartMs ?? slot.startMs > Date.now()`. Considerar todas as `agendas` juntas e escolher o de menor `startMs`. Se hoje não estiver visível, `null`.
-- Passar `nextEventId` para `StaffColumn` → `SlotCell`.
-- Em `SlotCell`, se `slot.ghlEventId === nextEventId`, renderizar dentro do card, no canto superior direito, um pequeno badge:
-  ```
-  <span className="absolute right-1 top-1 rounded-sm bg-foreground px-1 py-[1px] text-[8px] font-black uppercase tracking-widest text-background">
-    PRÓXIMO
-  </span>
-  ```
-- Sem animação. Apenas um card por vez recebe o badge (garantido pelo id único).
+## Pendências fora deste plano
 
-## 6) Auto-scroll inteligente do modo Dia
-
-Em `DayView`:
-
-- Adicionar `const scrollRef = useRef<HTMLDivElement | null>(null)` no container `<div className="h-full overflow-auto">` (L445).
-- Adicionar `const didAutoScrollRef = useRef(false)` e `const userScrolledRef = useRef(false)`.
-- Registrar `onScroll` no container que marca `userScrolledRef.current = true` (só depois do primeiro auto-scroll — para não invalidar a si mesmo, comparar timestamp: só marca se `Date.now() - autoScrollAt > 400ms`).
-- `useEffect` disparado quando `rowCount > 0 && !didAutoScrollRef.current`:
-  - `targetPx = (nextEventTopPx ?? nowTopPx)`; onde `nextEventTopPx = ((eventStart - dayStartMs)/60000/SLOT_MINUTES) * ROW_HEIGHT_PX`.
-  - Se ambos `null` (dia futuro, sem eventos), não faz nada.
-  - `scrollRef.current.scrollTo({ top: Math.max(0, targetPx - 80), behavior: "auto" })`.
-  - Marca `didAutoScrollRef.current = true` e `autoScrollAt = Date.now()`.
-- Ao mudar `date` (via effect com `[date]`), zerar ambos os refs para que o próximo dia carregado também role uma vez.
-
-## Critérios de conclusão / testes
-
-- Simular manualmente via ajuste de viewport (375, 390, 430 px) usando `preview_ui--set_preview_device_viewport` na etapa de verificação; conferir:
-  - "Hoje" clicável no header.
-  - Menu compacto Semana/Mês abre e navega.
-  - Coluna de horas legível sem quebrar cards.
-  - Card "PRÓXIMO" com badge no topo.
-  - Ao abrir Agenda, grade rola perto do próximo evento (ou "agora").
-- Desktop (`sm:` breakpoints): comportamento atual preservado — tabs completas, "Hoje" com padding maior, coluna de horas em `w-14`.
-
-## Riscos
-
-- **Toaster global**: se alguma rota já monta seu próprio (menu, admin, onboarding), teremos dois Toasters em cascata. Sonner tolera múltiplos, mas os toasts podem duplicar. **Mitigação**: nesta etapa remover *apenas* o de agenda; consolidar os demais é escopo futuro.
-- **Auto-scroll**: o container pode não ter altura própria em algumas viewports; se `scrollHeight === clientHeight`, a chamada é no-op — sem efeito colateral.
-- **`nextEventId` global entre artistas**: o "próximo" é o mais próximo de qualquer artista; em estúdios com múltiplos tatuadores, cada um vê apenas um badge por dia (o mais próximo do estúdio). Aceitável para esta etapa; refinamento por "meu próximo" fica para a etapa "Minha agenda / Todos" persistente.
-- **Popover no mobile**: garantir `z-index` acima do header sticky (usar `z-40`).
-
-Após implementar, verifico com Playwright em 375/390/430 e reporto arquivos, resumo, riscos e resultados.
+- Convite/onboarding da Nivia (uso o fluxo `/admin/equipe` existente — não é código novo).
+- Reprocessamento de falhas GHL em massa (fica para uma tela admin depois; base já grava `ghl_sync_attempts` e `chave_idempotencia`).  
+  
+analise essas mudanças antes de criar.  
