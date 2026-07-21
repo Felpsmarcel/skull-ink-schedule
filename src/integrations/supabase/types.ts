@@ -590,10 +590,14 @@ export type Database = {
       movimentacoes: {
         Row: {
           artist_id: string
+          chave_grupo: string | null
           chave_idempotencia: string
           created_at: string
           data_pagamento: string
           data_tatuagem: string | null
+          forma_pagamento:
+            | Database["public"]["Enums"]["forma_pagamento_enum"]
+            | null
           ghl_contact_id: string | null
           ghl_custom_object_id: string | null
           ghl_last_synced_at: string | null
@@ -608,7 +612,7 @@ export type Database = {
           origem_lancamento: string
           recebido_por_app_user_id: string
           referencia: string | null
-          registrado_por_app_user_id: string
+          registrado_por_app_user_id: string | null
           tipo_movimento: Database["public"]["Enums"]["movimentacao_tipo"]
           total: number | null
           updated_at: string
@@ -619,10 +623,14 @@ export type Database = {
         }
         Insert: {
           artist_id: string
+          chave_grupo?: string | null
           chave_idempotencia: string
           created_at?: string
           data_pagamento: string
           data_tatuagem?: string | null
+          forma_pagamento?:
+            | Database["public"]["Enums"]["forma_pagamento_enum"]
+            | null
           ghl_contact_id?: string | null
           ghl_custom_object_id?: string | null
           ghl_last_synced_at?: string | null
@@ -637,7 +645,7 @@ export type Database = {
           origem_lancamento?: string
           recebido_por_app_user_id: string
           referencia?: string | null
-          registrado_por_app_user_id: string
+          registrado_por_app_user_id?: string | null
           tipo_movimento: Database["public"]["Enums"]["movimentacao_tipo"]
           total?: number | null
           updated_at?: string
@@ -648,10 +656,14 @@ export type Database = {
         }
         Update: {
           artist_id?: string
+          chave_grupo?: string | null
           chave_idempotencia?: string
           created_at?: string
           data_pagamento?: string
           data_tatuagem?: string | null
+          forma_pagamento?:
+            | Database["public"]["Enums"]["forma_pagamento_enum"]
+            | null
           ghl_contact_id?: string | null
           ghl_custom_object_id?: string | null
           ghl_last_synced_at?: string | null
@@ -666,7 +678,7 @@ export type Database = {
           origem_lancamento?: string
           recebido_por_app_user_id?: string
           referencia?: string | null
-          registrado_por_app_user_id?: string
+          registrado_por_app_user_id?: string | null
           tipo_movimento?: Database["public"]["Enums"]["movimentacao_tipo"]
           total?: number | null
           updated_at?: string
@@ -1170,6 +1182,7 @@ export type Database = {
         | "cancelled"
         | "completed"
         | "no_show"
+      forma_pagamento_enum: "cartao" | "dinheiro" | "sumup" | "transferencia"
       movimentacao_sync_status: "pending" | "synced" | "failed"
       movimentacao_tipo: "sinal" | "sessao" | "saldo" | "produto" | "estorno"
       payment_method: "cash" | "card" | "transfer" | "payconiq" | "other"
@@ -1312,6 +1325,7 @@ export const Constants = {
         "completed",
         "no_show",
       ],
+      forma_pagamento_enum: ["cartao", "dinheiro", "sumup", "transferencia"],
       movimentacao_sync_status: ["pending", "synced", "failed"],
       movimentacao_tipo: ["sinal", "sessao", "saldo", "produto", "estorno"],
       payment_method: ["cash", "card", "transfer", "payconiq", "other"],
