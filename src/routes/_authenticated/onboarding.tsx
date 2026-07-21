@@ -1,5 +1,7 @@
-import { createFileRoute, Link, Outlet, redirect, useRouterState } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, redirect, useRouter, useRouterState } from "@tanstack/react-router";
 import { getOnboardingStatus } from "@/lib/onboarding.functions";
+import { ErrorState } from "@/components/ui/error-state";
+import { LoadingState } from "@/components/ui/loading-state";
 
 const STEPS = [
   { path: "/onboarding/bem-vindo", label: "Bem-vindo" },
@@ -18,8 +20,35 @@ export const Route = createFileRoute("/_authenticated/onboarding")({
     }
     return { onboarding: status };
   },
+  pendingComponent: OnboardingPending,
+  errorComponent: OnboardingError,
   component: OnboardingLayout,
 });
+
+function OnboardingPending() {
+  return (
+    <div className="mx-auto flex min-h-svh max-w-lg items-center justify-center px-5">
+      <LoadingState label="Carregando configuração…" />
+    </div>
+  );
+}
+
+function OnboardingError({ error, reset }: { error: Error; reset: () => void }) {
+  const router = useRouter();
+  return (
+    <div className="mx-auto flex min-h-svh max-w-lg items-center justify-center px-5">
+      <ErrorState
+        title="Não foi possível abrir a configuração"
+        description="Atualize a página ou tente voltar para a agenda."
+        details={error.message}
+        onRetry={() => {
+          router.invalidate();
+          reset();
+        }}
+      />
+    </div>
+  );
+}
 
 function OnboardingLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
