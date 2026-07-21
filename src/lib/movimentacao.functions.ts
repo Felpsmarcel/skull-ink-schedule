@@ -391,3 +391,181 @@ export const listMovimentacoes = createServerFn({ method: "GET" })
       recebido_por_nome: null,
     })) as MovimentacaoRow[];
   });
+
+// ---------------- reprocessFailedMovimentacoes --------------------------
+
+const ReprocessInput = z.object({
+  slug: z.string().optional(),
+  limit: z.number().int().min(1).max(50).default(20),
+});
+
+export interface ReprocessResult {
+  processed: number;
+  succeeded: number;
+  failed: number;
+  errors: Array<{ id: string; error: string }>;
+}
+
+interface FailedRow {
+  id: string;
+  chave_idempotencia: string;
+  nome_cliente: string;
+  data_pagamento: string;
+  artist_id: string;
+  link_origem: string;
+  tipo_movimento: MovimentacaoTipo;
+  valor_cartao: number;
+  valor_dinheiro: number;
+  valor_sumup: number;
+  valor_transferencia: number;
+  total: number;
+  data_tatuagem: string | null;
+  observacoes: string | null;
+  ghl_sync_attempts: number | null;
+}
+
+function isDuplicateError(msg: string): boolean {
+  const s = msg.toLowerCase();
+  return (
+    s.includes("status=409") ||
+    s.includes("already exists") ||
+    s.includes("duplicate") ||
+    s.includes("externalid")
+  );
+}
+
+export const reprocessFailedMovimentacoes = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => ReprocessInput.parse(data ?? {}))
+  .handler(async ({ data, context }): Promise<ReprocessResult> => {
+    const { userId, supabase } = context;
+    const me = await getAppUserRow(supabase, userId);
+    if (me.role !== "admin") throw new Error("Forbidden");
+
+    if (data.slug && !isMovimentacaoSlug(data.slug)) throw new Error("Link inválido.");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    let q = supabaseAdmin
+      .from("movimentacoes" as never)
+      .select(
+        "id, chave_idempotencia, nome_cliente, data_pagamento, artist_id, link_origem, tipo_movimento, valor_cartao, valor_dinheiro, valor_sumup, valor_transferencia, total, data_tatuagem, observacoes, ghl_sync_attempts",
+      )
+      .eq("ghl_sync_status", "failed")
+      .order("created_at", { ascending: true })
+      .limit(data.limit);
+    if (data.slug) q = q.eq("link_origem", data.slug);
+
+    const { data: rowsRaw, error } = await q;
+    if (error) throw new Error(error.message);
+    const rows = (rowsRaw ?? []) as FailedRow[];
+    if (rows.length === 0) {
+      return { processed: 0, succeeded: 0, failed: 0, errors: [] };
+    }
+
+    // Enriquecer com artist_name.
+    const artistIds = Array.from(new Set(rows.map((r) => r.artist_id)));
+    const { data: artists } = await supabaseAdmin
+      .from("artists" as never)
+      .select("id, name")
+      .in("id", artistIds);
+    const artistName = new Map(
+      ((artists ?? []) as Array<{ id: string; name: string }>).map(
+        (a) => [a.id, a.name] as const,
+      ),
+    );
+
+    // Cache de owners por slug para evitar múltiplos lookups.
+    const ownerCache = new Map<string, Awaited<ReturnType<typeof resolveSlugOwner>>>();
+    async function getOwner(slug: string) {
+      if (!isMovimentacaoSlug(slug)) return null;
+      const cached = ownerCache.get(slug);
+      if (cached) return cached;
+      const owner = await resolveSlugOwner(slug);
+      ownerCache.set(slug, owner);
+      return owner;
+    }
+
+    const { syncMovimentacaoToGhl } = await import("./movimentacao-ghl.server");
+
+    let succeeded = 0;
+    let failed = 0;
+    const errors: Array<{ id: string; error: string }> = [];
+    const nowIso = new Date().toISOString();
+
+    for (const row of rows) {
+      const owner = await getOwner(row.link_origem);
+      if (!owner) {
+        failed++;
+        const msg = `link_origem inválido: ${row.link_origem}`;
+        errors.push({ id: row.id, error: msg });
+        await supabaseAdmin
+          .from("movimentacoes" as never)
+          .update({
+            ghl_sync_error: msg.slice(0, 500),
+            ghl_sync_attempts: (row.ghl_sync_attempts ?? 0) + 1,
+            ghl_last_synced_at: nowIso,
+          } as never)
+          .eq("id", row.id);
+        continue;
+      }
+
+      const sync = await syncMovimentacaoToGhl({
+        id: row.id,
+        chave_idempotencia: row.chave_idempotencia,
+        nome_cliente: row.nome_cliente,
+        data_pagamento: row.data_pagamento,
+        artist_name: artistName.get(row.artist_id) ?? "",
+        recebido_por_nome: owner.displayName,
+        link_origem: row.link_origem,
+        tipo_movimento: row.tipo_movimento,
+        valor_cartao: Number(row.valor_cartao),
+        valor_dinheiro: Number(row.valor_dinheiro),
+        valor_sumup: Number(row.valor_sumup),
+        valor_transferencia: Number(row.valor_transferencia),
+        total: Number(row.total),
+        data_tatuagem: row.data_tatuagem,
+        observacoes: row.observacoes,
+      });
+
+      const attempts = (row.ghl_sync_attempts ?? 0) + 1;
+      if (sync.ok) {
+        succeeded++;
+        await supabaseAdmin
+          .from("movimentacoes" as never)
+          .update({
+            ghl_sync_status: "synced",
+            ghl_custom_object_id: sync.ghl_custom_object_id ?? null,
+            ghl_last_synced_at: nowIso,
+            ghl_sync_attempts: attempts,
+            ghl_sync_error: null,
+          } as never)
+          .eq("id", row.id);
+      } else if (sync.error && isDuplicateError(sync.error)) {
+        // GHL já tem o record (externalId duplicado) — marcar como synced.
+        succeeded++;
+        await supabaseAdmin
+          .from("movimentacoes" as never)
+          .update({
+            ghl_sync_status: "synced",
+            ghl_last_synced_at: nowIso,
+            ghl_sync_attempts: attempts,
+            ghl_sync_error: null,
+          } as never)
+          .eq("id", row.id);
+      } else {
+        failed++;
+        errors.push({ id: row.id, error: sync.error ?? "unknown_error" });
+        await supabaseAdmin
+          .from("movimentacoes" as never)
+          .update({
+            ghl_sync_error: (sync.error ?? "").slice(0, 500),
+            ghl_sync_attempts: attempts,
+            ghl_last_synced_at: nowIso,
+          } as never)
+          .eq("id", row.id);
+      }
+    }
+
+    return { processed: rows.length, succeeded, failed, errors };
+  });
