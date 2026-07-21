@@ -79,7 +79,7 @@ async function setCachedObjectKey(key: string) {
     key: "ghl_movimentacao_object_key",
     value: { key },
     updated_at: new Date().toISOString(),
-  });
+  } as never);
 }
 
 async function findOrCreateObjectKey(token: string): Promise<string> {
