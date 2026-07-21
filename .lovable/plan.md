@@ -1,46 +1,35 @@
-## Objetivo
+## Plano
 
-Adicionar uma ação "Reprocessar sync HighLevel" na página `/admin/movimentacao-links` que reexecuta a sincronização com o HighLevel **apenas** para registros de `movimentacoes` com `ghl_sync_status = 'failed'`.
+Corrigir a tela em branco ao acessar `/admin/movimentacao-links` e deixar o comportamento claro para contas não-admin.
 
-## Escopo
+### Diagnóstico confirmado
 
-Reprocessamento restrito a linhas com `ghl_sync_status = 'failed'`. Nada em `pending` ou `synced` é tocado. Não altera o link de convite/vínculo do artista — é uma ação separada da seção "Convidar/Reparar".
+- O preview atual está em `/onboarding/bem-vindo` com `body` vazio e sem overlay de erro visível.
+- A sessão atual retorna perfil `artist`, não `admin`.
+- A rota admin já tem uma tela de “Acesso restrito”, mas o app ainda pode cair no onboarding antes de renderizar algo útil.
+- O onboarding chama `getOnboardingStatus()` em `beforeLoad`; se essa chamada falhar ou travar, a página pode ficar sem conteúdo visível.
 
-## Implementação
+### Implementação proposta
 
-### 1. Nova server function — `src/lib/movimentacao.functions.ts`
+1. **Blindar o gate principal autenticado**
+   - Manter `/admin/*` fora do redirecionamento obrigatório para onboarding.
+   - Fazer a verificação do usuário por uma função reutilizável para evitar divergência entre rota e UI.
 
-Adicionar `reprocessFailedMovimentacoes` (admin-only, POST, protegida por `requireSupabaseAuth` + verificação `role === 'admin'` via `context.supabase` em `app_users`).
+2. **Corrigir fallback do onboarding**
+   - Adicionar `pendingComponent`/estado de carregamento no layout de onboarding.
+   - Adicionar `errorComponent` simples para que falhas no `getOnboardingStatus()` não resultem em tela branca.
 
-Comportamento:
-- Aceita input opcional `{ slug?: MovimentacaoSlug, limit?: number (default 20, max 50) }`. Sem `slug`, processa todos os slugs; com `slug`, filtra por `link_origem = slug`.
-- Carrega até `limit` linhas com `ghl_sync_status = 'failed'` via `supabaseAdmin`, ordenadas por `created_at asc` (mais antigas primeiro).
-- Para cada linha: resolve `artist.name` e `recebido_por` (via `resolveSlugOwner(link_origem)`), chama `syncMovimentacaoToGhl` reutilizando o payload atual, e:
-  - Se `ok`: update para `synced`, `ghl_custom_object_id`, `ghl_last_synced_at = now()`, `ghl_sync_attempts = ghl_sync_attempts + 1`, `ghl_sync_error = null`.
-  - Se erro: mantém `failed`, incrementa `ghl_sync_attempts`, atualiza `ghl_sync_error` (500 chars) e `ghl_last_synced_at`.
-- Retorna `{ processed, succeeded, failed, errors: Array<{ id, error }> }`.
+3. **Melhorar a autorização admin**
+   - Garantir que `/admin/movimentacao-links` sempre renderize uma destas opções:
+     - página admin completa quando a conta for admin;
+     - “Acesso restrito” quando a conta for artista/vendedor;
+     - erro amigável com botão de tentar novamente se o perfil falhar.
 
-Idempotência preservada — `syncMovimentacaoToGhl` já usa `externalId = chave_idempotencia`, então se o record foi criado no GHL numa tentativa anterior, o HighLevel dedupa; qualquer erro 4xx específico de duplicata volta como `ok:false` e será tratado (pode-se detectar `status=409` ou mensagem "already exists" e marcar como `synced` — ver Detalhes técnicos).
+4. **Validar no preview**
+   - Reabrir `/admin/movimentacao-links` com a sessão atual.
+   - Confirmar que não fica em branco e que a mensagem correta aparece para `artist`.
+   - Conferir logs/console para garantir ausência de erro runtime.
 
-### 2. Contagem de failures — `src/lib/movimentacao-links.functions.ts`
+### Resultado esperado
 
-Estender `MovimentacaoLinkStatus` com `failedSyncCount: number`. No handler, agregar via `supabaseAdmin` um `count` por `link_origem` onde `ghl_sync_status = 'failed'` e adicionar ao retorno por slug.
-
-### 3. UI — `src/routes/_authenticated/_admin/admin.movimentacao-links.tsx`
-
-Dentro de `LinkCard`, quando `row.failedSyncCount > 0`:
-- Exibir `StatusBadge variant="warning"`: `N falha(s) sync GHL`.
-- Botão "Reprocessar sync" (ícone `RefreshCw`), abaixo da seção convite/reparar, chamando `reprocessFailedMovimentacoes({ slug: row.slug })` via `useServerFn` + `useMutation`.
-- `onSuccess`: toast com `succeeded/processed`; invalidar `["movimentacao-links"]`.
-- `onError`: toast de erro.
-
-Também adicionar no cabeçalho um botão global "Reprocessar todas as falhas" quando `sum(failedSyncCount) > 0`, chamando a mesma função sem `slug`.
-
-## Detalhes técnicos
-
-- **Duplicatas no GHL**: se o record já foi criado numa tentativa anterior (record existe com o mesmo `externalId`), o POST retorna 4xx. Tratar no `reprocessFailedMovimentacoes` inspecionando o `sync.error` retornado — se contiver `status=409` ou `"already exists"`/`"duplicate"`, marcar como `synced` sem `ghl_custom_object_id` (será resolvido em sync futuro por GET, fora deste escopo).
-- **Autorização**: usar o padrão já presente em `ghl-sync-admin.functions.ts` (checar role via `context.supabase` antes de importar `supabaseAdmin`). Não fazer fallback para admin client na verificação de role.
-- **Rate limit**: processar sequencialmente (não `Promise.all`) para não estourar rate limit do HighLevel; com `limit ≤ 50` isso é rápido o bastante.
-- **Colunas usadas**: `ghl_sync_status`, `ghl_sync_attempts`, `ghl_sync_error`, `ghl_last_synced_at`, `ghl_custom_object_id` já existem na tabela `movimentacoes` (usadas em `createMovimentacao`).
-- **Sem migração** — apenas código de aplicação.
-- **TS**: rodar `tsgo` ao final para garantir zero erros.
+Ao acessar `/admin/movimentacao-links`, a tela não deve mais ficar branca. Se a conta atual não for admin, o app deve mostrar claramente “Acesso restrito” em vez de redirecionar silenciosamente para onboarding ou renderizar vazio.

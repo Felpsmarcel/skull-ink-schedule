@@ -1,19 +1,42 @@
 import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { Button } from "@/components/ui/button";
+import { ErrorState } from "@/components/ui/error-state";
 import { LoadingState } from "@/components/ui/loading-state";
 
 export const Route = createFileRoute("/_authenticated/_admin")({
+  pendingComponent: AdminPending,
   component: AdminGate,
 });
 
+function AdminPending() {
+  return (
+    <main className="mx-auto flex min-h-[70vh] max-w-sm items-center justify-center px-4">
+      <LoadingState label="Verificando acesso…" />
+    </main>
+  );
+}
+
 function AdminGate() {
-  const { data, isLoading, isError } = useCurrentUser();
+  const { data, isLoading, isError, error, refetch } = useCurrentUser();
   const isAdmin = data?.role === "admin";
 
-  if (isLoading) return <LoadingState label="Verificando acesso…" />;
+  if (isLoading) return <AdminPending />;
 
-  if (isError || !isAdmin) {
+  if (isError) {
+    return (
+      <main className="mx-auto flex min-h-[70vh] max-w-sm items-center justify-center px-4">
+        <ErrorState
+          title="Não foi possível verificar o acesso"
+          description="Atualize a página ou entre novamente."
+          details={error instanceof Error ? error.message : undefined}
+          onRetry={() => { void refetch(); }}
+        />
+      </main>
+    );
+  }
+
+  if (!isAdmin) {
     return (
       <main className="mx-auto flex min-h-[70vh] max-w-sm flex-col items-center justify-center px-4 text-center">
         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">

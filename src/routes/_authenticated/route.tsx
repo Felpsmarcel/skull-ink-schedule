@@ -5,18 +5,22 @@ import { AuthShell } from "@/components/layout/auth-shell";
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async ({ location }) => {
+    const path = location.pathname;
     const { data, error } = await supabase.auth.getUser();
     if (error || !data.user) {
       throw redirect({ to: "/auth", search: { redirect: location.href } });
     }
+
+    if (path.startsWith("/admin")) {
+      return { user: data.user };
+    }
+
     // Onboarding gate for artists: if the artist has not completed the initial
     // setup, force them to /onboarding — except when they're already there or
     // in the account menu.
-    const path = location.pathname;
     const inOnboarding = path.startsWith("/onboarding");
     const inMenu = path === "/menu";
-    const inAdmin = path.startsWith("/admin");
-    if (!inOnboarding && !inMenu && !inAdmin) {
+    if (!inOnboarding && !inMenu) {
       const { data: appUser } = await supabase
         .from("app_users")
         .select("role, artist_id")
