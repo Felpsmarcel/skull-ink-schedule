@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { PaymentLinkCard } from "@/components/movimentacao/payment-link-card";
 
 export const Route = createFileRoute("/_authenticated/onboarding/bem-vindo")({
   head: () => ({ meta: [{ title: "Bem-vindo — GF Tattoo Studio" }, { name: "robots", content: "noindex,nofollow" }] }),
@@ -34,6 +35,7 @@ function WelcomeStep() {
           <span className="text-muted-foreground">Seus clientes recebem confirmações por email.</span>
         </li>
       </ul>
+      <PaymentLinkCard />
       <Button asChild className="w-full">
         <Link to="/onboarding/perfil">Começar</Link>
       </Button>
