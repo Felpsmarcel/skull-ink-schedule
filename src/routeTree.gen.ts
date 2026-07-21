@@ -48,6 +48,7 @@ import { Route as AuthenticatedAppointmentsNewClienteRouteImport } from './route
 import { Route as AuthenticatedAppointmentsNewAgendaRouteImport } from './routes/_authenticated/appointments.new.agenda'
 import { Route as AuthenticatedAdminRelatoriosAgendamentosRouteImport } from './routes/_authenticated/_admin/relatorios.agendamentos'
 import { Route as AuthenticatedAdminAdminVendedoresRouteImport } from './routes/_authenticated/_admin/admin.vendedores'
+import { Route as AuthenticatedAdminAdminMovimentacaoLinksRouteImport } from './routes/_authenticated/_admin/admin.movimentacao-links'
 import { Route as AuthenticatedAdminAdminEquipeRouteImport } from './routes/_authenticated/_admin/admin.equipe'
 
 const UnsubscribeRoute = UnsubscribeRouteImport.update({
@@ -264,6 +265,12 @@ const AuthenticatedAdminAdminVendedoresRoute =
     path: '/admin/vendedores',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
+const AuthenticatedAdminAdminMovimentacaoLinksRoute =
+  AuthenticatedAdminAdminMovimentacaoLinksRouteImport.update({
+    id: '/admin/movimentacao-links',
+    path: '/admin/movimentacao-links',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
 const AuthenticatedAdminAdminEquipeRoute =
   AuthenticatedAdminAdminEquipeRouteImport.update({
     id: '/admin/equipe',
@@ -296,6 +303,7 @@ export interface FileRoutesByFullPath {
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/movimentacao/': typeof AuthenticatedMovimentacaoIndexRoute
   '/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
+  '/admin/movimentacao-links': typeof AuthenticatedAdminAdminMovimentacaoLinksRoute
   '/admin/vendedores': typeof AuthenticatedAdminAdminVendedoresRoute
   '/relatorios/agendamentos': typeof AuthenticatedAdminRelatoriosAgendamentosRoute
   '/appointments/new/agenda': typeof AuthenticatedAppointmentsNewAgendaRoute
@@ -335,6 +343,7 @@ export interface FileRoutesByTo {
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/movimentacao': typeof AuthenticatedMovimentacaoIndexRoute
   '/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
+  '/admin/movimentacao-links': typeof AuthenticatedAdminAdminMovimentacaoLinksRoute
   '/admin/vendedores': typeof AuthenticatedAdminAdminVendedoresRoute
   '/relatorios/agendamentos': typeof AuthenticatedAdminRelatoriosAgendamentosRoute
   '/appointments/new/agenda': typeof AuthenticatedAppointmentsNewAgendaRoute
@@ -378,6 +387,7 @@ export interface FileRoutesById {
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/_authenticated/movimentacao/': typeof AuthenticatedMovimentacaoIndexRoute
   '/_authenticated/_admin/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
+  '/_authenticated/_admin/admin/movimentacao-links': typeof AuthenticatedAdminAdminMovimentacaoLinksRoute
   '/_authenticated/_admin/admin/vendedores': typeof AuthenticatedAdminAdminVendedoresRoute
   '/_authenticated/_admin/relatorios/agendamentos': typeof AuthenticatedAdminRelatoriosAgendamentosRoute
   '/_authenticated/appointments/new/agenda': typeof AuthenticatedAppointmentsNewAgendaRoute
@@ -420,6 +430,7 @@ export interface FileRouteTypes {
     | '/lovable/email/suppression'
     | '/movimentacao/'
     | '/admin/equipe'
+    | '/admin/movimentacao-links'
     | '/admin/vendedores'
     | '/relatorios/agendamentos'
     | '/appointments/new/agenda'
@@ -459,6 +470,7 @@ export interface FileRouteTypes {
     | '/lovable/email/suppression'
     | '/movimentacao'
     | '/admin/equipe'
+    | '/admin/movimentacao-links'
     | '/admin/vendedores'
     | '/relatorios/agendamentos'
     | '/appointments/new/agenda'
@@ -501,6 +513,7 @@ export interface FileRouteTypes {
     | '/lovable/email/suppression'
     | '/_authenticated/movimentacao/'
     | '/_authenticated/_admin/admin/equipe'
+    | '/_authenticated/_admin/admin/movimentacao-links'
     | '/_authenticated/_admin/admin/vendedores'
     | '/_authenticated/_admin/relatorios/agendamentos'
     | '/_authenticated/appointments/new/agenda'
@@ -810,6 +823,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminAdminVendedoresRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
+    '/_authenticated/_admin/admin/movimentacao-links': {
+      id: '/_authenticated/_admin/admin/movimentacao-links'
+      path: '/admin/movimentacao-links'
+      fullPath: '/admin/movimentacao-links'
+      preLoaderRoute: typeof AuthenticatedAdminAdminMovimentacaoLinksRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
     '/_authenticated/_admin/admin/equipe': {
       id: '/_authenticated/_admin/admin/equipe'
       path: '/admin/equipe'
@@ -824,6 +844,7 @@ interface AuthenticatedAdminRouteRouteChildren {
   AuthenticatedAdminGhlTestRoute: typeof AuthenticatedAdminGhlTestRoute
   AuthenticatedAdminReconciliarRoute: typeof AuthenticatedAdminReconciliarRoute
   AuthenticatedAdminAdminEquipeRoute: typeof AuthenticatedAdminAdminEquipeRoute
+  AuthenticatedAdminAdminMovimentacaoLinksRoute: typeof AuthenticatedAdminAdminMovimentacaoLinksRoute
   AuthenticatedAdminAdminVendedoresRoute: typeof AuthenticatedAdminAdminVendedoresRoute
   AuthenticatedAdminRelatoriosAgendamentosRoute: typeof AuthenticatedAdminRelatoriosAgendamentosRoute
 }
@@ -833,6 +854,8 @@ const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren
     AuthenticatedAdminGhlTestRoute: AuthenticatedAdminGhlTestRoute,
     AuthenticatedAdminReconciliarRoute: AuthenticatedAdminReconciliarRoute,
     AuthenticatedAdminAdminEquipeRoute: AuthenticatedAdminAdminEquipeRoute,
+    AuthenticatedAdminAdminMovimentacaoLinksRoute:
+      AuthenticatedAdminAdminMovimentacaoLinksRoute,
     AuthenticatedAdminAdminVendedoresRoute:
       AuthenticatedAdminAdminVendedoresRoute,
     AuthenticatedAdminRelatoriosAgendamentosRoute:
@@ -944,13 +967,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
