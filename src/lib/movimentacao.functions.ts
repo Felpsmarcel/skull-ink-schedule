@@ -75,7 +75,6 @@ async function resolveSlugOwner(
       .from("app_users" as never)
       .select("id, role, created_at")
       .eq("artist_id", target.artistId)
-      .eq("role", "artist")
       .order("created_at", { ascending: true })
       .limit(1);
     if (error) throw new Error(error.message);
