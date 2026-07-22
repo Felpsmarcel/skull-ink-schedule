@@ -4,14 +4,16 @@ import { useQuery } from "@tanstack/react-query";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, CheckCircle2, AlertTriangle } from "lucide-react";
+import { ArrowLeft, CheckCircle2, AlertTriangle, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import {
   listMovimentacoesHistorico,
   findMovimentacaoPage,
+  getEditableMovimentacaoIds,
   type HistoricoRow,
   type MovimentacaoTipo,
 } from "@/lib/movimentacao.functions";
+import { supabase } from "@/integrations/supabase/client";
 
 const PAGE_SIZE = 15;
 
@@ -60,12 +62,40 @@ function HistoricoPage() {
   const router = useRouter();
   const fetchList = useServerFn(listMovimentacoesHistorico);
   const fetchFindPage = useServerFn(findMovimentacaoPage);
+  const fetchEditableIds = useServerFn(getEditableMovimentacaoIds);
 
   const query = useQuery({
     queryKey: ["movimentacao-historico", page],
     queryFn: () => fetchList({ data: { page, pageSize: PAGE_SIZE } }),
     retry: false,
   });
+
+  // Detect signed-in user (client-side) — used to gate the "Editar" button
+  const [isAuthed, setIsAuthed] = useState(false);
+  useEffect(() => {
+    let mounted = true;
+    supabase.auth.getUser().then(({ data }) => {
+      if (mounted) setIsAuthed(!!data.user);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+      if (mounted) setIsAuthed(!!session?.user);
+    });
+    return () => {
+      mounted = false;
+      sub.subscription.unsubscribe();
+    };
+  }, []);
+
+  const editableQ = useQuery({
+    queryKey: ["movimentacao-editable-ids", page, query.data?.rows.map((r) => r.id).join(",")],
+    queryFn: () =>
+      fetchEditableIds({
+        data: { ids: (query.data?.rows ?? []).map((r) => r.id) },
+      }),
+    enabled: isAuthed && !!query.data && query.data.rows.length > 0,
+    staleTime: 60_000,
+  });
+  const editableSet = new Set(editableQ.data?.ids ?? []);
 
   // Scroll to top on page change
   useEffect(() => {
@@ -188,6 +218,7 @@ function HistoricoPage() {
                 <Card
                   row={row}
                   isFlash={flashId === row.id}
+                  canEdit={editableSet.has(row.id)}
                   refCallback={
                     highlight === row.id ? (el) => (highlightRef.current = el) : undefined
                   }
@@ -212,10 +243,12 @@ function HistoricoPage() {
 function Card({
   row,
   isFlash,
+  canEdit,
   refCallback,
 }: {
   row: HistoricoRow;
   isFlash: boolean;
+  canEdit: boolean;
   refCallback?: (el: HTMLDivElement | null) => void;
 }) {
   const isSynced = row.ghl_status === "synced";
@@ -265,6 +298,17 @@ function Card({
           {currencyFmt.format(row.total)}
         </span>
       </div>
+      {canEdit && (
+        <div className="mt-3 flex justify-end">
+          <Link
+            to="/movimentacao/historico/$id/editar"
+            params={{ id: row.id }}
+            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700 hover:bg-slate-50"
+          >
+            <Pencil className="size-3" /> Editar
+          </Link>
+        </div>
+      )}
     </div>
   );
 }
