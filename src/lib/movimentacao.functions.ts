@@ -6,6 +6,12 @@ import {
   isMovimentacaoSlug,
   type MovimentacaoSlug,
   type SlugTarget,
+  STAFF_RECEBEDORES,
+  STAFF_RECEBEDOR_IDS,
+  SLUG_DEFAULT_RECEBEDOR,
+  getStaffRecebedor,
+  type StaffRecebedor,
+  type StaffRecebedorId,
 } from "@/config/movimentacao-slugs";
 
 // ---------------- Types --------------------------------------------------
@@ -16,9 +22,11 @@ export type FormaPagamento = "cartao" | "dinheiro" | "sumup" | "transferencia";
 export interface SlugContext {
   slug: MovimentacaoSlug;
   target: SlugTarget;
-  recebidoPorAppUserId: string; // dono do slug
-  recebidoPorNome: string;
+  recebidoPorAppUserId: string; // default (do slug)
+  recebidoPorNome: string;      // default (do slug)
   defaultArtistId: string | null; // pré-seleção do select "Tatuador"
+  recebedores: StaffRecebedor[];
+  defaultRecebedorId: StaffRecebedorId;
 }
 
 export interface MovimentacaoRow {
@@ -64,51 +72,21 @@ async function getAppUserRow(
   );
 }
 
-async function resolveSlugOwner(
-  slug: MovimentacaoSlug,
-): Promise<{ appUserId: string; displayName: string; defaultArtistId: string | null }> {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+function resolveSlugDefaults(slug: MovimentacaoSlug): {
+  defaultRecebedorId: StaffRecebedorId;
+  appUserId: string;
+  displayName: string;
+  defaultArtistId: string | null;
+} {
   const target = MOVIMENTACAO_SLUGS[slug];
-
-  if (target.kind === "artist") {
-    const { data, error } = await supabaseAdmin
-      .from("app_users" as never)
-      .select("id, role, created_at")
-      .eq("artist_id", target.artistId)
-      .order("created_at", { ascending: true })
-      .limit(1);
-    if (error) throw new Error(error.message);
-    const rows = (data ?? []) as Array<{ id: string }>;
-    const row = rows[0] ?? null;
-    if (!row) {
-      throw new Error(
-        `Nenhuma conta linkada ao artista ${target.displayName}. Convide-o em /admin/equipe antes de usar este link.`,
-      );
-    }
-    return {
-      appUserId: row.id,
-      displayName: target.displayName,
-      defaultArtistId: target.artistId,
-    };
-  }
-
-  // seller
-  const { data, error } = await supabaseAdmin
-    .from("app_users" as never)
-    .select("id, role, created_at")
-    .eq("seller_id", target.sellerId)
-    .eq("role", "seller")
-    .order("created_at", { ascending: true })
-    .limit(1);
-  if (error) throw new Error(error.message);
-  const rows = (data ?? []) as Array<{ id: string }>;
-  const row = rows[0] ?? null;
-  if (!row) {
-    throw new Error(
-      `Nenhuma conta linkada a ${target.displayName}. Convide em /admin/vendedores antes de usar este link.`,
-    );
-  }
-  return { appUserId: row.id, displayName: target.displayName, defaultArtistId: null };
+  const defaultRecebedorId = SLUG_DEFAULT_RECEBEDOR[slug];
+  const staff = getStaffRecebedor(defaultRecebedorId);
+  return {
+    defaultRecebedorId,
+    appUserId: staff.appUserId,
+    displayName: staff.displayName,
+    defaultArtistId: target.kind === "artist" ? target.artistId : null,
+  };
 }
 
 // ---------------- getSlugContext ----------------------------------------
@@ -124,14 +102,16 @@ export const getSlugContext = createServerFn({ method: "GET" })
     const slug = data.slug;
     const target = MOVIMENTACAO_SLUGS[slug];
 
-    const owner = await resolveSlugOwner(slug);
+    const defaults = resolveSlugDefaults(slug);
 
     return {
       slug,
       target,
-      recebidoPorAppUserId: owner.appUserId,
-      recebidoPorNome: owner.displayName,
-      defaultArtistId: owner.defaultArtistId,
+      recebidoPorAppUserId: defaults.appUserId,
+      recebidoPorNome: defaults.displayName,
+      defaultArtistId: defaults.defaultArtistId,
+      recebedores: STAFF_RECEBEDORES,
+      defaultRecebedorId: defaults.defaultRecebedorId,
     };
   });
 
@@ -198,6 +178,7 @@ const CreateInput = z
     data_pagamento: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida."),
     artist_id: z.string().uuid("Selecione o tatuador."),
     tipo_movimento: z.enum(["sinal", "sessao", "saldo", "produto", "estorno"]),
+    recebido_por_id: z.enum(STAFF_RECEBEDOR_IDS),
     valor_cartao: z.number().min(0).default(0),
     valor_dinheiro: z.number().min(0).default(0),
     valor_sumup: z.number().min(0).default(0),
@@ -236,7 +217,7 @@ export const createMovimentacao = createServerFn({ method: "POST" })
     if (!isMovimentacaoSlug(data.slug)) throw new Error("Link inválido.");
     const slug = data.slug;
 
-    const owner = await resolveSlugOwner(slug);
+    const recebedor = getStaffRecebedor(data.recebido_por_id);
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
@@ -288,7 +269,7 @@ export const createMovimentacao = createServerFn({ method: "POST" })
         nome_cliente: nome,
         data_pagamento: data.data_pagamento,
         artist_id: data.artist_id,
-        recebido_por_app_user_id: owner.appUserId,
+        recebido_por_app_user_id: recebedor.appUserId,
         registrado_por_app_user_id: null,
         link_origem: slug,
         origem_lancamento: "link_individual",
@@ -321,7 +302,7 @@ export const createMovimentacao = createServerFn({ method: "POST" })
         nome_cliente: nome,
         data_pagamento: data.data_pagamento,
         artist_name: artistRow.name,
-        recebido_por_nome: owner.displayName,
+        recebido_por_nome: recebedor.displayName,
         link_origem: slug,
         tipo_movimento: data.tipo_movimento,
         valor_cartao: insertPayload.valor_cartao,
@@ -430,6 +411,7 @@ interface FailedRow {
   nome_cliente: string;
   data_pagamento: string;
   artist_id: string;
+  recebido_por_app_user_id: string | null;
   link_origem: string;
   tipo_movimento: MovimentacaoTipo;
   valor_cartao: number;
@@ -467,7 +449,7 @@ export const reprocessFailedMovimentacoes = createServerFn({ method: "POST" })
     let q = supabaseAdmin
       .from("movimentacoes" as never)
       .select(
-        "id, chave_idempotencia, nome_cliente, data_pagamento, artist_id, link_origem, tipo_movimento, valor_cartao, valor_dinheiro, valor_sumup, valor_transferencia, total, data_tatuagem, observacoes, ghl_sync_attempts",
+        "id, chave_idempotencia, nome_cliente, data_pagamento, artist_id, recebido_por_app_user_id, link_origem, tipo_movimento, valor_cartao, valor_dinheiro, valor_sumup, valor_transferencia, total, data_tatuagem, observacoes, ghl_sync_attempts",
       )
       .eq("ghl_sync_status", "failed")
       .order("created_at", { ascending: true })
@@ -493,15 +475,12 @@ export const reprocessFailedMovimentacoes = createServerFn({ method: "POST" })
       ),
     );
 
-    // Cache de owners por slug para evitar múltiplos lookups.
-    const ownerCache = new Map<string, Awaited<ReturnType<typeof resolveSlugOwner>>>();
-    async function getOwner(slug: string) {
-      if (!isMovimentacaoSlug(slug)) return null;
-      const cached = ownerCache.get(slug);
-      if (cached) return cached;
-      const owner = await resolveSlugOwner(slug);
-      ownerCache.set(slug, owner);
-      return owner;
+    // Resolve displayName do recebedor a partir do staff fixo.
+    const staffByUserId = new Map(
+      STAFF_RECEBEDORES.map((s) => [s.appUserId, s.displayName] as const),
+    );
+    function nameFor(appUserId: string | null): string {
+      return appUserId ? staffByUserId.get(appUserId) ?? "" : "";
     }
 
     const { syncMovimentacaoToGhl } = await import("./movimentacao-ghl.server");
@@ -512,29 +491,13 @@ export const reprocessFailedMovimentacoes = createServerFn({ method: "POST" })
     const nowIso = new Date().toISOString();
 
     for (const row of rows) {
-      const owner = await getOwner(row.link_origem);
-      if (!owner) {
-        failed++;
-        const msg = `link_origem inválido: ${row.link_origem}`;
-        errors.push({ id: row.id, error: msg });
-        await supabaseAdmin
-          .from("movimentacoes" as never)
-          .update({
-            ghl_sync_error: msg.slice(0, 500),
-            ghl_sync_attempts: (row.ghl_sync_attempts ?? 0) + 1,
-            ghl_last_synced_at: nowIso,
-          } as never)
-          .eq("id", row.id);
-        continue;
-      }
-
       const sync = await syncMovimentacaoToGhl({
         id: row.id,
         chave_idempotencia: row.chave_idempotencia,
         nome_cliente: row.nome_cliente,
         data_pagamento: row.data_pagamento,
         artist_name: artistName.get(row.artist_id) ?? "",
-        recebido_por_nome: owner.displayName,
+        recebido_por_nome: nameFor(row.recebido_por_app_user_id),
         link_origem: row.link_origem,
         tipo_movimento: row.tipo_movimento,
         valor_cartao: Number(row.valor_cartao),
