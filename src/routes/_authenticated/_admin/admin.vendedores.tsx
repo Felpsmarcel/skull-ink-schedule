@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Loader2, UserPlus, Pencil, Trash2, Send, Link2 } from "lucide-react";
+import { Loader2, UserPlus, Pencil, Trash2, Send, Link2, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +23,10 @@ import {
   repairSellerLink,
   type SellerWithUsers,
 } from "@/lib/sellers-invite.functions";
+import {
+  MOVIMENTACAO_PROD_ORIGIN,
+  findSlugForSeller,
+} from "@/config/movimentacao-slugs";
 
 export const Route = createFileRoute("/_authenticated/_admin/admin/vendedores")({
   head: () => ({
@@ -276,6 +280,19 @@ function SellerCard({
 
   const linkedEmails = seller.users.map((u) => u.email ?? u.id.slice(0, 8));
 
+  const slug = findSlugForSeller(seller.id);
+  const paymentUrl = slug ? `${MOVIMENTACAO_PROD_ORIGIN}/movimentacao/${slug}` : null;
+
+  async function copyPaymentUrl() {
+    if (!paymentUrl) return;
+    try {
+      await navigator.clipboard.writeText(paymentUrl);
+      toast.success("Link copiado.");
+    } catch {
+      toast.error("Não foi possível copiar. Copie manualmente.");
+    }
+  }
+
   return (
     <li className="rounded-lg border border-border bg-card p-4">
       <div className="flex items-start justify-between gap-3">
@@ -356,6 +373,30 @@ function SellerCard({
             Reparar vínculo
           </Button>
         </div>
+      </div>
+
+      <div className="mt-3 rounded-md border border-border bg-muted/30 p-3">
+        <div className="mb-1 flex items-center justify-between gap-2">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Link de pagamento
+          </p>
+          <StatusBadge variant={seller.users.length > 0 ? "success" : "warning"}>
+            {seller.users.length > 0 ? "conta linkada" : "sem conta"}
+          </StatusBadge>
+        </div>
+        {paymentUrl ? (
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Input readOnly value={paymentUrl} className="font-mono text-xs" />
+            <Button size="sm" variant="outline" onClick={copyPaymentUrl}>
+              <Copy className="mr-2 h-3.5 w-3.5" />
+              Copiar
+            </Button>
+          </div>
+        ) : (
+          <p className="text-[11px] text-muted-foreground">
+            Sem slug configurado em <code>movimentacao-slugs.ts</code> para este vendedor.
+          </p>
+        )}
       </div>
     </li>
   );
