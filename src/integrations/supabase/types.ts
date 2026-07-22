@@ -595,6 +595,7 @@ export type Database = {
           created_at: string
           data_pagamento: string
           data_tatuagem: string | null
+          deleted_at: string | null
           forma_pagamento:
             | Database["public"]["Enums"]["forma_pagamento_enum"]
             | null
@@ -628,6 +629,7 @@ export type Database = {
           created_at?: string
           data_pagamento: string
           data_tatuagem?: string | null
+          deleted_at?: string | null
           forma_pagamento?:
             | Database["public"]["Enums"]["forma_pagamento_enum"]
             | null
@@ -661,6 +663,7 @@ export type Database = {
           created_at?: string
           data_pagamento?: string
           data_tatuagem?: string | null
+          deleted_at?: string | null
           forma_pagamento?:
             | Database["public"]["Enums"]["forma_pagamento_enum"]
             | null
@@ -1084,6 +1087,10 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      find_movimentacao_page: {
+        Args: { p_id: string; p_page_size?: number }
+        Returns: number
+      }
       get_monthly_report: {
         Args: {
           p_artist?: string
@@ -1155,6 +1162,25 @@ export type Database = {
         }[]
       }
       ghl_sync_status: { Args: never; Returns: Json }
+      list_movimentacoes_historico: {
+        Args: { p_page?: number; p_page_size?: number }
+        Returns: {
+          created_at: string
+          ghl_sync_status: string
+          id: string
+          link_origem: string
+          nome_cliente: string
+          tatuador: string
+          tipo_movimento: string
+          total: number
+          total_count: number
+          total_valor: number
+          valor_cartao: number
+          valor_dinheiro: number
+          valor_sumup: number
+          valor_transferencia: number
+        }[]
+      }
       move_to_dlq: {
         Args: {
           dlq_name: string
