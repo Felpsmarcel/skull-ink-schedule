@@ -15,9 +15,9 @@ export const Route = createFileRoute("/auth_/recover")({
       { name: "description", content: "Recupere o acesso à sua conta GF Tattoo Studio." },
       { name: "robots", content: "noindex,nofollow" },
       { property: "og:title", content: "Recuperar senha — GF Tattoo Studio" },
-      { property: "og:url", content: "https://gftattoocalendar.com/auth_/recover" },
+      { property: "og:url", content: "https://gftattoocalendar.com/auth/recover" },
     ],
-    links: [{ rel: "canonical", href: "https://gftattoocalendar.com/auth_/recover" }],
+    links: [{ rel: "canonical", href: "https://gftattoocalendar.com/auth/recover" }],
   }),
   component: () => (
     <ClientOnly fallback={null}>
@@ -60,7 +60,7 @@ function ResetPage() {
             Se este email existe, enviamos um link para redefinir a senha. Verifique sua caixa
             de entrada.
           </p>
-          <Link to="/auth" className="text-xs underline">
+          <Link to="/auth" search={{ redirect: undefined }} className="text-xs underline">
             Voltar para o login
           </Link>
         </div>
@@ -83,7 +83,7 @@ function ResetPage() {
             Enviar link
           </Button>
           <div className="text-center">
-            <Link to="/auth" className="text-xs underline text-muted-foreground">
+            <Link to="/auth" search={{ redirect: undefined }} className="text-xs underline text-muted-foreground">
               Voltar
             </Link>
           </div>

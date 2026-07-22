@@ -1,76 +1,60 @@
-## Objetivo
+## Situação atual
 
-Permitir editar registos de `movimentacoes` a partir do histórico, com página dedicada `/movimentacao/historico/$id/editar`, acesso a admins e vendedores, soft delete e ressync GHL.
+O comando `tsgo` reporta 9 erros TypeScript hard que impedem o build limpo. Sem build limpo, não é seguro publicar nem testar o dashboard editável recém-criado.
 
-## Modelo de acesso
+## Objetivo deste plano
 
-- **Admin**: edita/apaga/ressincroniza qualquer registo.
-- **Vendedor**: edita/apaga/ressincroniza apenas registos onde `recebido_por_slug` (ou coluna equivalente já existente que identifica o vendedor/recebedor do link) corresponde ao seller do utilizador.
-- Página pública `/movimentacao/historico` continua em leitura anónima; botão "Editar" aparece condicionalmente quando há sessão autenticada com permissão.
+Restaurar o build zero-erros corrigindo apenas os problemas de tipo introduzidos nas rotas de autenticação e na agenda.
 
-## Base de dados
+## Erros identificados
 
-Migração:
-- Adicionar `deleted_at timestamptz` a `movimentacoes` (soft delete).
-- Adicionar `updated_at timestamptz` + trigger se ainda não existir.
-- Ajustar policy pública `SELECT anon` para filtrar `deleted_at IS NULL`.
-- Nova policy `UPDATE` para `authenticated`: admin (via `has_role`) OU vendedor dono (comparando `recebido_por_slug` com o slug do seller). Idem policy leitura autenticada dos próprios registos (mesmo se soft-deleted, para a UI mostrar histórico).
-- View / RPC opcional `movimentacoes_stats` já mencionada anteriormente — reaproveitar.
+1. **Rotas `/auth` exigem `search` obrigatório** — `validateSearch` em `/auth` provavelmente define `redirect` como obrigatório ou o tipo inferiu `search` required. Isso quebra `navigate({ to: "/auth", replace: true })` em:
+   - `src/components/layout/auth-shell.tsx`
+   - `src/routes/_authenticated/menu.tsx`
+   - `src/routes/index.tsx`
 
-## Server functions (`src/lib/movimentacao.functions.ts`)
+2. **Links para `/auth_/recover` inválidos** — a rota real é `/auth/recover` (underscore no nome de arquivo vira segmento normal). Arquivos afetados:
+   - `src/routes/auth.tsx`
+   - `src/routes/auth_.recover.tsx`
+   - `src/routes/auth_.update-password.tsx`
 
-Todas com `.middleware([requireSupabaseAuth])`:
+3. **Links para `/auth` sem `search` em `auth_.recover.tsx`** — mesma causa do item 1.
 
-1. `getMovimentacaoForEdit({ id })` — devolve o registo + flag `canEdit` calculada no servidor a partir do role/seller.
-2. `updateMovimentacao({ id, patch })` — valida com Zod:
-   - `nome_cliente` (string 1..120)
-   - `artist_id` (uuid | null)
-   - `tipo_movimento` (enum)
-   - `valor_cartao/dinheiro/sumup/transferencia` (number ≥ 0)
-   - Recalcula `total` no servidor (soma dos 4). Ignora `total` vindo do cliente.
-   - Reautoriza (admin OU dono) antes do UPDATE; RLS é rede de segurança.
-   - Marca `ghl_sync_status = 'pending'` para reenviar (opcional, ver ação abaixo).
-3. `softDeleteMovimentacao({ id })` — set `deleted_at = now()`.
-4. `resyncMovimentacaoGhl({ id })` — dispara sync usando o helper existente em `movimentacao-ghl.server.ts`.
+4. **Tipo `debug` inferido como `boolean` em vez de `true`** — em `src/routes/_authenticated/agenda.tsx`, a função reducer de `navigate({ search: (prev) => ... })` permite `debug: false`, mas o schema de busca deve aceitar `boolean`.
 
-Listagem pública existente (`listMovimentacoesHistorico`) passa a filtrar `deleted_at IS NULL` (já fica coberto pela policy anon).
+## Passos de implementação
 
-## UI
+### 1. Ajustar schema de busca de `/auth`
 
-### Card no histórico
-- Se utilizador autenticado com permissão sobre a linha: renderizar botão discreto "Editar" (ícone lápis) que faz `<Link to="/movimentacao/historico/$id/editar" params={{ id }}>`.
-- Detecção do estado auth: hook `useCurrentUser` já existente; a decisão fina (dono/admin) fica no servidor via `canEdit` retornado por uma versão leve — para não pedir por linha, o `listMovimentacoesHistorico`, quando chamado autenticado, devolve `canEdit` por row. Chamado anónimo, devolve `canEdit: false`.
+Tornar `redirect` opcional explicitamente no `validateSearch` de `src/routes/auth.tsx` para que `search` não seja required nos tipos do router.
 
-### Página `/movimentacao/historico/$id/editar`
-Rota autenticada em `src/routes/_authenticated/movimentacao.historico.$id.editar.tsx` (bloqueia anónimos naturalmente pelo gate `_authenticated`).
+### 2. Corrigir todos os `navigate`/`Link` para `/auth`
 
-Layout mobile-first:
-- Header sticky com "← Voltar" (volta ao histórico preservando `?highlight=<id>`).
-- Form com campos: Nome do cliente, Tatuador (Select com artistas ativos), Tipo (Select), Valores por método (4 inputs numéricos com máscara EUR), Total (readonly, calculado ao vivo).
-- Rodapé sticky com "Guardar alterações" (primary) e menu "Mais" com "Apagar" (confirm) e "Ressincronizar GHL".
-- Estados: loading, saving, success toast + navigate para `/movimentacao/historico?highlight=<id>`, erro inline.
-- Guard: se `canEdit=false`, mostra estado "Sem permissão".
+Adicionar `search: { redirect: undefined }` (ou omitir de forma compatível) nas chamadas em:
+- `auth-shell.tsx`
+- `menu.tsx`
+- `index.tsx`
 
-### React Query
-- `useMutation` para update/delete/resync, invalidar `["movimentacao-historico"]` e a query do detalhe no `onSuccess`.
+Se o schema ficar realmente opcional, as chamadas atuais passam a compilar sem alteração.
 
-## Segurança
+### 3. Corrigir links `/auth_/recover` → `/auth/recover`
 
-- Autorização dupla: server function verifica role/ownership antes do UPDATE; policies RLS impedem escrita fora do escopo.
-- Nunca confiar em `total` do cliente — recalcular no servidor.
-- Zod em todos os inputs; limites de tamanho.
-- `deleted_at` esconde da vista pública; admin pode ver soft-deletes se quisermos (fora do escopo agora).
+Atualizar todos os `<Link to="/auth_/recover" ... />` e `navigate({ to: "/auth_/recover" })` para `/auth/recover`.
 
-## Ficheiros a criar/editar
+### 4. Corrigir reducer de search em `agenda.tsx`
 
-- **Migração SQL**: `deleted_at`, policies UPDATE + SELECT autenticado, atualização da policy anon.
-- `src/lib/movimentacao.functions.ts`: novas fns + `canEdit` no list.
-- `src/routes/_authenticated/movimentacao.historico.$id.editar.tsx`: nova rota.
-- `src/routes/movimentacao.historico.tsx`: mostrar botão "Editar" por card quando `canEdit`.
-- (Opcional) `src/lib/movimentacao-ghl.server.ts`: expor helper `resyncOne(id)` se ainda não existe standalone.
+Alterar a tipagem ou o schema de busca da rota `/agenda` para que `debug` seja `boolean` em vez de `true`, permitindo que o reducer preserve o valor anterior sem erro de contravariância.
 
-## Fora do escopo
+### 5. Reexecutar `tsgo` e iterar
 
-- Auditoria/histórico de alterações (log de quem editou o quê).
-- Edição em massa.
-- Restaurar soft-deletes na UI.
+Após as correções, rodar `bunx tsgo` novamente para confirmar zero erros. Se surgirem novos erros de tipo derivados dessas mudanças, corrigi-los no mesmo ciclo.
+
+## Fora do escopo deste plano
+
+- Novas funcionalidades no dashboard editável.
+- Refatorações de UX/UI.
+- Ajustes na migration de soft-delete (já criada, pendente de deploy).
+
+## Resultado esperado
+
+`bunx tsgo` finaliza com `0 errors`, permitindo publicar e testar o app com segurança.
