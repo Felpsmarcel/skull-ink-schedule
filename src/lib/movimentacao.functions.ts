@@ -178,6 +178,7 @@ const CreateInput = z
     data_pagamento: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida."),
     artist_id: z.string().uuid("Selecione o tatuador."),
     tipo_movimento: z.enum(["sinal", "sessao", "saldo", "produto", "estorno"]),
+    recebido_por_id: z.enum(STAFF_RECEBEDOR_IDS),
     valor_cartao: z.number().min(0).default(0),
     valor_dinheiro: z.number().min(0).default(0),
     valor_sumup: z.number().min(0).default(0),
@@ -216,7 +217,7 @@ export const createMovimentacao = createServerFn({ method: "POST" })
     if (!isMovimentacaoSlug(data.slug)) throw new Error("Link inválido.");
     const slug = data.slug;
 
-    const owner = await resolveSlugOwner(slug);
+    const recebedor = getStaffRecebedor(data.recebido_por_id);
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
