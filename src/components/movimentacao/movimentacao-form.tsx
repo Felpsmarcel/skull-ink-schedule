@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -94,9 +94,28 @@ function initialState(context: SlugContext): FormState {
   };
 }
 
+interface Confirmation {
+  id: string;
+  synced: boolean;
+  nome_cliente: string;
+  artistName: string;
+  tipo: MovimentacaoTipo;
+  metodo: string;
+  total: number;
+  criado_em: Date;
+}
+
+const TIPO_LABEL: Record<MovimentacaoTipo, string> = {
+  sinal: "Sinal",
+  sessao: "Sessão",
+  saldo: "Saldo",
+  produto: "Produto",
+  estorno: "Estorno",
+};
+
 export function MovimentacaoForm({ context, artists, artistsLoading }: Props) {
   const [form, setForm] = useState<FormState>(() => initialState(context));
-  const [lastResult, setLastResult] = useState<null | { synced: boolean }>(null);
+  const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
   const qc = useQueryClient();
   const submit = useServerFn(createMovimentacao);
 
@@ -138,7 +157,6 @@ export function MovimentacaoForm({ context, artists, artistsLoading }: Props) {
     onSuccess: (res) => {
       haptic("success");
       const synced = res.ghl_sync_status === "synced";
-      setLastResult({ synced });
       qc.invalidateQueries({ queryKey: ["movimentacoes"] });
       qc.invalidateQueries({ queryKey: ["finance-summary"] });
       toast.success(
@@ -146,8 +164,27 @@ export function MovimentacaoForm({ context, artists, artistsLoading }: Props) {
           ? "Pagamento registado e sincronizado."
           : "Pagamento registado. Sincronização com o CRM pendente.",
       );
-      // reset preservando slug/tatuador padrão/data hoje
-      setForm(initialState(context));
+      const cartao = parseAmount(form.valor_cartao);
+      const dinheiro = parseAmount(form.valor_dinheiro);
+      const sumup = parseAmount(form.valor_sumup);
+      const transf = parseAmount(form.valor_transferencia);
+      const metodos: string[] = [];
+      if (cartao > 0) metodos.push("Cartão");
+      if (dinheiro > 0) metodos.push("Dinheiro");
+      if (sumup > 0) metodos.push("SumUp");
+      if (transf > 0) metodos.push("Transferência");
+      const artistName =
+        artists.find((a) => a.id === form.artist_id)?.name ?? "—";
+      setConfirmation({
+        id: res.id,
+        synced,
+        nome_cliente: form.nome_cliente.trim(),
+        artistName,
+        tipo: form.tipo_movimento,
+        metodo: metodos.length > 1 ? "Misto" : metodos[0] ?? "—",
+        total: cartao + dinheiro + sumup + transf,
+        criado_em: new Date(),
+      });
     },
     onError: (err) => {
       haptic("warning");
@@ -165,6 +202,18 @@ export function MovimentacaoForm({ context, artists, artistsLoading }: Props) {
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((s) => ({ ...s, [key]: value }));
+  }
+
+  if (confirmation) {
+    return (
+      <ConfirmationScreen
+        data={confirmation}
+        onNew={() => {
+          setConfirmation(null);
+          setForm(initialState(context));
+        }}
+      />
+    );
   }
 
   return (
@@ -351,13 +400,74 @@ export function MovimentacaoForm({ context, artists, artistsLoading }: Props) {
         )}
       </Button>
 
-      {lastResult && !mutation.isPending && (
-        <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-800 dark:text-emerald-300">
-          Pagamento registado.
-          {!lastResult.synced && " (Sincronização com CRM pendente.)"}
-        </div>
-      )}
     </form>
+  );
+}
+
+function ConfirmationScreen({
+  data,
+  onNew,
+}: {
+  data: Confirmation;
+  onNew: () => void;
+}) {
+  const ok = data.synced;
+  const color = ok ? "#16a34a" : "#d97706";
+  const dateStr = new Intl.DateTimeFormat("pt-PT", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(data.criado_em);
+  const timeStr = new Intl.DateTimeFormat("pt-PT", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(data.criado_em);
+
+  return (
+    <div className="rounded-xl bg-card p-6 shadow-sm">
+      <div className="mb-4 flex items-center gap-3">
+        {ok ? (
+          <CheckCircle2 className="h-8 w-8 shrink-0" style={{ color }} />
+        ) : (
+          <AlertTriangle className="h-8 w-8 shrink-0" style={{ color }} />
+        )}
+        <h2 className="text-base font-semibold">
+          {ok ? "Pagamento registado!" : "Guardado — sincronização pendente"}
+        </h2>
+      </div>
+
+      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 border-t border-border pt-4 text-sm">
+        <dt className="text-muted-foreground">Cliente</dt>
+        <dd className="font-medium">{data.nome_cliente}</dd>
+        <dt className="text-muted-foreground">Tatuador</dt>
+        <dd className="font-medium">{data.artistName}</dd>
+        <dt className="text-muted-foreground">Tipo</dt>
+        <dd className="font-medium">{TIPO_LABEL[data.tipo]}</dd>
+        <dt className="text-muted-foreground">Método</dt>
+        <dd className="font-medium">{data.metodo}</dd>
+        <dt className="text-muted-foreground">Total</dt>
+        <dd className="font-bold tabular-nums">{fmtEur(data.total)}</dd>
+      </dl>
+
+      <p className="mt-4 text-xs text-muted-foreground">
+        Registado em {dateStr} às {timeStr}
+      </p>
+
+      <a
+        href={`/movimentacao/historico?highlight=${encodeURIComponent(data.id)}`}
+        className="mt-4 inline-block text-sm text-muted-foreground hover:text-foreground"
+      >
+        → Ver no histórico
+      </a>
+
+      <Button
+        type="button"
+        onClick={onNew}
+        className="mt-4 h-12 w-full text-base font-semibold"
+      >
+        Novo registo
+      </Button>
+    </div>
   );
 }
 
