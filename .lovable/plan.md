@@ -1,77 +1,67 @@
 ## Objetivo
 
-Permitir que quem preenche o formulário de `/movimentacao/$slug` escolha **quem recebeu o pagamento** (staff fixo) e **quem é o tatuador** (lista de artistas), separadamente. O slug passa a ser apenas uma pré-seleção do "Recebido por" — tudo continua editável.
+Adicionar 2 elementos à página `/movimentacao/$slug` sem tocar em campos, validações ou lógica de submit existentes.
 
-## O que muda para o utilizador
+## Mudanças
 
-No formulário público de pagamento:
+### 1. `src/routes/movimentacao.$slug.tsx` — botão "Histórico" no header
+
+No header (linha com nome do recebedor), adicionar à direita um `<Link to="/movimentacao/historico">` discreto com ícone `Clock` (lucide) + texto "Histórico". Cinza (`text-muted-foreground`), sem fundo/borda, `text-xs`. Layout do header vira `flex items-center justify-between`.
+
+Nota: a rota `/movimentacao/historico` ainda não existe — o link vai renderizar mas dar 404 até ser criada. Isto é intencional conforme o pedido ("NÃO criar nova rota aqui").
+
+### 2. `src/components/movimentacao/movimentacao-form.tsx` — tela de confirmação pós-submit
+
+Substituir o atual bloco `lastResult` (banner verde) por um **modo confirmação** que troca o form inteiro. Toda a lógica de submit, validação e mutação permanece intacta.
+
+**Estado**: expandir `lastResult` para guardar snapshot do registo criado:
+```ts
+{ id, synced, ghl_status, nome_cliente, artistName, tipo, metodo, total, criado_em }
+```
+Preenchido em `onSuccess` a partir de `res` + valores do form antes do reset. `artistName` resolvido via lookup em `artists` pelo `artist_id`. `metodo` derivado do campo com valor > 0 (cartão / dinheiro / sumup / transferência / misto se >1).
+
+**Render condicional**: se `lastResult` existe → renderiza `<ConfirmationScreen />` no lugar do `<form>`; senão renderiza o form como hoje.
+
+**ConfirmationScreen** (novo componente inline no mesmo arquivo):
+- Card `bg-card rounded-xl shadow-sm p-6` (mesma largura do form)
+- Ícone: `CheckCircle2` verde `#16a34a` se `ghl_status === "synced"`, senão `AlertTriangle` âmbar `#d97706`
+- Título correspondente ("Pagamento registado!" / "Guardado — sincronização pendente")
+- Tabela resumo (Cliente / Tatuador / Tipo / Método / Total) usando `<dl>` com `grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5`
+- Texto pequeno cinza: `Registado em ${formatDate} às ${HH:MM}` (usa `formatDate` de `@/lib/format` + `toLocaleTimeString` pt-PT)
+- Link `<a href="/movimentacao/historico?highlight=${id}">→ Ver no histórico</a>` (âncora HTML simples, cinza)
+- Botão primário "Novo registo": `setLastResult(null)` + `setForm(initialState(context))` — o `initialState` já usa `context.defaultRecebedorId` derivado do slug, então "Recebido por" volta pré-preenchido automaticamente
+
+### Backend: o `id` e `ghl_sync_status` do registo criado
+
+`createMovimentacao` em `src/lib/movimentacao.functions.ts` já retorna `{ id, ghl_sync_status, ... }` (usado hoje no `onSuccess`). Nenhuma alteração de servidor necessária. Se `id` não estiver no retorno atual, adiciono-o ao `select` do insert — a verificar ao ler o arquivo em build mode.
+
+## Fora de escopo
+
+- Criar rota `/movimentacao/historico` (pedido explícito)
+- Alterar campos, labels, validações, mutação, GHL sync
+- Retirar o `qc.invalidateQueries` / `haptic` / `toast` existentes (mantidos)
+
+## Aparência (ASCII)
 
 ```text
-Recebido por *   [ Gabriel ▾ ]   ← pré-selecionado pelo slug, editável
-Tatuador *       [ Selecione ▾ ] ← lista de artistas ativos (como hoje)
+┌─────────────────────────────────────┐
+│ Registro de pagamento               │
+│ Gabriel                  🕐 Histórico│
+└─────────────────────────────────────┘
+
+── após submit ──
+┌─────────────────────────────────────┐
+│  ✓  Pagamento registado!            │
+│                                     │
+│  Cliente    Luciene Caberlin        │
+│  Tatuador   Andre Pareyn            │
+│  Tipo       Saldo                   │
+│  Método     SumUp                   │
+│  Total      € 1.700,00              │
+│                                     │
+│  Registado em 22/07/2026 às 00:56   │
+│                                     │
+│  → Ver no histórico                 │
+│  [    Novo registo    ]             │
+└─────────────────────────────────────┘
 ```
-
-O card cinza "Recebido por: Gabriel Fernandes" (read-only) some — vira um `Select`.
-
-## Passos
-
-**1. Definir o staff fixo em `src/config/movimentacao-slugs.ts`**
-
-Adicionar uma lista canônica de quem pode receber pagamento, cada item apontando para o `app_user_id` real no banco (o que hoje é resolvido dinamicamente por `resolveSlugOwner`):
-
-```ts
-export type StaffRecebedorId = "gabriel" | "nivia" | "augusto" | "felipe";
-
-export interface StaffRecebedor {
-  id: StaffRecebedorId;
-  displayName: string;
-  appUserId: string;   // FK real em app_users(id)
-}
-
-export const STAFF_RECEBEDORES: StaffRecebedor[] = [...];
-```
-
-Preencho os `appUserId` reais consultando o banco antes de escrever o migration/config (Gabriel = ffmconsultoria, Nivia = conta do seller, Augusto = araujoaugusto499, Felipe = a decidir se existe conta ativa).
-
-Também adiciono `slug → StaffRecebedorId` como default:
-
-```ts
-export const SLUG_DEFAULT_RECEBEDOR: Record<MovimentacaoSlug, StaffRecebedorId> = {
-  gabriel: "gabriel", andre: "gabriel", joyce: "gabriel",
-  augusto: "augusto", nivia: "nivia",
-};
-```
-
-(Andre e Joyce hoje resolvem para a conta do Gabriel; mantenho esse comportamento como default, mas editável.)
-
-**2. `src/lib/movimentacao.functions.ts`**
-
-- `SlugContext` ganha `recebedores: StaffRecebedor[]` e `defaultRecebedorId: StaffRecebedorId`. Continuo devolvendo `recebidoPorNome` para o cabeçalho, mas ele passa a refletir o default.
-- `resolveSlugOwner(slug)` é substituído/complementado por uma resolução baseada em `STAFF_RECEBEDORES` — sem lookup dinâmico por `artist_id`/`seller_id`. Isso também remove o bug "Nenhuma conta linkada".
-- `CreateInput` do `createMovimentacao` ganha `recebido_por_id: z.enum([...ids])`. O handler traduz para `recebido_por_app_user_id` via `STAFF_RECEBEDORES`, em vez de derivar do slug.
-- `link_origem` continua sendo o `slug` (tracking de origem preservado).
-- GHL sync: `recebido_por_nome` passa a vir do staff escolhido, não do dono do slug.
-
-**3. `src/components/movimentacao/movimentacao-form.tsx`**
-
-- Substituir o card read-only "Recebido por" por um `Select` obrigatório, inicializado com `context.defaultRecebedorId`.
-- Adicionar `recebido_por_id` ao `FormState` e enviar no `submit`.
-- O cabeçalho da página (`movimentacao.$slug.tsx`) passa a mostrar o nome do recebedor atualmente selecionado (via callback opcional) ou simplesmente "Registro de pagamento" sem subtítulo.
-
-**4. Reprocess (admin)**
-
-`reprocessFailedMovimentacoes` lê `recebido_por_app_user_id` da linha existente (não mais do slug), então não precisa mais do `resolveSlugOwner` — só de um lookup em `app_users` para o `displayName` na hora do sync. Simplifica a função.
-
-## Detalhes técnicos
-
-- Compatibilidade: linhas antigas em `movimentacoes` já têm `recebido_por_app_user_id` correto — nada a migrar.
-- Segurança: `createMovimentacao` continua público (rota `/movimentacao/$slug`), mas o `recebido_por_id` é validado contra a lista fechada `STAFF_RECEBEDORES` (Zod enum), então não dá para forjar UUID arbitrário.
-- Verificação antes de escrever o config: rodar `SELECT id, email FROM app_users WHERE email IN (...)` para confirmar os 4 `appUserId`. Se o Felipe não tiver conta ativa, ele fica fora da lista (a decisão anterior foi apagar o `app_user` dele) — nesse caso o staff fica 3 pessoas (Gabriel, Nivia, Augusto).
-- Nenhum migration SQL é necessário.
-
-## Arquivos afetados
-
-- `src/config/movimentacao-slugs.ts` (adicionar STAFF_RECEBEDORES + defaults)
-- `src/lib/movimentacao.functions.ts` (SlugContext, createMovimentacao, reprocess)
-- `src/components/movimentacao/movimentacao-form.tsx` (novo Select)
-- `src/routes/movimentacao.$slug.tsx` (ajuste de cabeçalho)
