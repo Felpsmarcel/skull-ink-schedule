@@ -573,25 +573,6 @@ export interface HistoricoPage {
   pageSize: number;
 }
 
-function makePublicClient() {
-  const url = process.env.SUPABASE_URL!;
-  const key =
-    process.env.SUPABASE_PUBLISHABLE_KEY ?? process.env.SUPABASE_ANON_KEY ?? "";
-  return createClient(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false },
-    global: {
-      fetch: (input, init) => {
-        const h = new Headers(init?.headers);
-        if (key.startsWith("sb_") && h.get("Authorization") === `Bearer ${key}`) {
-          h.delete("Authorization");
-        }
-        h.set("apikey", key);
-        return fetch(input, { ...init, headers: h });
-      },
-    },
-  });
-}
-
 function deriveMetodo(r: {
   valor_cartao: number;
   valor_dinheiro: number;
@@ -616,62 +597,49 @@ const HistoricoInput = z.object({
 export const listMovimentacoesHistorico = createServerFn({ method: "GET" })
   .inputValidator((data: unknown) => HistoricoInput.parse(data))
   .handler(async ({ data }): Promise<HistoricoPage> => {
-    const supabase = makePublicClient();
-    const from = (data.page - 1) * data.pageSize;
-    const to = from + data.pageSize - 1;
-
-    const { data: rows, error, count } = await supabase
-      .from("movimentacoes")
-      .select(
-        "id, created_at, nome_cliente, link_origem, tipo_movimento, valor_cartao, valor_dinheiro, valor_sumup, valor_transferencia, total, ghl_sync_status, artist:artists(name)",
-        { count: "exact" },
-      )
-      .order("created_at", { ascending: false })
-      .range(from, to);
-
-    if (error) throw new Error(error.message);
-
-    // Sum total across all rows (single lightweight query)
-    const { data: totals, error: totalsErr } = await supabase
-      .from("movimentacoes")
-      .select("total");
-    if (totalsErr) throw new Error(totalsErr.message);
-    const totalValor = (totals ?? []).reduce(
-      (acc: number, r: { total: number | null }) => acc + Number(r.total ?? 0),
-      0,
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rowsRaw, error } = await supabaseAdmin.rpc(
+      "list_movimentacoes_historico" as never,
+      { p_page: data.page, p_page_size: data.pageSize } as never,
     );
-
-    const mapped: HistoricoRow[] = (rows ?? []).map((r) => {
-      const raw = r as unknown as {
-        id: string;
-        created_at: string;
-        nome_cliente: string;
-        link_origem: string;
-        tipo_movimento: MovimentacaoTipo;
-        valor_cartao: number;
-        valor_dinheiro: number;
-        valor_sumup: number;
-        valor_transferencia: number;
-        total: number;
-        ghl_sync_status: "pending" | "synced" | "failed";
-        artist: { name: string | null } | null;
-      };
-      return {
-        id: raw.id,
-        created_at: raw.created_at,
-        nome_cliente: raw.nome_cliente,
-        tatuador: raw.artist?.name ?? null,
-        link_origem: raw.link_origem,
-        tipo_movimento: raw.tipo_movimento,
-        metodo: deriveMetodo(raw),
-        total: Number(raw.total ?? 0),
-        ghl_status: raw.ghl_sync_status === "synced" ? "synced" : "pending",
-      };
-    });
-
+    if (error) throw new Error(error.message);
+    const rows = (rowsRaw ?? []) as Array<{
+      id: string;
+      created_at: string;
+      nome_cliente: string;
+      tatuador: string | null;
+      link_origem: string;
+      tipo_movimento: MovimentacaoTipo;
+      valor_cartao: number | string;
+      valor_dinheiro: number | string;
+      valor_sumup: number | string;
+      valor_transferencia: number | string;
+      total: number | string;
+      ghl_sync_status: "pending" | "synced" | "failed";
+      total_count: number | string;
+      total_valor: number | string;
+    }>;
+    const totalCount = rows.length > 0 ? Number(rows[0].total_count) : 0;
+    const totalValor = rows.length > 0 ? Number(rows[0].total_valor) : 0;
+    const mapped: HistoricoRow[] = rows.map((r) => ({
+      id: r.id,
+      created_at: r.created_at,
+      nome_cliente: r.nome_cliente,
+      tatuador: r.tatuador,
+      link_origem: r.link_origem,
+      tipo_movimento: r.tipo_movimento,
+      metodo: deriveMetodo({
+        valor_cartao: Number(r.valor_cartao),
+        valor_dinheiro: Number(r.valor_dinheiro),
+        valor_sumup: Number(r.valor_sumup),
+        valor_transferencia: Number(r.valor_transferencia),
+      }),
+      total: Number(r.total ?? 0),
+      ghl_status: r.ghl_sync_status === "synced" ? "synced" : "pending",
+    }));
     return {
       rows: mapped,
-      total: count ?? 0,
+      total: totalCount,
       totalValor,
       page: data.page,
       pageSize: data.pageSize,
@@ -686,21 +654,12 @@ const FindPageInput = z.object({
 export const findMovimentacaoPage = createServerFn({ method: "GET" })
   .inputValidator((data: unknown) => FindPageInput.parse(data))
   .handler(async ({ data }): Promise<{ page: number } | null> => {
-    const supabase = makePublicClient();
-    const { data: row, error } = await supabase
-      .from("movimentacoes")
-      .select("created_at")
-      .eq("id", data.id)
-      .limit(1)
-      .maybeSingle();
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: pageNum, error } = await supabaseAdmin.rpc(
+      "find_movimentacao_page" as never,
+      { p_id: data.id, p_page_size: data.pageSize } as never,
+    );
     if (error) throw new Error(error.message);
-    if (!row) return null;
-    const { count, error: countErr } = await supabase
-      .from("movimentacoes")
-      .select("id", { count: "exact", head: true })
-      .gt("created_at", (row as { created_at: string }).created_at);
-    if (countErr) throw new Error(countErr.message);
-    const position = (count ?? 0) + 1;
-    const page = Math.ceil(position / data.pageSize);
-    return { page };
+    if (pageNum == null) return null;
+    return { page: Number(pageNum) };
   });
