@@ -6,6 +6,12 @@ import {
   isMovimentacaoSlug,
   type MovimentacaoSlug,
   type SlugTarget,
+  STAFF_RECEBEDORES,
+  STAFF_RECEBEDOR_IDS,
+  SLUG_DEFAULT_RECEBEDOR,
+  getStaffRecebedor,
+  type StaffRecebedor,
+  type StaffRecebedorId,
 } from "@/config/movimentacao-slugs";
 
 // ---------------- Types --------------------------------------------------
@@ -16,9 +22,11 @@ export type FormaPagamento = "cartao" | "dinheiro" | "sumup" | "transferencia";
 export interface SlugContext {
   slug: MovimentacaoSlug;
   target: SlugTarget;
-  recebidoPorAppUserId: string; // dono do slug
-  recebidoPorNome: string;
+  recebidoPorAppUserId: string; // default (do slug)
+  recebidoPorNome: string;      // default (do slug)
   defaultArtistId: string | null; // pré-seleção do select "Tatuador"
+  recebedores: StaffRecebedor[];
+  defaultRecebedorId: StaffRecebedorId;
 }
 
 export interface MovimentacaoRow {
@@ -64,51 +72,21 @@ async function getAppUserRow(
   );
 }
 
-async function resolveSlugOwner(
-  slug: MovimentacaoSlug,
-): Promise<{ appUserId: string; displayName: string; defaultArtistId: string | null }> {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+function resolveSlugDefaults(slug: MovimentacaoSlug): {
+  defaultRecebedorId: StaffRecebedorId;
+  appUserId: string;
+  displayName: string;
+  defaultArtistId: string | null;
+} {
   const target = MOVIMENTACAO_SLUGS[slug];
-
-  if (target.kind === "artist") {
-    const { data, error } = await supabaseAdmin
-      .from("app_users" as never)
-      .select("id, role, created_at")
-      .eq("artist_id", target.artistId)
-      .order("created_at", { ascending: true })
-      .limit(1);
-    if (error) throw new Error(error.message);
-    const rows = (data ?? []) as Array<{ id: string }>;
-    const row = rows[0] ?? null;
-    if (!row) {
-      throw new Error(
-        `Nenhuma conta linkada ao artista ${target.displayName}. Convide-o em /admin/equipe antes de usar este link.`,
-      );
-    }
-    return {
-      appUserId: row.id,
-      displayName: target.displayName,
-      defaultArtistId: target.artistId,
-    };
-  }
-
-  // seller
-  const { data, error } = await supabaseAdmin
-    .from("app_users" as never)
-    .select("id, role, created_at")
-    .eq("seller_id", target.sellerId)
-    .eq("role", "seller")
-    .order("created_at", { ascending: true })
-    .limit(1);
-  if (error) throw new Error(error.message);
-  const rows = (data ?? []) as Array<{ id: string }>;
-  const row = rows[0] ?? null;
-  if (!row) {
-    throw new Error(
-      `Nenhuma conta linkada a ${target.displayName}. Convide em /admin/vendedores antes de usar este link.`,
-    );
-  }
-  return { appUserId: row.id, displayName: target.displayName, defaultArtistId: null };
+  const defaultRecebedorId = SLUG_DEFAULT_RECEBEDOR[slug];
+  const staff = getStaffRecebedor(defaultRecebedorId);
+  return {
+    defaultRecebedorId,
+    appUserId: staff.appUserId,
+    displayName: staff.displayName,
+    defaultArtistId: target.kind === "artist" ? target.artistId : null,
+  };
 }
 
 // ---------------- getSlugContext ----------------------------------------
@@ -124,14 +102,16 @@ export const getSlugContext = createServerFn({ method: "GET" })
     const slug = data.slug;
     const target = MOVIMENTACAO_SLUGS[slug];
 
-    const owner = await resolveSlugOwner(slug);
+    const defaults = resolveSlugDefaults(slug);
 
     return {
       slug,
       target,
-      recebidoPorAppUserId: owner.appUserId,
-      recebidoPorNome: owner.displayName,
-      defaultArtistId: owner.defaultArtistId,
+      recebidoPorAppUserId: defaults.appUserId,
+      recebidoPorNome: defaults.displayName,
+      defaultArtistId: defaults.defaultArtistId,
+      recebedores: STAFF_RECEBEDORES,
+      defaultRecebedorId: defaults.defaultRecebedorId,
     };
   });
 
