@@ -74,3 +74,42 @@ export function findSlugForSeller(sellerId: string): MovimentacaoSlug | null {
   }
   return null;
 }
+
+// ---------- Staff que pode receber pagamento --------------------------------
+// Lista fechada usada no seletor "Recebido por" do formulário público.
+// appUserId aponta para app_users(id) real — validado no banco em 2026-07.
+
+export type StaffRecebedorId = "gabriel" | "nivia" | "augusto";
+
+export interface StaffRecebedor {
+  id: StaffRecebedorId;
+  displayName: string;
+  appUserId: string;
+}
+
+export const STAFF_RECEBEDORES: StaffRecebedor[] = [
+  { id: "gabriel", displayName: "Gabriel", appUserId: "7cf2055b-0ee6-4dc9-95aa-6ec7b6b491a8" },
+  { id: "nivia",   displayName: "Nivia",   appUserId: "ac83fbba-ea45-4e26-ba1a-0a0020fc0e3e" },
+  { id: "augusto", displayName: "Augusto", appUserId: "952d9a08-873e-46d5-a2f2-c3b7800f72b9" },
+];
+
+export const STAFF_RECEBEDOR_IDS: [StaffRecebedorId, ...StaffRecebedorId[]] = [
+  "gabriel",
+  "nivia",
+  "augusto",
+];
+
+export function getStaffRecebedor(id: StaffRecebedorId): StaffRecebedor {
+  const hit = STAFF_RECEBEDORES.find((s) => s.id === id);
+  if (!hit) throw new Error(`Recebedor inválido: ${id}`);
+  return hit;
+}
+
+// Slug → recebedor default (editável no formulário).
+export const SLUG_DEFAULT_RECEBEDOR: Record<MovimentacaoSlug, StaffRecebedorId> = {
+  gabriel: "gabriel",
+  andre: "gabriel",
+  joyce: "gabriel",
+  augusto: "augusto",
+  nivia: "nivia",
+};
