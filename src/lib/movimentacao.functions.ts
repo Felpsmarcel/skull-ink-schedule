@@ -411,6 +411,7 @@ interface FailedRow {
   nome_cliente: string;
   data_pagamento: string;
   artist_id: string;
+  recebido_por_app_user_id: string | null;
   link_origem: string;
   tipo_movimento: MovimentacaoTipo;
   valor_cartao: number;
@@ -448,7 +449,7 @@ export const reprocessFailedMovimentacoes = createServerFn({ method: "POST" })
     let q = supabaseAdmin
       .from("movimentacoes" as never)
       .select(
-        "id, chave_idempotencia, nome_cliente, data_pagamento, artist_id, link_origem, tipo_movimento, valor_cartao, valor_dinheiro, valor_sumup, valor_transferencia, total, data_tatuagem, observacoes, ghl_sync_attempts",
+        "id, chave_idempotencia, nome_cliente, data_pagamento, artist_id, recebido_por_app_user_id, link_origem, tipo_movimento, valor_cartao, valor_dinheiro, valor_sumup, valor_transferencia, total, data_tatuagem, observacoes, ghl_sync_attempts",
       )
       .eq("ghl_sync_status", "failed")
       .order("created_at", { ascending: true })
@@ -474,15 +475,25 @@ export const reprocessFailedMovimentacoes = createServerFn({ method: "POST" })
       ),
     );
 
-    // Cache de owners por slug para evitar múltiplos lookups.
-    const ownerCache = new Map<string, Awaited<ReturnType<typeof resolveSlugOwner>>>();
-    async function getOwner(slug: string) {
-      if (!isMovimentacaoSlug(slug)) return null;
-      const cached = ownerCache.get(slug);
-      if (cached) return cached;
-      const owner = await resolveSlugOwner(slug);
-      ownerCache.set(slug, owner);
-      return owner;
+    // Resolve displayName do recebedor por app_user_id: primeiro do staff fixo,
+    // depois fallback para app_users (linhas antigas com contas removidas).
+    const staffByUserId = new Map(STAFF_RECEBEDORES.map((s) => [s.appUserId, s.displayName] as const));
+    const missingIds = Array.from(
+      new Set(rows.map((r) => r.recebido_por_app_user_id).filter((x): x is string => !!x && !staffByUserId.has(x))),
+    );
+    const dbNames = new Map<string, string>();
+    if (missingIds.length > 0) {
+      const { data: users } = await supabaseAdmin
+        .from("app_users" as never)
+        .select("id, display_name")
+        .in("id", missingIds);
+      for (const u of (users ?? []) as Array<{ id: string; display_name: string | null }>) {
+        if (u.display_name) dbNames.set(u.id, u.display_name);
+      }
+    }
+    function nameFor(appUserId: string | null): string {
+      if (!appUserId) return "";
+      return staffByUserId.get(appUserId) ?? dbNames.get(appUserId) ?? "";
     }
 
     const { syncMovimentacaoToGhl } = await import("./movimentacao-ghl.server");
@@ -493,29 +504,13 @@ export const reprocessFailedMovimentacoes = createServerFn({ method: "POST" })
     const nowIso = new Date().toISOString();
 
     for (const row of rows) {
-      const owner = await getOwner(row.link_origem);
-      if (!owner) {
-        failed++;
-        const msg = `link_origem inválido: ${row.link_origem}`;
-        errors.push({ id: row.id, error: msg });
-        await supabaseAdmin
-          .from("movimentacoes" as never)
-          .update({
-            ghl_sync_error: msg.slice(0, 500),
-            ghl_sync_attempts: (row.ghl_sync_attempts ?? 0) + 1,
-            ghl_last_synced_at: nowIso,
-          } as never)
-          .eq("id", row.id);
-        continue;
-      }
-
       const sync = await syncMovimentacaoToGhl({
         id: row.id,
         chave_idempotencia: row.chave_idempotencia,
         nome_cliente: row.nome_cliente,
         data_pagamento: row.data_pagamento,
         artist_name: artistName.get(row.artist_id) ?? "",
-        recebido_por_nome: owner.displayName,
+        recebido_por_nome: nameFor(row.recebido_por_app_user_id),
         link_origem: row.link_origem,
         tipo_movimento: row.tipo_movimento,
         valor_cartao: Number(row.valor_cartao),
