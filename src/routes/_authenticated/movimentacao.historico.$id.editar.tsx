@@ -214,7 +214,7 @@ function EditarPage() {
             maxLength={120}
             value={form.nome_cliente}
             onChange={(e) => setForm({ ...form, nome_cliente: e.target.value })}
-            className="input"
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-900"
           />
         </Field>
 
@@ -223,7 +223,7 @@ function EditarPage() {
             required
             value={form.artist_id}
             onChange={(e) => setForm({ ...form, artist_id: e.target.value })}
-            className="input"
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-900"
           >
             {(artistsQ.data ?? []).map((a) => (
               <option key={a.id} value={a.id}>
@@ -239,7 +239,7 @@ function EditarPage() {
             onChange={(e) =>
               setForm({ ...form, tipo_movimento: e.target.value as MovimentacaoTipo })
             }
-            className="input"
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-900"
           >
             {TIPO_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
@@ -352,7 +352,7 @@ function MoneyField({
           min="0"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="input pl-7"
+          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 pl-7 text-sm outline-none focus:border-slate-900"
         />
       </div>
     </label>
