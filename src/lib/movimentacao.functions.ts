@@ -475,25 +475,12 @@ export const reprocessFailedMovimentacoes = createServerFn({ method: "POST" })
       ),
     );
 
-    // Resolve displayName do recebedor por app_user_id: primeiro do staff fixo,
-    // depois fallback para app_users (linhas antigas com contas removidas).
-    const staffByUserId = new Map(STAFF_RECEBEDORES.map((s) => [s.appUserId, s.displayName] as const));
-    const missingIds = Array.from(
-      new Set(rows.map((r) => r.recebido_por_app_user_id).filter((x): x is string => !!x && !staffByUserId.has(x))),
+    // Resolve displayName do recebedor a partir do staff fixo.
+    const staffByUserId = new Map(
+      STAFF_RECEBEDORES.map((s) => [s.appUserId, s.displayName] as const),
     );
-    const dbNames = new Map<string, string>();
-    if (missingIds.length > 0) {
-      const { data: users } = await supabaseAdmin
-        .from("app_users" as never)
-        .select("id, display_name")
-        .in("id", missingIds);
-      for (const u of (users ?? []) as Array<{ id: string; display_name: string | null }>) {
-        if (u.display_name) dbNames.set(u.id, u.display_name);
-      }
-    }
     function nameFor(appUserId: string | null): string {
-      if (!appUserId) return "";
-      return staffByUserId.get(appUserId) ?? dbNames.get(appUserId) ?? "";
+      return appUserId ? staffByUserId.get(appUserId) ?? "" : "";
     }
 
     const { syncMovimentacaoToGhl } = await import("./movimentacao-ghl.server");
