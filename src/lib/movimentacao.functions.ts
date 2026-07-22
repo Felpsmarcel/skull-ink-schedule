@@ -1,6 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { createClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
   MOVIMENTACAO_SLUGS,
@@ -574,25 +573,6 @@ export interface HistoricoPage {
   pageSize: number;
 }
 
-function makePublicClient() {
-  const url = process.env.SUPABASE_URL!;
-  const key =
-    process.env.SUPABASE_PUBLISHABLE_KEY ?? process.env.SUPABASE_ANON_KEY ?? "";
-  return createClient(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false },
-    global: {
-      fetch: (input, init) => {
-        const h = new Headers(init?.headers);
-        if (key.startsWith("sb_") && h.get("Authorization") === `Bearer ${key}`) {
-          h.delete("Authorization");
-        }
-        h.set("apikey", key);
-        return fetch(input, { ...init, headers: h });
-      },
-    },
-  });
-}
-
 function deriveMetodo(r: {
   valor_cartao: number;
   valor_dinheiro: number;
@@ -617,62 +597,49 @@ const HistoricoInput = z.object({
 export const listMovimentacoesHistorico = createServerFn({ method: "GET" })
   .inputValidator((data: unknown) => HistoricoInput.parse(data))
   .handler(async ({ data }): Promise<HistoricoPage> => {
-    const supabase = makePublicClient();
-    const from = (data.page - 1) * data.pageSize;
-    const to = from + data.pageSize - 1;
-
-    const { data: rows, error, count } = await supabase
-      .from("movimentacoes")
-      .select(
-        "id, created_at, nome_cliente, link_origem, tipo_movimento, valor_cartao, valor_dinheiro, valor_sumup, valor_transferencia, total, ghl_sync_status, artist:artists(name)",
-        { count: "exact" },
-      )
-      .order("created_at", { ascending: false })
-      .range(from, to);
-
-    if (error) throw new Error(error.message);
-
-    // Sum total across all rows (single lightweight query)
-    const { data: totals, error: totalsErr } = await supabase
-      .from("movimentacoes")
-      .select("total");
-    if (totalsErr) throw new Error(totalsErr.message);
-    const totalValor = (totals ?? []).reduce(
-      (acc: number, r: { total: number | null }) => acc + Number(r.total ?? 0),
-      0,
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rowsRaw, error } = await supabaseAdmin.rpc(
+      "list_movimentacoes_historico" as never,
+      { p_page: data.page, p_page_size: data.pageSize } as never,
     );
-
-    const mapped: HistoricoRow[] = (rows ?? []).map((r) => {
-      const raw = r as unknown as {
-        id: string;
-        created_at: string;
-        nome_cliente: string;
-        link_origem: string;
-        tipo_movimento: MovimentacaoTipo;
-        valor_cartao: number;
-        valor_dinheiro: number;
-        valor_sumup: number;
-        valor_transferencia: number;
-        total: number;
-        ghl_sync_status: "pending" | "synced" | "failed";
-        artist: { name: string | null } | null;
-      };
-      return {
-        id: raw.id,
-        created_at: raw.created_at,
-        nome_cliente: raw.nome_cliente,
-        tatuador: raw.artist?.name ?? null,
-        link_origem: raw.link_origem,
-        tipo_movimento: raw.tipo_movimento,
-        metodo: deriveMetodo(raw),
-        total: Number(raw.total ?? 0),
-        ghl_status: raw.ghl_sync_status === "synced" ? "synced" : "pending",
-      };
-    });
-
+    if (error) throw new Error(error.message);
+    const rows = (rowsRaw ?? []) as Array<{
+      id: string;
+      created_at: string;
+      nome_cliente: string;
+      tatuador: string | null;
+      link_origem: string;
+      tipo_movimento: MovimentacaoTipo;
+      valor_cartao: number | string;
+      valor_dinheiro: number | string;
+      valor_sumup: number | string;
+      valor_transferencia: number | string;
+      total: number | string;
+      ghl_sync_status: "pending" | "synced" | "failed";
+      total_count: number | string;
+      total_valor: number | string;
+    }>;
+    const totalCount = rows.length > 0 ? Number(rows[0].total_count) : 0;
+    const totalValor = rows.length > 0 ? Number(rows[0].total_valor) : 0;
+    const mapped: HistoricoRow[] = rows.map((r) => ({
+      id: r.id,
+      created_at: r.created_at,
+      nome_cliente: r.nome_cliente,
+      tatuador: r.tatuador,
+      link_origem: r.link_origem,
+      tipo_movimento: r.tipo_movimento,
+      metodo: deriveMetodo({
+        valor_cartao: Number(r.valor_cartao),
+        valor_dinheiro: Number(r.valor_dinheiro),
+        valor_sumup: Number(r.valor_sumup),
+        valor_transferencia: Number(r.valor_transferencia),
+      }),
+      total: Number(r.total ?? 0),
+      ghl_status: r.ghl_sync_status === "synced" ? "synced" : "pending",
+    }));
     return {
       rows: mapped,
-      total: count ?? 0,
+      total: totalCount,
       totalValor,
       page: data.page,
       pageSize: data.pageSize,
@@ -687,21 +654,278 @@ const FindPageInput = z.object({
 export const findMovimentacaoPage = createServerFn({ method: "GET" })
   .inputValidator((data: unknown) => FindPageInput.parse(data))
   .handler(async ({ data }): Promise<{ page: number } | null> => {
-    const supabase = makePublicClient();
-    const { data: row, error } = await supabase
-      .from("movimentacoes")
-      .select("created_at")
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: pageNum, error } = await supabaseAdmin.rpc(
+      "find_movimentacao_page" as never,
+      { p_id: data.id, p_page_size: data.pageSize } as never,
+    );
+    if (error) throw new Error(error.message);
+    if (pageNum == null) return null;
+    return { page: Number(pageNum) };
+  });
+
+// ---------------- Editable dashboard ------------------------------------
+
+export interface MovimentacaoEditRow {
+  id: string;
+  created_at: string;
+  nome_cliente: string;
+  data_pagamento: string;
+  artist_id: string;
+  artist_name: string | null;
+  recebido_por_app_user_id: string;
+  recebido_por_nome: string | null;
+  link_origem: string;
+  tipo_movimento: MovimentacaoTipo;
+  valor_cartao: number;
+  valor_dinheiro: number;
+  valor_sumup: number;
+  valor_transferencia: number;
+  total: number;
+  data_tatuagem: string | null;
+  observacoes: string | null;
+  ghl_sync_status: "pending" | "synced" | "failed";
+  deleted_at: string | null;
+  canEdit: boolean;
+}
+
+function canEditRow(
+  role: string | null,
+  userId: string,
+  recebidoPorAppUserId: string | null,
+): boolean {
+  if (role === "admin") return true;
+  return !!recebidoPorAppUserId && recebidoPorAppUserId === userId;
+}
+
+const IdInput = z.object({ id: z.string().uuid() });
+
+export const getMovimentacaoForEdit = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => IdInput.parse(data))
+  .handler(async ({ data, context }): Promise<MovimentacaoEditRow> => {
+    const me = await getAppUserRow(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rowRaw, error } = await supabaseAdmin
+      .from("movimentacoes" as never)
+      .select(
+        "id, created_at, nome_cliente, data_pagamento, artist_id, recebido_por_app_user_id, link_origem, tipo_movimento, valor_cartao, valor_dinheiro, valor_sumup, valor_transferencia, total, data_tatuagem, observacoes, ghl_sync_status, deleted_at",
+      )
       .eq("id", data.id)
-      .limit(1)
       .maybeSingle();
     if (error) throw new Error(error.message);
-    if (!row) return null;
-    const { count, error: countErr } = await supabase
-      .from("movimentacoes")
-      .select("id", { count: "exact", head: true })
-      .gt("created_at", (row as { created_at: string }).created_at);
-    if (countErr) throw new Error(countErr.message);
-    const position = (count ?? 0) + 1;
-    const page = Math.ceil(position / data.pageSize);
-    return { page };
+    if (!rowRaw) throw new Error("Registo não encontrado.");
+    const row = rowRaw as unknown as Omit<MovimentacaoEditRow, "artist_name" | "recebido_por_nome" | "canEdit">;
+
+    const [{ data: artist }, staffName] = await Promise.all([
+      supabaseAdmin
+        .from("artists" as never)
+        .select("name")
+        .eq("id", row.artist_id)
+        .maybeSingle(),
+      Promise.resolve(
+        STAFF_RECEBEDORES.find((s) => s.appUserId === row.recebido_por_app_user_id)
+          ?.displayName ?? null,
+      ),
+    ]);
+
+    return {
+      ...row,
+      valor_cartao: Number(row.valor_cartao),
+      valor_dinheiro: Number(row.valor_dinheiro),
+      valor_sumup: Number(row.valor_sumup),
+      valor_transferencia: Number(row.valor_transferencia),
+      total: Number(row.total),
+      artist_name: (artist as { name?: string | null } | null)?.name ?? null,
+      recebido_por_nome: staffName,
+      canEdit: canEditRow(me.role, context.userId, row.recebido_por_app_user_id),
+    };
+  });
+
+const UpdateInput = z.object({
+  id: z.string().uuid(),
+  nome_cliente: z.string().trim().min(2).max(120),
+  artist_id: z.string().uuid(),
+  tipo_movimento: z.enum(["sinal", "sessao", "saldo", "produto", "estorno"]),
+  valor_cartao: z.number().min(0),
+  valor_dinheiro: z.number().min(0),
+  valor_sumup: z.number().min(0),
+  valor_transferencia: z.number().min(0),
+});
+
+export const updateMovimentacao = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => UpdateInput.parse(data))
+  .handler(async ({ data, context }): Promise<{ ok: true }> => {
+    if (data.valor_cartao > 0 && data.valor_sumup > 0) {
+      throw new Error("SumUp e Cartão são métodos exclusivos.");
+    }
+    const total =
+      data.valor_cartao + data.valor_dinheiro + data.valor_sumup + data.valor_transferencia;
+    if (total <= 0) throw new Error("O total deve ser superior a €0.");
+
+    const me = await getAppUserRow(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: cur, error: curErr } = await supabaseAdmin
+      .from("movimentacoes" as never)
+      .select("recebido_por_app_user_id")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (curErr) throw new Error(curErr.message);
+    if (!cur) throw new Error("Registo não encontrado.");
+    const recebedor = (cur as { recebido_por_app_user_id: string | null }).recebido_por_app_user_id;
+    if (!canEditRow(me.role, context.userId, recebedor)) {
+      throw new Error("Sem permissão para editar este registo.");
+    }
+
+    // Confirm artist exists.
+    const { data: artist, error: artErr } = await supabaseAdmin
+      .from("artists" as never)
+      .select("id")
+      .eq("id", data.artist_id)
+      .maybeSingle();
+    if (artErr) throw new Error(artErr.message);
+    if (!artist) throw new Error("Tatuador inválido.");
+
+    const { error: updErr } = await supabaseAdmin
+      .from("movimentacoes" as never)
+      .update({
+        nome_cliente: data.nome_cliente.trim(),
+        artist_id: data.artist_id,
+        tipo_movimento: data.tipo_movimento,
+        valor_cartao: data.valor_cartao,
+        valor_dinheiro: data.valor_dinheiro,
+        valor_sumup: data.valor_sumup,
+        valor_transferencia: data.valor_transferencia,
+        ghl_sync_status: "pending",
+      } as never)
+      .eq("id", data.id);
+    if (updErr) throw new Error(updErr.message);
+
+    return { ok: true };
+  });
+
+export const softDeleteMovimentacao = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => IdInput.parse(data))
+  .handler(async ({ data, context }): Promise<{ ok: true }> => {
+    const me = await getAppUserRow(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: cur, error } = await supabaseAdmin
+      .from("movimentacoes" as never)
+      .select("recebido_por_app_user_id")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!cur) throw new Error("Registo não encontrado.");
+    const recebedor = (cur as { recebido_por_app_user_id: string | null }).recebido_por_app_user_id;
+    if (!canEditRow(me.role, context.userId, recebedor)) {
+      throw new Error("Sem permissão para apagar este registo.");
+    }
+    const { error: delErr } = await supabaseAdmin
+      .from("movimentacoes" as never)
+      .update({ deleted_at: new Date().toISOString() } as never)
+      .eq("id", data.id);
+    if (delErr) throw new Error(delErr.message);
+    return { ok: true };
+  });
+
+export const resyncMovimentacaoGhl = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => IdInput.parse(data))
+  .handler(async ({ data, context }): Promise<{ ok: boolean; error?: string }> => {
+    const me = await getAppUserRow(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rowRaw, error } = await supabaseAdmin
+      .from("movimentacoes" as never)
+      .select(
+        "id, chave_idempotencia, nome_cliente, data_pagamento, artist_id, recebido_por_app_user_id, link_origem, tipo_movimento, valor_cartao, valor_dinheiro, valor_sumup, valor_transferencia, total, data_tatuagem, observacoes, ghl_sync_attempts",
+      )
+      .eq("id", data.id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!rowRaw) throw new Error("Registo não encontrado.");
+    const row = rowRaw as FailedRow;
+    if (!canEditRow(me.role, context.userId, row.recebido_por_app_user_id)) {
+      throw new Error("Sem permissão para ressincronizar.");
+    }
+
+    const { data: artistRaw } = await supabaseAdmin
+      .from("artists" as never)
+      .select("name")
+      .eq("id", row.artist_id)
+      .maybeSingle();
+    const artistName = (artistRaw as { name?: string } | null)?.name ?? "";
+    const staffName =
+      STAFF_RECEBEDORES.find((s) => s.appUserId === row.recebido_por_app_user_id)
+        ?.displayName ?? "";
+
+    const { syncMovimentacaoToGhl } = await import("./movimentacao-ghl.server");
+    const sync = await syncMovimentacaoToGhl({
+      id: row.id,
+      chave_idempotencia: row.chave_idempotencia,
+      nome_cliente: row.nome_cliente,
+      data_pagamento: row.data_pagamento,
+      artist_name: artistName,
+      recebido_por_nome: staffName,
+      link_origem: row.link_origem,
+      tipo_movimento: row.tipo_movimento,
+      valor_cartao: Number(row.valor_cartao),
+      valor_dinheiro: Number(row.valor_dinheiro),
+      valor_sumup: Number(row.valor_sumup),
+      valor_transferencia: Number(row.valor_transferencia),
+      total: Number(row.total),
+      data_tatuagem: row.data_tatuagem,
+      observacoes: row.observacoes,
+    });
+    const attempts = (row.ghl_sync_attempts ?? 0) + 1;
+    const nowIso = new Date().toISOString();
+    if (sync.ok || (sync.error && isDuplicateError(sync.error))) {
+      await supabaseAdmin
+        .from("movimentacoes" as never)
+        .update({
+          ghl_sync_status: "synced",
+          ghl_custom_object_id: sync.ghl_custom_object_id ?? null,
+          ghl_last_synced_at: nowIso,
+          ghl_sync_attempts: attempts,
+          ghl_sync_error: null,
+        } as never)
+        .eq("id", row.id);
+      return { ok: true };
+    }
+    await supabaseAdmin
+      .from("movimentacoes" as never)
+      .update({
+        ghl_sync_status: "failed",
+        ghl_sync_error: (sync.error ?? "").slice(0, 500),
+        ghl_sync_attempts: attempts,
+        ghl_last_synced_at: nowIso,
+      } as never)
+      .eq("id", row.id);
+    return { ok: false, error: sync.error };
+  });
+
+// ---------------- List authenticated user's editable ids ---------------
+
+const EditableIdsInput = z.object({ ids: z.array(z.string().uuid()).max(50) });
+
+export const getEditableMovimentacaoIds = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => EditableIdsInput.parse(data))
+  .handler(async ({ data, context }): Promise<{ ids: string[] }> => {
+    if (data.ids.length === 0) return { ids: [] };
+    const me = await getAppUserRow(context.supabase, context.userId);
+    if (me.role === "admin") return { ids: data.ids };
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows, error } = await supabaseAdmin
+      .from("movimentacoes" as never)
+      .select("id, recebido_por_app_user_id")
+      .in("id", data.ids);
+    if (error) throw new Error(error.message);
+    const list = (rows ?? []) as Array<{ id: string; recebido_por_app_user_id: string | null }>;
+    return {
+      ids: list
+        .filter((r) => r.recebido_por_app_user_id === context.userId)
+        .map((r) => r.id),
+    };
   });

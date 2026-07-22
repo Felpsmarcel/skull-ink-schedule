@@ -1,74 +1,76 @@
-# /movimentacao/historico — histórico público de pagamentos
+## Objetivo
 
-Rota pública (sem auth) que lista todos os registos de `movimentacoes`, com paginação, destaque via `?highlight=<id>` e link "Voltar".
+Permitir editar registos de `movimentacoes` a partir do histórico, com página dedicada `/movimentacao/historico/$id/editar`, acesso a admins e vendedores, soft delete e ressync GHL.
 
-## Mapeamento do spec ↔ schema real
+## Modelo de acesso
 
-O schema real difere do descrito no pedido. Reconciliação:
+- **Admin**: edita/apaga/ressincroniza qualquer registo.
+- **Vendedor**: edita/apaga/ressincroniza apenas registos onde `recebido_por_slug` (ou coluna equivalente já existente que identifica o vendedor/recebedor do link) corresponde ao seller do utilizador.
+- Página pública `/movimentacao/historico` continua em leitura anónima; botão "Editar" aparece condicionalmente quando há sessão autenticada com permissão.
 
-| Pedido            | Schema real                                                                     |
-| ----------------- | ------------------------------------------------------------------------------- |
-| `cliente`         | `nome_cliente`                                                                  |
-| `tatuador`        | join `artists.name` via `artist_id`                                             |
-| `link`            | `link_origem`                                                                   |
-| `tipo`            | `tipo_movimento` enum (`sinal`/`sessao`/`saldo`/`produto`/`estorno`) → rotular  |
-| `metodo`          | derivado dos `valor_cartao/dinheiro/sumup/transferencia > 0` (pode ser "misto") |
-| `valor`           | `total`                                                                         |
-| `ghl_status`      | `ghl_sync_status` enum (`pending`/`synced`/`failed`)                            |
-| `created_at`      | `created_at`                                                                    |
+## Base de dados
 
-Rótulos:
-- Tipo: sinal→"Sinal", sessao→"Sessão pagamento do dia", saldo→"Valor total", produto→"Produto GF TATTOO", estorno→"Estorno"
-- Método: se só um valor > 0 → nome desse método (Cartão/Dinheiro/SumUp/Transferência); se >1 → "Misto"
-- Badge: `synced`→"✓ Sync" (verde); `pending`/`failed`→"⚠ Pendente" (âmbar). Nunca expor "failed"/erros técnicos.
+Migração:
+- Adicionar `deleted_at timestamptz` a `movimentacoes` (soft delete).
+- Adicionar `updated_at timestamptz` + trigger se ainda não existir.
+- Ajustar policy pública `SELECT anon` para filtrar `deleted_at IS NULL`.
+- Nova policy `UPDATE` para `authenticated`: admin (via `has_role`) OU vendedor dono (comparando `recebido_por_slug` com o slug do seller). Idem policy leitura autenticada dos próprios registos (mesmo se soft-deleted, para a UI mostrar histórico).
+- View / RPC opcional `movimentacoes_stats` já mencionada anteriormente — reaproveitar.
 
-## Passos
+## Server functions (`src/lib/movimentacao.functions.ts`)
 
-1. **Server function pública** `listMovimentacoesHistorico` em `src/lib/movimentacao.functions.ts`:
-   - Sem `.middleware([requireSupabaseAuth])`. Usa cliente publishable (`SUPABASE_URL` + `SUPABASE_PUBLISHABLE_KEY`, sem persistência) dentro do `.handler`.
-   - Input: `{ page: number, pageSize: 15 }`.
-   - Query: `movimentacoes` LEFT JOIN `artists(name)`, ORDER BY `created_at DESC`, `range((page-1)*15, page*15-1)`, `count: exact`.
-   - Retorna DTO plano: `{ rows: HistoricoRow[], total: number, totalValor: number }`.
-     - `totalValor` via segunda query `select('total').eq(...)` agregando no servidor (ou RPC simples). Para simplicidade: `select('total')` sem paginação e somar — pequenos volumes. Se preferível, criar RPC `movimentacoes_stats()` retornando `{ count, sum }`.
-   - Projeção apenas dos campos necessários (sem PII sensível além do que já aparece no formulário público).
+Todas com `.middleware([requireSupabaseAuth])`:
 
-2. **RLS**: adicionar policy `SELECT` para `anon` em `movimentacoes` restrita às colunas seguras — via GRANT + policy `USING (true)`. (Já existe grant? Verificar antes; se não, incluir migração.)
-   - Como alternativa mais segura sem expor a tabela: manter query via server function usando publishable key + policy `TO anon` com `USING (true)` (o server publishable client atua como anon). Não expor a tabela ao browser diretamente.
+1. `getMovimentacaoForEdit({ id })` — devolve o registo + flag `canEdit` calculada no servidor a partir do role/seller.
+2. `updateMovimentacao({ id, patch })` — valida com Zod:
+   - `nome_cliente` (string 1..120)
+   - `artist_id` (uuid | null)
+   - `tipo_movimento` (enum)
+   - `valor_cartao/dinheiro/sumup/transferencia` (number ≥ 0)
+   - Recalcula `total` no servidor (soma dos 4). Ignora `total` vindo do cliente.
+   - Reautoriza (admin OU dono) antes do UPDATE; RLS é rede de segurança.
+   - Marca `ghl_sync_status = 'pending'` para reenviar (opcional, ver ação abaixo).
+3. `softDeleteMovimentacao({ id })` — set `deleted_at = now()`.
+4. `resyncMovimentacaoGhl({ id })` — dispara sync usando o helper existente em `movimentacao-ghl.server.ts`.
 
-3. **Locate/procurar página do highlight** — `findMovimentacaoPage` server fn:
-   - Input `{ id: string, pageSize: 15 }`. Faz `count` de rows com `created_at > (select created_at from movimentacoes where id = $id)` para calcular a página. Retorna `{ page }` ou `null`.
+Listagem pública existente (`listMovimentacoesHistorico`) passa a filtrar `deleted_at IS NULL` (já fica coberto pela policy anon).
 
-4. **Rota** `src/routes/movimentacao.historico.tsx` (pública, sem gate):
-   - `validateSearch`: `{ page: fallback(z.number().int(), 1).default(1), highlight: fallback(z.string(), "").default("") }`.
-   - `head()`: title "Histórico de pagamentos — GF Tattoo", `robots: noindex,nofollow`.
-   - `loader`: `ensureQueryData` para `listMovimentacoesHistorico({ page })`.
-   - Componente usa `useSuspenseQuery`.
+## UI
 
-5. **UI** mobile-first, tokens do design system existente (não hardcode cores exceto quando o spec pede explicitamente #E11D2A/#16a34a):
-   - Header sticky com botão "← Voltar" (`useRouter().history.back()` com fallback `navigate({ to: "/movimentacao/$slug", params: { slug: "gabriel" }})`).
-   - Título + subtítulo "N registos · Total: € X,XX" (formatação `Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' })`).
-   - Grid `flex flex-col gap-3` de cards `rounded-xl shadow-sm border bg-card p-4`.
-   - Cada card com layout descrito (data, cliente bold, tatuador, tipo·método, valor à direita verde, badge no topo-direita).
-   - Paginação: "← Anterior" / "Página X de Y" / "Próximo →" com `<Link>` (search fn form) para preservar `highlight`. Scroll para topo via `useEffect` em mudança de `page`.
-   - Skeletons (3), erro com botão retry (`router.invalidate()`), estado vazio.
+### Card no histórico
+- Se utilizador autenticado com permissão sobre a linha: renderizar botão discreto "Editar" (ícone lápis) que faz `<Link to="/movimentacao/historico/$id/editar" params={{ id }}>`.
+- Detecção do estado auth: hook `useCurrentUser` já existente; a decisão fina (dono/admin) fica no servidor via `canEdit` retornado por uma versão leve — para não pedir por linha, o `listMovimentacoesHistorico`, quando chamado autenticado, devolve `canEdit` por row. Chamado anónimo, devolve `canEdit: false`.
 
-6. **Highlight**:
-   - `useEffect([data, highlight])`: se `highlight` presente, procurar card pelo id na página atual.
-     - Se encontrado: `scrollIntoView({ behavior: 'smooth', block: 'center' })`, aplicar classe `ring-2 ring-[#E11D2A]` com `transition`. Timer 3s remove a classe.
-     - Se não encontrado nesta página: chamar `findMovimentacaoPage({ id: highlight })`. Se retornar `page` diferente, mostrar `toast` com botão "Ir para essa página" → `navigate({ search: { page: X, highlight } })`.
+### Página `/movimentacao/historico/$id/editar`
+Rota autenticada em `src/routes/_authenticated/movimentacao.historico.$id.editar.tsx` (bloqueia anónimos naturalmente pelo gate `_authenticated`).
 
-7. **Ligação a partir do form**: o `ConfirmationScreen` já tem link "Ver no histórico" — atualizar para apontar para `/movimentacao/historico?highlight=<id>` (já pode existir; verificar em build mode).
+Layout mobile-first:
+- Header sticky com "← Voltar" (volta ao histórico preservando `?highlight=<id>`).
+- Form com campos: Nome do cliente, Tatuador (Select com artistas ativos), Tipo (Select), Valores por método (4 inputs numéricos com máscara EUR), Total (readonly, calculado ao vivo).
+- Rodapé sticky com "Guardar alterações" (primary) e menu "Mais" com "Apagar" (confirm) e "Ressincronizar GHL".
+- Estados: loading, saving, success toast + navigate para `/movimentacao/historico?highlight=<id>`, erro inline.
+- Guard: se `canEdit=false`, mostra estado "Sem permissão".
 
-## Segurança / considerações
+### React Query
+- `useMutation` para update/delete/resync, invalidar `["movimentacao-historico"]` e a query do detalhe no `onSuccess`.
 
-- Página pública lista nomes de clientes e valores. Confirmar com o utilizador que isto é aceitável (já era assumido pelo pedido — "acesso público").
-- Adicionar `robots: noindex,nofollow` para evitar indexação.
-- Não expor `ghl_sync_error` nem `chave_idempotencia` no DTO.
-- Rate/quantidade: sem filtros; se a tabela crescer muito, considerar filtro por período no futuro (fora do escopo agora).
+## Segurança
 
-## Arquivos a criar/editar
+- Autorização dupla: server function verifica role/ownership antes do UPDATE; policies RLS impedem escrita fora do escopo.
+- Nunca confiar em `total` do cliente — recalcular no servidor.
+- Zod em todos os inputs; limites de tamanho.
+- `deleted_at` esconde da vista pública; admin pode ver soft-deletes se quisermos (fora do escopo agora).
 
-- `src/lib/movimentacao.functions.ts` — adicionar `listMovimentacoesHistorico` + `findMovimentacaoPage` (server fns públicas).
-- `src/routes/movimentacao.historico.tsx` — nova rota pública.
-- Migração SQL — grant SELECT + policy anon em `movimentacoes` (colunas necessárias), se ainda não existir.
-- `src/components/movimentacao/movimentacao-form.tsx` — garantir que o link "Ver no histórico" da confirmação usa `?highlight=<id>`.
+## Ficheiros a criar/editar
+
+- **Migração SQL**: `deleted_at`, policies UPDATE + SELECT autenticado, atualização da policy anon.
+- `src/lib/movimentacao.functions.ts`: novas fns + `canEdit` no list.
+- `src/routes/_authenticated/movimentacao.historico.$id.editar.tsx`: nova rota.
+- `src/routes/movimentacao.historico.tsx`: mostrar botão "Editar" por card quando `canEdit`.
+- (Opcional) `src/lib/movimentacao-ghl.server.ts`: expor helper `resyncOne(id)` se ainda não existe standalone.
+
+## Fora do escopo
+
+- Auditoria/histórico de alterações (log de quem editou o quê).
+- Edição em massa.
+- Restaurar soft-deletes na UI.
