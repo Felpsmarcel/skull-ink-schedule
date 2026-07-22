@@ -103,7 +103,11 @@ function HistoricoPage() {
               label: "Ir para essa página",
               onClick: () =>
                 navigate({
-                  search: (prev) => ({ ...prev, page: res.page, highlight }),
+                  search: (prev: { page: number; highlight: string }) => ({
+                    ...prev,
+                    page: res.page,
+                    highlight,
+                  }),
                 }),
             },
           });
