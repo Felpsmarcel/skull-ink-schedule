@@ -63,3 +63,14 @@ export const MOVIMENTACAO_SLUG_LIST: MovimentacaoSlug[] = [
 export function isMovimentacaoSlug(v: string): v is MovimentacaoSlug {
   return (MOVIMENTACAO_SLUG_LIST as string[]).includes(v);
 }
+
+// Origem pública canônica usada para montar os links de registro de pagamento.
+export const MOVIMENTACAO_PROD_ORIGIN = "https://gftattoocalendar.com";
+
+export function findSlugForSeller(sellerId: string): MovimentacaoSlug | null {
+  for (const key of MOVIMENTACAO_SLUG_LIST) {
+    const t = MOVIMENTACAO_SLUGS[key];
+    if (t.kind === "seller" && t.sellerId === sellerId) return t.slug;
+  }
+  return null;
+}
