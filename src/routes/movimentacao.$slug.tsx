@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Clock } from "lucide-react";
@@ -59,13 +59,13 @@ function MovimentacaoPublicPage() {
               {ctx.data?.recebidoPorNome ?? "…"}
             </p>
           </div>
-          <Link
-            to="/movimentacao/historico"
+          <a
+            href="/movimentacao/historico"
             className="inline-flex shrink-0 items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
           >
             <Clock className="h-3.5 w-3.5" />
             Histórico
-          </Link>
+          </a>
         </div>
       </header>
 
