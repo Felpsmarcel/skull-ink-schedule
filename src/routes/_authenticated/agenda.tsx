@@ -72,7 +72,7 @@ export const Route = createFileRoute("/_authenticated/agenda")({
       rawView === "week" || rawView === "month" || rawView === "day"
         ? (rawView as View)
         : undefined;
-    const out: { debug?: true; view?: View } = {};
+    const out: { debug?: boolean; view?: View } = {};
     if (on) out.debug = true;
     if (view && view !== "day") out.view = view;
     return out;

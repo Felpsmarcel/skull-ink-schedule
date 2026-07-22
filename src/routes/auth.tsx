@@ -10,9 +10,10 @@ import gfLockup from "@/assets/gf-lockup.png";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
-  validateSearch: (s: Record<string, unknown>) => ({
-    redirect: typeof s.redirect === "string" ? s.redirect : undefined,
-  }),
+  validateSearch: (s: Record<string, unknown>) => {
+    const redirect = typeof s.redirect === "string" ? s.redirect : undefined;
+    return redirect ? { redirect } : {};
+  },
   head: () => ({
     meta: [
       { title: "Entrar — GF Tattoo Studio" },
@@ -121,7 +122,7 @@ function AuthPage() {
         </Button>
         <div className="text-center">
           <Link
-            to="/auth_/recover"
+            to="/auth/recover"
             className="text-xs text-muted-foreground underline underline-offset-2"
           >
             Esqueci minha senha

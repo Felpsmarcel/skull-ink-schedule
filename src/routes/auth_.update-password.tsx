@@ -171,7 +171,7 @@ function UpdatePasswordPage() {
       ) : state.kind === "no_link" ? (
         <div className="w-full max-w-sm space-y-3 text-center">
           <p className="text-sm">Abra este link a partir do email que você recebeu.</p>
-          <Link to="/auth_/recover" className="text-xs underline">
+          <Link to="/auth/recover" className="text-xs underline">
             Solicitar novo link
           </Link>
         </div>
@@ -181,7 +181,7 @@ function UpdatePasswordPage() {
             O link é inválido ou expirou.
           </p>
           <p className="text-[11px] text-muted-foreground">{state.message}</p>
-          <Link to="/auth_/recover" className="text-xs underline">
+          <Link to="/auth/recover" className="text-xs underline">
             Solicitar novo link
           </Link>
         </div>
