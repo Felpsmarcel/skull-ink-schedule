@@ -51,6 +51,7 @@ import { Route as AuthenticatedAdminRelatoriosAgendamentosRouteImport } from './
 import { Route as AuthenticatedAdminAdminVendedoresRouteImport } from './routes/_authenticated/_admin/admin.vendedores'
 import { Route as AuthenticatedAdminAdminMovimentacaoLinksRouteImport } from './routes/_authenticated/_admin/admin.movimentacao-links'
 import { Route as AuthenticatedAdminAdminEquipeRouteImport } from './routes/_authenticated/_admin/admin.equipe'
+import { Route as AuthenticatedMovimentacaoHistoricoIdEditarRouteImport } from './routes/_authenticated/movimentacao.historico.$id.editar'
 
 const UnsubscribeRoute = UnsubscribeRouteImport.update({
   id: '/unsubscribe',
@@ -282,6 +283,12 @@ const AuthenticatedAdminAdminEquipeRoute =
     path: '/admin/equipe',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
+const AuthenticatedMovimentacaoHistoricoIdEditarRoute =
+  AuthenticatedMovimentacaoHistoricoIdEditarRouteImport.update({
+    id: '/movimentacao/historico/$id/editar',
+    path: '/movimentacao/historico/$id/editar',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -324,6 +331,7 @@ export interface FileRoutesByFullPath {
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
   '/appointments/new/': typeof AuthenticatedAppointmentsNewIndexRoute
+  '/movimentacao/historico/$id/editar': typeof AuthenticatedMovimentacaoHistoricoIdEditarRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -365,6 +373,7 @@ export interface FileRoutesByTo {
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
   '/appointments/new': typeof AuthenticatedAppointmentsNewIndexRoute
+  '/movimentacao/historico/$id/editar': typeof AuthenticatedMovimentacaoHistoricoIdEditarRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -410,6 +419,7 @@ export interface FileRoutesById {
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
   '/_authenticated/appointments/new/': typeof AuthenticatedAppointmentsNewIndexRoute
+  '/_authenticated/movimentacao/historico/$id/editar': typeof AuthenticatedMovimentacaoHistoricoIdEditarRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -454,6 +464,7 @@ export interface FileRouteTypes {
     | '/lovable/email/transactional/preview'
     | '/lovable/email/transactional/send'
     | '/appointments/new/'
+    | '/movimentacao/historico/$id/editar'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -495,6 +506,7 @@ export interface FileRouteTypes {
     | '/lovable/email/transactional/preview'
     | '/lovable/email/transactional/send'
     | '/appointments/new'
+    | '/movimentacao/historico/$id/editar'
   id:
     | '__root__'
     | '/'
@@ -539,6 +551,7 @@ export interface FileRouteTypes {
     | '/lovable/email/transactional/preview'
     | '/lovable/email/transactional/send'
     | '/_authenticated/appointments/new/'
+    | '/_authenticated/movimentacao/historico/$id/editar'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -857,6 +870,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminAdminEquipeRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
+    '/_authenticated/movimentacao/historico/$id/editar': {
+      id: '/_authenticated/movimentacao/historico/$id/editar'
+      path: '/movimentacao/historico/$id/editar'
+      fullPath: '/movimentacao/historico/$id/editar'
+      preLoaderRoute: typeof AuthenticatedMovimentacaoHistoricoIdEditarRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -947,6 +967,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedServicesRoute: typeof AuthenticatedServicesRoute
   AuthenticatedAppointmentsNewRoute: typeof AuthenticatedAppointmentsNewRouteWithChildren
   AuthenticatedMovimentacaoIndexRoute: typeof AuthenticatedMovimentacaoIndexRoute
+  AuthenticatedMovimentacaoHistoricoIdEditarRoute: typeof AuthenticatedMovimentacaoHistoricoIdEditarRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -960,6 +981,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAppointmentsNewRoute:
     AuthenticatedAppointmentsNewRouteWithChildren,
   AuthenticatedMovimentacaoIndexRoute: AuthenticatedMovimentacaoIndexRoute,
+  AuthenticatedMovimentacaoHistoricoIdEditarRoute:
+    AuthenticatedMovimentacaoHistoricoIdEditarRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
