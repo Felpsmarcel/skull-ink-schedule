@@ -13,6 +13,7 @@ import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as MovimentacaoHistoricoRouteImport } from './routes/movimentacao.historico'
 import { Route as MovimentacaoSlugRouteImport } from './routes/movimentacao.$slug'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as AuthUpdatePasswordRouteImport } from './routes/auth_.update-password'
@@ -68,6 +69,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MovimentacaoHistoricoRoute = MovimentacaoHistoricoRouteImport.update({
+  id: '/movimentacao/historico',
+  path: '/movimentacao/historico',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MovimentacaoSlugRoute = MovimentacaoSlugRouteImport.update({
@@ -291,6 +297,7 @@ export interface FileRoutesByFullPath {
   '/auth/update-password': typeof AuthUpdatePasswordRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/movimentacao/$slug': typeof MovimentacaoSlugRoute
+  '/movimentacao/historico': typeof MovimentacaoHistoricoRoute
   '/ghl-test': typeof AuthenticatedAdminGhlTestRoute
   '/reconciliar': typeof AuthenticatedAdminReconciliarRoute
   '/appointments/new': typeof AuthenticatedAppointmentsNewRouteWithChildren
@@ -332,6 +339,7 @@ export interface FileRoutesByTo {
   '/auth/update-password': typeof AuthUpdatePasswordRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/movimentacao/$slug': typeof MovimentacaoSlugRoute
+  '/movimentacao/historico': typeof MovimentacaoHistoricoRoute
   '/ghl-test': typeof AuthenticatedAdminGhlTestRoute
   '/reconciliar': typeof AuthenticatedAdminReconciliarRoute
   '/onboarding/bem-vindo': typeof AuthenticatedOnboardingBemVindoRoute
@@ -375,6 +383,7 @@ export interface FileRoutesById {
   '/auth_/update-password': typeof AuthUpdatePasswordRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/movimentacao/$slug': typeof MovimentacaoSlugRoute
+  '/movimentacao/historico': typeof MovimentacaoHistoricoRoute
   '/_authenticated/_admin/ghl-test': typeof AuthenticatedAdminGhlTestRoute
   '/_authenticated/_admin/reconciliar': typeof AuthenticatedAdminReconciliarRoute
   '/_authenticated/appointments/new': typeof AuthenticatedAppointmentsNewRouteWithChildren
@@ -418,6 +427,7 @@ export interface FileRouteTypes {
     | '/auth/update-password'
     | '/email/unsubscribe'
     | '/movimentacao/$slug'
+    | '/movimentacao/historico'
     | '/ghl-test'
     | '/reconciliar'
     | '/appointments/new'
@@ -459,6 +469,7 @@ export interface FileRouteTypes {
     | '/auth/update-password'
     | '/email/unsubscribe'
     | '/movimentacao/$slug'
+    | '/movimentacao/historico'
     | '/ghl-test'
     | '/reconciliar'
     | '/onboarding/bem-vindo'
@@ -501,6 +512,7 @@ export interface FileRouteTypes {
     | '/auth_/update-password'
     | '/email/unsubscribe'
     | '/movimentacao/$slug'
+    | '/movimentacao/historico'
     | '/_authenticated/_admin/ghl-test'
     | '/_authenticated/_admin/reconciliar'
     | '/_authenticated/appointments/new'
@@ -538,6 +550,7 @@ export interface RootRouteChildren {
   AuthUpdatePasswordRoute: typeof AuthUpdatePasswordRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   MovimentacaoSlugRoute: typeof MovimentacaoSlugRoute
+  MovimentacaoHistoricoRoute: typeof MovimentacaoHistoricoRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   ApiPublicHooksSendRemindersRoute: typeof ApiPublicHooksSendRemindersRoute
   ApiPublicHooksSyncGhlRoute: typeof ApiPublicHooksSyncGhlRoute
@@ -576,6 +589,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/movimentacao/historico': {
+      id: '/movimentacao/historico'
+      path: '/movimentacao/historico'
+      fullPath: '/movimentacao/historico'
+      preLoaderRoute: typeof MovimentacaoHistoricoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/movimentacao/$slug': {
@@ -954,6 +974,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthUpdatePasswordRoute: AuthUpdatePasswordRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   MovimentacaoSlugRoute: MovimentacaoSlugRoute,
+  MovimentacaoHistoricoRoute: MovimentacaoHistoricoRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   ApiPublicHooksSendRemindersRoute: ApiPublicHooksSendRemindersRoute,
   ApiPublicHooksSyncGhlRoute: ApiPublicHooksSyncGhlRoute,

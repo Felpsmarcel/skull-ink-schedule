@@ -1,67 +1,74 @@
-## Objetivo
+# /movimentacao/historico — histórico público de pagamentos
 
-Adicionar 2 elementos à página `/movimentacao/$slug` sem tocar em campos, validações ou lógica de submit existentes.
+Rota pública (sem auth) que lista todos os registos de `movimentacoes`, com paginação, destaque via `?highlight=<id>` e link "Voltar".
 
-## Mudanças
+## Mapeamento do spec ↔ schema real
 
-### 1. `src/routes/movimentacao.$slug.tsx` — botão "Histórico" no header
+O schema real difere do descrito no pedido. Reconciliação:
 
-No header (linha com nome do recebedor), adicionar à direita um `<Link to="/movimentacao/historico">` discreto com ícone `Clock` (lucide) + texto "Histórico". Cinza (`text-muted-foreground`), sem fundo/borda, `text-xs`. Layout do header vira `flex items-center justify-between`.
+| Pedido            | Schema real                                                                     |
+| ----------------- | ------------------------------------------------------------------------------- |
+| `cliente`         | `nome_cliente`                                                                  |
+| `tatuador`        | join `artists.name` via `artist_id`                                             |
+| `link`            | `link_origem`                                                                   |
+| `tipo`            | `tipo_movimento` enum (`sinal`/`sessao`/`saldo`/`produto`/`estorno`) → rotular  |
+| `metodo`          | derivado dos `valor_cartao/dinheiro/sumup/transferencia > 0` (pode ser "misto") |
+| `valor`           | `total`                                                                         |
+| `ghl_status`      | `ghl_sync_status` enum (`pending`/`synced`/`failed`)                            |
+| `created_at`      | `created_at`                                                                    |
 
-Nota: a rota `/movimentacao/historico` ainda não existe — o link vai renderizar mas dar 404 até ser criada. Isto é intencional conforme o pedido ("NÃO criar nova rota aqui").
+Rótulos:
+- Tipo: sinal→"Sinal", sessao→"Sessão pagamento do dia", saldo→"Valor total", produto→"Produto GF TATTOO", estorno→"Estorno"
+- Método: se só um valor > 0 → nome desse método (Cartão/Dinheiro/SumUp/Transferência); se >1 → "Misto"
+- Badge: `synced`→"✓ Sync" (verde); `pending`/`failed`→"⚠ Pendente" (âmbar). Nunca expor "failed"/erros técnicos.
 
-### 2. `src/components/movimentacao/movimentacao-form.tsx` — tela de confirmação pós-submit
+## Passos
 
-Substituir o atual bloco `lastResult` (banner verde) por um **modo confirmação** que troca o form inteiro. Toda a lógica de submit, validação e mutação permanece intacta.
+1. **Server function pública** `listMovimentacoesHistorico` em `src/lib/movimentacao.functions.ts`:
+   - Sem `.middleware([requireSupabaseAuth])`. Usa cliente publishable (`SUPABASE_URL` + `SUPABASE_PUBLISHABLE_KEY`, sem persistência) dentro do `.handler`.
+   - Input: `{ page: number, pageSize: 15 }`.
+   - Query: `movimentacoes` LEFT JOIN `artists(name)`, ORDER BY `created_at DESC`, `range((page-1)*15, page*15-1)`, `count: exact`.
+   - Retorna DTO plano: `{ rows: HistoricoRow[], total: number, totalValor: number }`.
+     - `totalValor` via segunda query `select('total').eq(...)` agregando no servidor (ou RPC simples). Para simplicidade: `select('total')` sem paginação e somar — pequenos volumes. Se preferível, criar RPC `movimentacoes_stats()` retornando `{ count, sum }`.
+   - Projeção apenas dos campos necessários (sem PII sensível além do que já aparece no formulário público).
 
-**Estado**: expandir `lastResult` para guardar snapshot do registo criado:
-```ts
-{ id, synced, ghl_status, nome_cliente, artistName, tipo, metodo, total, criado_em }
-```
-Preenchido em `onSuccess` a partir de `res` + valores do form antes do reset. `artistName` resolvido via lookup em `artists` pelo `artist_id`. `metodo` derivado do campo com valor > 0 (cartão / dinheiro / sumup / transferência / misto se >1).
+2. **RLS**: adicionar policy `SELECT` para `anon` em `movimentacoes` restrita às colunas seguras — via GRANT + policy `USING (true)`. (Já existe grant? Verificar antes; se não, incluir migração.)
+   - Como alternativa mais segura sem expor a tabela: manter query via server function usando publishable key + policy `TO anon` com `USING (true)` (o server publishable client atua como anon). Não expor a tabela ao browser diretamente.
 
-**Render condicional**: se `lastResult` existe → renderiza `<ConfirmationScreen />` no lugar do `<form>`; senão renderiza o form como hoje.
+3. **Locate/procurar página do highlight** — `findMovimentacaoPage` server fn:
+   - Input `{ id: string, pageSize: 15 }`. Faz `count` de rows com `created_at > (select created_at from movimentacoes where id = $id)` para calcular a página. Retorna `{ page }` ou `null`.
 
-**ConfirmationScreen** (novo componente inline no mesmo arquivo):
-- Card `bg-card rounded-xl shadow-sm p-6` (mesma largura do form)
-- Ícone: `CheckCircle2` verde `#16a34a` se `ghl_status === "synced"`, senão `AlertTriangle` âmbar `#d97706`
-- Título correspondente ("Pagamento registado!" / "Guardado — sincronização pendente")
-- Tabela resumo (Cliente / Tatuador / Tipo / Método / Total) usando `<dl>` com `grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5`
-- Texto pequeno cinza: `Registado em ${formatDate} às ${HH:MM}` (usa `formatDate` de `@/lib/format` + `toLocaleTimeString` pt-PT)
-- Link `<a href="/movimentacao/historico?highlight=${id}">→ Ver no histórico</a>` (âncora HTML simples, cinza)
-- Botão primário "Novo registo": `setLastResult(null)` + `setForm(initialState(context))` — o `initialState` já usa `context.defaultRecebedorId` derivado do slug, então "Recebido por" volta pré-preenchido automaticamente
+4. **Rota** `src/routes/movimentacao.historico.tsx` (pública, sem gate):
+   - `validateSearch`: `{ page: fallback(z.number().int(), 1).default(1), highlight: fallback(z.string(), "").default("") }`.
+   - `head()`: title "Histórico de pagamentos — GF Tattoo", `robots: noindex,nofollow`.
+   - `loader`: `ensureQueryData` para `listMovimentacoesHistorico({ page })`.
+   - Componente usa `useSuspenseQuery`.
 
-### Backend: o `id` e `ghl_sync_status` do registo criado
+5. **UI** mobile-first, tokens do design system existente (não hardcode cores exceto quando o spec pede explicitamente #E11D2A/#16a34a):
+   - Header sticky com botão "← Voltar" (`useRouter().history.back()` com fallback `navigate({ to: "/movimentacao/$slug", params: { slug: "gabriel" }})`).
+   - Título + subtítulo "N registos · Total: € X,XX" (formatação `Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' })`).
+   - Grid `flex flex-col gap-3` de cards `rounded-xl shadow-sm border bg-card p-4`.
+   - Cada card com layout descrito (data, cliente bold, tatuador, tipo·método, valor à direita verde, badge no topo-direita).
+   - Paginação: "← Anterior" / "Página X de Y" / "Próximo →" com `<Link>` (search fn form) para preservar `highlight`. Scroll para topo via `useEffect` em mudança de `page`.
+   - Skeletons (3), erro com botão retry (`router.invalidate()`), estado vazio.
 
-`createMovimentacao` em `src/lib/movimentacao.functions.ts` já retorna `{ id, ghl_sync_status, ... }` (usado hoje no `onSuccess`). Nenhuma alteração de servidor necessária. Se `id` não estiver no retorno atual, adiciono-o ao `select` do insert — a verificar ao ler o arquivo em build mode.
+6. **Highlight**:
+   - `useEffect([data, highlight])`: se `highlight` presente, procurar card pelo id na página atual.
+     - Se encontrado: `scrollIntoView({ behavior: 'smooth', block: 'center' })`, aplicar classe `ring-2 ring-[#E11D2A]` com `transition`. Timer 3s remove a classe.
+     - Se não encontrado nesta página: chamar `findMovimentacaoPage({ id: highlight })`. Se retornar `page` diferente, mostrar `toast` com botão "Ir para essa página" → `navigate({ search: { page: X, highlight } })`.
 
-## Fora de escopo
+7. **Ligação a partir do form**: o `ConfirmationScreen` já tem link "Ver no histórico" — atualizar para apontar para `/movimentacao/historico?highlight=<id>` (já pode existir; verificar em build mode).
 
-- Criar rota `/movimentacao/historico` (pedido explícito)
-- Alterar campos, labels, validações, mutação, GHL sync
-- Retirar o `qc.invalidateQueries` / `haptic` / `toast` existentes (mantidos)
+## Segurança / considerações
 
-## Aparência (ASCII)
+- Página pública lista nomes de clientes e valores. Confirmar com o utilizador que isto é aceitável (já era assumido pelo pedido — "acesso público").
+- Adicionar `robots: noindex,nofollow` para evitar indexação.
+- Não expor `ghl_sync_error` nem `chave_idempotencia` no DTO.
+- Rate/quantidade: sem filtros; se a tabela crescer muito, considerar filtro por período no futuro (fora do escopo agora).
 
-```text
-┌─────────────────────────────────────┐
-│ Registro de pagamento               │
-│ Gabriel                  🕐 Histórico│
-└─────────────────────────────────────┘
+## Arquivos a criar/editar
 
-── após submit ──
-┌─────────────────────────────────────┐
-│  ✓  Pagamento registado!            │
-│                                     │
-│  Cliente    Luciene Caberlin        │
-│  Tatuador   Andre Pareyn            │
-│  Tipo       Saldo                   │
-│  Método     SumUp                   │
-│  Total      € 1.700,00              │
-│                                     │
-│  Registado em 22/07/2026 às 00:56   │
-│                                     │
-│  → Ver no histórico                 │
-│  [    Novo registo    ]             │
-└─────────────────────────────────────┘
-```
+- `src/lib/movimentacao.functions.ts` — adicionar `listMovimentacoesHistorico` + `findMovimentacaoPage` (server fns públicas).
+- `src/routes/movimentacao.historico.tsx` — nova rota pública.
+- Migração SQL — grant SELECT + policy anon em `movimentacoes` (colunas necessárias), se ainda não existir.
+- `src/components/movimentacao/movimentacao-form.tsx` — garantir que o link "Ver no histórico" da confirmação usa `?highlight=<id>`.
