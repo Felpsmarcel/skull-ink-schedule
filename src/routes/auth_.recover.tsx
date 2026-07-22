@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import gfLockup from "@/assets/gf-lockup.png";
 
-export const Route = createFileRoute("/auth/recover")({
+export const Route = createFileRoute("/auth_/recover")({
   ssr: false,
   head: () => ({
     meta: [
