@@ -20,6 +20,7 @@ import {
   type ArtistOption,
   type MovimentacaoTipo,
 } from "@/lib/movimentacao.functions";
+import type { StaffRecebedorId } from "@/config/movimentacao-slugs";
 import { haptic } from "@/lib/haptics";
 
 interface Props {
@@ -65,6 +66,7 @@ interface FormState {
   nome_cliente: string;
   data_pagamento: string;
   artist_id: string;
+  recebido_por_id: StaffRecebedorId;
   tipo_movimento: MovimentacaoTipo;
   valor_cartao: string;
   valor_dinheiro: string;
@@ -80,6 +82,7 @@ function initialState(context: SlugContext): FormState {
     nome_cliente: "",
     data_pagamento: todayISO(),
     artist_id: context.defaultArtistId ?? "",
+    recebido_por_id: context.defaultRecebedorId,
     tipo_movimento: "sessao",
     valor_cartao: "",
     valor_dinheiro: "",
@@ -120,6 +123,7 @@ export function MovimentacaoForm({ context, artists, artistsLoading }: Props) {
           nome_cliente: form.nome_cliente,
           data_pagamento: form.data_pagamento,
           artist_id: form.artist_id,
+          recebido_por_id: form.recebido_por_id,
           tipo_movimento: form.tipo_movimento,
           valor_cartao: parseAmount(form.valor_cartao),
           valor_dinheiro: parseAmount(form.valor_dinheiro),
@@ -172,10 +176,23 @@ export function MovimentacaoForm({ context, artists, artistsLoading }: Props) {
         mutation.mutate();
       }}
     >
-      {/* Recebido por (read-only) */}
-      <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-xs">
-        <span className="text-muted-foreground">Recebido por: </span>
-        <span className="font-semibold">{context.recebidoPorNome}</span>
+      <div className="space-y-1.5">
+        <Label htmlFor="recebido_por_id">Recebido por *</Label>
+        <Select
+          value={form.recebido_por_id}
+          onValueChange={(v) => set("recebido_por_id", v as StaffRecebedorId)}
+        >
+          <SelectTrigger id="recebido_por_id" className="h-11">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {context.recebedores.map((r) => (
+              <SelectItem key={r.id} value={r.id}>
+                {r.displayName}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="space-y-1.5">
