@@ -17,6 +17,7 @@ import {
 import { inviteArtist, repairArtistLink } from "@/lib/team.functions";
 import { inviteSeller, repairSellerLink } from "@/lib/sellers-invite.functions";
 import { reprocessFailedMovimentacoes } from "@/lib/movimentacao.functions";
+import { MOVIMENTACAO_PROD_ORIGIN } from "@/config/movimentacao-slugs";
 
 export const Route = createFileRoute("/_authenticated/_admin/admin/movimentacao-links")({
   head: () => ({
@@ -29,7 +30,7 @@ export const Route = createFileRoute("/_authenticated/_admin/admin/movimentacao-
   component: MovimentacaoLinksPage,
 });
 
-const PROD_ORIGIN = "https://gftattoocalendar.com";
+const PROD_ORIGIN = MOVIMENTACAO_PROD_ORIGIN;
 
 function MovimentacaoLinksPage() {
   const status = useServerFn(getMovimentacaoLinkStatus);
