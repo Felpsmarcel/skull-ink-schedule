@@ -515,6 +515,11 @@ function ReportRowItem({ row }: { row: ReportRow }) {
             {formatDate(row.data_pagamento)} · {row.tatuador ?? "—"}
             {row.recebido_por_nome ? ` · Recebido por ${row.recebido_por_nome}` : ""}
           </p>
+          {row.registrado_por_nome && (
+            <p className="text-[11px] text-muted-foreground">
+              Registado por {row.registrado_por_nome}
+            </p>
+          )}
         </div>
         <span className="shrink-0 text-sm font-bold tabular-nums">
           {formatCurrency(row.total)}

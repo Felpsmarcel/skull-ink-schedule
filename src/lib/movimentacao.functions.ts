@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { getRequestHeader } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { ReportRow } from "@/lib/report-html";
@@ -88,6 +89,34 @@ function resolveSlugDefaults(slug: MovimentacaoSlug): {
     displayName: staff.displayName,
     defaultArtistId: target.kind === "artist" ? target.artistId : null,
   };
+}
+
+// Metadados de origem do pedido (dispositivo + marca anónima do IP).
+async function captureRequestTrace(): Promise<{
+  userAgent: string | null;
+  ipHash: string | null;
+}> {
+  let userAgent: string | null = null;
+  let ip: string | null = null;
+  try {
+    userAgent = (getRequestHeader("user-agent") ?? null)?.slice(0, 300) ?? null;
+    ip =
+      getRequestHeader("cf-connecting-ip") ??
+      getRequestHeader("x-real-ip") ??
+      (getRequestHeader("x-forwarded-for") ?? "").split(",")[0].trim() ??
+      null;
+  } catch {
+    // fora de um contexto de request
+  }
+  let ipHash: string | null = null;
+  if (ip) {
+    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(ip));
+    ipHash = Array.from(new Uint8Array(buf))
+      .slice(0, 8)
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+  }
+  return { userAgent, ipHash: ipHash };
 }
 
 // ---------------- getSlugContext ----------------------------------------
@@ -219,6 +248,8 @@ const CreateInput = z
       .optional(),
     observacoes: z.string().max(1000).nullable().optional(),
     chave_idempotencia: z.string().uuid("Chave de idempotência inválida."),
+    registrado_por_id: z.enum([...STAFF_RECEBEDOR_IDS, "outro"] as [string, ...string[]]),
+    registrado_por_nome: z.string().trim().max(80).nullable().optional(),
   })
   .refine((v) => !(v.valor_cartao > 0 && v.valor_sumup > 0), {
     message: "SumUp e Cartão são métodos exclusivos.",
@@ -231,6 +262,10 @@ const CreateInput = z
   .refine((v) => v.tipo_movimento !== "sinal" || Boolean(v.data_tatuagem), {
     message: "Informe a data da sessão agendada.",
     path: ["data_tatuagem"],
+  })
+  .refine((v) => v.registrado_por_id !== "outro" || (v.registrado_por_nome ?? "").length >= 2, {
+    message: "Indique quem está a registar.",
+    path: ["registrado_por_nome"],
   });
 
 export interface CreateResult {
@@ -248,6 +283,10 @@ async function insertMovimentacaoRows(
     tipo_movimento: MovimentacaoTipo;
     recebido_por_app_user_id: string;
     registrado_por_app_user_id: string | null;
+    registrado_por_nome: string | null;
+    registrado_por_staff_id: string | null;
+    registrado_user_agent: string | null;
+    registrado_ip_hash: string | null;
     link_origem: string;
     origem_lancamento: string;
     valor_cartao: number;
@@ -297,6 +336,11 @@ async function insertMovimentacaoRows(
       artist_id: params.artist_id,
       recebido_por_app_user_id: params.recebido_por_app_user_id,
       registrado_por_app_user_id: params.registrado_por_app_user_id,
+      registrado_por_nome: params.registrado_por_nome,
+      registrado_por_staff_id: params.registrado_por_staff_id,
+      registrado_user_agent: params.registrado_user_agent,
+      registrado_ip_hash: params.registrado_ip_hash,
+      registrado_em: new Date().toISOString(),
       link_origem: params.link_origem,
       origem_lancamento: params.origem_lancamento,
       tipo_movimento: params.tipo_movimento,
@@ -379,6 +423,13 @@ export const createMovimentacao = createServerFn({ method: "POST" })
     const slug = data.slug;
 
     const recebedor = getStaffRecebedor(data.recebido_por_id);
+    const registradoStaff =
+      data.registrado_por_id === "outro"
+        ? null
+        : STAFF_RECEBEDORES.find((s) => s.id === data.registrado_por_id) ?? null;
+    const registradoNome =
+      registradoStaff?.displayName ?? ((data.registrado_por_nome ?? "").trim() || null);
+    const trace = await captureRequestTrace();
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
@@ -398,6 +449,10 @@ export const createMovimentacao = createServerFn({ method: "POST" })
       tipo_movimento: data.tipo_movimento,
       recebido_por_app_user_id: recebedor.appUserId,
       registrado_por_app_user_id: null,
+      registrado_por_nome: registradoNome,
+      registrado_por_staff_id: data.registrado_por_id,
+      registrado_user_agent: trace.userAgent,
+      registrado_ip_hash: trace.ipHash,
       link_origem: slug,
       origem_lancamento: "link_individual",
       valor_cartao: data.valor_cartao,
@@ -463,6 +518,11 @@ export const createMovimentacaoManual = createServerFn({ method: "POST" })
     const artistRow = artistData as { id: string; name: string } | null;
     if (!artistRow) throw new Error("Tatuador inválido.");
 
+    // Nome de quem registou: staff conhecido pelo app_user id, senão o próprio recebedor.
+    const registradoStaff =
+      STAFF_RECEBEDORES.find((s) => s.appUserId === context.userId) ?? null;
+    const trace = await captureRequestTrace();
+
     return insertMovimentacaoRows({
       nome_cliente: data.nome_cliente,
       data_pagamento: data.data_pagamento,
@@ -470,6 +530,10 @@ export const createMovimentacaoManual = createServerFn({ method: "POST" })
       tipo_movimento: data.tipo_movimento,
       recebido_por_app_user_id: recebedor.appUserId,
       registrado_por_app_user_id: context.userId,
+      registrado_por_nome: registradoStaff?.displayName ?? "Admin (app)",
+      registrado_por_staff_id: registradoStaff?.id ?? null,
+      registrado_user_agent: trace.userAgent,
+      registrado_ip_hash: trace.ipHash,
       link_origem: "manual",
       origem_lancamento: "manual",
       valor_cartao: data.valor_cartao,
@@ -824,6 +888,8 @@ export interface MovimentacaoEditRow {
   ghl_sync_status: "pending" | "synced" | "failed";
   deleted_at: string | null;
   canEdit: boolean;
+  registrado_por_nome: string | null;
+  registrado_em: string | null;
 }
 
 function canEditRow(
@@ -846,13 +912,16 @@ export const getMovimentacaoForEdit = createServerFn({ method: "GET" })
     const { data: rowRaw, error } = await supabaseAdmin
       .from("movimentacoes" as never)
       .select(
-        "id, created_at, nome_cliente, data_pagamento, artist_id, recebido_por_app_user_id, link_origem, tipo_movimento, valor_cartao, valor_dinheiro, valor_sumup, valor_transferencia, total, data_tatuagem, observacoes, ghl_sync_status, deleted_at",
+        "id, created_at, nome_cliente, data_pagamento, artist_id, recebido_por_app_user_id, link_origem, tipo_movimento, valor_cartao, valor_dinheiro, valor_sumup, valor_transferencia, total, data_tatuagem, observacoes, ghl_sync_status, deleted_at, registrado_por_nome, registrado_em",
       )
       .eq("id", data.id)
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!rowRaw) throw new Error("Registo não encontrado.");
-    const row = rowRaw as unknown as Omit<MovimentacaoEditRow, "artist_name" | "recebido_por_nome" | "canEdit">;
+    const row = rowRaw as unknown as Omit<
+      MovimentacaoEditRow,
+      "artist_name" | "recebido_por_nome" | "canEdit"
+    >;
 
     const [{ data: artist }, staffName] = await Promise.all([
       supabaseAdmin
@@ -877,6 +946,83 @@ export const getMovimentacaoForEdit = createServerFn({ method: "GET" })
       recebido_por_nome: staffName,
       canEdit: canEditRow(me.role, context.userId, row.recebido_por_app_user_id),
     };
+  });
+
+// ---------------- Histórico de alterações --------------------------------
+
+export interface AuditEntry {
+  id: string;
+  acao: string;
+  actor: string | null;
+  created_at: string;
+  changes: Array<{ campo: string; de: string; para: string }>;
+}
+
+const AUDIT_FIELD_LABELS: Record<string, string> = {
+  nome_cliente: "Cliente",
+  data_pagamento: "Data do pagamento",
+  artist_id: "Tatuador",
+  recebido_por_app_user_id: "Recebido por",
+  tipo_movimento: "Tipo",
+  forma_pagamento: "Forma",
+  valor_cartao: "Cartão",
+  valor_dinheiro: "Dinheiro",
+  valor_sumup: "SumUp",
+  valor_transferencia: "Transferência",
+  total: "Total",
+  data_tatuagem: "Data da sessão",
+  observacoes: "Observações",
+  ghl_sync_status: "Sync CRM",
+  deleted_at: "Apagado em",
+  link_origem: "Link",
+  origem_lancamento: "Origem",
+};
+
+function formatAuditChanges(
+  raw: Record<string, unknown> | null,
+): Array<{ campo: string; de: string; para: string }> {
+  if (!raw) return [];
+  const out: Array<{ campo: string; de: string; para: string }> = [];
+  for (const [key, value] of Object.entries(raw)) {
+    const campo = AUDIT_FIELD_LABELS[key] ?? key;
+    if (value && typeof value === "object" && "de" in (value as object)) {
+      const v = value as { de: unknown; para: unknown };
+      out.push({ campo, de: String(v.de ?? "—"), para: String(v.para ?? "—") });
+    } else {
+      out.push({ campo, de: "", para: String(value ?? "—") });
+    }
+  }
+  return out;
+}
+
+export const listMovimentacaoAudit = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => IdInput.parse(data))
+  .handler(async ({ data, context }): Promise<AuditEntry[]> => {
+    const { data: rows, error } = await context.supabase
+      .from("movimentacoes_audit")
+      .select("id, acao, actor_app_user_id, actor_nome, changes, created_at")
+      .eq("movimentacao_id", data.id)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    if (error) throw new Error(error.message);
+    const staffById = new Map(STAFF_RECEBEDORES.map((s) => [s.appUserId, s.displayName] as const));
+    return ((rows ?? []) as Array<{
+      id: string;
+      acao: string;
+      actor_app_user_id: string | null;
+      actor_nome: string | null;
+      changes: Record<string, unknown> | null;
+      created_at: string;
+    }>).map((r) => ({
+      id: r.id,
+      acao: r.acao,
+      actor:
+        r.actor_nome ??
+        (r.actor_app_user_id ? staffById.get(r.actor_app_user_id) ?? "Utilizador da app" : null),
+      created_at: r.created_at,
+      changes: formatAuditChanges(r.changes),
+    }));
   });
 
 const UpdateInput = z.object({
@@ -1112,6 +1258,7 @@ export const getMovimentacoesReport = createServerFn({ method: "GET" })
       tatuador: r.tatuador ? String(r.tatuador) : null,
       recebido_por_app_user_id: r.recebido_por_app_user_id ? String(r.recebido_por_app_user_id) : null,
       recebido_por_nome: r.recebido_por_nome ? String(r.recebido_por_nome) : null,
+      registrado_por_nome: r.registrado_por_nome ? String(r.registrado_por_nome) : null,
       link_origem: String(r.link_origem ?? ""),
       tipo_movimento: String(r.tipo_movimento ?? ""),
       valor_cartao: Number(r.valor_cartao ?? 0),

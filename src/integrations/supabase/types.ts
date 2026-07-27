@@ -613,7 +613,12 @@ export type Database = {
           origem_lancamento: string
           recebido_por_app_user_id: string
           referencia: string | null
+          registrado_em: string | null
+          registrado_ip_hash: string | null
           registrado_por_app_user_id: string | null
+          registrado_por_nome: string | null
+          registrado_por_staff_id: string | null
+          registrado_user_agent: string | null
           tipo_movimento: Database["public"]["Enums"]["movimentacao_tipo"]
           total: number | null
           updated_at: string
@@ -647,7 +652,12 @@ export type Database = {
           origem_lancamento?: string
           recebido_por_app_user_id: string
           referencia?: string | null
+          registrado_em?: string | null
+          registrado_ip_hash?: string | null
           registrado_por_app_user_id?: string | null
+          registrado_por_nome?: string | null
+          registrado_por_staff_id?: string | null
+          registrado_user_agent?: string | null
           tipo_movimento: Database["public"]["Enums"]["movimentacao_tipo"]
           total?: number | null
           updated_at?: string
@@ -681,7 +691,12 @@ export type Database = {
           origem_lancamento?: string
           recebido_por_app_user_id?: string
           referencia?: string | null
+          registrado_em?: string | null
+          registrado_ip_hash?: string | null
           registrado_por_app_user_id?: string | null
+          registrado_por_nome?: string | null
+          registrado_por_staff_id?: string | null
+          registrado_user_agent?: string | null
           tipo_movimento?: Database["public"]["Enums"]["movimentacao_tipo"]
           total?: number | null
           updated_at?: string
@@ -720,6 +735,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      movimentacoes_audit: {
+        Row: {
+          acao: string
+          actor_app_user_id: string | null
+          actor_nome: string | null
+          changes: Json
+          created_at: string
+          id: string
+          movimentacao_id: string
+        }
+        Insert: {
+          acao: string
+          actor_app_user_id?: string | null
+          actor_nome?: string | null
+          changes?: Json
+          created_at?: string
+          id?: string
+          movimentacao_id: string
+        }
+        Update: {
+          acao?: string
+          actor_app_user_id?: string | null
+          actor_nome?: string | null
+          changes?: Json
+          created_at?: string
+          id?: string
+          movimentacao_id?: string
+        }
+        Relationships: []
       }
       payments: {
         Row: {
@@ -1191,6 +1236,7 @@ export type Database = {
               nome_cliente: string
               recebido_por_app_user_id: string
               recebido_por_nome: string
+              registrado_por_nome: string
               tatuador: string
               tipo_movimento: string
               total: number

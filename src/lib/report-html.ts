@@ -9,6 +9,7 @@ export interface ReportRow {
   tatuador: string | null;
   recebido_por_app_user_id: string | null;
   recebido_por_nome: string | null;
+  registrado_por_nome: string | null;
   link_origem: string;
   tipo_movimento: string;
   valor_cartao: number;
@@ -161,6 +162,7 @@ export function buildReportHtml(
         <td>${esc(r.nome_cliente)}</td>
         <td>${esc(r.tatuador ?? "—")}</td>
         <td>${esc(r.recebido_por_nome ?? "—")}</td>
+        <td>${esc(r.registrado_por_nome ?? "—")}</td>
         <td>${esc(TIPO_LABELS[r.tipo_movimento] ?? r.tipo_movimento)}</td>
         <td>${esc(metodoLabel(r))}</td>
         <td class="num">${esc(formatCurrency(r.total))}</td>
@@ -217,9 +219,9 @@ ${breakdownHtml("Totais por tipo de movimento", agg.porTipo)}
 <section>
   <h2>Detalhe dos pagamentos</h2>
   <table>
-    <thead><tr><th>Data</th><th>Cliente</th><th>Tatuador</th><th>Recebido por</th><th>Tipo</th><th>Formas</th><th class="num">Total</th><th>GHL</th></tr></thead>
-    <tbody>${detalhe || `<tr><td colspan="8">Sem pagamentos no período.</td></tr>`}</tbody>
-    <tfoot><tr><td colspan="6">Total</td><td class="num">${esc(formatCurrency(agg.total))}</td><td></td></tr></tfoot>
+    <thead><tr><th>Data</th><th>Cliente</th><th>Tatuador</th><th>Recebido por</th><th>Registado por</th><th>Tipo</th><th>Formas</th><th class="num">Total</th><th>GHL</th></tr></thead>
+    <tbody>${detalhe || `<tr><td colspan="9">Sem pagamentos no período.</td></tr>`}</tbody>
+    <tfoot><tr><td colspan="7">Total</td><td class="num">${esc(formatCurrency(agg.total))}</td><td></td></tr></tfoot>
   </table>
 </section>
 </body>
@@ -243,6 +245,7 @@ const CSV_COLUMNS: Array<{ label: string; pick: (r: ReportRow) => unknown }> = [
   { label: "Cliente", pick: (r) => r.nome_cliente },
   { label: "Tatuador", pick: (r) => r.tatuador ?? "" },
   { label: "Recebido por", pick: (r) => r.recebido_por_nome ?? "" },
+  { label: "Registado por", pick: (r) => r.registrado_por_nome ?? "" },
   { label: "Tipo", pick: (r) => TIPO_LABELS[r.tipo_movimento] ?? r.tipo_movimento },
   { label: "Cartão", pick: (r) => r.valor_cartao },
   { label: "Dinheiro", pick: (r) => r.valor_dinheiro },

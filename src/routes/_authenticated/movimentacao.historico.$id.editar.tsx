@@ -10,6 +10,7 @@ import {
   softDeleteMovimentacao,
   resyncMovimentacaoGhl,
   listArtistsForSelect,
+  listMovimentacaoAudit,
   type MovimentacaoEditRow,
   type MovimentacaoTipo,
 } from "@/lib/movimentacao.functions";
@@ -50,6 +51,7 @@ function EditarPage() {
   const doUpdate = useServerFn(updateMovimentacao);
   const doDelete = useServerFn(softDeleteMovimentacao);
   const doResync = useServerFn(resyncMovimentacaoGhl);
+  const fetchAudit = useServerFn(listMovimentacaoAudit);
 
   const rowQ = useQuery<MovimentacaoEditRow>({
     queryKey: ["movimentacao-edit", id],
@@ -61,6 +63,12 @@ function EditarPage() {
     queryKey: ["movimentacao-artists"],
     queryFn: () => fetchArtists(),
     staleTime: 5 * 60_000,
+  });
+
+  const auditQ = useQuery({
+    queryKey: ["movimentacao-audit", id],
+    queryFn: () => fetchAudit({ data: { id } }),
+    retry: false,
   });
 
   const [form, setForm] = useState<null | {
@@ -304,6 +312,56 @@ function EditarPage() {
           </button>
         </div>
       </form>
+
+      <section className="px-4 pb-6">
+        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+          Histórico de alterações
+        </h2>
+        {rowQ.data?.registrado_por_nome && (
+          <p className="mb-2 text-xs text-slate-500">
+            Registado por {rowQ.data.registrado_por_nome}
+            {rowQ.data.registrado_em
+              ? ` em ${new Date(rowQ.data.registrado_em).toLocaleString("pt-PT")}`
+              : ""}
+          </p>
+        )}
+        {auditQ.isLoading ? (
+          <p className="text-xs text-slate-400">A carregar…</p>
+        ) : (auditQ.data?.length ?? 0) === 0 ? (
+          <p className="text-xs text-slate-400">Sem alterações registadas.</p>
+        ) : (
+          <ul className="space-y-2">
+            {auditQ.data!.map((entry) => (
+              <li key={entry.id} className="rounded-lg border border-slate-200 bg-white p-3">
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="text-sm font-medium text-slate-800">
+                    {entry.acao === "insert"
+                      ? "Criado"
+                      : entry.acao === "delete"
+                        ? "Apagado"
+                        : "Editado"}
+                    {entry.actor ? ` · ${entry.actor}` : ""}
+                  </span>
+                  <span className="text-[11px] text-slate-400">
+                    {new Date(entry.created_at).toLocaleString("pt-PT")}
+                  </span>
+                </div>
+                {entry.changes.length > 0 && (
+                  <ul className="mt-1.5 space-y-0.5 text-xs text-slate-600">
+                    {entry.changes.map((c, i) => (
+                      <li key={`${entry.id}-${i}`}>
+                        <span className="font-medium">{c.campo}:</span>{" "}
+                        {c.de ? `${c.de} → ` : ""}
+                        {c.para}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <footer className="sticky bottom-0 z-30 border-t border-slate-200 bg-white/95 px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] backdrop-blur">
         <button

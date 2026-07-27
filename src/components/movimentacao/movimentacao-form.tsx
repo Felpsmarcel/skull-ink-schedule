@@ -95,11 +95,42 @@ function newIdempotencyKey(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+const REGISTRADOR_STORAGE_KEY = "gf:movimentacao:registrador";
+
+function readRememberedRegistrador():
+  | { id: StaffRecebedorId | "outro"; nome: string }
+  | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(REGISTRADOR_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { id?: string; nome?: string };
+    if (!parsed?.id) return null;
+    const valid =
+      parsed.id === "outro" || STAFF_RECEBEDORES.some((s) => s.id === parsed.id);
+    if (!valid) return null;
+    return { id: parsed.id as StaffRecebedorId | "outro", nome: parsed.nome ?? "" };
+  } catch {
+    return null;
+  }
+}
+
+function rememberRegistrador(id: StaffRecebedorId | "outro", nome: string) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(REGISTRADOR_STORAGE_KEY, JSON.stringify({ id, nome }));
+  } catch {
+    // storage indisponível — ignorar
+  }
+}
+
 interface FormState {
   nome_cliente: string;
   data_pagamento: string;
   artist_id: string;
   recebido_por_id: StaffRecebedorId;
+  registrado_por_id: StaffRecebedorId | "outro";
+  registrado_por_nome: string;
   tipo_movimento: MovimentacaoTipo;
   valor_cartao: string;
   valor_dinheiro: string;
@@ -113,11 +144,14 @@ interface FormState {
 function initialState(context: SlugContext | undefined, mode: "link" | "manual"): FormState {
   const defaultArtistId = context?.defaultArtistId ?? "";
   const defaultRecebedorId = context?.defaultRecebedorId ?? STAFF_RECEBEDORES[0].id;
+  const remembered = readRememberedRegistrador();
   return {
     nome_cliente: "",
     data_pagamento: todayISO(),
     artist_id: mode === "manual" ? "" : defaultArtistId,
     recebido_por_id: mode === "manual" ? STAFF_RECEBEDORES[0].id : defaultRecebedorId,
+    registrado_por_id: remembered?.id ?? defaultRecebedorId,
+    registrado_por_nome: remembered?.nome ?? "",
     tipo_movimento: "sessao",
     valor_cartao: "",
     valor_dinheiro: "",
@@ -183,7 +217,13 @@ export function MovimentacaoForm({ context, artists, artistsLoading, mode = "lin
   const isSinal = form.tipo_movimento === "sinal";
   const sinalErro = isSinal && !form.data_tatuagem;
 
-  const step1Valid = form.nome_cliente.trim().length >= 2 && !!form.artist_id;
+  const registradorValid =
+    isManual ||
+    (form.registrado_por_id !== "outro"
+      ? true
+      : form.registrado_por_nome.trim().length >= 2);
+  const step1Valid =
+    form.nome_cliente.trim().length >= 2 && !!form.artist_id && registradorValid;
   const step2Valid = total > 0 && !exclusivoErro;
   const step3Valid = !sinalErro;
 
@@ -207,7 +247,15 @@ export function MovimentacaoForm({ context, artists, artistsLoading, mode = "lin
         return submitManual({ data: base });
       }
       if (!context) throw new Error("Contexto do link em falta.");
-      return submitLink({ data: { ...base, slug: context.slug } });
+      rememberRegistrador(form.registrado_por_id, form.registrado_por_nome.trim());
+      return submitLink({
+        data: {
+          ...base,
+          slug: context.slug,
+          registrado_por_id: form.registrado_por_id,
+          registrado_por_nome: form.registrado_por_nome.trim() || null,
+        },
+      });
     },
     onSuccess: (res) => {
       haptic("success");
@@ -368,6 +416,7 @@ export function MovimentacaoForm({ context, artists, artistsLoading, mode = "lin
             artists={artists}
             artistsLoading={artistsLoading}
             recentClients={recentClientsQ.data ?? []}
+            showRegistrador={!isManual}
           />
         )}
 
@@ -440,9 +489,18 @@ interface StepOneProps {
   artists: ArtistOption[];
   artistsLoading?: boolean;
   recentClients: string[];
+  showRegistrador?: boolean;
 }
 
-function StepOne({ form, set, recebedores, artists, artistsLoading, recentClients }: StepOneProps) {
+function StepOne({
+  form,
+  set,
+  recebedores,
+  artists,
+  artistsLoading,
+  recentClients,
+  showRegistrador,
+}: StepOneProps) {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -475,6 +533,41 @@ function StepOne({ form, set, recebedores, artists, artistsLoading, recentClient
           </SelectContent>
         </Select>
       </div>
+
+      {showRegistrador && (
+        <div className="space-y-1.5">
+          <Label htmlFor="registrado_por_id">Quem está a registar? *</Label>
+          <Select
+            value={form.registrado_por_id}
+            onValueChange={(v) => set("registrado_por_id", v as StaffRecebedorId | "outro")}
+          >
+            <SelectTrigger id="registrado_por_id" className="h-14 text-base">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {STAFF_RECEBEDORES.map((r) => (
+                <SelectItem key={r.id} value={r.id}>
+                  {r.displayName}
+                </SelectItem>
+              ))}
+              <SelectItem value="outro">Outro…</SelectItem>
+            </SelectContent>
+          </Select>
+          {form.registrado_por_id === "outro" && (
+            <Input
+              id="registrado_por_nome"
+              value={form.registrado_por_nome}
+              onChange={(e) => set("registrado_por_nome", e.target.value)}
+              className="mt-2 h-14 text-base"
+              placeholder="Nome de quem está a registar"
+              autoComplete="off"
+            />
+          )}
+          <p className="text-xs text-muted-foreground">
+            Fica guardado no histórico do lançamento.
+          </p>
+        </div>
+      )}
 
       <div className="relative space-y-1.5">
         <Label htmlFor="nome_cliente">Nome do cliente *</Label>
