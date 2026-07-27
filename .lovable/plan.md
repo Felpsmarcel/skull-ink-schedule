@@ -1,53 +1,129 @@
-# Dashboard de Relatórios — Histórico de Pagamentos
+# Melhorias no Relatório de Pagamentos (lançamentos)
 
-Nova página autenticada `/relatorios/movimentacoes` que resume os pagamentos registados (tabela `movimentacoes`), com agregações e um relatório HTML imprimível/exportável.
+## Estado atual
 
-## Acesso
+A página `/relatorios/movimentacoes` já entrega:
 
-- **Admin**: vê todos os registos.
-- **Recebedor** (tatuador/vendedor que consta como "recebido por"): vê apenas os pagamentos que recebeu.
-- Registos apagados (soft delete) ficam de fora.
+- Filtros por período (atalhos mês atual/anterior + intervalo livre), tatuador (admin) e tipo de movimento, todos sincronizados na URL.
+- Cards de topo: total recebido, número de pagamentos, ticket médio, valor com sync pendente.
+- Quebras por forma de pagamento, tatuador e tipo de movimento, com barras proporcionais.
+- Lista de detalhe com data, cliente, tatuador, tipo, formas, total e status GHL.
+- Exportação para Imprimir/PDF, HTML autónomo e CSV.
+- Acesso controlado por papel (admin vê tudo; recebedor vê só os seus).
 
-A regra de acesso é aplicada no banco, não no frontend.
+## O que mudaria e porquê
 
-## Filtros
+### 1. Adicionar filtro "Recebido por"
 
-- Atalhos rápidos: mês atual, mês anterior, seletor mês/ano.
-- Intervalo livre: data inicial e data final.
-- Filtro opcional por tatuador (apenas admin) e por tipo de movimento.
-- Filtros refletidos na URL, para o relatório poder ser partilhado/recarregado.
+**Porquê:** Hoje o admin filtra por tatuador, mas o dinheiro entrou na mão de um vendedor/tatuador recebedor. Para conciliar caixa, o filtro natural é "quem recebeu".
 
-## Conteúdo do dashboard
+**Como:**
+- Adicionar `p_recebedor uuid` à RPC `get_movimentacoes_report`.
+- A lista de opções vem de `STAFF_RECEBEDORES` ou de uma consulta a `app_users` com perfis de recebedores.
+- Mostrar o filtro apenas para admin (recebedores comuns já só veem os próprios lançamentos).
 
-1. **Cartões de topo**: total recebido no período, número de pagamentos, ticket médio, valor com sincronização pendente.
-2. **Totais por forma de pagamento**: cartão, dinheiro, SumUp, transferência — valor, % do total e barra proporcional.
-3. **Totais por tatuador**: tabela ordenada por valor, com nº de pagamentos.
-4. **Totais por tipo de movimento**: sinal, sessão, saldo, produto, estorno.
-5. **Detalhe**: lista completa dos pagamentos do período (data, cliente, tatuador, tipo, formas, total, status de sync).
+### 2. Filtro por status de sync GHL
 
-## Relatório HTML
+**Porquê:** Permite ao administrador focar rapidamente nos lançamentos que falharam e precisam de reprocessamento.
 
-- Botão **Imprimir / Guardar PDF**: estilos de impressão (`@media print`) que escondem navegação, botões e filtros e formatam o relatório em A4 com cabeçalho (logo GF, período, quem gerou, data de emissão).
-- Botão **Exportar HTML**: gera um ficheiro `.html` autónomo (estilos inline, sem dependências) com os mesmos blocos, descarregado no dispositivo — abre em qualquer browser e pode ser enviado por email/WhatsApp.
-- Mantém-se também a exportação CSV já usada noutros relatórios, para Excel.
+**Como:**
+- Adicionar `p_sync_status` à RPC com opções `pending`, `synced`, `failed`.
+- URL: `?sync=failed`.
 
-## Detalhes técnicos
+### 3. Comparação com período anterior
 
-- **Banco**: nova função `SECURITY DEFINER` `get_movimentacoes_report(p_start timestamptz, p_end timestamptz, p_artist uuid, p_tipo text)` que:
-  - resolve o papel via `current_user_role()`; se não for `admin`, filtra por `recebido_por_app_user_id = auth.uid()`; sem sessão, levanta `unauthorized`;
-  - devolve as linhas do período (colunas seguras) já com nome do tatuador;
-  - `GRANT EXECUTE ... TO authenticated` (sem `anon`).
-  - As agregações por forma/tatuador/tipo são calculadas no cliente a partir dessas linhas (volume por mês é pequeno), evitando múltiplas idas ao banco.
-- **Server functions**: `getMovimentacoesReport` em `src/lib/movimentacao.functions.ts`, com `requireSupabaseAuth`, chamando a RPC acima.
-- **Rota**: `src/routes/_authenticated/relatorios.movimentacoes.tsx` (fora do gate `_admin`, pois recebedores também acedem), com `head()` próprio e `robots: noindex`.
-- **Componentes**: `src/components/relatorios/` — `report-summary-cards.tsx`, `breakdown-table.tsx`, `report-print-header.tsx`; gerador do HTML autónomo em `src/lib/report-html.ts` (função pura, testável, reutilizada pela exportação).
-- **Estilos de impressão**: bloco `@media print` em `src/styles.css`, sem cores hardcoded fora dos tokens.
-- **Navegação**: nova linha "Relatório de pagamentos" no menu (`src/routes/_authenticated/menu.tsx`), visível para admin e recebedores.
-- Formatação monetária e de datas reutiliza `src/lib/format.ts` (EUR, `pt-PT`, fuso Europe/Brussels).
+**Porquê:** O total de hoje só faz sentido quando comparado com ontem/mês passado.
 
-## Verificação
+**Como:**
+- Calcular o período imediatamente anterior ao selecionado (mesma duração).
+- Buscar os agregados desse período via uma segunda chamada à RPC ou calcular no cliente se o volume for pequeno.
+- Mostrar seta + percentagem nos cards de topo: total recebido, número de pagamentos e ticket médio.
+
+### 4. Gráficos simples
+
+**Porquê:** Tornar padrões óbvios em segundos (picos de dia, domínio de cartão vs. dinheiro, etc.).
+
+**Como:**
+- Gráfico de barras: evolução diária do total recebido no período.
+- Gráfico de donut/pizza: distribuição por forma de pagamento.
+- Biblioteca: `recharts` (leve, React-friendly).
+- Esconder gráficos na versão de impressão (`no-print`).
+
+### 5. Paginação e busca no detalhe
+
+**Porquê:** À medida que o histórico cresce, renderizar todos os lançamentos de uma vez fica pesado e difícil de ler.
+
+**Como:**
+- Paginar o detalhe em blocos de 25 ou 50.
+- Campo de busca por nome do cliente com debounce.
+- Manter a busca na URL (`?q=maria`).
+
+### 6. Agrupar detalhe por dia
+
+**Porquê:** No mobile, uma lista longa de lançamentos perde o contexto temporal. Agrupar por dia facilita conciliação de caixa.
+
+**Como:**
+- Separador de data com subtotal do dia.
+- Expandir/colapsar dias no mobile.
+
+### 7. Exportação para Excel (.xlsx)
+
+**Porquê:** CSV abre quebrado em Excel português (separador `;` ajuda, mas .xlsx é imediato e profissional).
+
+**Como:**
+- Gerar `.xlsx` com duas abas: "Resumo" (cards + quebras) e "Detalhe" (todos os campos).
+- Biblioteca: `xlsx` (sheetjs) ou `exceljs` — verificar compatibilidade com Worker/edge no build.
+
+### 8. Cards de alerta
+
+**Porquê:** Destacar situações que precisam de ação.
+
+**Como:**
+- Card "Sync com falha" em tom de alerta quando `failed > 0`.
+- Card "Estornos no período" quando houver estornos, mostrando valor líquido (total - estornos).
+
+### 9. Navegação para edição a partir do detalhe
+
+**Porquê:** Quando o admin encontra um lançamento errado no relatório, quer corrigi-lo sem sair do contexto.
+
+**Como:**
+- Tornar cada linha do detalhe clicável, navegando para `/movimentacao/historico/<id>/editar`.
+- Voltar para o relatório com os mesmos filtros na URL.
+
+### 10. Relatórios salvos/favoritos
+
+**Porquê:** Usuários repetem os mesmos filtros toda semana (ex.: "Mensalidade Gabriel").
+
+**Como:**
+- Guardar combinações de filtros com nome no `localStorage`.
+- Botão "Guardar filtro" + dropdown de filtros salvos.
+- Futuro: persistir na base se for adotado.
+
+## Ordem de implementação sugerida
+
+Fase 1 — Ganho imediato, baixo risco:
+1. Filtro "Recebido por".
+2. Filtro por status de sync GHL.
+3. Cards de alerta (falhas e estornos).
+4. Navegação para edição no detalhe.
+
+Fase 2 — Análise e visualização:
+5. Comparação com período anterior.
+6. Gráficos de evolução diária e formas de pagamento.
+7. Agrupamento do detalhe por dia.
+
+Fase 3 — Escala e conveniência:
+8. Paginação e busca.
+9. Exportação Excel.
+10. Relatórios salvos.
+
+## Critérios de aceitação
 
 - `tsgo` sem erros.
-- Conferência no preview mobile: dashboard com dados reais, exportação HTML aberta e inspecionada, e pré-visualização de impressão sem cortes.
+- Filtros novos sincronizados na URL.
+- Impressão/PDF continua limpa (gráficos e botões escondidos).
+- Mobile continua usável (filtros não empurram conteúdo para fora da viewport).
 
-Self critique antes de criar 
+## Próximo passo
+
+Recomendo começar pela **Fase 1**: filtro "Recebido por", status de sync, alertas e link para edição. São mudaras pequenas que já resolvem dores reais de conciliação e reprocessamento.
