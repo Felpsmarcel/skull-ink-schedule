@@ -265,7 +265,7 @@ export function MovimentacaoForm({ context, artists, artistsLoading, mode = "lin
 
   function resetForm() {
     setConfirmation(null);
-    setForm(initialState(context));
+    setForm(initialState(context, mode));
     setStep(1);
     setActiveMethods(new Set());
     setFocusedMethod(null);
