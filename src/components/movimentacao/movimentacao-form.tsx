@@ -189,23 +189,25 @@ export function MovimentacaoForm({ context, artists, artistsLoading, mode = "lin
 
   const mutation = useMutation({
     mutationFn: async () => {
-      return submit({
-        data: {
-          slug: context.slug,
-          nome_cliente: form.nome_cliente,
-          data_pagamento: form.data_pagamento,
-          artist_id: form.artist_id,
-          recebido_por_id: form.recebido_por_id,
-          tipo_movimento: form.tipo_movimento,
-          valor_cartao: parseAmount(form.valor_cartao),
-          valor_dinheiro: parseAmount(form.valor_dinheiro),
-          valor_sumup: parseAmount(form.valor_sumup),
-          valor_transferencia: parseAmount(form.valor_transferencia),
-          data_tatuagem: form.data_tatuagem || null,
-          observacoes: form.observacoes || null,
-          chave_idempotencia: form.chave_idempotencia,
-        },
-      });
+      const base = {
+        nome_cliente: form.nome_cliente,
+        data_pagamento: form.data_pagamento,
+        artist_id: form.artist_id,
+        recebido_por_id: form.recebido_por_id,
+        tipo_movimento: form.tipo_movimento,
+        valor_cartao: parseAmount(form.valor_cartao),
+        valor_dinheiro: parseAmount(form.valor_dinheiro),
+        valor_sumup: parseAmount(form.valor_sumup),
+        valor_transferencia: parseAmount(form.valor_transferencia),
+        data_tatuagem: form.data_tatuagem || null,
+        observacoes: form.observacoes || null,
+        chave_idempotencia: form.chave_idempotencia,
+      };
+      if (isManual) {
+        return submitManual({ data: base });
+      }
+      if (!context) throw new Error("Contexto do link em falta.");
+      return submitLink({ data: { ...base, slug: context.slug } });
     },
     onSuccess: (res) => {
       haptic("success");
