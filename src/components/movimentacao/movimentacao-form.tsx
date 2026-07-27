@@ -913,7 +913,7 @@ function ConfirmationScreen({
         </Button>
 
         <a
-          href={`/movimentacao/historico?highlight=${encodeURIComponent(data.id)}`}
+          href={historyHref}
           className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-md border border-border bg-background text-base font-medium hover:bg-muted"
         >
           <History className="h-4 w-4" />
