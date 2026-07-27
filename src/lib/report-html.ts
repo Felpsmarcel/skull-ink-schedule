@@ -216,9 +216,9 @@ ${breakdownHtml("Totais por tipo de movimento", agg.porTipo)}
 <section>
   <h2>Detalhe dos pagamentos</h2>
   <table>
-    <thead><tr><th>Data</th><th>Cliente</th><th>Tatuador</th><th>Tipo</th><th>Formas</th><th class="num">Total</th><th>GHL</th></tr></thead>
-    <tbody>${detalhe || `<tr><td colspan="7">Sem pagamentos no período.</td></tr>`}</tbody>
-    <tfoot><tr><td colspan="5">Total</td><td class="num">${esc(formatCurrency(agg.total))}</td><td></td></tr></tfoot>
+    <thead><tr><th>Data</th><th>Cliente</th><th>Tatuador</th><th>Recebido por</th><th>Tipo</th><th>Formas</th><th class="num">Total</th><th>GHL</th></tr></thead>
+    <tbody>${detalhe || `<tr><td colspan="8">Sem pagamentos no período.</td></tr>`}</tbody>
+    <tfoot><tr><td colspan="6">Total</td><td class="num">${esc(formatCurrency(agg.total))}</td><td></td></tr></tfoot>
   </table>
 </section>
 </body>
