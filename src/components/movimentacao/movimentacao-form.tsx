@@ -95,6 +95,35 @@ function newIdempotencyKey(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+const REGISTRADOR_STORAGE_KEY = "gf:movimentacao:registrador";
+
+function readRememberedRegistrador():
+  | { id: StaffRecebedorId | "outro"; nome: string }
+  | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(REGISTRADOR_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { id?: string; nome?: string };
+    if (!parsed?.id) return null;
+    const valid =
+      parsed.id === "outro" || STAFF_RECEBEDORES.some((s) => s.id === parsed.id);
+    if (!valid) return null;
+    return { id: parsed.id as StaffRecebedorId | "outro", nome: parsed.nome ?? "" };
+  } catch {
+    return null;
+  }
+}
+
+function rememberRegistrador(id: StaffRecebedorId | "outro", nome: string) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(REGISTRADOR_STORAGE_KEY, JSON.stringify({ id, nome }));
+  } catch {
+    // storage indisponível — ignorar
+  }
+}
+
 interface FormState {
   nome_cliente: string;
   data_pagamento: string;
