@@ -4,7 +4,16 @@ import { z } from "zod";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, Download, FileCode2, Printer, Receipt } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  Download,
+  ExternalLink,
+  FileCode2,
+  Printer,
+  Receipt,
+  RotateCcw,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -17,6 +26,7 @@ import { useArtists } from "@/hooks/use-artists";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { getMovimentacoesReport } from "@/lib/movimentacao.functions";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { STAFF_RECEBEDORES } from "@/config/movimentacao-slugs";
 import {
   aggregateReport,
   buildReportHtml,
@@ -25,6 +35,7 @@ import {
   metodoLabel,
   TIPO_LABELS,
   type BreakdownItem,
+  type ReportRow,
 } from "@/lib/report-html";
 
 const searchSchema = z.object({
@@ -32,6 +43,8 @@ const searchSchema = z.object({
   end: fallback(z.string(), "").default(""),
   artist: fallback(z.string(), "").default(""),
   tipo: fallback(z.string(), "").default(""),
+  recebedor: fallback(z.string(), "").default(""),
+  sync: fallback(z.string(), "").default(""),
 });
 
 export const Route = createFileRoute("/_authenticated/relatorios/movimentacoes")({
@@ -62,6 +75,13 @@ function monthRange(offset: number): { start: string; end: string } {
 
 const TIPO_OPTIONS = Object.entries(TIPO_LABELS);
 
+const SYNC_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: "", label: "Todos" },
+  { value: "synced", label: "Sincronizado" },
+  { value: "pending", label: "Pendente" },
+  { value: "failed", label: "Com falha" },
+];
+
 function RelatorioMovimentacoesPage() {
   const search = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
@@ -75,7 +95,15 @@ function RelatorioMovimentacoesPage() {
 
   const fetchReport = useServerFn(getMovimentacoesReport);
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ["movimentacoes-report", start, end, search.artist, search.tipo],
+    queryKey: [
+      "movimentacoes-report",
+      start,
+      end,
+      search.artist,
+      search.tipo,
+      search.recebedor,
+      search.sync,
+    ],
     queryFn: () =>
       fetchReport({
         data: {
@@ -83,6 +111,8 @@ function RelatorioMovimentacoesPage() {
           end,
           artistId: search.artist || null,
           tipo: search.tipo || null,
+          recebedor: search.recebedor || null,
+          syncStatus: (search.sync as "pending" | "synced" | "failed" | "") || null,
         },
       }),
     staleTime: 30_000,
@@ -90,6 +120,19 @@ function RelatorioMovimentacoesPage() {
 
   const rows = data?.rows ?? [];
   const agg = useMemo(() => aggregateReport(rows), [rows]);
+
+  const failedRows = useMemo(
+    () => rows.filter((r) => r.ghl_sync_status === "failed"),
+    [rows],
+  );
+  const estornoRows = useMemo(
+    () => rows.filter((r) => r.tipo_movimento === "estorno"),
+    [rows],
+  );
+  const valorLiquido = useMemo(
+    () => agg.total - estornoRows.reduce((s, r) => s + r.total, 0),
+    [agg.total, estornoRows],
+  );
 
   const periodoLabel = `${formatDate(start)} — ${formatDate(end)}`;
 
@@ -119,6 +162,9 @@ function RelatorioMovimentacoesPage() {
     exportReportCSV(rows, `relatorio-pagamentos-${start}_${end}.csv`);
     toast.success(`Exportado: ${rows.length} linha(s)`);
   }
+
+  const hasFilters =
+    search.artist || search.tipo || search.recebedor || search.sync;
 
   return (
     <div className="min-h-svh bg-background pb-[calc(env(safe-area-inset-bottom)+7rem)] text-foreground sm:pb-24">
@@ -168,20 +214,36 @@ function RelatorioMovimentacoesPage() {
               />
             </Field>
             {isAdmin && (
-              <Field label="Tatuador">
-                <select
-                  value={search.artist}
-                  onChange={(e) => setSearch({ artist: e.target.value })}
-                  className="h-11 w-full rounded-md border border-input bg-background px-2 text-sm"
-                >
-                  <option value="">Todos</option>
-                  {(artists ?? []).map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name}
-                    </option>
-                  ))}
-                </select>
-              </Field>
+              <>
+                <Field label="Tatuador">
+                  <select
+                    value={search.artist}
+                    onChange={(e) => setSearch({ artist: e.target.value })}
+                    className="h-11 w-full rounded-md border border-input bg-background px-2 text-sm"
+                  >
+                    <option value="">Todos</option>
+                    {(artists ?? []).map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.name}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Recebido por">
+                  <select
+                    value={search.recebedor}
+                    onChange={(e) => setSearch({ recebedor: e.target.value })}
+                    className="h-11 w-full rounded-md border border-input bg-background px-2 text-sm"
+                  >
+                    <option value="">Todos</option>
+                    {STAFF_RECEBEDORES.map((s) => (
+                      <option key={s.appUserId} value={s.appUserId}>
+                        {s.displayName}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              </>
             )}
             <Field label="Tipo">
               <select
@@ -197,8 +259,21 @@ function RelatorioMovimentacoesPage() {
                 ))}
               </select>
             </Field>
+            <Field label="Sync GHL">
+              <select
+                value={search.sync}
+                onChange={(e) => setSearch({ sync: e.target.value })}
+                className="h-11 w-full rounded-md border border-input bg-background px-2 text-sm"
+              >
+                {SYNC_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </Field>
           </div>
-          <div className="flex flex-wrap gap-2 pt-1">
+          <div className="flex flex-wrap items-center gap-2 pt-1">
             <Button type="button" size="sm" onClick={() => window.print()}>
               <Printer className="h-4 w-4" /> Imprimir / PDF
             </Button>
@@ -208,6 +283,18 @@ function RelatorioMovimentacoesPage() {
             <Button type="button" size="sm" variant="outline" onClick={handleExportCsv}>
               <Download className="h-4 w-4" /> CSV
             </Button>
+            {hasFilters && (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() =>
+                  setSearch({ artist: "", tipo: "", recebedor: "", sync: "" })
+                }
+              >
+                <RotateCcw className="h-4 w-4" /> Limpar
+              </Button>
+            )}
           </div>
         </div>
 
@@ -245,6 +332,38 @@ function RelatorioMovimentacoesPage() {
               />
             </div>
 
+            {estornoRows.length > 0 && (
+              <AlertCard
+                icon={<Receipt className="h-4 w-4" />}
+                title="Estornos no período"
+                value={formatCurrency(estornoRows.reduce((s, r) => s + r.total, 0))}
+                sub={`${estornoRows.length} registo(s) · Líquido ${formatCurrency(valorLiquido)}`}
+                tone="warn"
+              />
+            )}
+
+            {failedRows.length > 0 && (
+              <AlertCard
+                icon={<AlertTriangle className="h-4 w-4" />}
+                title="Sync GHL com falha"
+                value={String(failedRows.length)}
+                sub={`${formatCurrency(failedRows.reduce((s, r) => s + r.total, 0))} não sincronizado`}
+                tone="danger"
+                action={
+                  search.sync !== "failed" ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setSearch({ sync: "failed" })}
+                    >
+                      Ver falhas
+                    </Button>
+                  ) : null
+                }
+              />
+            )}
+
             <Breakdown title="Por forma de pagamento" items={agg.porForma} />
             <Breakdown title="Por tatuador" items={agg.porTatuador} />
             <Breakdown title="Por tipo de movimento" items={agg.porTipo} />
@@ -255,28 +374,7 @@ function RelatorioMovimentacoesPage() {
               </h2>
               <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
                 {rows.map((r) => (
-                  <li key={r.id} className="space-y-1 px-4 py-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold">{r.nome_cliente}</p>
-                        <p className="text-[11px] text-muted-foreground">
-                          {formatDate(r.data_pagamento)} · {r.tatuador ?? "—"}
-                        </p>
-                      </div>
-                      <span className="shrink-0 text-sm font-bold tabular-nums">
-                        {formatCurrency(r.total)}
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <StatusBadge variant="info">
-                        {TIPO_LABELS[r.tipo_movimento] ?? r.tipo_movimento}
-                      </StatusBadge>
-                      <span className="text-[11px] text-muted-foreground">{metodoLabel(r)}</span>
-                      <StatusBadge variant={r.ghl_sync_status === "synced" ? "success" : "warning"}>
-                        {r.ghl_sync_status === "synced" ? "Sync" : "Pendente"}
-                      </StatusBadge>
-                    </div>
-                  </li>
+                  <ReportRowItem key={r.id} row={r} />
                 ))}
               </ul>
             </section>
@@ -336,5 +434,77 @@ function Breakdown({ title, items }: { title: string; items: BreakdownItem[] }) 
         ))}
       </ul>
     </section>
+  );
+}
+
+function AlertCard({
+  icon,
+  title,
+  value,
+  sub,
+  tone,
+  action,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  value: string;
+  sub: string;
+  tone: "warn" | "danger";
+  action?: React.ReactNode;
+}) {
+  const border = tone === "danger" ? "border-red-500/40" : "border-amber-500/40";
+  const bg = tone === "danger" ? "bg-red-500/10" : "bg-amber-500/10";
+  const text = tone === "danger" ? "text-red-600" : "text-amber-600";
+  return (
+    <div className={`rounded-lg border ${border} ${bg} p-4`}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <span className={text}>{icon}</span>
+          <div>
+            <p className={`text-sm font-semibold ${text}`}>{title}</p>
+            <p className="text-xs text-muted-foreground">{sub}</p>
+          </div>
+        </div>
+        <div className="text-right">
+          <p className={`text-lg font-bold tabular-nums ${text}`}>{value}</p>
+          {action && <div className="mt-1.5">{action}</div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ReportRowItem({ row }: { row: ReportRow }) {
+  return (
+    <li className="group relative space-y-1 px-4 py-3">
+      <Link
+        to="/movimentacao/historico/$id/editar"
+        params={{ id: row.id }}
+        className="absolute inset-0 z-10"
+        aria-label={`Editar pagamento de ${row.nome_cliente}`}
+      />
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold">{row.nome_cliente}</p>
+          <p className="text-[11px] text-muted-foreground">
+            {formatDate(row.data_pagamento)} · {row.tatuador ?? "—"}
+            {row.recebido_por_nome ? ` · Recebido por ${row.recebido_por_nome}` : ""}
+          </p>
+        </div>
+        <span className="shrink-0 text-sm font-bold tabular-nums">
+          {formatCurrency(row.total)}
+        </span>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <StatusBadge variant="info">
+          {TIPO_LABELS[row.tipo_movimento] ?? row.tipo_movimento}
+        </StatusBadge>
+        <span className="text-[11px] text-muted-foreground">{metodoLabel(row)}</span>
+        <StatusBadge variant={row.ghl_sync_status === "synced" ? "success" : "warning"}>
+          {row.ghl_sync_status === "synced" ? "Sync" : "Pendente"}
+        </StatusBadge>
+        <ExternalLink className="ml-auto h-3.5 w-3.5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+      </div>
+    </li>
   );
 }
