@@ -4,7 +4,16 @@ import { z } from "zod";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, Download, FileCode2, Printer, Receipt } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  Download,
+  ExternalLink,
+  FileCode2,
+  Printer,
+  Receipt,
+  RotateCcw,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -17,6 +26,7 @@ import { useArtists } from "@/hooks/use-artists";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { getMovimentacoesReport } from "@/lib/movimentacao.functions";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { STAFF_RECEBEDORES } from "@/config/movimentacao-slugs";
 import {
   aggregateReport,
   buildReportHtml,
@@ -25,6 +35,7 @@ import {
   metodoLabel,
   TIPO_LABELS,
   type BreakdownItem,
+  type ReportRow,
 } from "@/lib/report-html";
 
 const searchSchema = z.object({
@@ -32,6 +43,8 @@ const searchSchema = z.object({
   end: fallback(z.string(), "").default(""),
   artist: fallback(z.string(), "").default(""),
   tipo: fallback(z.string(), "").default(""),
+  recebedor: fallback(z.string(), "").default(""),
+  sync: fallback(z.string(), "").default(""),
 });
 
 export const Route = createFileRoute("/_authenticated/relatorios/movimentacoes")({
