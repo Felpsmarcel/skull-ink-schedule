@@ -192,3 +192,20 @@
 @utility pr-safe {
   padding-right: env(safe-area-inset-right);
 }
+
+@media print {
+  .no-print,
+  [data-bottom-nav],
+  nav[aria-label="Navegação principal"] {
+    display: none !important;
+  }
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+}
