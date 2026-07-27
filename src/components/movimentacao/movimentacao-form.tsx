@@ -214,7 +214,7 @@ export function MovimentacaoForm({ context, artists, artistsLoading, mode = "lin
       const synced = res.ghl_sync_status === "synced";
       qc.invalidateQueries({ queryKey: ["movimentacoes"] });
       qc.invalidateQueries({ queryKey: ["finance-summary"] });
-      qc.invalidateQueries({ queryKey: ["movimentacao-recent-clients", context.slug] });
+      qc.invalidateQueries({ queryKey: ["movimentacao-recent-clients", context?.slug ?? "manual"] });
       toast.success(
         synced
           ? "Pagamento registado e sincronizado."
