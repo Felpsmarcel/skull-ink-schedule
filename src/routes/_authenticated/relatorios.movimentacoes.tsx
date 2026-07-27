@@ -314,7 +314,7 @@ function RelatorioMovimentacoesPage() {
                 size="sm"
                 variant="ghost"
                 onClick={() =>
-                  setSearch({ artist: "", tipo: "", recebedor: "", sync: "" })
+                  setSearch({ artist: "", tipo: "", recebedor: "", sync: "", origem: "" })
                 }
               >
                 <RotateCcw className="h-4 w-4" /> Limpar
