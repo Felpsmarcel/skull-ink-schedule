@@ -929,3 +929,52 @@ export const getEditableMovimentacaoIds = createServerFn({ method: "POST" })
         .map((r) => r.id),
     };
   });
+
+// ---------------- Relatório -----------------------------------------------
+
+const ReportInput = z.object({
+  start: z.string(),
+  end: z.string(),
+  artistId: z.string().uuid().nullable().optional(),
+  tipo: z.string().nullable().optional(),
+});
+
+export interface MovimentacaoReportResult {
+  rows: ReportRow[];
+  role: string | null;
+}
+
+export const getMovimentacoesReport = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => ReportInput.parse(data))
+  .handler(async ({ data, context }): Promise<MovimentacaoReportResult> => {
+    const me = await getAppUserRow(context.supabase, context.userId);
+    const { data: rowsRaw, error } = await context.supabase.rpc(
+      "get_movimentacoes_report" as never,
+      {
+        p_start: data.start,
+        p_end: data.end,
+        p_artist: data.artistId ?? null,
+        p_tipo: data.tipo ?? null,
+      } as never,
+    );
+    if (error) throw new Error(error.message);
+    const raw = (rowsRaw ?? []) as Array<Record<string, unknown>>;
+    const rows: ReportRow[] = raw.map((r) => ({
+      id: String(r.id),
+      created_at: String(r.created_at),
+      data_pagamento: String(r.data_pagamento),
+      nome_cliente: String(r.nome_cliente ?? ""),
+      artist_id: r.artist_id ? String(r.artist_id) : null,
+      tatuador: r.tatuador ? String(r.tatuador) : null,
+      link_origem: String(r.link_origem ?? ""),
+      tipo_movimento: String(r.tipo_movimento ?? ""),
+      valor_cartao: Number(r.valor_cartao ?? 0),
+      valor_dinheiro: Number(r.valor_dinheiro ?? 0),
+      valor_sumup: Number(r.valor_sumup ?? 0),
+      valor_transferencia: Number(r.valor_transferencia ?? 0),
+      total: Number(r.total ?? 0),
+      ghl_sync_status: (r.ghl_sync_status as ReportRow["ghl_sync_status"]) ?? "pending",
+    }));
+    return { rows, role: me.role };
+  });
