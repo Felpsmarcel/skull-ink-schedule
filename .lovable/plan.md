@@ -1,60 +1,53 @@
-## Situação atual
+# Dashboard de Relatórios — Histórico de Pagamentos
 
-O comando `tsgo` reporta 9 erros TypeScript hard que impedem o build limpo. Sem build limpo, não é seguro publicar nem testar o dashboard editável recém-criado.
+Nova página autenticada `/relatorios/movimentacoes` que resume os pagamentos registados (tabela `movimentacoes`), com agregações e um relatório HTML imprimível/exportável.
 
-## Objetivo deste plano
+## Acesso
 
-Restaurar o build zero-erros corrigindo apenas os problemas de tipo introduzidos nas rotas de autenticação e na agenda.
+- **Admin**: vê todos os registos.
+- **Recebedor** (tatuador/vendedor que consta como "recebido por"): vê apenas os pagamentos que recebeu.
+- Registos apagados (soft delete) ficam de fora.
 
-## Erros identificados
+A regra de acesso é aplicada no banco, não no frontend.
 
-1. **Rotas `/auth` exigem `search` obrigatório** — `validateSearch` em `/auth` provavelmente define `redirect` como obrigatório ou o tipo inferiu `search` required. Isso quebra `navigate({ to: "/auth", replace: true })` em:
-   - `src/components/layout/auth-shell.tsx`
-   - `src/routes/_authenticated/menu.tsx`
-   - `src/routes/index.tsx`
+## Filtros
 
-2. **Links para `/auth_/recover` inválidos** — a rota real é `/auth/recover` (underscore no nome de arquivo vira segmento normal). Arquivos afetados:
-   - `src/routes/auth.tsx`
-   - `src/routes/auth_.recover.tsx`
-   - `src/routes/auth_.update-password.tsx`
+- Atalhos rápidos: mês atual, mês anterior, seletor mês/ano.
+- Intervalo livre: data inicial e data final.
+- Filtro opcional por tatuador (apenas admin) e por tipo de movimento.
+- Filtros refletidos na URL, para o relatório poder ser partilhado/recarregado.
 
-3. **Links para `/auth` sem `search` em `auth_.recover.tsx`** — mesma causa do item 1.
+## Conteúdo do dashboard
 
-4. **Tipo `debug` inferido como `boolean` em vez de `true`** — em `src/routes/_authenticated/agenda.tsx`, a função reducer de `navigate({ search: (prev) => ... })` permite `debug: false`, mas o schema de busca deve aceitar `boolean`.
+1. **Cartões de topo**: total recebido no período, número de pagamentos, ticket médio, valor com sincronização pendente.
+2. **Totais por forma de pagamento**: cartão, dinheiro, SumUp, transferência — valor, % do total e barra proporcional.
+3. **Totais por tatuador**: tabela ordenada por valor, com nº de pagamentos.
+4. **Totais por tipo de movimento**: sinal, sessão, saldo, produto, estorno.
+5. **Detalhe**: lista completa dos pagamentos do período (data, cliente, tatuador, tipo, formas, total, status de sync).
 
-## Passos de implementação
+## Relatório HTML
 
-### 1. Ajustar schema de busca de `/auth`
+- Botão **Imprimir / Guardar PDF**: estilos de impressão (`@media print`) que escondem navegação, botões e filtros e formatam o relatório em A4 com cabeçalho (logo GF, período, quem gerou, data de emissão).
+- Botão **Exportar HTML**: gera um ficheiro `.html` autónomo (estilos inline, sem dependências) com os mesmos blocos, descarregado no dispositivo — abre em qualquer browser e pode ser enviado por email/WhatsApp.
+- Mantém-se também a exportação CSV já usada noutros relatórios, para Excel.
 
-Tornar `redirect` opcional explicitamente no `validateSearch` de `src/routes/auth.tsx` para que `search` não seja required nos tipos do router.
+## Detalhes técnicos
 
-### 2. Corrigir todos os `navigate`/`Link` para `/auth`
+- **Banco**: nova função `SECURITY DEFINER` `get_movimentacoes_report(p_start timestamptz, p_end timestamptz, p_artist uuid, p_tipo text)` que:
+  - resolve o papel via `current_user_role()`; se não for `admin`, filtra por `recebido_por_app_user_id = auth.uid()`; sem sessão, levanta `unauthorized`;
+  - devolve as linhas do período (colunas seguras) já com nome do tatuador;
+  - `GRANT EXECUTE ... TO authenticated` (sem `anon`).
+  - As agregações por forma/tatuador/tipo são calculadas no cliente a partir dessas linhas (volume por mês é pequeno), evitando múltiplas idas ao banco.
+- **Server functions**: `getMovimentacoesReport` em `src/lib/movimentacao.functions.ts`, com `requireSupabaseAuth`, chamando a RPC acima.
+- **Rota**: `src/routes/_authenticated/relatorios.movimentacoes.tsx` (fora do gate `_admin`, pois recebedores também acedem), com `head()` próprio e `robots: noindex`.
+- **Componentes**: `src/components/relatorios/` — `report-summary-cards.tsx`, `breakdown-table.tsx`, `report-print-header.tsx`; gerador do HTML autónomo em `src/lib/report-html.ts` (função pura, testável, reutilizada pela exportação).
+- **Estilos de impressão**: bloco `@media print` em `src/styles.css`, sem cores hardcoded fora dos tokens.
+- **Navegação**: nova linha "Relatório de pagamentos" no menu (`src/routes/_authenticated/menu.tsx`), visível para admin e recebedores.
+- Formatação monetária e de datas reutiliza `src/lib/format.ts` (EUR, `pt-PT`, fuso Europe/Brussels).
 
-Adicionar `search: { redirect: undefined }` (ou omitir de forma compatível) nas chamadas em:
-- `auth-shell.tsx`
-- `menu.tsx`
-- `index.tsx`
+## Verificação
 
-Se o schema ficar realmente opcional, as chamadas atuais passam a compilar sem alteração.
+- `tsgo` sem erros.
+- Conferência no preview mobile: dashboard com dados reais, exportação HTML aberta e inspecionada, e pré-visualização de impressão sem cortes.
 
-### 3. Corrigir links `/auth_/recover` → `/auth/recover`
-
-Atualizar todos os `<Link to="/auth_/recover" ... />` e `navigate({ to: "/auth_/recover" })` para `/auth/recover`.
-
-### 4. Corrigir reducer de search em `agenda.tsx`
-
-Alterar a tipagem ou o schema de busca da rota `/agenda` para que `debug` seja `boolean` em vez de `true`, permitindo que o reducer preserve o valor anterior sem erro de contravariância.
-
-### 5. Reexecutar `tsgo` e iterar
-
-Após as correções, rodar `bunx tsgo` novamente para confirmar zero erros. Se surgirem novos erros de tipo derivados dessas mudanças, corrigi-los no mesmo ciclo.
-
-## Fora do escopo deste plano
-
-- Novas funcionalidades no dashboard editável.
-- Refatorações de UX/UI.
-- Ajustes na migration de soft-delete (já criada, pendente de deploy).
-
-## Resultado esperado
-
-`bunx tsgo` finaliza com `0 errors`, permitindo publicar e testar o app com segurança.
+Self critique antes de criar 
