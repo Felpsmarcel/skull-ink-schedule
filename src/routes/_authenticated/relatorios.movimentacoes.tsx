@@ -436,3 +436,75 @@ function Breakdown({ title, items }: { title: string; items: BreakdownItem[] }) 
     </section>
   );
 }
+
+function AlertCard({
+  icon,
+  title,
+  value,
+  sub,
+  tone,
+  action,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  value: string;
+  sub: string;
+  tone: "warn" | "danger";
+  action?: React.ReactNode;
+}) {
+  const border = tone === "danger" ? "border-red-500/40" : "border-amber-500/40";
+  const bg = tone === "danger" ? "bg-red-500/10" : "bg-amber-500/10";
+  const text = tone === "danger" ? "text-red-600" : "text-amber-600";
+  return (
+    <div className={`rounded-lg border ${border} ${bg} p-4`}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <span className={text}>{icon}</span>
+          <div>
+            <p className={`text-sm font-semibold ${text}`}>{title}</p>
+            <p className="text-xs text-muted-foreground">{sub}</p>
+          </div>
+        </div>
+        <div className="text-right">
+          <p className={`text-lg font-bold tabular-nums ${text}`}>{value}</p>
+          {action && <div className="mt-1.5">{action}</div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ReportRowItem({ row }: { row: ReportRow }) {
+  return (
+    <li className="group relative space-y-1 px-4 py-3">
+      <Link
+        to="/movimentacao/historico/$id/editar"
+        params={{ id: row.id }}
+        className="absolute inset-0 z-10"
+        aria-label={`Editar pagamento de ${row.nome_cliente}`}
+      />
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold">{row.nome_cliente}</p>
+          <p className="text-[11px] text-muted-foreground">
+            {formatDate(row.data_pagamento)} · {row.tatuador ?? "—"}
+            {row.recebido_por_nome ? ` · Recebido por ${row.recebido_por_nome}` : ""}
+          </p>
+        </div>
+        <span className="shrink-0 text-sm font-bold tabular-nums">
+          {formatCurrency(row.total)}
+        </span>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <StatusBadge variant="info">
+          {TIPO_LABELS[row.tipo_movimento] ?? row.tipo_movimento}
+        </StatusBadge>
+        <span className="text-[11px] text-muted-foreground">{metodoLabel(row)}</span>
+        <StatusBadge variant={row.ghl_sync_status === "synced" ? "success" : "warning"}>
+          {row.ghl_sync_status === "synced" ? "Sync" : "Pendente"}
+        </StatusBadge>
+        <ExternalLink className="ml-auto h-3.5 w-3.5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+      </div>
+    </li>
+  );
+}
