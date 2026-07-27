@@ -323,11 +323,12 @@ export function MovimentacaoForm({ context, artists, artistsLoading }: Props) {
     }
     if (!target) {
       target = "dinheiro";
-      setActiveMethods((prev) => new Set(prev).add(target));
+      setActiveMethods((prev) => new Set(prev).add("dinheiro"));
     }
-    const current = parseAmount(getAmountForMethod(target));
-    setAmountForMethod(target, formatAmountInput(current + amount));
-    setFocusedMethod(target);
+    const chosen = target ?? "dinheiro";
+    const current = parseAmount(getAmountForMethod(chosen));
+    setAmountForMethod(chosen, formatAmountInput(current + amount));
+    setFocusedMethod(chosen);
   }
 
   if (confirmation) {
