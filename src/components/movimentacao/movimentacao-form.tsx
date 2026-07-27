@@ -426,13 +426,13 @@ function Stepper({ step }: { step: 1 | 2 | 3 }) {
 interface StepOneProps {
   form: FormState;
   set: <K extends keyof FormState>(key: K, value: FormState[K]) => void;
-  context: SlugContext;
+  recebedores: { id: StaffRecebedorId; displayName: string }[];
   artists: ArtistOption[];
   artistsLoading?: boolean;
   recentClients: string[];
 }
 
-function StepOne({ form, set, context, artists, artistsLoading, recentClients }: StepOneProps) {
+function StepOne({ form, set, recebedores, artists, artistsLoading, recentClients }: StepOneProps) {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
