@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { ReportRow } from "@/lib/report-html";
 import {
   MOVIMENTACAO_SLUGS,
   isMovimentacaoSlug,
