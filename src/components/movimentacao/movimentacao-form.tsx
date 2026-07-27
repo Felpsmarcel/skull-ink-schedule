@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -148,6 +148,7 @@ export function MovimentacaoForm({ context, artists, artistsLoading }: Props) {
   const [form, setForm] = useState<FormState>(() => initialState(context));
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
+  const [activeMethods, setActiveMethods] = useState<Set<PaymentMethodKey>>(new Set());
   const [focusedMethod, setFocusedMethod] = useState<PaymentMethodKey | null>(null);
   const qc = useQueryClient();
   const submit = useServerFn(createMovimentacao);
@@ -256,6 +257,7 @@ export function MovimentacaoForm({ context, artists, artistsLoading }: Props) {
     setConfirmation(null);
     setForm(initialState(context));
     setStep(1);
+    setActiveMethods(new Set());
     setFocusedMethod(null);
   }
 
@@ -263,6 +265,15 @@ export function MovimentacaoForm({ context, artists, artistsLoading }: Props) {
     const field = METODO_OPTIONS.find((m) => m.key === method)?.field;
     if (!field) return;
     setForm((s) => ({ ...s, [field]: raw }));
+    setActiveMethods((prev) => {
+      const next = new Set(prev);
+      if (parseAmount(raw) > 0 || method === focusedMethod) {
+        next.add(method);
+      } else if (raw === "" && method !== focusedMethod) {
+        next.delete(method);
+      }
+      return next;
+    });
   }
 
   function getAmountForMethod(method: PaymentMethodKey): string {
@@ -279,18 +290,23 @@ export function MovimentacaoForm({ context, artists, artistsLoading }: Props) {
   }
 
   function isMethodActive(method: PaymentMethodKey): boolean {
-    return parseAmount(getAmountForMethod(method)) > 0;
+    return activeMethods.has(method) || parseAmount(getAmountForMethod(method)) > 0;
   }
 
   function toggleMethod(method: PaymentMethodKey) {
     haptic("tap");
     const active = isMethodActive(method);
     if (active) {
+      setActiveMethods((prev) => {
+        const next = new Set(prev);
+        next.delete(method);
+        return next;
+      });
       setAmountForMethod(method, "");
       if (focusedMethod === method) setFocusedMethod(null);
     } else {
+      setActiveMethods((prev) => new Set(prev).add(method));
       setFocusedMethod(method);
-      // Focus the input on next tick.
       setTimeout(() => {
         const el = document.getElementById(`amount-${method}`);
         if (el) el.focus();
@@ -300,14 +316,14 @@ export function MovimentacaoForm({ context, artists, artistsLoading }: Props) {
 
   function applyQuickAmount(amount: number) {
     haptic("tap");
-    const activeMethods = METODO_OPTIONS.filter((m) => isMethodActive(m.key)).map((m) => m.key);
+    const active = METODO_OPTIONS.filter((m) => isMethodActive(m.key)).map((m) => m.key);
     let target: PaymentMethodKey | null = focusedMethod;
     if (!target || !isMethodActive(target)) {
-      target = activeMethods[0] ?? null;
+      target = active[0] ?? null;
     }
     if (!target) {
-      // Default to dinheiro if nothing selected.
       target = "dinheiro";
+      setActiveMethods((prev) => new Set(prev).add(target));
     }
     const current = parseAmount(getAmountForMethod(target));
     setAmountForMethod(target, formatAmountInput(current + amount));
@@ -315,12 +331,7 @@ export function MovimentacaoForm({ context, artists, artistsLoading }: Props) {
   }
 
   if (confirmation) {
-    return (
-      <ConfirmationScreen
-        data={confirmation}
-        onNew={resetForm}
-      />
-    );
+    return <ConfirmationScreen data={confirmation} onNew={resetForm} />;
   }
 
   return (
@@ -372,12 +383,9 @@ export function MovimentacaoForm({ context, artists, artistsLoading }: Props) {
         onBack={prevStep}
         onNext={nextStep}
         onSubmit={() => mutation.mutate()}
-        canNext={
-          (step === 1 && step1Valid) || (step === 2 && step2Valid) || false
-        }
+        canNext={(step === 1 && step1Valid) || (step === 2 && step2Valid) || false}
         canSubmit={step === 3 && step3Valid && total > 0 && !exclusivoErro && !mutation.isPending}
         isSubmitting={mutation.isPending}
-        total={total}
       />
     </div>
   );
@@ -640,7 +648,7 @@ function StepTwo({
         )}
       </div>
 
-      <div className="sticky bottom-0 rounded-lg border border-border bg-card p-4 shadow-sm">
+      <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
         <div className="flex items-baseline justify-between">
           <span className="text-sm uppercase tracking-wider text-muted-foreground">Total</span>
           <span
@@ -727,7 +735,10 @@ function StepThree({ form, set, total, isSinal, sinalErro, artists }: StepThreeP
           <dt className="text-muted-foreground">Tipo</dt>
           <dd className="font-medium">{TIPO_LABEL[form.tipo_movimento]}</dd>
           <dt className="text-muted-foreground">Total</dt>
-          <dd className="font-bold tabular-nums" style={{ color: total > 0 ? "#E11D2A" : undefined }}>
+          <dd
+            className="font-bold tabular-nums"
+            style={{ color: total > 0 ? "#E11D2A" : undefined }}
+          >
             {fmtEur(total)}
           </dd>
         </dl>
@@ -744,7 +755,6 @@ interface WizardFooterProps {
   canNext: boolean;
   canSubmit: boolean;
   isSubmitting: boolean;
-  total: number;
 }
 
 function WizardFooter({
@@ -887,11 +897,7 @@ function ConfirmationScreen({
           Ver no histórico
         </a>
 
-        <Button
-          type="button"
-          onClick={onNew}
-          className="h-14 w-full text-base font-semibold"
-        >
+        <Button type="button" onClick={onNew} className="h-14 w-full text-base font-semibold">
           <Plus className="mr-2 h-4 w-4" />
           Novo registo
         </Button>
@@ -899,3 +905,4 @@ function ConfirmationScreen({
     </div>
   );
 }
+
