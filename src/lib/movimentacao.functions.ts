@@ -220,6 +220,8 @@ const CreateInput = z
       .optional(),
     observacoes: z.string().max(1000).nullable().optional(),
     chave_idempotencia: z.string().uuid("Chave de idempotência inválida."),
+    registrado_por_id: z.enum([...STAFF_RECEBEDOR_IDS, "outro"] as [string, ...string[]]),
+    registrado_por_nome: z.string().trim().max(80).nullable().optional(),
   })
   .refine((v) => !(v.valor_cartao > 0 && v.valor_sumup > 0), {
     message: "SumUp e Cartão são métodos exclusivos.",
@@ -232,6 +234,10 @@ const CreateInput = z
   .refine((v) => v.tipo_movimento !== "sinal" || Boolean(v.data_tatuagem), {
     message: "Informe a data da sessão agendada.",
     path: ["data_tatuagem"],
+  })
+  .refine((v) => v.registrado_por_id !== "outro" || (v.registrado_por_nome ?? "").length >= 2, {
+    message: "Indique quem está a registar.",
+    path: ["registrado_por_nome"],
   });
 
 export interface CreateResult {
