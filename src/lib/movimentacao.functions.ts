@@ -1076,6 +1076,7 @@ const ReportInput = z.object({
   tipo: z.string().nullable().optional(),
   recebedor: z.string().uuid().nullable().optional(),
   syncStatus: z.enum(["pending", "synced", "failed"]).nullable().optional(),
+  origem: z.enum(["link_individual", "manual"]).nullable().optional(),
 });
 
 export interface MovimentacaoReportResult {
