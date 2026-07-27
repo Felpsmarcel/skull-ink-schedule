@@ -110,6 +110,7 @@ function RelatorioMovimentacoesPage() {
       search.tipo,
       search.recebedor,
       search.sync,
+      search.origem,
     ],
     queryFn: () =>
       fetchReport({
@@ -120,6 +121,7 @@ function RelatorioMovimentacoesPage() {
           tipo: search.tipo || null,
           recebedor: search.recebedor || null,
           syncStatus: (search.sync as "pending" | "synced" | "failed" | "") || null,
+          origem: (search.origem as "link_individual" | "manual" | "") || null,
         },
       }),
     staleTime: 30_000,
