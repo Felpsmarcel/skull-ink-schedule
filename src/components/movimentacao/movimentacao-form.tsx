@@ -100,6 +100,8 @@ interface FormState {
   data_pagamento: string;
   artist_id: string;
   recebido_por_id: StaffRecebedorId;
+  registrado_por_id: StaffRecebedorId | "outro";
+  registrado_por_nome: string;
   tipo_movimento: MovimentacaoTipo;
   valor_cartao: string;
   valor_dinheiro: string;
@@ -113,11 +115,14 @@ interface FormState {
 function initialState(context: SlugContext | undefined, mode: "link" | "manual"): FormState {
   const defaultArtistId = context?.defaultArtistId ?? "";
   const defaultRecebedorId = context?.defaultRecebedorId ?? STAFF_RECEBEDORES[0].id;
+  const remembered = readRememberedRegistrador();
   return {
     nome_cliente: "",
     data_pagamento: todayISO(),
     artist_id: mode === "manual" ? "" : defaultArtistId,
     recebido_por_id: mode === "manual" ? STAFF_RECEBEDORES[0].id : defaultRecebedorId,
+    registrado_por_id: remembered?.id ?? defaultRecebedorId,
+    registrado_por_nome: remembered?.nome ?? "",
     tipo_movimento: "sessao",
     valor_cartao: "",
     valor_dinheiro: "",
