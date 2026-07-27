@@ -149,6 +149,8 @@ function RelatorioMovimentacoesPage() {
     navigate({ search: (prev: typeof search) => ({ ...prev, ...patch }) });
   }
 
+  const origemLabel = ORIGEM_OPTIONS.find((o) => o.value === search.origem)?.label;
+
   function handleExportHtml() {
     if (rows.length === 0) {
       toast.error("Nada para exportar");
@@ -158,6 +160,7 @@ function RelatorioMovimentacoesPage() {
       periodoLabel,
       geradoPor: me?.email ?? "—",
       geradoEm: new Date(),
+      origemLabel: origemLabel ? `Relatório de pagamentos — ${origemLabel}` : undefined,
     });
     downloadReportHtml(html, `relatorio-pagamentos-${start}_${end}.html`);
     toast.success("Relatório HTML exportado");
@@ -173,7 +176,7 @@ function RelatorioMovimentacoesPage() {
   }
 
   const hasFilters =
-    search.artist || search.tipo || search.recebedor || search.sync;
+    search.artist || search.tipo || search.recebedor || search.sync || search.origem;
 
   return (
     <div className="min-h-svh bg-background pb-[calc(env(safe-area-inset-bottom)+7rem)] text-foreground sm:pb-24">
