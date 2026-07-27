@@ -1,129 +1,69 @@
-# Melhorias no Relatório de Pagamentos (lançamentos)
+# Plano: UX mobile do registro de pagamento
 
-## Estado atual
+## Contexto
+A página pública `/movimentacao/[slug]` é usada por tatuadores e vendedores no celular para registar pagamentos. O formulário atual exibe todos os campos de uma só vez e exige muitos toques/edições manuais, o que atrasa o registro no dia a dia do estúdio.
 
-A página `/relatorios/movimentacoes` já entrega:
+## Objetivo
+Reduzir o tempo e o número de toques para registar um pagamento no mobile, sem perder precisão ou validação.
 
-- Filtros por período (atalhos mês atual/anterior + intervalo livre), tatuador (admin) e tipo de movimento, todos sincronizados na URL.
-- Cards de topo: total recebido, número de pagamentos, ticket médio, valor com sync pendente.
-- Quebras por forma de pagamento, tatuador e tipo de movimento, com barras proporcionais.
-- Lista de detalhe com data, cliente, tatuador, tipo, formas, total e status GHL.
-- Exportação para Imprimir/PDF, HTML autónomo e CSV.
-- Acesso controlado por papel (admin vê tudo; recebedor vê só os seus).
+## Escopo
+Foco apenas na página `/movimentacao/[slug]` e no componente `MovimentacaoForm`. Não alterar regras financeiras, tabelas ou sync GHL.
 
-## O que mudaria e porquê
+## Implementação
 
-### 1. Adicionar filtro "Recebido por"
+### 1. Wizard de 3 passos
+Dividir o formulário longo em etapas para reduzir carga cognitiva:
 
-**Porquê:** Hoje o admin filtra por tatuador, mas o dinheiro entrou na mão de um vendedor/tatuador recebedor. Para conciliar caixa, o filtro natural é "quem recebeu".
+- **Passo 1 — Cliente e Tatuador**
+  - Nome do cliente (input com autocomplete de clientes recentes)
+  - Seletor de tatuador (já pré-selecionado pelo slug)
+  - Botão "Próximo"
 
-**Como:**
-- Adicionar `p_recebedor uuid` à RPC `get_movimentacoes_report`.
-- A lista de opções vem de `STAFF_RECEBEDORES` ou de uma consulta a `app_users` com perfis de recebedores.
-- Mostrar o filtro apenas para admin (recebedores comuns já só veem os próprios lançamentos).
+- **Passo 2 — Valor e Método**
+  - Tipo de movimento (chips: Sinal, Sessão, Saldo, Produto, Estorno)
+  - Método de pagamento como chips exclusivos + combinação permitida (Cartão, Dinheiro, SumUp, Transferência)
+  - Input de valor com botões rápidos: €50, €100, €150, €200, €250
+  - Total destacado e sticky no rodapé deste passo
 
-### 2. Filtro por status de sync GHL
+- **Passo 3 — Detalhes e Confirmar**
+  - Data do pagamento (default hoje)
+  - Data da sessão agendada (obrigatória apenas para "Sinal")
+  - Observações (opcional)
+  - Resumo final e botão "Registar pagamento"
 
-**Porquê:** Permite ao administrador focar rapidamente nos lançamentos que falharam e precisam de reprocessamento.
+### 2. Otimizações mobile
+- Aumentar altura dos inputs e botões para `h-13`/`h-14` (mínimo 52–56 px).
+- Usar `inputMode="decimal"` e teclado numérico para valores.
+- Adicionar safe-area no rodapé dos passos.
+- Manter indicador de progresso (1-2-3) no topo.
+- Permitir navegação "Voltar" entre passos sem perder dados.
 
-**Como:**
-- Adicionar `p_sync_status` à RPC com opções `pending`, `synced`, `failed`.
-- URL: `?sync=failed`.
+### 3. Ajudas e defaults inteligentes
+- Sugerir clientes recentes (últimos 20 registados no mesmo slug) ao digitar o nome.
+- Pré-selecionar tatuador e "Recebido por" conforme o slug.
+- Data do pagamento default = hoje.
+- Destacar visualmente quando o total for > 0 e quando houver erro de método exclusivo (Cartão + SumUp).
 
-### 3. Comparação com período anterior
+### 4. Confirmação pós-submit
+- Manter a tela de confirmação, mas adicionar:
+  - Botão grande "Novo registo".
+  - Botão "Ver no histórico".
+  - Badge de status do sync GHL.
+  - Opção de copiar resumo do pagamento (cliente + valor) para área de transferência.
 
-**Porquê:** O total de hoje só faz sentido quando comparado com ontem/mês passado.
-
-**Como:**
-- Calcular o período imediatamente anterior ao selecionado (mesma duração).
-- Buscar os agregados desse período via uma segunda chamada à RPC ou calcular no cliente se o volume for pequeno.
-- Mostrar seta + percentagem nos cards de topo: total recebido, número de pagamentos e ticket médio.
-
-### 4. Gráficos simples
-
-**Porquê:** Tornar padrões óbvios em segundos (picos de dia, domínio de cartão vs. dinheiro, etc.).
-
-**Como:**
-- Gráfico de barras: evolução diária do total recebido no período.
-- Gráfico de donut/pizza: distribuição por forma de pagamento.
-- Biblioteca: `recharts` (leve, React-friendly).
-- Esconder gráficos na versão de impressão (`no-print`).
-
-### 5. Paginação e busca no detalhe
-
-**Porquê:** À medida que o histórico cresce, renderizar todos os lançamentos de uma vez fica pesado e difícil de ler.
-
-**Como:**
-- Paginar o detalhe em blocos de 25 ou 50.
-- Campo de busca por nome do cliente com debounce.
-- Manter a busca na URL (`?q=maria`).
-
-### 6. Agrupar detalhe por dia
-
-**Porquê:** No mobile, uma lista longa de lançamentos perde o contexto temporal. Agrupar por dia facilita conciliação de caixa.
-
-**Como:**
-- Separador de data com subtotal do dia.
-- Expandir/colapsar dias no mobile.
-
-### 7. Exportação para Excel (.xlsx)
-
-**Porquê:** CSV abre quebrado em Excel português (separador `;` ajuda, mas .xlsx é imediato e profissional).
-
-**Como:**
-- Gerar `.xlsx` com duas abas: "Resumo" (cards + quebras) e "Detalhe" (todos os campos).
-- Biblioteca: `xlsx` (sheetjs) ou `exceljs` — verificar compatibilidade com Worker/edge no build.
-
-### 8. Cards de alerta
-
-**Porquê:** Destacar situações que precisam de ação.
-
-**Como:**
-- Card "Sync com falha" em tom de alerta quando `failed > 0`.
-- Card "Estornos no período" quando houver estornos, mostrando valor líquido (total - estornos).
-
-### 9. Navegação para edição a partir do detalhe
-
-**Porquê:** Quando o admin encontra um lançamento errado no relatório, quer corrigi-lo sem sair do contexto.
-
-**Como:**
-- Tornar cada linha do detalhe clicável, navegando para `/movimentacao/historico/<id>/editar`.
-- Voltar para o relatório com os mesmos filtros na URL.
-
-### 10. Relatórios salvos/favoritos
-
-**Porquê:** Usuários repetem os mesmos filtros toda semana (ex.: "Mensalidade Gabriel").
-
-**Como:**
-- Guardar combinações de filtros com nome no `localStorage`.
-- Botão "Guardar filtro" + dropdown de filtros salvos.
-- Futuro: persistir na base se for adotado.
-
-## Ordem de implementação sugerida
-
-Fase 1 — Ganho imediato, baixo risco:
-1. Filtro "Recebido por".
-2. Filtro por status de sync GHL.
-3. Cards de alerta (falhas e estornos).
-4. Navegação para edição no detalhe.
-
-Fase 2 — Análise e visualização:
-5. Comparação com período anterior.
-6. Gráficos de evolução diária e formas de pagamento.
-7. Agrupamento do detalhe por dia.
-
-Fase 3 — Escala e conveniência:
-8. Paginação e busca.
-9. Exportação Excel.
-10. Relatórios salvos.
+## Arquivos envolvidos
+- `src/components/movimentacao/movimentacao-form.tsx` (refatoração principal)
+- `src/routes/movimentacao.$slug.tsx` (ajustes de layout/safe-area)
+- `src/lib/movimentacao.functions.ts` (novo server fn para listar clientes recentes)
+- `src/styles.css` (pequenos ajustes de utilitários, se necessário)
 
 ## Critérios de aceitação
+- Formulário funciona em 3 passos no mobile.
+- Registro de pagamento comum (Sessão + Cartão/Dinheiro) é feito em ≤ 5 toques após digitar o nome.
+- Build limpo (`tsgo` e `bun run build` passam).
+- Nenhuma regressão na validação ou no sync GHL.
 
-- `tsgo` sem erros.
-- Filtros novos sincronizados na URL.
-- Impressão/PDF continua limpa (gráficos e botões escondidos).
-- Mobile continua usável (filtros não empurram conteúdo para fora da viewport).
-
-## Próximo passo
-
-Recomendo começar pela **Fase 1**: filtro "Recebido por", status de sync, alertas e link para edição. São mudaras pequenas que já resolvem dores reais de conciliação e reprocessamento.
+## Notas
+- Não alterar schema do banco.
+- Não alterar regras de RLS ou sync.
+- Manter a página pública (sem autenticação obrigatória).
