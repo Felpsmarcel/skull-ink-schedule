@@ -125,6 +125,7 @@ export interface ReportMeta {
   periodoLabel: string;
   geradoPor: string;
   geradoEm: Date;
+  origemLabel?: string;
 }
 
 function breakdownHtml(title: string, items: BreakdownItem[]): string {
