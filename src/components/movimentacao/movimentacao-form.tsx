@@ -110,12 +110,14 @@ interface FormState {
   chave_idempotencia: string;
 }
 
-function initialState(context: SlugContext): FormState {
+function initialState(context: SlugContext | undefined, mode: "link" | "manual"): FormState {
+  const defaultArtistId = context?.defaultArtistId ?? "";
+  const defaultRecebedorId = context?.defaultRecebedorId ?? STAFF_RECEBEDORES[0].id;
   return {
     nome_cliente: "",
     data_pagamento: todayISO(),
-    artist_id: context.defaultArtistId ?? "",
-    recebido_por_id: context.defaultRecebedorId,
+    artist_id: mode === "manual" ? "" : defaultArtistId,
+    recebido_por_id: mode === "manual" ? STAFF_RECEBEDORES[0].id : defaultRecebedorId,
     tipo_movimento: "sessao",
     valor_cartao: "",
     valor_dinheiro: "",
