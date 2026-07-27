@@ -284,6 +284,19 @@ function RelatorioMovimentacoesPage() {
                 ))}
               </select>
             </Field>
+            <Field label="Origem">
+              <select
+                value={search.origem}
+                onChange={(e) => setSearch({ origem: e.target.value })}
+                className="h-11 w-full rounded-md border border-input bg-background px-2 text-sm"
+              >
+                {ORIGEM_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </Field>
           </div>
           <div className="flex flex-wrap items-center gap-2 pt-1">
             <Button type="button" size="sm" onClick={() => window.print()}>
