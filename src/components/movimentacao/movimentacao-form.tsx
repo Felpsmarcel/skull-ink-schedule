@@ -217,7 +217,13 @@ export function MovimentacaoForm({ context, artists, artistsLoading, mode = "lin
   const isSinal = form.tipo_movimento === "sinal";
   const sinalErro = isSinal && !form.data_tatuagem;
 
-  const step1Valid = form.nome_cliente.trim().length >= 2 && !!form.artist_id;
+  const registradorValid =
+    isManual ||
+    (form.registrado_por_id !== "outro"
+      ? true
+      : form.registrado_por_nome.trim().length >= 2);
+  const step1Valid =
+    form.nome_cliente.trim().length >= 2 && !!form.artist_id && registradorValid;
   const step2Valid = total > 0 && !exclusivoErro;
   const step3Valid = !sinalErro;
 
@@ -241,7 +247,15 @@ export function MovimentacaoForm({ context, artists, artistsLoading, mode = "lin
         return submitManual({ data: base });
       }
       if (!context) throw new Error("Contexto do link em falta.");
-      return submitLink({ data: { ...base, slug: context.slug } });
+      rememberRegistrador(form.registrado_por_id, form.registrado_por_nome.trim());
+      return submitLink({
+        data: {
+          ...base,
+          slug: context.slug,
+          registrado_por_id: form.registrado_por_id,
+          registrado_por_nome: form.registrado_por_nome.trim() || null,
+        },
+      });
     },
     onSuccess: (res) => {
       haptic("success");
