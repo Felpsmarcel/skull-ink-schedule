@@ -938,6 +938,8 @@ const ReportInput = z.object({
   end: z.string(),
   artistId: z.string().uuid().nullable().optional(),
   tipo: z.string().nullable().optional(),
+  recebedor: z.string().uuid().nullable().optional(),
+  syncStatus: z.enum(["pending", "synced", "failed"]).nullable().optional(),
 });
 
 export interface MovimentacaoReportResult {
@@ -957,6 +959,8 @@ export const getMovimentacoesReport = createServerFn({ method: "GET" })
         p_end: data.end,
         p_artist: data.artistId ?? null,
         p_tipo: data.tipo ?? null,
+        p_recebedor: data.recebedor ?? null,
+        p_sync_status: data.syncStatus ?? null,
       } as never,
     );
     if (error) throw new Error(error.message);
@@ -968,6 +972,8 @@ export const getMovimentacoesReport = createServerFn({ method: "GET" })
       nome_cliente: String(r.nome_cliente ?? ""),
       artist_id: r.artist_id ? String(r.artist_id) : null,
       tatuador: r.tatuador ? String(r.tatuador) : null,
+      recebido_por_app_user_id: r.recebido_por_app_user_id ? String(r.recebido_por_app_user_id) : null,
+      recebido_por_nome: r.recebido_por_nome ? String(r.recebido_por_nome) : null,
       link_origem: String(r.link_origem ?? ""),
       tipo_movimento: String(r.tipo_movimento ?? ""),
       valor_cartao: Number(r.valor_cartao ?? 0),
