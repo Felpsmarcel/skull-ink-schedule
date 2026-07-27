@@ -159,6 +159,7 @@ export function buildReportHtml(
         <td>${esc(formatDate(r.data_pagamento))}</td>
         <td>${esc(r.nome_cliente)}</td>
         <td>${esc(r.tatuador ?? "—")}</td>
+        <td>${esc(r.recebido_por_nome ?? "—")}</td>
         <td>${esc(TIPO_LABELS[r.tipo_movimento] ?? r.tipo_movimento)}</td>
         <td>${esc(metodoLabel(r))}</td>
         <td class="num">${esc(formatCurrency(r.total))}</td>
