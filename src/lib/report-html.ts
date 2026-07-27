@@ -174,7 +174,7 @@ export function buildReportHtml(
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Relatório de pagamentos — ${esc(meta.periodoLabel)}</title>
+<title>${esc(meta.origemLabel ?? "Relatório de pagamentos")} — ${esc(meta.periodoLabel)}</title>
 <style>
   :root { color-scheme: light; }
   * { box-sizing: border-box; }
