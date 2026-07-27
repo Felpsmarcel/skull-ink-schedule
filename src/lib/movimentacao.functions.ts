@@ -1098,6 +1098,7 @@ export const getMovimentacoesReport = createServerFn({ method: "GET" })
         p_tipo: data.tipo ?? null,
         p_recebedor: data.recebedor ?? null,
         p_sync_status: data.syncStatus ?? null,
+        p_origem: data.origem ?? null,
       } as never,
     );
     if (error) throw new Error(error.message);
