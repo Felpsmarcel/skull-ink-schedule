@@ -428,7 +428,7 @@ export const createMovimentacao = createServerFn({ method: "POST" })
         ? null
         : STAFF_RECEBEDORES.find((s) => s.id === data.registrado_por_id) ?? null;
     const registradoNome =
-      registradoStaff?.displayName ?? (data.registrado_por_nome ?? "").trim() || null;
+      registradoStaff?.displayName ?? ((data.registrado_por_nome ?? "").trim() || null);
     const trace = await captureRequestTrace();
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
