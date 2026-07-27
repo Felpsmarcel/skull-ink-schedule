@@ -45,7 +45,14 @@ const searchSchema = z.object({
   tipo: fallback(z.string(), "").default(""),
   recebedor: fallback(z.string(), "").default(""),
   sync: fallback(z.string(), "").default(""),
+  origem: fallback(z.string(), "").default(""),
 });
+
+const ORIGEM_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: "", label: "Todas as origens" },
+  { value: "link_individual", label: "Link do tatuador" },
+  { value: "manual", label: "Lançamento manual" },
+];
 
 export const Route = createFileRoute("/_authenticated/relatorios/movimentacoes")({
   validateSearch: zodValidator(searchSchema),
@@ -103,6 +110,7 @@ function RelatorioMovimentacoesPage() {
       search.tipo,
       search.recebedor,
       search.sync,
+      search.origem,
     ],
     queryFn: () =>
       fetchReport({
@@ -113,6 +121,7 @@ function RelatorioMovimentacoesPage() {
           tipo: search.tipo || null,
           recebedor: search.recebedor || null,
           syncStatus: (search.sync as "pending" | "synced" | "failed" | "") || null,
+          origem: (search.origem as "link_individual" | "manual" | "") || null,
         },
       }),
     staleTime: 30_000,
@@ -140,6 +149,8 @@ function RelatorioMovimentacoesPage() {
     navigate({ search: (prev: typeof search) => ({ ...prev, ...patch }) });
   }
 
+  const origemLabel = ORIGEM_OPTIONS.find((o) => o.value === search.origem)?.label;
+
   function handleExportHtml() {
     if (rows.length === 0) {
       toast.error("Nada para exportar");
@@ -149,6 +160,7 @@ function RelatorioMovimentacoesPage() {
       periodoLabel,
       geradoPor: me?.email ?? "—",
       geradoEm: new Date(),
+      origemLabel: origemLabel ? `Relatório de pagamentos — ${origemLabel}` : undefined,
     });
     downloadReportHtml(html, `relatorio-pagamentos-${start}_${end}.html`);
     toast.success("Relatório HTML exportado");
@@ -164,7 +176,7 @@ function RelatorioMovimentacoesPage() {
   }
 
   const hasFilters =
-    search.artist || search.tipo || search.recebedor || search.sync;
+    search.artist || search.tipo || search.recebedor || search.sync || search.origem;
 
   return (
     <div className="min-h-svh bg-background pb-[calc(env(safe-area-inset-bottom)+7rem)] text-foreground sm:pb-24">
@@ -272,6 +284,19 @@ function RelatorioMovimentacoesPage() {
                 ))}
               </select>
             </Field>
+            <Field label="Origem">
+              <select
+                value={search.origem}
+                onChange={(e) => setSearch({ origem: e.target.value })}
+                className="h-11 w-full rounded-md border border-input bg-background px-2 text-sm"
+              >
+                {ORIGEM_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </Field>
           </div>
           <div className="flex flex-wrap items-center gap-2 pt-1">
             <Button type="button" size="sm" onClick={() => window.print()}>
@@ -289,7 +314,7 @@ function RelatorioMovimentacoesPage() {
                 size="sm"
                 variant="ghost"
                 onClick={() =>
-                  setSearch({ artist: "", tipo: "", recebedor: "", sync: "" })
+                  setSearch({ artist: "", tipo: "", recebedor: "", sync: "", origem: "" })
                 }
               >
                 <RotateCcw className="h-4 w-4" /> Limpar

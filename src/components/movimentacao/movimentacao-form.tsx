@@ -25,18 +25,20 @@ import {
 } from "@/components/ui/select";
 import {
   createMovimentacao,
+  createMovimentacaoManual,
   listRecentClients,
   type SlugContext,
   type ArtistOption,
   type MovimentacaoTipo,
 } from "@/lib/movimentacao.functions";
-import type { StaffRecebedorId } from "@/config/movimentacao-slugs";
+import { STAFF_RECEBEDORES, type StaffRecebedorId } from "@/config/movimentacao-slugs";
 import { haptic } from "@/lib/haptics";
 
 interface Props {
-  context: SlugContext;
+  context?: SlugContext;
   artists: ArtistOption[];
   artistsLoading?: boolean;
+  mode?: "link" | "manual";
 }
 
 const TIPO_OPTIONS: { value: MovimentacaoTipo; label: string }[] = [
@@ -108,12 +110,14 @@ interface FormState {
   chave_idempotencia: string;
 }
 
-function initialState(context: SlugContext): FormState {
+function initialState(context: SlugContext | undefined, mode: "link" | "manual"): FormState {
+  const defaultArtistId = context?.defaultArtistId ?? "";
+  const defaultRecebedorId = context?.defaultRecebedorId ?? STAFF_RECEBEDORES[0].id;
   return {
     nome_cliente: "",
     data_pagamento: todayISO(),
-    artist_id: context.defaultArtistId ?? "",
-    recebido_por_id: context.defaultRecebedorId,
+    artist_id: mode === "manual" ? "" : defaultArtistId,
+    recebido_por_id: mode === "manual" ? STAFF_RECEBEDORES[0].id : defaultRecebedorId,
     tipo_movimento: "sessao",
     valor_cartao: "",
     valor_dinheiro: "",
@@ -144,20 +148,24 @@ const TIPO_LABEL: Record<MovimentacaoTipo, string> = {
   estorno: "Estorno",
 };
 
-export function MovimentacaoForm({ context, artists, artistsLoading }: Props) {
-  const [form, setForm] = useState<FormState>(() => initialState(context));
+export function MovimentacaoForm({ context, artists, artistsLoading, mode = "link" }: Props) {
+  const isManual = mode === "manual";
+  const [form, setForm] = useState<FormState>(() => initialState(context, mode));
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
   const [activeMethods, setActiveMethods] = useState<Set<PaymentMethodKey>>(new Set());
   const [focusedMethod, setFocusedMethod] = useState<PaymentMethodKey | null>(null);
   const qc = useQueryClient();
-  const submit = useServerFn(createMovimentacao);
+  const submitLink = useServerFn(createMovimentacao);
+  const submitManual = useServerFn(createMovimentacaoManual);
   const fetchRecentClients = useServerFn(listRecentClients);
 
   const recentClientsQ = useQuery({
-    queryKey: ["movimentacao-recent-clients", context.slug],
-    queryFn: () => fetchRecentClients({ data: { slug: context.slug, limit: 20 } }),
+    queryKey: ["movimentacao-recent-clients", context?.slug ?? "manual"],
+    queryFn: () =>
+      context ? fetchRecentClients({ data: { slug: context.slug, limit: 20 } }) : [],
     staleTime: 60_000,
+    enabled: !isManual && !!context,
   });
 
   const total = useMemo(
@@ -181,30 +189,32 @@ export function MovimentacaoForm({ context, artists, artistsLoading }: Props) {
 
   const mutation = useMutation({
     mutationFn: async () => {
-      return submit({
-        data: {
-          slug: context.slug,
-          nome_cliente: form.nome_cliente,
-          data_pagamento: form.data_pagamento,
-          artist_id: form.artist_id,
-          recebido_por_id: form.recebido_por_id,
-          tipo_movimento: form.tipo_movimento,
-          valor_cartao: parseAmount(form.valor_cartao),
-          valor_dinheiro: parseAmount(form.valor_dinheiro),
-          valor_sumup: parseAmount(form.valor_sumup),
-          valor_transferencia: parseAmount(form.valor_transferencia),
-          data_tatuagem: form.data_tatuagem || null,
-          observacoes: form.observacoes || null,
-          chave_idempotencia: form.chave_idempotencia,
-        },
-      });
+      const base = {
+        nome_cliente: form.nome_cliente,
+        data_pagamento: form.data_pagamento,
+        artist_id: form.artist_id,
+        recebido_por_id: form.recebido_por_id,
+        tipo_movimento: form.tipo_movimento,
+        valor_cartao: parseAmount(form.valor_cartao),
+        valor_dinheiro: parseAmount(form.valor_dinheiro),
+        valor_sumup: parseAmount(form.valor_sumup),
+        valor_transferencia: parseAmount(form.valor_transferencia),
+        data_tatuagem: form.data_tatuagem || null,
+        observacoes: form.observacoes || null,
+        chave_idempotencia: form.chave_idempotencia,
+      };
+      if (isManual) {
+        return submitManual({ data: base });
+      }
+      if (!context) throw new Error("Contexto do link em falta.");
+      return submitLink({ data: { ...base, slug: context.slug } });
     },
     onSuccess: (res) => {
       haptic("success");
       const synced = res.ghl_sync_status === "synced";
       qc.invalidateQueries({ queryKey: ["movimentacoes"] });
       qc.invalidateQueries({ queryKey: ["finance-summary"] });
-      qc.invalidateQueries({ queryKey: ["movimentacao-recent-clients", context.slug] });
+      qc.invalidateQueries({ queryKey: ["movimentacao-recent-clients", context?.slug ?? "manual"] });
       toast.success(
         synced
           ? "Pagamento registado e sincronizado."
@@ -255,7 +265,7 @@ export function MovimentacaoForm({ context, artists, artistsLoading }: Props) {
 
   function resetForm() {
     setConfirmation(null);
-    setForm(initialState(context));
+    setForm(initialState(context, mode));
     setStep(1);
     setActiveMethods(new Set());
     setFocusedMethod(null);
@@ -332,7 +342,17 @@ export function MovimentacaoForm({ context, artists, artistsLoading }: Props) {
   }
 
   if (confirmation) {
-    return <ConfirmationScreen data={confirmation} onNew={resetForm} />;
+    return (
+      <ConfirmationScreen
+        data={confirmation}
+        onNew={resetForm}
+        historyHref={
+          isManual
+            ? `/relatorios/movimentacoes?origem=manual&highlight=${encodeURIComponent(confirmation.id)}`
+            : `/movimentacao/historico?highlight=${encodeURIComponent(confirmation.id)}`
+        }
+      />
+    );
   }
 
   return (
@@ -344,7 +364,7 @@ export function MovimentacaoForm({ context, artists, artistsLoading }: Props) {
           <StepOne
             form={form}
             set={set}
-            context={context}
+            recebedores={isManual ? STAFF_RECEBEDORES : context?.recebedores ?? STAFF_RECEBEDORES}
             artists={artists}
             artistsLoading={artistsLoading}
             recentClients={recentClientsQ.data ?? []}
@@ -416,13 +436,13 @@ function Stepper({ step }: { step: 1 | 2 | 3 }) {
 interface StepOneProps {
   form: FormState;
   set: <K extends keyof FormState>(key: K, value: FormState[K]) => void;
-  context: SlugContext;
+  recebedores: { id: StaffRecebedorId; displayName: string }[];
   artists: ArtistOption[];
   artistsLoading?: boolean;
   recentClients: string[];
 }
 
-function StepOne({ form, set, context, artists, artistsLoading, recentClients }: StepOneProps) {
+function StepOne({ form, set, recebedores, artists, artistsLoading, recentClients }: StepOneProps) {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -447,7 +467,7 @@ function StepOne({ form, set, context, artists, artistsLoading, recentClients }:
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {context.recebedores.map((r) => (
+            {recebedores.map((r) => (
               <SelectItem key={r.id} value={r.id}>
                 {r.displayName}
               </SelectItem>
@@ -815,9 +835,11 @@ function WizardFooter({
 function ConfirmationScreen({
   data,
   onNew,
+  historyHref,
 }: {
   data: Confirmation;
   onNew: () => void;
+  historyHref: string;
 }) {
   const ok = data.synced;
   const color = ok ? "#16a34a" : "#d97706";
@@ -891,7 +913,7 @@ function ConfirmationScreen({
         </Button>
 
         <a
-          href={`/movimentacao/historico?highlight=${encodeURIComponent(data.id)}`}
+          href={historyHref}
           className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-md border border-border bg-background text-base font-medium hover:bg-muted"
         >
           <History className="h-4 w-4" />

@@ -53,6 +53,7 @@ import { Route as AuthenticatedAdminAdminVendedoresRouteImport } from './routes/
 import { Route as AuthenticatedAdminAdminMovimentacaoLinksRouteImport } from './routes/_authenticated/_admin/admin.movimentacao-links'
 import { Route as AuthenticatedAdminAdminEquipeRouteImport } from './routes/_authenticated/_admin/admin.equipe'
 import { Route as AuthenticatedMovimentacaoHistoricoIdEditarRouteImport } from './routes/_authenticated/movimentacao.historico.$id.editar'
+import { Route as AuthenticatedAdminAdminMovimentacaoNovoRouteImport } from './routes/_authenticated/_admin/admin.movimentacao.novo'
 
 const UnsubscribeRoute = UnsubscribeRouteImport.update({
   id: '/unsubscribe',
@@ -296,6 +297,12 @@ const AuthenticatedMovimentacaoHistoricoIdEditarRoute =
     path: '/movimentacao/historico/$id/editar',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAdminAdminMovimentacaoNovoRoute =
+  AuthenticatedAdminAdminMovimentacaoNovoRouteImport.update({
+    id: '/admin/movimentacao/novo',
+    path: '/admin/movimentacao/novo',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -339,6 +346,7 @@ export interface FileRoutesByFullPath {
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
   '/appointments/new/': typeof AuthenticatedAppointmentsNewIndexRoute
+  '/admin/movimentacao/novo': typeof AuthenticatedAdminAdminMovimentacaoNovoRoute
   '/movimentacao/historico/$id/editar': typeof AuthenticatedMovimentacaoHistoricoIdEditarRoute
 }
 export interface FileRoutesByTo {
@@ -382,6 +390,7 @@ export interface FileRoutesByTo {
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
   '/appointments/new': typeof AuthenticatedAppointmentsNewIndexRoute
+  '/admin/movimentacao/novo': typeof AuthenticatedAdminAdminMovimentacaoNovoRoute
   '/movimentacao/historico/$id/editar': typeof AuthenticatedMovimentacaoHistoricoIdEditarRoute
 }
 export interface FileRoutesById {
@@ -429,6 +438,7 @@ export interface FileRoutesById {
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
   '/_authenticated/appointments/new/': typeof AuthenticatedAppointmentsNewIndexRoute
+  '/_authenticated/_admin/admin/movimentacao/novo': typeof AuthenticatedAdminAdminMovimentacaoNovoRoute
   '/_authenticated/movimentacao/historico/$id/editar': typeof AuthenticatedMovimentacaoHistoricoIdEditarRoute
 }
 export interface FileRouteTypes {
@@ -475,6 +485,7 @@ export interface FileRouteTypes {
     | '/lovable/email/transactional/preview'
     | '/lovable/email/transactional/send'
     | '/appointments/new/'
+    | '/admin/movimentacao/novo'
     | '/movimentacao/historico/$id/editar'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -518,6 +529,7 @@ export interface FileRouteTypes {
     | '/lovable/email/transactional/preview'
     | '/lovable/email/transactional/send'
     | '/appointments/new'
+    | '/admin/movimentacao/novo'
     | '/movimentacao/historico/$id/editar'
   id:
     | '__root__'
@@ -564,6 +576,7 @@ export interface FileRouteTypes {
     | '/lovable/email/transactional/preview'
     | '/lovable/email/transactional/send'
     | '/_authenticated/appointments/new/'
+    | '/_authenticated/_admin/admin/movimentacao/novo'
     | '/_authenticated/movimentacao/historico/$id/editar'
   fileRoutesById: FileRoutesById
 }
@@ -897,6 +910,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMovimentacaoHistoricoIdEditarRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/_admin/admin/movimentacao/novo': {
+      id: '/_authenticated/_admin/admin/movimentacao/novo'
+      path: '/admin/movimentacao/novo'
+      fullPath: '/admin/movimentacao/novo'
+      preLoaderRoute: typeof AuthenticatedAdminAdminMovimentacaoNovoRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
   }
 }
 
@@ -907,6 +927,7 @@ interface AuthenticatedAdminRouteRouteChildren {
   AuthenticatedAdminAdminMovimentacaoLinksRoute: typeof AuthenticatedAdminAdminMovimentacaoLinksRoute
   AuthenticatedAdminAdminVendedoresRoute: typeof AuthenticatedAdminAdminVendedoresRoute
   AuthenticatedAdminRelatoriosAgendamentosRoute: typeof AuthenticatedAdminRelatoriosAgendamentosRoute
+  AuthenticatedAdminAdminMovimentacaoNovoRoute: typeof AuthenticatedAdminAdminMovimentacaoNovoRoute
 }
 
 const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren =
@@ -920,6 +941,8 @@ const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren
       AuthenticatedAdminAdminVendedoresRoute,
     AuthenticatedAdminRelatoriosAgendamentosRoute:
       AuthenticatedAdminRelatoriosAgendamentosRoute,
+    AuthenticatedAdminAdminMovimentacaoNovoRoute:
+      AuthenticatedAdminAdminMovimentacaoNovoRoute,
   }
 
 const AuthenticatedAdminRouteRouteWithChildren =

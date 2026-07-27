@@ -78,6 +78,7 @@ function MenuPage() {
               <Row to="/admin/equipe" icon={<Users className="h-4 w-4" />} label="Equipe" />
               <Row to="/admin/vendedores" icon={<UserSquare2 className="h-4 w-4" />} label="Vendedores" />
               <Row to="/admin/movimentacao-links" icon={<Link2 className="h-4 w-4" />} label="Links de pagamento" />
+              <Row to="/admin/movimentacao/novo" icon={<Banknote className="h-4 w-4" />} label="Lançamento manual" />
               <Row to="/reconciliar" icon={<RefreshCw className="h-4 w-4" />} label="Reconciliar GHL" />
               <Row to="/relatorios/agendamentos" icon={<FileText className="h-4 w-4" />} label="Relatório mensal" />
             </>

@@ -240,6 +240,138 @@ export interface CreateResult {
   ghl_error?: string;
 }
 
+async function insertMovimentacaoRows(
+  params: {
+    nome_cliente: string;
+    data_pagamento: string;
+    artist_id: string;
+    tipo_movimento: MovimentacaoTipo;
+    recebido_por_app_user_id: string;
+    registrado_por_app_user_id: string | null;
+    link_origem: string;
+    origem_lancamento: string;
+    valor_cartao: number;
+    valor_dinheiro: number;
+    valor_sumup: number;
+    valor_transferencia: number;
+    data_tatuagem: string | null;
+    observacoes: string | null;
+    chave_idempotencia: string;
+    artist_name: string;
+    recebido_por_nome: string;
+  },
+): Promise<CreateResult> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { syncMovimentacaoToGhl } = await import("./movimentacao-ghl.server");
+
+  const forms: Array<{ forma: FormaPagamento; valor: number }> = [
+    { forma: "cartao" as const, valor: params.valor_cartao },
+    { forma: "dinheiro" as const, valor: params.valor_dinheiro },
+    { forma: "sumup" as const, valor: params.valor_sumup },
+    { forma: "transferencia" as const, valor: params.valor_transferencia },
+  ].filter((f) => f.valor > 0);
+
+  const groupKey = (globalThis.crypto as Crypto | undefined)?.randomUUID?.()
+    ?? `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+  const ids: string[] = [];
+  const errors: string[] = [];
+
+  for (const f of forms) {
+    const chaveForma = `${params.chave_idempotencia}:${f.forma}`;
+
+    const { data: existing } = await supabaseAdmin
+      .from("movimentacoes" as never)
+      .select("id")
+      .eq("chave_idempotencia", params.chave_idempotencia)
+      .eq("forma_pagamento", f.forma)
+      .maybeSingle();
+    if (existing) {
+      ids.push((existing as { id: string }).id);
+      continue;
+    }
+
+    const insertPayload = {
+      nome_cliente: params.nome_cliente.trim(),
+      data_pagamento: params.data_pagamento,
+      artist_id: params.artist_id,
+      recebido_por_app_user_id: params.recebido_por_app_user_id,
+      registrado_por_app_user_id: params.registrado_por_app_user_id,
+      link_origem: params.link_origem,
+      origem_lancamento: params.origem_lancamento,
+      tipo_movimento: params.tipo_movimento,
+      forma_pagamento: f.forma,
+      valor_cartao: f.forma === "cartao" ? f.valor : 0,
+      valor_dinheiro: f.forma === "dinheiro" ? f.valor : 0,
+      valor_sumup: f.forma === "sumup" ? f.valor : 0,
+      valor_transferencia: f.forma === "transferencia" ? f.valor : 0,
+      data_tatuagem: params.data_tatuagem ?? null,
+      observacoes: params.observacoes?.trim() || null,
+      chave_idempotencia: params.chave_idempotencia,
+      chave_grupo: groupKey,
+      ghl_sync_status: "pending" as const,
+    };
+
+    const { data: inserted, error: insertErr } = await supabaseAdmin
+      .from("movimentacoes" as never)
+      .insert(insertPayload as never)
+      .select("id, total")
+      .single();
+    if (insertErr) throw new Error(insertErr.message);
+    const row = inserted as { id: string; total: number };
+    ids.push(row.id);
+
+    const sync = await syncMovimentacaoToGhl({
+      id: row.id,
+      chave_idempotencia: chaveForma,
+      nome_cliente: params.nome_cliente.trim(),
+      data_pagamento: params.data_pagamento,
+      artist_name: params.artist_name,
+      recebido_por_nome: params.recebido_por_nome,
+      link_origem: params.link_origem,
+      tipo_movimento: params.tipo_movimento,
+      valor_cartao: insertPayload.valor_cartao,
+      valor_dinheiro: insertPayload.valor_dinheiro,
+      valor_sumup: insertPayload.valor_sumup,
+      valor_transferencia: insertPayload.valor_transferencia,
+      total: Number(row.total),
+      data_tatuagem: params.data_tatuagem ?? null,
+      observacoes: params.observacoes?.trim() || null,
+    });
+
+    if (sync.ok) {
+      await supabaseAdmin
+        .from("movimentacoes" as never)
+        .update({
+          ghl_sync_status: "synced",
+          ghl_custom_object_id: sync.ghl_custom_object_id ?? null,
+          ghl_last_synced_at: new Date().toISOString(),
+          ghl_sync_attempts: 1,
+        } as never)
+        .eq("id", row.id);
+    } else {
+      errors.push(sync.error ?? "unknown_error");
+      await supabaseAdmin
+        .from("movimentacoes" as never)
+        .update({
+          ghl_sync_status: "failed",
+          ghl_sync_error: (sync.error ?? "").slice(0, 500),
+          ghl_sync_attempts: 1,
+        } as never)
+        .eq("id", row.id);
+    }
+  }
+
+  if (ids.length === 0) throw new Error("Nenhum valor válido informado.");
+
+  return {
+    id: ids[0],
+    ids,
+    ghl_sync_status: errors.length === 0 ? "synced" : "failed",
+    ghl_error: errors[0],
+  };
+}
+
 export const createMovimentacao = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => CreateInput.parse(data))
   .handler(async ({ data }): Promise<CreateResult> => {
@@ -250,7 +382,6 @@ export const createMovimentacao = createServerFn({ method: "POST" })
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    // Verifica que artist_id existe e busca nome.
     const { data: artistData, error: artistErr } = await supabaseAdmin
       .from("artists" as never)
       .select("id, name")
@@ -260,120 +391,97 @@ export const createMovimentacao = createServerFn({ method: "POST" })
     const artistRow = artistData as { id: string; name: string } | null;
     if (!artistRow) throw new Error("Tatuador inválido.");
 
-    // Desmembra em uma linha por forma de pagamento (>0).
-    const forms: Array<{ forma: FormaPagamento; valor: number }> = [
-      { forma: "cartao" as const, valor: data.valor_cartao },
-      { forma: "dinheiro" as const, valor: data.valor_dinheiro },
-      { forma: "sumup" as const, valor: data.valor_sumup },
-      { forma: "transferencia" as const, valor: data.valor_transferencia },
-    ].filter((f) => f.valor > 0);
+    return insertMovimentacaoRows({
+      nome_cliente: data.nome_cliente,
+      data_pagamento: data.data_pagamento,
+      artist_id: data.artist_id,
+      tipo_movimento: data.tipo_movimento,
+      recebido_por_app_user_id: recebedor.appUserId,
+      registrado_por_app_user_id: null,
+      link_origem: slug,
+      origem_lancamento: "link_individual",
+      valor_cartao: data.valor_cartao,
+      valor_dinheiro: data.valor_dinheiro,
+      valor_sumup: data.valor_sumup,
+      valor_transferencia: data.valor_transferencia,
+      data_tatuagem: data.data_tatuagem ?? null,
+      observacoes: data.observacoes ?? null,
+      chave_idempotencia: data.chave_idempotencia,
+      artist_name: artistRow.name,
+      recebido_por_nome: recebedor.displayName,
+    });
+  });
 
-    // chave_grupo agrupa linhas do mesmo formulário
-    const groupKey = (globalThis.crypto as Crypto | undefined)?.randomUUID?.()
-      ?? `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+// ---------------- createMovimentacaoManual --------------------------------
 
-    const nome = data.nome_cliente.trim();
-    const obs = data.observacoes?.trim() || null;
+const CreateManualInput = z
+  .object({
+    nome_cliente: z.string().trim().min(2, "Nome do cliente é obrigatório.").max(120),
+    data_pagamento: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida."),
+    artist_id: z.string().uuid("Selecione o tatuador."),
+    tipo_movimento: z.enum(["sinal", "sessao", "saldo", "produto", "estorno"]),
+    recebido_por_id: z.enum(STAFF_RECEBEDOR_IDS),
+    valor_cartao: z.number().min(0).default(0),
+    valor_dinheiro: z.number().min(0).default(0),
+    valor_sumup: z.number().min(0).default(0),
+    valor_transferencia: z.number().min(0).default(0),
+    data_tatuagem: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .nullable()
+      .optional(),
+    observacoes: z.string().max(1000).nullable().optional(),
+    chave_idempotencia: z.string().uuid("Chave de idempotência inválida."),
+  })
+  .refine((v) => !(v.valor_cartao > 0 && v.valor_sumup > 0), {
+    message: "SumUp e Cartão são métodos exclusivos.",
+    path: ["valor_sumup"],
+  })
+  .refine(
+    (v) => v.valor_cartao + v.valor_dinheiro + v.valor_sumup + v.valor_transferencia > 0,
+    { message: "O total deve ser superior a €0.", path: ["valor_dinheiro"] },
+  )
+  .refine((v) => v.tipo_movimento !== "sinal" || Boolean(v.data_tatuagem), {
+    message: "Informe a data da sessão agendada.",
+    path: ["data_tatuagem"],
+  });
 
-    const ids: string[] = [];
-    const errors: string[] = [];
-    const { syncMovimentacaoToGhl } = await import("./movimentacao-ghl.server");
+export const createMovimentacaoManual = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => CreateManualInput.parse(data))
+  .handler(async ({ data, context }): Promise<CreateResult> => {
+    const recebedor = getStaffRecebedor(data.recebido_por_id);
 
-    for (const f of forms) {
-      const chaveForma = `${data.chave_idempotencia}:${f.forma}`;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-      // Idempotência per (chave_idempotencia, forma_pagamento)
-      const { data: existing } = await supabaseAdmin
-        .from("movimentacoes" as never)
-        .select("id")
-        .eq("chave_idempotencia", data.chave_idempotencia)
-        .eq("forma_pagamento", f.forma)
-        .maybeSingle();
-      if (existing) {
-        ids.push((existing as { id: string }).id);
-        continue;
-      }
+    const { data: artistData, error: artistErr } = await supabaseAdmin
+      .from("artists" as never)
+      .select("id, name")
+      .eq("id", data.artist_id)
+      .maybeSingle();
+    if (artistErr) throw new Error(artistErr.message);
+    const artistRow = artistData as { id: string; name: string } | null;
+    if (!artistRow) throw new Error("Tatuador inválido.");
 
-      const insertPayload = {
-        nome_cliente: nome,
-        data_pagamento: data.data_pagamento,
-        artist_id: data.artist_id,
-        recebido_por_app_user_id: recebedor.appUserId,
-        registrado_por_app_user_id: null,
-        link_origem: slug,
-        origem_lancamento: "link_individual",
-        tipo_movimento: data.tipo_movimento,
-        forma_pagamento: f.forma,
-        valor_cartao: f.forma === "cartao" ? f.valor : 0,
-        valor_dinheiro: f.forma === "dinheiro" ? f.valor : 0,
-        valor_sumup: f.forma === "sumup" ? f.valor : 0,
-        valor_transferencia: f.forma === "transferencia" ? f.valor : 0,
-        data_tatuagem: data.data_tatuagem ?? null,
-        observacoes: obs,
-        chave_idempotencia: data.chave_idempotencia,
-        chave_grupo: groupKey,
-        ghl_sync_status: "pending" as const,
-      };
-
-      const { data: inserted, error: insertErr } = await supabaseAdmin
-        .from("movimentacoes" as never)
-        .insert(insertPayload as never)
-        .select("id, total")
-        .single();
-      if (insertErr) throw new Error(insertErr.message);
-      const row = inserted as { id: string; total: number };
-      ids.push(row.id);
-
-      // Sync GHL best-effort — cada forma vira um record separado
-      const sync = await syncMovimentacaoToGhl({
-        id: row.id,
-        chave_idempotencia: chaveForma,
-        nome_cliente: nome,
-        data_pagamento: data.data_pagamento,
-        artist_name: artistRow.name,
-        recebido_por_nome: recebedor.displayName,
-        link_origem: slug,
-        tipo_movimento: data.tipo_movimento,
-        valor_cartao: insertPayload.valor_cartao,
-        valor_dinheiro: insertPayload.valor_dinheiro,
-        valor_sumup: insertPayload.valor_sumup,
-        valor_transferencia: insertPayload.valor_transferencia,
-        total: Number(row.total),
-        data_tatuagem: data.data_tatuagem ?? null,
-        observacoes: obs,
-      });
-
-      if (sync.ok) {
-        await supabaseAdmin
-          .from("movimentacoes" as never)
-          .update({
-            ghl_sync_status: "synced",
-            ghl_custom_object_id: sync.ghl_custom_object_id ?? null,
-            ghl_last_synced_at: new Date().toISOString(),
-            ghl_sync_attempts: 1,
-          } as never)
-          .eq("id", row.id);
-      } else {
-        errors.push(sync.error ?? "unknown_error");
-        await supabaseAdmin
-          .from("movimentacoes" as never)
-          .update({
-            ghl_sync_status: "failed",
-            ghl_sync_error: (sync.error ?? "").slice(0, 500),
-            ghl_sync_attempts: 1,
-          } as never)
-          .eq("id", row.id);
-      }
-    }
-
-    if (ids.length === 0) throw new Error("Nenhum valor válido informado.");
-
-    return {
-      id: ids[0],
-      ids,
-      ghl_sync_status: errors.length === 0 ? "synced" : "failed",
-      ghl_error: errors[0],
-    };
+    return insertMovimentacaoRows({
+      nome_cliente: data.nome_cliente,
+      data_pagamento: data.data_pagamento,
+      artist_id: data.artist_id,
+      tipo_movimento: data.tipo_movimento,
+      recebido_por_app_user_id: recebedor.appUserId,
+      registrado_por_app_user_id: context.userId,
+      link_origem: "manual",
+      origem_lancamento: "manual",
+      valor_cartao: data.valor_cartao,
+      valor_dinheiro: data.valor_dinheiro,
+      valor_sumup: data.valor_sumup,
+      valor_transferencia: data.valor_transferencia,
+      data_tatuagem: data.data_tatuagem ?? null,
+      observacoes: data.observacoes ?? null,
+      chave_idempotencia: data.chave_idempotencia,
+      artist_name: artistRow.name,
+      recebido_por_nome: recebedor.displayName,
+    });
   });
 
 // ---------------- listMovimentacoes -------------------------------------
@@ -968,6 +1076,7 @@ const ReportInput = z.object({
   tipo: z.string().nullable().optional(),
   recebedor: z.string().uuid().nullable().optional(),
   syncStatus: z.enum(["pending", "synced", "failed"]).nullable().optional(),
+  origem: z.enum(["link_individual", "manual"]).nullable().optional(),
 });
 
 export interface MovimentacaoReportResult {
@@ -989,6 +1098,7 @@ export const getMovimentacoesReport = createServerFn({ method: "GET" })
         p_tipo: data.tipo ?? null,
         p_recebedor: data.recebedor ?? null,
         p_sync_status: data.syncStatus ?? null,
+        p_origem: data.origem ?? null,
       } as never,
     );
     if (error) throw new Error(error.message);

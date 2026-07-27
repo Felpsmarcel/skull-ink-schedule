@@ -125,6 +125,7 @@ export interface ReportMeta {
   periodoLabel: string;
   geradoPor: string;
   geradoEm: Date;
+  origemLabel?: string;
 }
 
 function breakdownHtml(title: string, items: BreakdownItem[]): string {
@@ -173,7 +174,7 @@ export function buildReportHtml(
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Relatório de pagamentos — ${esc(meta.periodoLabel)}</title>
+<title>${esc(meta.origemLabel ?? "Relatório de pagamentos")} — ${esc(meta.periodoLabel)}</title>
 <style>
   :root { color-scheme: light; }
   * { box-sizing: border-box; }
@@ -197,7 +198,7 @@ export function buildReportHtml(
 </head>
 <body>
 <header>
-  <h1>GF Tattoo — Relatório de pagamentos</h1>
+  <h1>GF Tattoo — ${esc(meta.origemLabel ?? "Relatório de pagamentos")}</h1>
   <div class="meta">Período: ${esc(meta.periodoLabel)}</div>
   <div class="meta">Gerado por ${esc(meta.geradoPor)} em ${esc(formatDate(meta.geradoEm))}</div>
 </header>
