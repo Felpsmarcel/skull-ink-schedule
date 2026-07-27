@@ -94,7 +94,7 @@ function RelatorioMovimentacoesPage() {
   const periodoLabel = `${formatDate(start)} — ${formatDate(end)}`;
 
   function setSearch(patch: Partial<typeof search>) {
-    navigate({ search: (prev) => ({ ...prev, ...patch }) });
+    navigate({ search: (prev: typeof search) => ({ ...prev, ...patch }) });
   }
 
   function handleExportHtml() {

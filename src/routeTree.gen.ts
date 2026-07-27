@@ -27,6 +27,7 @@ import { Route as AuthenticatedAgendaRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/_admin/route'
 import { Route as AuthenticatedMovimentacaoIndexRouteImport } from './routes/_authenticated/movimentacao.index'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
+import { Route as AuthenticatedRelatoriosMovimentacoesRouteImport } from './routes/_authenticated/relatorios.movimentacoes'
 import { Route as AuthenticatedOnboardingServicosRouteImport } from './routes/_authenticated/onboarding.servicos'
 import { Route as AuthenticatedOnboardingProntoRouteImport } from './routes/_authenticated/onboarding.pronto'
 import { Route as AuthenticatedOnboardingPerfilRouteImport } from './routes/_authenticated/onboarding.perfil'
@@ -142,6 +143,12 @@ const LovableEmailSuppressionRoute = LovableEmailSuppressionRouteImport.update({
   path: '/lovable/email/suppression',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedRelatoriosMovimentacoesRoute =
+  AuthenticatedRelatoriosMovimentacoesRouteImport.update({
+    id: '/relatorios/movimentacoes',
+    path: '/relatorios/movimentacoes',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedOnboardingServicosRoute =
   AuthenticatedOnboardingServicosRouteImport.update({
     id: '/servicos',
@@ -313,6 +320,7 @@ export interface FileRoutesByFullPath {
   '/onboarding/perfil': typeof AuthenticatedOnboardingPerfilRoute
   '/onboarding/pronto': typeof AuthenticatedOnboardingProntoRoute
   '/onboarding/servicos': typeof AuthenticatedOnboardingServicosRoute
+  '/relatorios/movimentacoes': typeof AuthenticatedRelatoriosMovimentacoesRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/movimentacao/': typeof AuthenticatedMovimentacaoIndexRoute
   '/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
@@ -355,6 +363,7 @@ export interface FileRoutesByTo {
   '/onboarding/perfil': typeof AuthenticatedOnboardingPerfilRoute
   '/onboarding/pronto': typeof AuthenticatedOnboardingProntoRoute
   '/onboarding/servicos': typeof AuthenticatedOnboardingServicosRoute
+  '/relatorios/movimentacoes': typeof AuthenticatedRelatoriosMovimentacoesRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/movimentacao': typeof AuthenticatedMovimentacaoIndexRoute
   '/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
@@ -401,6 +410,7 @@ export interface FileRoutesById {
   '/_authenticated/onboarding/perfil': typeof AuthenticatedOnboardingPerfilRoute
   '/_authenticated/onboarding/pronto': typeof AuthenticatedOnboardingProntoRoute
   '/_authenticated/onboarding/servicos': typeof AuthenticatedOnboardingServicosRoute
+  '/_authenticated/relatorios/movimentacoes': typeof AuthenticatedRelatoriosMovimentacoesRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/_authenticated/movimentacao/': typeof AuthenticatedMovimentacaoIndexRoute
   '/_authenticated/_admin/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
@@ -446,6 +456,7 @@ export interface FileRouteTypes {
     | '/onboarding/perfil'
     | '/onboarding/pronto'
     | '/onboarding/servicos'
+    | '/relatorios/movimentacoes'
     | '/lovable/email/suppression'
     | '/movimentacao/'
     | '/admin/equipe'
@@ -488,6 +499,7 @@ export interface FileRouteTypes {
     | '/onboarding/perfil'
     | '/onboarding/pronto'
     | '/onboarding/servicos'
+    | '/relatorios/movimentacoes'
     | '/lovable/email/suppression'
     | '/movimentacao'
     | '/admin/equipe'
@@ -533,6 +545,7 @@ export interface FileRouteTypes {
     | '/_authenticated/onboarding/perfil'
     | '/_authenticated/onboarding/pronto'
     | '/_authenticated/onboarding/servicos'
+    | '/_authenticated/relatorios/movimentacoes'
     | '/lovable/email/suppression'
     | '/_authenticated/movimentacao/'
     | '/_authenticated/_admin/admin/equipe'
@@ -701,6 +714,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/lovable/email/suppression'
       preLoaderRoute: typeof LovableEmailSuppressionRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/relatorios/movimentacoes': {
+      id: '/_authenticated/relatorios/movimentacoes'
+      path: '/relatorios/movimentacoes'
+      fullPath: '/relatorios/movimentacoes'
+      preLoaderRoute: typeof AuthenticatedRelatoriosMovimentacoesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/onboarding/servicos': {
       id: '/_authenticated/onboarding/servicos'
@@ -966,6 +986,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedReviewsRoute: typeof AuthenticatedReviewsRoute
   AuthenticatedServicesRoute: typeof AuthenticatedServicesRoute
   AuthenticatedAppointmentsNewRoute: typeof AuthenticatedAppointmentsNewRouteWithChildren
+  AuthenticatedRelatoriosMovimentacoesRoute: typeof AuthenticatedRelatoriosMovimentacoesRoute
   AuthenticatedMovimentacaoIndexRoute: typeof AuthenticatedMovimentacaoIndexRoute
   AuthenticatedMovimentacaoHistoricoIdEditarRoute: typeof AuthenticatedMovimentacaoHistoricoIdEditarRoute
 }
@@ -980,6 +1001,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedServicesRoute: AuthenticatedServicesRoute,
   AuthenticatedAppointmentsNewRoute:
     AuthenticatedAppointmentsNewRouteWithChildren,
+  AuthenticatedRelatoriosMovimentacoesRoute:
+    AuthenticatedRelatoriosMovimentacoesRoute,
   AuthenticatedMovimentacaoIndexRoute: AuthenticatedMovimentacaoIndexRoute,
   AuthenticatedMovimentacaoHistoricoIdEditarRoute:
     AuthenticatedMovimentacaoHistoricoIdEditarRoute,
