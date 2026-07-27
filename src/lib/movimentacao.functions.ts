@@ -888,6 +888,8 @@ export interface MovimentacaoEditRow {
   ghl_sync_status: "pending" | "synced" | "failed";
   deleted_at: string | null;
   canEdit: boolean;
+  registrado_por_nome: string | null;
+  registrado_em: string | null;
 }
 
 function canEditRow(
@@ -910,13 +912,16 @@ export const getMovimentacaoForEdit = createServerFn({ method: "GET" })
     const { data: rowRaw, error } = await supabaseAdmin
       .from("movimentacoes" as never)
       .select(
-        "id, created_at, nome_cliente, data_pagamento, artist_id, recebido_por_app_user_id, link_origem, tipo_movimento, valor_cartao, valor_dinheiro, valor_sumup, valor_transferencia, total, data_tatuagem, observacoes, ghl_sync_status, deleted_at",
+        "id, created_at, nome_cliente, data_pagamento, artist_id, recebido_por_app_user_id, link_origem, tipo_movimento, valor_cartao, valor_dinheiro, valor_sumup, valor_transferencia, total, data_tatuagem, observacoes, ghl_sync_status, deleted_at, registrado_por_nome, registrado_em",
       )
       .eq("id", data.id)
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!rowRaw) throw new Error("Registo não encontrado.");
-    const row = rowRaw as unknown as Omit<MovimentacaoEditRow, "artist_name" | "recebido_por_nome" | "canEdit">;
+    const row = rowRaw as unknown as Omit<
+      MovimentacaoEditRow,
+      "artist_name" | "recebido_por_nome" | "canEdit"
+    >;
 
     const [{ data: artist }, staffName] = await Promise.all([
       supabaseAdmin
@@ -941,6 +946,46 @@ export const getMovimentacaoForEdit = createServerFn({ method: "GET" })
       recebido_por_nome: staffName,
       canEdit: canEditRow(me.role, context.userId, row.recebido_por_app_user_id),
     };
+  });
+
+// ---------------- Histórico de alterações --------------------------------
+
+export interface AuditEntry {
+  id: string;
+  acao: string;
+  actor: string | null;
+  created_at: string;
+  changes: Record<string, unknown>;
+}
+
+export const listMovimentacaoAudit = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => IdInput.parse(data))
+  .handler(async ({ data, context }): Promise<AuditEntry[]> => {
+    const { data: rows, error } = await context.supabase
+      .from("movimentacoes_audit")
+      .select("id, acao, actor_app_user_id, actor_nome, changes, created_at")
+      .eq("movimentacao_id", data.id)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    if (error) throw new Error(error.message);
+    const staffById = new Map(STAFF_RECEBEDORES.map((s) => [s.appUserId, s.displayName] as const));
+    return ((rows ?? []) as Array<{
+      id: string;
+      acao: string;
+      actor_app_user_id: string | null;
+      actor_nome: string | null;
+      changes: Record<string, unknown> | null;
+      created_at: string;
+    }>).map((r) => ({
+      id: r.id,
+      acao: r.acao,
+      actor:
+        r.actor_nome ??
+        (r.actor_app_user_id ? staffById.get(r.actor_app_user_id) ?? "Utilizador da app" : null),
+      created_at: r.created_at,
+      changes: r.changes ?? {},
+    }));
   });
 
 const UpdateInput = z.object({

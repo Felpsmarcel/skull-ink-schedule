@@ -9,6 +9,7 @@ export interface ReportRow {
   tatuador: string | null;
   recebido_por_app_user_id: string | null;
   recebido_por_nome: string | null;
+  registrado_por_nome: string | null;
   link_origem: string;
   tipo_movimento: string;
   valor_cartao: number;
