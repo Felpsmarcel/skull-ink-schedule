@@ -354,7 +354,7 @@ export function MovimentacaoForm({ context, artists, artistsLoading, mode = "lin
           <StepOne
             form={form}
             set={set}
-            context={context}
+            recebedores={isManual ? STAFF_RECEBEDORES : context?.recebedores ?? STAFF_RECEBEDORES}
             artists={artists}
             artistsLoading={artistsLoading}
             recentClients={recentClientsQ.data ?? []}
