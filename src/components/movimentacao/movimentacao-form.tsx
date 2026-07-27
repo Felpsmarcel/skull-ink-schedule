@@ -457,7 +457,7 @@ function StepOne({ form, set, recebedores, artists, artistsLoading, recentClient
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {context.recebedores.map((r) => (
+            {recebedores.map((r) => (
               <SelectItem key={r.id} value={r.id}>
                 {r.displayName}
               </SelectItem>
