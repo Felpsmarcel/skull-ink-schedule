@@ -7,6 +7,8 @@ export interface ReportRow {
   nome_cliente: string;
   artist_id: string | null;
   tatuador: string | null;
+  recebido_por_app_user_id: string | null;
+  recebido_por_nome: string | null;
   link_origem: string;
   tipo_movimento: string;
   valor_cartao: number;
