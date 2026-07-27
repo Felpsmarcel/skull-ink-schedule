@@ -25,18 +25,20 @@ import {
 } from "@/components/ui/select";
 import {
   createMovimentacao,
+  createMovimentacaoManual,
   listRecentClients,
   type SlugContext,
   type ArtistOption,
   type MovimentacaoTipo,
 } from "@/lib/movimentacao.functions";
-import type { StaffRecebedorId } from "@/config/movimentacao-slugs";
+import { STAFF_RECEBEDORES, type StaffRecebedorId } from "@/config/movimentacao-slugs";
 import { haptic } from "@/lib/haptics";
 
 interface Props {
-  context: SlugContext;
+  context?: SlugContext;
   artists: ArtistOption[];
   artistsLoading?: boolean;
+  mode?: "link" | "manual";
 }
 
 const TIPO_OPTIONS: { value: MovimentacaoTipo; label: string }[] = [
