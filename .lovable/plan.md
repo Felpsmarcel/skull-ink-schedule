@@ -1,69 +1,63 @@
-# Plano: UX mobile do registro de pagamento
+# Correção: Dashboard e relatório HTML para lançamentos manuais
 
-## Contexto
-A página pública `/movimentacao/[slug]` é usada por tatuadores e vendedores no celular para registar pagamentos. O formulário atual exibe todos os campos de uma só vez e exige muitos toques/edições manuais, o que atrasa o registro no dia a dia do estúdio.
+## O que foi feito até agora
+- Foi criada a página `/relatorios/movimentacoes` com cards, filtros e exportação HTML/CSV.
+- Porém, ela lista **todos** os registros da tabela `movimentacoes`, sem distinguir origem.
+- A coluna `origem_lancamento` existe, mas hoje só é preenchida com `link_individual`.
+- Não existe tela nem função para criar um registro com `origem_lancamento = 'manual'`.
 
-## Objetivo
-Reduzir o tempo e o número de toques para registar um pagamento no mobile, sem perder precisão ou validação.
+## O que será construído
 
-## Escopo
-Foco apenas na página `/movimentacao/[slug]` e no componente `MovimentacaoForm`. Não alterar regras financeiras, tabelas ou sync GHL.
+### 1. Criar a origem "manual" no banco
+- Garantir que `movimentacoes.origem_lancamento` aceite o valor `manual`.
+- Criar/alterar a função `get_movimentacoes_report` para aceitar o parâmetro `p_origem` e filtrar por `origem_lancamento`.
+- Atualizar `list_movimentacoes_historico` para também expor/originar corretamente (sem quebrar o histórico público).
 
-## Implementação
+### 2. Criar função de criação de lançamento manual
+- Novo server function `createMovimentacaoManual` em `src/lib/movimentacao.functions.ts`.
+- Recebe os mesmos campos do link público, mas grava:
+  - `origem_lancamento = 'manual'`
+  - `registrado_por_app_user_id = auth.uid()` (quem digitou)
+  - `recebido_por_app_user_id` pode ser escolhido (ex: Gabriel, Nívia, Augusto) ou default do operador logado.
+- Validações iguais às do link (métodos exclusivos, total > 0, etc.).
+- Dispara o sync GHL como best-effort, igual ao link.
 
-### 1. Wizard de 3 passos
-Dividir o formulário longo em etapas para reduzir carga cognitiva:
+### 3. Nova página de lançamento manual
+- Rota: `/admin/movimentacao/novo` (acesso autenticado, idealmente admin/staff).
+- Formulário mobile-first com os mesmos campos do wizard de pagamento:
+  - Cliente, data do pagamento, tatuador, tipo (sinal/sessão/saldo/produto/estorno).
+  - Valores por forma de pagamento (cartão, dinheiro, SumUp, transferência).
+  - Quem recebeu o pagamento (select de recebedores).
+  - Data da tatuagem (quando aplicável) e observações.
+- Após salvar, redireciona para o relatório filtrado em "Manuais".
 
-- **Passo 1 — Cliente e Tatuador**
-  - Nome do cliente (input com autocomplete de clientes recentes)
-  - Seletor de tatuador (já pré-selecionado pelo slug)
-  - Botão "Próximo"
+### 4. Dashboard de lançamentos manuais
+- Opção A (recomendada): adicionar um filtro de origem na página `/relatorios/movimentacoes`:
+  - "Todos" / "Link individual" / "Lançamento manual".
+  - A URL reflete a origem escolhida (`?origem=manual`).
+  - Cards e gráficos recalculam automaticamente.
+- Opção B (alternativa): criar rota dedicada `/relatorios/movimentacoes/manual` que já abre filtrada.
+- Escolha da abordagem depende da sua preferência (ver pergunta abaixo).
 
-- **Passo 2 — Valor e Método**
-  - Tipo de movimento (chips: Sinal, Sessão, Saldo, Produto, Estorno)
-  - Método de pagamento como chips exclusivos + combinação permitida (Cartão, Dinheiro, SumUp, Transferência)
-  - Input de valor com botões rápidos: €50, €100, €150, €200, €250
-  - Total destacado e sticky no rodapé deste passo
+### 5. Relatório HTML para manuais
+- A exportação HTML/CSV já existente em `src/lib/report-html.ts` será atualizada para:
+  - Receber o filtro de origem.
+  - Gerar o relatório com título e metadados indicando "Lançamentos manuais" quando aplicável.
+  - Manter os mesmos cards, tabelas e totais, mas apenas dos registros manuais.
 
-- **Passo 3 — Detalhes e Confirmar**
-  - Data do pagamento (default hoje)
-  - Data da sessão agendada (obrigatória apenas para "Sinal")
-  - Observações (opcional)
-  - Resumo final e botão "Registar pagamento"
+### 6. Menu e navegação
+- Adicionar atalho no menu admin para "Novo lançamento manual".
+- Adicionar atalho no relatório para alternar entre "Link individual" e "Manuais".
 
-### 2. Otimizações mobile
-- Aumentar altura dos inputs e botões para `h-13`/`h-14` (mínimo 52–56 px).
-- Usar `inputMode="decimal"` e teclado numérico para valores.
-- Adicionar safe-area no rodapé dos passos.
-- Manter indicador de progresso (1-2-3) no topo.
-- Permitir navegação "Voltar" entre passos sem perder dados.
-
-### 3. Ajudas e defaults inteligentes
-- Sugerir clientes recentes (últimos 20 registados no mesmo slug) ao digitar o nome.
-- Pré-selecionar tatuador e "Recebido por" conforme o slug.
-- Data do pagamento default = hoje.
-- Destacar visualmente quando o total for > 0 e quando houver erro de método exclusivo (Cartão + SumUp).
-
-### 4. Confirmação pós-submit
-- Manter a tela de confirmação, mas adicionar:
-  - Botão grande "Novo registo".
-  - Botão "Ver no histórico".
-  - Badge de status do sync GHL.
-  - Opção de copiar resumo do pagamento (cliente + valor) para área de transferência.
-
-## Arquivos envolvidos
-- `src/components/movimentacao/movimentacao-form.tsx` (refatoração principal)
-- `src/routes/movimentacao.$slug.tsx` (ajustes de layout/safe-area)
-- `src/lib/movimentacao.functions.ts` (novo server fn para listar clientes recentes)
-- `src/styles.css` (pequenos ajustes de utilitários, se necessário)
+## Decisões pendentes
+1. **Você prefere**:
+   - (A) Apenas um filtro na página atual `/relatorios/movimentacoes` para ver manuais; ou
+   - (B) Uma rota separada `/relatorios/movimentacoes/manual` como dashboard próprio?
+2. **Quem pode criar lançamentos manuais?** Apenas admin, ou também vendedores/tatuadores autenticados?
 
 ## Critérios de aceitação
-- Formulário funciona em 3 passos no mobile.
-- Registro de pagamento comum (Sessão + Cartão/Dinheiro) é feito em ≤ 5 toques após digitar o nome.
-- Build limpo (`tsgo` e `bun run build` passam).
-- Nenhuma regressão na validação ou no sync GHL.
-
-## Notas
-- Não alterar schema do banco.
-- Não alterar regras de RLS ou sync.
-- Manter a página pública (sem autenticação obrigatória).
+- É possível criar um pagamento com origem `manual` pela interface.
+- O relatório consegue filtrar e mostrar apenas lançamentos manuais.
+- A exportação HTML/CSV reflete o filtro ativo.
+- Build (`tsgo` + `bun run build`) passa sem erros.
+- Nenhum registro antigo (`link_individual`) é perdido ou alterado.
