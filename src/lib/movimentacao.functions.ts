@@ -91,6 +91,51 @@ function resolveSlugDefaults(slug: MovimentacaoSlug): {
   };
 }
 
+// Metadados de origem do pedido (dispositivo + marca anónima do IP).
+async function captureRequestTrace(): Promise<{
+  userAgent: string | null;
+  ipHash: string | null;
+}> {
+  let userAgent: string | null = null;
+  let ip: string | null = null;
+  try {
+    userAgent = (getRequestHeader("user-agent") ?? null)?.slice(0, 300) ?? null;
+    ip =
+      getRequestHeader("cf-connecting-ip") ??
+      getRequestHeader("x-real-ip") ??
+      (getRequestHeader("x-forwarded-for") ?? "").split(",")[0].trim() ??
+      null;
+  } catch {
+    // fora de um contexto de request
+  }
+  let ipHash: string | null = null;
+  if (ip) {
+    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(ip));
+    ipHash = Array.from(new Uint8Array(buf))
+      .slice(0, 8)
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+  }
+  return { userAgent, ipHash: ipHash };
+}
+
+function unusedResolveSlugDefaults(slug: MovimentacaoSlug): {
+  defaultRecebedorId: StaffRecebedorId;
+  appUserId: string;
+  displayName: string;
+  defaultArtistId: string | null;
+} {
+  const target = MOVIMENTACAO_SLUGS[slug];
+  const defaultRecebedorId = SLUG_DEFAULT_RECEBEDOR[slug];
+  const staff = getStaffRecebedor(defaultRecebedorId);
+  return {
+    defaultRecebedorId,
+    appUserId: staff.appUserId,
+    displayName: staff.displayName,
+    defaultArtistId: target.kind === "artist" ? target.artistId : null,
+  };
+}
+
 // ---------------- getSlugContext ----------------------------------------
 
 const SlugInput = z.object({ slug: z.string() });
@@ -395,6 +440,13 @@ export const createMovimentacao = createServerFn({ method: "POST" })
     const slug = data.slug;
 
     const recebedor = getStaffRecebedor(data.recebido_por_id);
+    const registradoStaff =
+      data.registrado_por_id === "outro"
+        ? null
+        : STAFF_RECEBEDORES.find((s) => s.id === data.registrado_por_id) ?? null;
+    const registradoNome =
+      registradoStaff?.displayName ?? (data.registrado_por_nome ?? "").trim() || null;
+    const trace = await captureRequestTrace();
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
@@ -414,6 +466,10 @@ export const createMovimentacao = createServerFn({ method: "POST" })
       tipo_movimento: data.tipo_movimento,
       recebido_por_app_user_id: recebedor.appUserId,
       registrado_por_app_user_id: null,
+      registrado_por_nome: registradoNome,
+      registrado_por_staff_id: data.registrado_por_id,
+      registrado_user_agent: trace.userAgent,
+      registrado_ip_hash: trace.ipHash,
       link_origem: slug,
       origem_lancamento: "link_individual",
       valor_cartao: data.valor_cartao,
