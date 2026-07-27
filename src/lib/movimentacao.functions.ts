@@ -116,7 +116,35 @@ export const getSlugContext = createServerFn({ method: "GET" })
     };
   });
 
+// ---------------- listRecentClients -------------------------------------
+
+const RecentClientsInput = z.object({
+  slug: z.string(),
+  limit: z.number().int().min(1).max(50).default(20),
+});
+
+export const listRecentClients = createServerFn({ method: "GET" })
+  .inputValidator((data: unknown) => RecentClientsInput.parse(data))
+  .handler(async ({ data }): Promise<string[]> => {
+    if (!isMovimentacaoSlug(data.slug)) throw new Error("Link inválido.");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows, error } = await supabaseAdmin
+      .from("movimentacoes" as never)
+      .select("nome_cliente")
+      .eq("link_origem", data.slug)
+      .order("created_at", { ascending: false })
+      .limit(200);
+    if (error) throw new Error(error.message);
+    const names = Array.from(
+      new Set(
+        (rows ?? []).map((r) => (r as { nome_cliente: string }).nome_cliente.trim()),
+      ),
+    ).filter(Boolean);
+    return names.slice(0, data.limit);
+  });
+
 // ---------------- getMySlug ---------------------------------------------
+
 
 export interface MySlugResult {
   slug: MovimentacaoSlug | null;
