@@ -198,7 +198,7 @@ export function buildReportHtml(
 </head>
 <body>
 <header>
-  <h1>GF Tattoo — Relatório de pagamentos</h1>
+  <h1>GF Tattoo — ${esc(meta.origemLabel ?? "Relatório de pagamentos")}</h1>
   <div class="meta">Período: ${esc(meta.periodoLabel)}</div>
   <div class="meta">Gerado por ${esc(meta.geradoPor)} em ${esc(formatDate(meta.geradoEm))}</div>
 </header>
