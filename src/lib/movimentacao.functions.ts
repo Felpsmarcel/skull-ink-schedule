@@ -518,6 +518,11 @@ export const createMovimentacaoManual = createServerFn({ method: "POST" })
     const artistRow = artistData as { id: string; name: string } | null;
     if (!artistRow) throw new Error("Tatuador inválido.");
 
+    // Nome de quem registou: staff conhecido pelo app_user id, senão o próprio recebedor.
+    const registradoStaff =
+      STAFF_RECEBEDORES.find((s) => s.appUserId === context.userId) ?? null;
+    const trace = await captureRequestTrace();
+
     return insertMovimentacaoRows({
       nome_cliente: data.nome_cliente,
       data_pagamento: data.data_pagamento,
@@ -525,6 +530,10 @@ export const createMovimentacaoManual = createServerFn({ method: "POST" })
       tipo_movimento: data.tipo_movimento,
       recebido_por_app_user_id: recebedor.appUserId,
       registrado_por_app_user_id: context.userId,
+      registrado_por_nome: registradoStaff?.displayName ?? "Admin (app)",
+      registrado_por_staff_id: registradoStaff?.id ?? null,
+      registrado_user_agent: trace.userAgent,
+      registrado_ip_hash: trace.ipHash,
       link_origem: "manual",
       origem_lancamento: "manual",
       valor_cartao: data.valor_cartao,
