@@ -955,7 +955,44 @@ export interface AuditEntry {
   acao: string;
   actor: string | null;
   created_at: string;
-  changes: Record<string, unknown>;
+  changes: Array<{ campo: string; de: string; para: string }>;
+}
+
+const AUDIT_FIELD_LABELS: Record<string, string> = {
+  nome_cliente: "Cliente",
+  data_pagamento: "Data do pagamento",
+  artist_id: "Tatuador",
+  recebido_por_app_user_id: "Recebido por",
+  tipo_movimento: "Tipo",
+  forma_pagamento: "Forma",
+  valor_cartao: "Cartão",
+  valor_dinheiro: "Dinheiro",
+  valor_sumup: "SumUp",
+  valor_transferencia: "Transferência",
+  total: "Total",
+  data_tatuagem: "Data da sessão",
+  observacoes: "Observações",
+  ghl_sync_status: "Sync CRM",
+  deleted_at: "Apagado em",
+  link_origem: "Link",
+  origem_lancamento: "Origem",
+};
+
+function formatAuditChanges(
+  raw: Record<string, unknown> | null,
+): Array<{ campo: string; de: string; para: string }> {
+  if (!raw) return [];
+  const out: Array<{ campo: string; de: string; para: string }> = [];
+  for (const [key, value] of Object.entries(raw)) {
+    const campo = AUDIT_FIELD_LABELS[key] ?? key;
+    if (value && typeof value === "object" && "de" in (value as object)) {
+      const v = value as { de: unknown; para: unknown };
+      out.push({ campo, de: String(v.de ?? "—"), para: String(v.para ?? "—") });
+    } else {
+      out.push({ campo, de: "", para: String(value ?? "—") });
+    }
+  }
+  return out;
 }
 
 export const listMovimentacaoAudit = createServerFn({ method: "GET" })
@@ -984,7 +1021,7 @@ export const listMovimentacaoAudit = createServerFn({ method: "GET" })
         r.actor_nome ??
         (r.actor_app_user_id ? staffById.get(r.actor_app_user_id) ?? "Utilizador da app" : null),
       created_at: r.created_at,
-      changes: r.changes ?? {},
+      changes: formatAuditChanges(r.changes),
     }));
   });
 
@@ -1221,6 +1258,7 @@ export const getMovimentacoesReport = createServerFn({ method: "GET" })
       tatuador: r.tatuador ? String(r.tatuador) : null,
       recebido_por_app_user_id: r.recebido_por_app_user_id ? String(r.recebido_por_app_user_id) : null,
       recebido_por_nome: r.recebido_por_nome ? String(r.recebido_por_nome) : null,
+      registrado_por_nome: r.registrado_por_nome ? String(r.registrado_por_nome) : null,
       link_origem: String(r.link_origem ?? ""),
       tipo_movimento: String(r.tipo_movimento ?? ""),
       valor_cartao: Number(r.valor_cartao ?? 0),
