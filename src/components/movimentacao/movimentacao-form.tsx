@@ -416,6 +416,7 @@ export function MovimentacaoForm({ context, artists, artistsLoading, mode = "lin
             artists={artists}
             artistsLoading={artistsLoading}
             recentClients={recentClientsQ.data ?? []}
+            showRegistrador={!isManual}
           />
         )}
 
@@ -488,9 +489,18 @@ interface StepOneProps {
   artists: ArtistOption[];
   artistsLoading?: boolean;
   recentClients: string[];
+  showRegistrador?: boolean;
 }
 
-function StepOne({ form, set, recebedores, artists, artistsLoading, recentClients }: StepOneProps) {
+function StepOne({
+  form,
+  set,
+  recebedores,
+  artists,
+  artistsLoading,
+  recentClients,
+  showRegistrador,
+}: StepOneProps) {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -523,6 +533,41 @@ function StepOne({ form, set, recebedores, artists, artistsLoading, recentClient
           </SelectContent>
         </Select>
       </div>
+
+      {showRegistrador && (
+        <div className="space-y-1.5">
+          <Label htmlFor="registrado_por_id">Quem está a registar? *</Label>
+          <Select
+            value={form.registrado_por_id}
+            onValueChange={(v) => set("registrado_por_id", v as StaffRecebedorId | "outro")}
+          >
+            <SelectTrigger id="registrado_por_id" className="h-14 text-base">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {STAFF_RECEBEDORES.map((r) => (
+                <SelectItem key={r.id} value={r.id}>
+                  {r.displayName}
+                </SelectItem>
+              ))}
+              <SelectItem value="outro">Outro…</SelectItem>
+            </SelectContent>
+          </Select>
+          {form.registrado_por_id === "outro" && (
+            <Input
+              id="registrado_por_nome"
+              value={form.registrado_por_nome}
+              onChange={(e) => set("registrado_por_nome", e.target.value)}
+              className="mt-2 h-14 text-base"
+              placeholder="Nome de quem está a registar"
+              autoComplete="off"
+            />
+          )}
+          <p className="text-xs text-muted-foreground">
+            Fica guardado no histórico do lançamento.
+          </p>
+        </div>
+      )}
 
       <div className="relative space-y-1.5">
         <Label htmlFor="nome_cliente">Nome do cliente *</Label>
