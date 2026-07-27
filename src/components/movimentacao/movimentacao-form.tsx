@@ -835,9 +835,11 @@ function WizardFooter({
 function ConfirmationScreen({
   data,
   onNew,
+  historyHref,
 }: {
   data: Confirmation;
   onNew: () => void;
+  historyHref: string;
 }) {
   const ok = data.synced;
   const color = ok ? "#16a34a" : "#d97706";
