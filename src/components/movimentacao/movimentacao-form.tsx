@@ -148,20 +148,24 @@ const TIPO_LABEL: Record<MovimentacaoTipo, string> = {
   estorno: "Estorno",
 };
 
-export function MovimentacaoForm({ context, artists, artistsLoading }: Props) {
-  const [form, setForm] = useState<FormState>(() => initialState(context));
+export function MovimentacaoForm({ context, artists, artistsLoading, mode = "link" }: Props) {
+  const isManual = mode === "manual";
+  const [form, setForm] = useState<FormState>(() => initialState(context, mode));
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
   const [activeMethods, setActiveMethods] = useState<Set<PaymentMethodKey>>(new Set());
   const [focusedMethod, setFocusedMethod] = useState<PaymentMethodKey | null>(null);
   const qc = useQueryClient();
-  const submit = useServerFn(createMovimentacao);
+  const submitLink = useServerFn(createMovimentacao);
+  const submitManual = useServerFn(createMovimentacaoManual);
   const fetchRecentClients = useServerFn(listRecentClients);
 
   const recentClientsQ = useQuery({
-    queryKey: ["movimentacao-recent-clients", context.slug],
-    queryFn: () => fetchRecentClients({ data: { slug: context.slug, limit: 20 } }),
+    queryKey: ["movimentacao-recent-clients", context?.slug ?? "manual"],
+    queryFn: () =>
+      context ? fetchRecentClients({ data: { slug: context.slug, limit: 20 } }) : [],
     staleTime: 60_000,
+    enabled: !isManual && !!context,
   });
 
   const total = useMemo(
