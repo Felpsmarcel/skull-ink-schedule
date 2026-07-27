@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { getRequestHeader } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { ReportRow } from "@/lib/report-html";
@@ -248,6 +249,10 @@ async function insertMovimentacaoRows(
     tipo_movimento: MovimentacaoTipo;
     recebido_por_app_user_id: string;
     registrado_por_app_user_id: string | null;
+    registrado_por_nome: string | null;
+    registrado_por_staff_id: string | null;
+    registrado_user_agent: string | null;
+    registrado_ip_hash: string | null;
     link_origem: string;
     origem_lancamento: string;
     valor_cartao: number;
@@ -297,6 +302,11 @@ async function insertMovimentacaoRows(
       artist_id: params.artist_id,
       recebido_por_app_user_id: params.recebido_por_app_user_id,
       registrado_por_app_user_id: params.registrado_por_app_user_id,
+      registrado_por_nome: params.registrado_por_nome,
+      registrado_por_staff_id: params.registrado_por_staff_id,
+      registrado_user_agent: params.registrado_user_agent,
+      registrado_ip_hash: params.registrado_ip_hash,
+      registrado_em: new Date().toISOString(),
       link_origem: params.link_origem,
       origem_lancamento: params.origem_lancamento,
       tipo_movimento: params.tipo_movimento,
