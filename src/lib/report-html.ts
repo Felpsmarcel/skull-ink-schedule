@@ -241,6 +241,7 @@ const CSV_COLUMNS: Array<{ label: string; pick: (r: ReportRow) => unknown }> = [
   { label: "Data", pick: (r) => r.data_pagamento },
   { label: "Cliente", pick: (r) => r.nome_cliente },
   { label: "Tatuador", pick: (r) => r.tatuador ?? "" },
+  { label: "Recebido por", pick: (r) => r.recebido_por_nome ?? "" },
   { label: "Tipo", pick: (r) => TIPO_LABELS[r.tipo_movimento] ?? r.tipo_movimento },
   { label: "Cartão", pick: (r) => r.valor_cartao },
   { label: "Dinheiro", pick: (r) => r.valor_dinheiro },
