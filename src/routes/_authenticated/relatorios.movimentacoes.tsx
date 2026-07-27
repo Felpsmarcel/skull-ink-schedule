@@ -45,7 +45,14 @@ const searchSchema = z.object({
   tipo: fallback(z.string(), "").default(""),
   recebedor: fallback(z.string(), "").default(""),
   sync: fallback(z.string(), "").default(""),
+  origem: fallback(z.string(), "").default(""),
 });
+
+const ORIGEM_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: "", label: "Todas as origens" },
+  { value: "link_individual", label: "Link do tatuador" },
+  { value: "manual", label: "Lançamento manual" },
+];
 
 export const Route = createFileRoute("/_authenticated/relatorios/movimentacoes")({
   validateSearch: zodValidator(searchSchema),
