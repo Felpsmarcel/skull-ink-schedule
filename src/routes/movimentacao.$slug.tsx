@@ -48,7 +48,7 @@ function MovimentacaoPublicPage() {
   }
 
   return (
-    <div className="min-h-svh bg-background pb-[calc(env(safe-area-inset-bottom)+6rem)] text-foreground">
+    <div className="min-h-svh bg-background pb-[calc(env(safe-area-inset-bottom)+7rem)] text-foreground">
       <header className="sticky top-0 z-30 border-b border-border bg-background/95 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] backdrop-blur">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
@@ -69,7 +69,7 @@ function MovimentacaoPublicPage() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-md px-4 py-4">
+      <main className="mx-auto max-w-md px-4 py-4">
         {ctx.isLoading && (
           <div className="text-sm text-muted-foreground">A carregar…</div>
         )}
@@ -85,7 +85,7 @@ function MovimentacaoPublicPage() {
             artistsLoading={artists.isLoading}
           />
         )}
-      </div>
+      </main>
     </div>
   );
 }
