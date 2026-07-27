@@ -342,7 +342,17 @@ export function MovimentacaoForm({ context, artists, artistsLoading, mode = "lin
   }
 
   if (confirmation) {
-    return <ConfirmationScreen data={confirmation} onNew={resetForm} />;
+    return (
+      <ConfirmationScreen
+        data={confirmation}
+        onNew={resetForm}
+        historyHref={
+          isManual
+            ? `/relatorios/movimentacoes?origem=manual&highlight=${encodeURIComponent(confirmation.id)}`
+            : `/movimentacao/historico?highlight=${encodeURIComponent(confirmation.id)}`
+        }
+      />
+    );
   }
 
   return (
