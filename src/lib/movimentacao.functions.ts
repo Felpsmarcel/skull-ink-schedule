@@ -119,23 +119,6 @@ async function captureRequestTrace(): Promise<{
   return { userAgent, ipHash: ipHash };
 }
 
-function unusedResolveSlugDefaults(slug: MovimentacaoSlug): {
-  defaultRecebedorId: StaffRecebedorId;
-  appUserId: string;
-  displayName: string;
-  defaultArtistId: string | null;
-} {
-  const target = MOVIMENTACAO_SLUGS[slug];
-  const defaultRecebedorId = SLUG_DEFAULT_RECEBEDOR[slug];
-  const staff = getStaffRecebedor(defaultRecebedorId);
-  return {
-    defaultRecebedorId,
-    appUserId: staff.appUserId,
-    displayName: staff.displayName,
-    defaultArtistId: target.kind === "artist" ? target.artistId : null,
-  };
-}
-
 // ---------------- getSlugContext ----------------------------------------
 
 const SlugInput = z.object({ slug: z.string() });
