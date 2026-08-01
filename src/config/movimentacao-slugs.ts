@@ -112,8 +112,8 @@ export function getStaffRecebedor(id: StaffRecebedorId): StaffRecebedor {
 // Slug → recebedor default (editável no formulário).
 export const SLUG_DEFAULT_RECEBEDOR: Record<MovimentacaoSlug, StaffRecebedorId> = {
   gabriel: "gabriel",
-  andre: "gabriel",
-  joyce: "gabriel",
+  andre: "andre",
+  joyce: "joyce",
   augusto: "augusto",
   nivia: "nivia",
 };
