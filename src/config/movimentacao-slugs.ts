@@ -79,7 +79,7 @@ export function findSlugForSeller(sellerId: string): MovimentacaoSlug | null {
 // Lista fechada usada no seletor "Recebido por" do formulário público.
 // appUserId aponta para app_users(id) real — validado no banco em 2026-07.
 
-export type StaffRecebedorId = "gabriel" | "nivia" | "augusto";
+export type StaffRecebedorId = "gabriel" | "nivia" | "augusto" | "andre" | "joyce";
 
 export interface StaffRecebedor {
   id: StaffRecebedorId;
@@ -91,12 +91,16 @@ export const STAFF_RECEBEDORES: StaffRecebedor[] = [
   { id: "gabriel", displayName: "Gabriel", appUserId: "7cf2055b-0ee6-4dc9-95aa-6ec7b6b491a8" },
   { id: "nivia",   displayName: "Nivia",   appUserId: "ac83fbba-ea45-4e26-ba1a-0a0020fc0e3e" },
   { id: "augusto", displayName: "Augusto", appUserId: "952d9a08-873e-46d5-a2f2-c3b7800f72b9" },
+  { id: "andre",   displayName: "André",   appUserId: "8d2b3fe0-7481-4c72-9d83-ce671bd6c241" },
+  { id: "joyce",   displayName: "Joyce",   appUserId: "e638e244-a6e2-446c-86d5-322bb277274e" },
 ];
 
 export const STAFF_RECEBEDOR_IDS: [StaffRecebedorId, ...StaffRecebedorId[]] = [
   "gabriel",
   "nivia",
   "augusto",
+  "andre",
+  "joyce",
 ];
 
 export function getStaffRecebedor(id: StaffRecebedorId): StaffRecebedor {
