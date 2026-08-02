@@ -228,12 +228,6 @@ export async function syncGhlAppointments(opts?: {
         phone: info?.phone ?? null,
       });
     }
-    void ((
-      e: GhlEvent,
-    ) =>
-        e.contact?.name?.trim() ||
-        [e.contact?.firstName, e.contact?.lastName].filter(Boolean).join(" ").trim() ||
-        "Sem nome");
     if (contactUpserts.length > 0) {
       const { data: cRows, error: cErr } = await supabaseAdmin
         .from("contacts" as never)
