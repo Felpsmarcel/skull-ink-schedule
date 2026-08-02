@@ -1246,6 +1246,37 @@ export type Database = {
               valor_transferencia: number
             }[]
           }
+        | {
+            Args: {
+              p_artist?: string
+              p_end: string
+              p_origem?: string
+              p_recebedor?: string
+              p_registrador?: string
+              p_start: string
+              p_sync_status?: string
+              p_tipo?: string
+            }
+            Returns: {
+              artist_id: string
+              created_at: string
+              data_pagamento: string
+              ghl_sync_status: string
+              id: string
+              link_origem: string
+              nome_cliente: string
+              recebido_por_app_user_id: string
+              recebido_por_nome: string
+              registrado_por_nome: string
+              tatuador: string
+              tipo_movimento: string
+              total: number
+              valor_cartao: number
+              valor_dinheiro: number
+              valor_sumup: number
+              valor_transferencia: number
+            }[]
+          }
       get_my_artist_appointments: {
         Args: never
         Returns: {
