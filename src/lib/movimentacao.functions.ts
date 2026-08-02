@@ -1225,6 +1225,7 @@ const ReportInput = z.object({
   origem: z.enum(["link_individual", "manual"]).nullable().optional(),
 });
 
+
 export interface MovimentacaoReportResult {
   rows: ReportRow[];
   role: string | null;
