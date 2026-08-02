@@ -181,6 +181,9 @@ export async function syncGhlAppointments(opts?: {
     (a) => a.ghl_calendar_id,
   );
 
+  // Same client shows up across calendars/events — cache per run.
+  const contactInfo = new Map<string, GhlContactInfo | null>();
+
   for (const artist of artists) {
     const calId = artist.ghl_calendar_id!;
     const artistCommissionPct = Number(artist.commission_pct ?? 40);
@@ -214,17 +217,23 @@ export async function syncGhlAppointments(opts?: {
       const gid = e.contactId ?? e.contact?.id;
       if (!gid || seenGhl.has(gid)) continue;
       seenGhl.add(gid);
-      const name =
-        e.contact?.name?.trim() ||
-        [e.contact?.firstName, e.contact?.lastName].filter(Boolean).join(" ").trim() ||
-        "Sem nome";
+    }
+    await resolveContacts([...seenGhl], token, contactInfo);
+    for (const gid of seenGhl) {
+      const info = contactInfo.get(gid) ?? null;
       contactUpserts.push({
         ghl_contact_id: gid,
-        name,
-        email: null,
-        phone: null,
+        name: info?.name ?? "Sem nome",
+        email: info?.email ?? null,
+        phone: info?.phone ?? null,
       });
     }
+    void ((
+      e: GhlEvent,
+    ) =>
+        e.contact?.name?.trim() ||
+        [e.contact?.firstName, e.contact?.lastName].filter(Boolean).join(" ").trim() ||
+        "Sem nome");
     if (contactUpserts.length > 0) {
       const { data: cRows, error: cErr } = await supabaseAdmin
         .from("contacts" as never)
