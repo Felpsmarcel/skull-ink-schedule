@@ -1223,6 +1223,7 @@ const ReportInput = z.object({
   recebedor: z.string().uuid().nullable().optional(),
   syncStatus: z.enum(["pending", "synced", "failed"]).nullable().optional(),
   origem: z.enum(["link_individual", "manual"]).nullable().optional(),
+  registrador: z.string().nullable().optional(),
 });
 
 
@@ -1246,6 +1247,7 @@ export const getMovimentacoesReport = createServerFn({ method: "GET" })
         p_recebedor: data.recebedor ?? null,
         p_sync_status: data.syncStatus ?? null,
         p_origem: data.origem ?? null,
+        p_registrador: data.registrador ?? null,
       } as never,
     );
     if (error) throw new Error(error.message);
