@@ -86,6 +86,71 @@ async function ghlGetEvents(
   return { ok: res.ok, status: res.status, events, raw };
 }
 
+export interface GhlContactInfo {
+  name: string | null;
+  phone: string | null;
+  email: string | null;
+}
+
+/**
+ * The calendar events endpoint only returns the contact ID — never the name.
+ * Fetch the contact record itself so client details land in the database.
+ */
+async function ghlGetContact(
+  contactId: string,
+  token: string,
+): Promise<GhlContactInfo | null> {
+  try {
+    const res = await fetch(`${GHL_BASE}/contacts/${contactId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Version: "2021-07-28",
+        Accept: "application/json",
+      },
+    });
+    if (!res.ok) return null;
+    const raw = (await res.json()) as {
+      contact?: {
+        contactName?: string;
+        name?: string;
+        firstName?: string;
+        lastName?: string;
+        phone?: string;
+        email?: string;
+      };
+    };
+    const c = raw?.contact;
+    if (!c) return null;
+    const name =
+      c.contactName?.trim() ||
+      c.name?.trim() ||
+      [c.firstName, c.lastName].filter(Boolean).join(" ").trim() ||
+      null;
+    return {
+      name,
+      phone: c.phone?.trim() || null,
+      email: c.email?.trim() || null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Resolve many contacts with a per-run cache and bounded concurrency. */
+async function resolveContacts(
+  ids: string[],
+  token: string,
+  cache: Map<string, GhlContactInfo | null>,
+): Promise<void> {
+  const pending = ids.filter((id) => !cache.has(id));
+  const CONCURRENCY = 5;
+  for (let i = 0; i < pending.length; i += CONCURRENCY) {
+    const slice = pending.slice(i, i + CONCURRENCY);
+    const results = await Promise.all(slice.map((id) => ghlGetContact(id, token)));
+    slice.forEach((id, idx) => cache.set(id, results[idx] ?? null));
+  }
+}
+
 export async function syncGhlAppointments(opts?: {
   pastDays?: number;
   futureDays?: number;
