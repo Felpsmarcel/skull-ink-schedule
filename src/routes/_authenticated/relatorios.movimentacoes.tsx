@@ -200,7 +200,12 @@ function RelatorioMovimentacoesPage() {
       toast.error("Nada para exportar");
       return;
     }
-    exportReportCSV(rows, `relatorio-pagamentos-${start}_${end}.csv`);
+    exportReportCSV(rows, `relatorio-pagamentos-${start}_${end}.csv`, {
+      periodoLabel,
+      geradoPor: me?.email ?? "—",
+      geradoEm: new Date(),
+      filtrosLabel,
+    });
     toast.success(`Exportado: ${rows.length} linha(s)`);
   }
 
