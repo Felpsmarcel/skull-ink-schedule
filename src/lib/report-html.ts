@@ -263,12 +263,21 @@ function csvEscape(v: unknown): string {
   return /[";\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
-export function exportReportCSV(rows: ReportRow[], filename: string) {
+export function exportReportCSV(rows: ReportRow[], filename: string, meta?: ReportMeta) {
   const header = CSV_COLUMNS.map((c) => csvEscape(c.label)).join(";");
   const body = rows
     .map((r) => CSV_COLUMNS.map((c) => csvEscape(c.pick(r))).join(";"))
     .join("\r\n");
-  const csv = "\uFEFF" + header + "\r\n" + body;
+  const preamble = meta
+    ? [
+        `${csvEscape("Período")};${csvEscape(meta.periodoLabel)}`,
+        `${csvEscape("Filtros")};${csvEscape(meta.filtrosLabel ?? "Sem filtros")}`,
+        `${csvEscape("Gerado por")};${csvEscape(meta.geradoPor)}`,
+        `${csvEscape("Gerado em")};${csvEscape(formatDate(meta.geradoEm))}`,
+        "",
+      ].join("\r\n") + "\r\n"
+    : "";
+  const csv = "\uFEFF" + preamble + header + "\r\n" + body;
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
