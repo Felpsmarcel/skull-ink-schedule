@@ -99,17 +99,23 @@ export const getFinanceSummary = createServerFn({ method: "GET" })
 
     const fetchPaidIds = async (ids: string[]): Promise<Set<string>> => {
       if (ids.length === 0) return new Set();
-      const { data: payRows, error: payErr } = await (supabase as any)
-        .from("payments" as never)
-        .select("appointment_id, status")
-        .eq("status", "paid")
-        .in("appointment_id", ids);
-      if (payErr) throw new Error(payErr.message);
-      return new Set(
-        ((payRows ?? []) as Array<{ appointment_id: string | null }>)
-          .map((r) => r.appointment_id)
-          .filter((x): x is string => Boolean(x)),
-      );
+      // Chunk to keep the PostgREST querystring small: a single .in() with
+      // hundreds of UUIDs produces a URL long enough to make fetch fail.
+      const paid = new Set<string>();
+      const CHUNK = 100;
+      for (let i = 0; i < ids.length; i += CHUNK) {
+        const slice = ids.slice(i, i + CHUNK);
+        const { data: payRows, error: payErr } = await (supabase as any)
+          .from("payments" as never)
+          .select("appointment_id, status")
+          .eq("status", "paid")
+          .in("appointment_id", slice);
+        if (payErr) throw new Error(payErr.message);
+        for (const r of (payRows ?? []) as Array<{ appointment_id: string | null }>) {
+          if (r.appointment_id) paid.add(r.appointment_id);
+        }
+      }
+      return paid;
     };
 
     if (me.role === "artist") {
