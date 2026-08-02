@@ -46,6 +46,7 @@ const searchSchema = z.object({
   recebedor: fallback(z.string(), "").default(""),
   sync: fallback(z.string(), "").default(""),
   origem: fallback(z.string(), "").default(""),
+  registrador: fallback(z.string(), "").default(""),
 });
 
 const ORIGEM_OPTIONS: Array<{ value: string; label: string }> = [
@@ -111,6 +112,7 @@ function RelatorioMovimentacoesPage() {
       search.recebedor,
       search.sync,
       search.origem,
+      search.registrador,
     ],
     queryFn: () =>
       fetchReport({
@@ -122,6 +124,7 @@ function RelatorioMovimentacoesPage() {
           recebedor: search.recebedor || null,
           syncStatus: (search.sync as "pending" | "synced" | "failed" | "") || null,
           origem: (search.origem as "link_individual" | "manual" | "") || null,
+          registrador: search.registrador || null,
         },
       }),
     staleTime: 30_000,
@@ -151,6 +154,31 @@ function RelatorioMovimentacoesPage() {
 
   const origemLabel = ORIGEM_OPTIONS.find((o) => o.value === search.origem)?.label;
 
+  const filtrosLabel = useMemo(() => {
+    const parts: string[] = [];
+    if (search.artist) {
+      parts.push(
+        `Tatuador: ${(artists ?? []).find((a) => a.id === search.artist)?.name ?? search.artist}`,
+      );
+    }
+    if (search.recebedor) {
+      parts.push(
+        `Recebido por: ${STAFF_RECEBEDORES.find((s) => s.appUserId === search.recebedor)?.displayName ?? search.recebedor}`,
+      );
+    }
+    if (search.registrador) {
+      parts.push(
+        `Registado por: ${STAFF_RECEBEDORES.find((s) => s.id === search.registrador)?.displayName ?? search.registrador}`,
+      );
+    }
+    if (search.tipo) parts.push(`Tipo: ${TIPO_LABELS[search.tipo] ?? search.tipo}`);
+    if (search.sync) {
+      parts.push(`Sync: ${SYNC_OPTIONS.find((o) => o.value === search.sync)?.label ?? search.sync}`);
+    }
+    if (search.origem) parts.push(`Origem: ${origemLabel ?? search.origem}`);
+    return parts.length > 0 ? parts.join(" · ") : "Sem filtros (todos os lançamentos)";
+  }, [artists, origemLabel, search]);
+
   function handleExportHtml() {
     if (rows.length === 0) {
       toast.error("Nada para exportar");
@@ -161,6 +189,7 @@ function RelatorioMovimentacoesPage() {
       geradoPor: me?.email ?? "—",
       geradoEm: new Date(),
       origemLabel: origemLabel ? `Relatório de pagamentos — ${origemLabel}` : undefined,
+      filtrosLabel,
     });
     downloadReportHtml(html, `relatorio-pagamentos-${start}_${end}.html`);
     toast.success("Relatório HTML exportado");
@@ -176,7 +205,12 @@ function RelatorioMovimentacoesPage() {
   }
 
   const hasFilters =
-    search.artist || search.tipo || search.recebedor || search.sync || search.origem;
+    search.artist ||
+    search.tipo ||
+    search.recebedor ||
+    search.sync ||
+    search.origem ||
+    search.registrador;
 
   return (
     <div className="min-h-svh bg-background pb-[calc(env(safe-area-inset-bottom)+7rem)] text-foreground sm:pb-24">
@@ -255,6 +289,20 @@ function RelatorioMovimentacoesPage() {
                     ))}
                   </select>
                 </Field>
+                <Field label="Registado por">
+                  <select
+                    value={search.registrador}
+                    onChange={(e) => setSearch({ registrador: e.target.value })}
+                    className="h-11 w-full rounded-md border border-input bg-background px-2 text-sm"
+                  >
+                    <option value="">Todos</option>
+                    {STAFF_RECEBEDORES.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.displayName}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
               </>
             )}
             <Field label="Tipo">
@@ -314,7 +362,14 @@ function RelatorioMovimentacoesPage() {
                 size="sm"
                 variant="ghost"
                 onClick={() =>
-                  setSearch({ artist: "", tipo: "", recebedor: "", sync: "", origem: "" })
+                  setSearch({
+                    artist: "",
+                    tipo: "",
+                    recebedor: "",
+                    sync: "",
+                    origem: "",
+                    registrador: "",
+                  })
                 }
               >
                 <RotateCcw className="h-4 w-4" /> Limpar
@@ -329,6 +384,7 @@ function RelatorioMovimentacoesPage() {
             GF Tattoo — Relatório de pagamentos
           </h2>
           <p className="text-xs text-muted-foreground">Período: {periodoLabel}</p>
+          <p className="text-xs text-muted-foreground">Filtros: {filtrosLabel}</p>
           <p className="text-xs text-muted-foreground">
             Gerado por {me?.email ?? "—"} em {formatDate(new Date())}
           </p>
