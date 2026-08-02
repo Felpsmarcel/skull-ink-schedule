@@ -1,22 +1,34 @@
-## Situação atual
+## Diagnóstico (verificado nos dados)
 
-O relatório de pagamentos (`/relatorios/movimentacoes`) já tem:
-- filtro por **intervalo de datas**, **tatuador**, **recebido por**, tipo, sync GHL e origem (link vs manual);
-- exportação **CSV** e **HTML** (imprimível/PDF) com os totais e o detalhe.
+A coluna "Cliente" aparece "—" porque **nenhum agendamento tem nome de cliente gravado**:
 
-O que falta para fechar o pedido é o filtro por **quem registou** (a pessoa que preencheu o formulário). Esse dado já é gravado em cada lançamento, mas ainda não é filtrável nem exportável como coluna filtrada.
+- 462 agendamentos: `contact_name` está vazio em **462** (100%). Todos têm `ghl_contact_id`.
+- Os 314 contactos criados pelo sync têm nome literal **"Sem nome"** e telefone vazio.
+
+Causa: o sync lê o endpoint de eventos do calendário do GHL, que devolve apenas o **ID** do contacto — não o nome. O código tenta ler `e.contact.name` / `firstName` / `lastName`, campos que esse endpoint nunca envia, então grava `NULL` no agendamento e "Sem nome" no contacto.
+
+O relatório está correto: ele mostra exatamente o que está na base (vazio).
+
+Nota: "Estilo" e "Tamanho" também estão vazios em todos os registos — são campos preenchidos só pelo fluxo interno de agendamento, não vêm do GHL. Fora do escopo deste fix.
 
 ## O que vou fazer
 
-1. **Filtro "Registado por"** no relatório, com a mesma lista fechada de staff (Gabriel, Nívia, Augusto, André, Joyce) usada em "Recebido por". Fica guardado no endereço da página, como os outros filtros, para poderes partilhar/voltar ao mesmo recorte.
-2. **Combinação de filtros**: datas + tatuador + recebido por + registado por funcionam em conjunto, e o botão "Limpar" também reseta o novo filtro.
-3. **Exportações refletem os filtros**: o CSV e o HTML passam a indicar no cabeçalho o recorte aplicado (período, tatuador, recebido por, registado por), para a auditoria ficar auto-explicativa. As colunas "Recebido por" e "Registado por" já existem no detalhe.
-4. **Nome do ficheiro** de exportação passa a incluir o período (já inclui) — mantém-se, sem mudanças.
+1. **Buscar o contacto no GHL durante o sync**
+   Para cada ID de contacto novo, consultar o cadastro do contacto no GHL e trazer nome, telefone e email. Fazer isso em lote, com cache por execução (o mesmo cliente aparece em vários agendamentos) e sem quebrar o sync se uma consulta falhar — nesse caso mantém o registo e regista a falha.
 
-## Notas técnicas
+2. **Gravar de verdade**
+   - `contacts`: nome real, telefone e email (deixa de ser "Sem nome").
+   - `appointments.contact_name` / `contact_phone` / `contact_email`: preenchidos no insert e atualizados nos agendamentos já existentes.
 
-- Nova versão da função de base de dados `get_movimentacoes_report` com o parâmetro extra `p_registrador` (filtra por `registrado_por_staff_id`, com fallback por `registrado_por_nome` para registos antigos), mantendo a assinatura atual para não quebrar chamadas existentes.
-- `src/lib/movimentacao.functions.ts`: acrescentar `registrador` ao `ReportInput` e passar `p_registrador` ao RPC.
-- `src/routes/_authenticated/relatorios.movimentacoes.tsx`: novo campo no painel de filtros (`registrador` no `validateSearch` com `fallback`), incluir na `queryKey`, no estado "tem filtros ativos" e no "Limpar".
-- `src/lib/report-html.ts`: `ReportMeta` ganha uma linha de "Filtros aplicados" no cabeçalho do HTML; CSV mantém as colunas atuais.
-- Validar com `tsgo` e build de produção.
+3. **Preencher o histórico (backfill)**
+   Rotina administrativa que percorre os 462 agendamentos sem nome, busca os contactos no GHL e preenche. Disparada por botão no painel admin, com contagem de quantos foram preenchidos.
+
+4. **Rede de segurança na exibição**
+   No relatório de agendamentos, quando o nome do agendamento estiver vazio, usar o nome do contacto ligado; só mostrar "—" se ambos estiverem vazios. Assim o relatório aproveita qualquer nome já disponível sem esperar o backfill.
+
+## Detalhes técnicos
+
+- `src/lib/sync.server.ts`: nova função de enriquecimento via `GET /contacts/{id}` (API GHL v2, mesmo token/`Version` já usados), com `Map` de cache e concorrência limitada; usar o resultado nos upserts de `contacts` e nos insert/update de `appointments`.
+- Nova server fn de backfill em `src/lib/ghl-sync-admin.functions.ts` (admin-only) + botão em `/admin/reconciliar` ou junto do `SyncGhlButton`.
+- Migração para atualizar `public.get_monthly_report`: `COALESCE(NULLIF(a.contact_name,''), c.name)` com `LEFT JOIN public.contacts c ON c.id = a.contact_id`, ignorando o placeholder "Sem nome".
+- Sem alteração de schema; campos já existem.

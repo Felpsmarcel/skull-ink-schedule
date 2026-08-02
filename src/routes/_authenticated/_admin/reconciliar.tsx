@@ -10,6 +10,7 @@ import {
   Calendar,
   Hash,
   Lightbulb,
+  Users,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -42,6 +43,7 @@ import {
   type SyncFailureRow,
 } from "@/lib/sync.functions";
 import { SyncGhlButton } from "@/components/sync-ghl-button";
+import { backfillGhlContactNames } from "@/lib/ghl-sync-admin.functions";
 
 export const Route = createFileRoute("/_authenticated/_admin/reconciliar")({
   head: () => ({
@@ -74,6 +76,27 @@ function ReconciliarPage() {
   const qc = useQueryClient();
   const list = useServerFn(listOpenSyncFailures);
   const resolve = useServerFn(resolveSyncFailure);
+  const backfill = useServerFn(backfillGhlContactNames);
+
+  const backfillM = useMutation({
+    mutationFn: () => backfill({ data: undefined }),
+    onSuccess: (r) => {
+      if (r.updatedAppointments === 0) {
+        toast.info(
+          r.scanned === 0
+            ? "Todos os agendamentos já têm nome de cliente."
+            : `Nenhum nome encontrado no GHL (${r.notFound} contacto(s) sem nome).`,
+        );
+      } else {
+        toast.success(
+          `${r.updatedAppointments} agendamento(s) e ${r.updatedContacts} contacto(s) atualizados.`,
+        );
+      }
+      qc.invalidateQueries({ queryKey: ["monthly-report"] });
+      qc.invalidateQueries({ queryKey: ["agenda-range"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : String(e)),
+  });
 
   const failuresQ = useQuery<SyncFailureRow[]>({
     queryKey: ["sync-failures"],
@@ -109,6 +132,28 @@ function ReconciliarPage() {
       </header>
 
       <main className="flex-1 space-y-3 p-4">
+        <div className="rounded-lg border border-border bg-card p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="flex items-center gap-2 text-sm font-semibold">
+                <Users className="h-4 w-4" /> Nomes de clientes
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Preenche nome, telefone e email dos clientes nos agendamentos antigos
+                importados do GHL (até 500 por execução).
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={backfillM.isPending}
+              onClick={() => backfillM.mutate()}
+            >
+              {backfillM.isPending ? "A preencher..." : "Preencher nomes"}
+            </Button>
+          </div>
+        </div>
+
         <Alert>
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Como funciona</AlertTitle>

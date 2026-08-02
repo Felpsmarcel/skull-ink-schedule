@@ -86,6 +86,80 @@ async function ghlGetEvents(
   return { ok: res.ok, status: res.status, events, raw };
 }
 
+export interface GhlContactInfo {
+  name: string | null;
+  phone: string | null;
+  email: string | null;
+}
+
+/**
+ * The calendar events endpoint only returns the contact ID — never the name.
+ * Fetch the contact record itself so client details land in the database.
+ */
+async function ghlGetContact(
+  contactId: string,
+  token: string,
+): Promise<GhlContactInfo | null> {
+  try {
+    // GHL rate-limits contact reads; retry on 429 with backoff.
+    let res: Response | null = null;
+    for (let attempt = 0; attempt < 4; attempt++) {
+      res = await fetch(`${GHL_BASE}/contacts/${contactId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Version: "2021-07-28",
+          Accept: "application/json",
+        },
+      });
+      if (res.status !== 429) break;
+      await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
+    }
+    if (!res || !res.ok) return null;
+    const raw = (await res.json()) as {
+      contact?: {
+        contactName?: string;
+        name?: string;
+        firstName?: string;
+        lastName?: string;
+        phone?: string;
+        email?: string;
+      };
+    };
+    const c = raw?.contact;
+    if (!c) return null;
+    const name =
+      c.contactName?.trim() ||
+      c.name?.trim() ||
+      [c.firstName, c.lastName].filter(Boolean).join(" ").trim() ||
+      null;
+    return {
+      name,
+      phone: c.phone?.trim() || null,
+      email: c.email?.trim() || null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Resolve many contacts with a per-run cache and bounded concurrency. */
+async function resolveContacts(
+  ids: string[],
+  token: string,
+  cache: Map<string, GhlContactInfo | null>,
+): Promise<void> {
+  const pending = ids.filter((id) => !cache.has(id));
+  const CONCURRENCY = 3;
+  for (let i = 0; i < pending.length; i += CONCURRENCY) {
+    const slice = pending.slice(i, i + CONCURRENCY);
+    const results = await Promise.all(slice.map((id) => ghlGetContact(id, token)));
+    slice.forEach((id, idx) => cache.set(id, results[idx] ?? null));
+    if (i + CONCURRENCY < pending.length) {
+      await new Promise((r) => setTimeout(r, 150));
+    }
+  }
+}
+
 export async function syncGhlAppointments(opts?: {
   pastDays?: number;
   futureDays?: number;
@@ -115,6 +189,9 @@ export async function syncGhlAppointments(opts?: {
   const artists = ((artistsData ?? []) as ArtistRow[]).filter(
     (a) => a.ghl_calendar_id,
   );
+
+  // Same client shows up across calendars/events — cache per run.
+  const contactInfo = new Map<string, GhlContactInfo | null>();
 
   for (const artist of artists) {
     const calId = artist.ghl_calendar_id!;
@@ -149,15 +226,15 @@ export async function syncGhlAppointments(opts?: {
       const gid = e.contactId ?? e.contact?.id;
       if (!gid || seenGhl.has(gid)) continue;
       seenGhl.add(gid);
-      const name =
-        e.contact?.name?.trim() ||
-        [e.contact?.firstName, e.contact?.lastName].filter(Boolean).join(" ").trim() ||
-        "Sem nome";
+    }
+    await resolveContacts([...seenGhl], token, contactInfo);
+    for (const gid of seenGhl) {
+      const info = contactInfo.get(gid) ?? null;
       contactUpserts.push({
         ghl_contact_id: gid,
-        name,
-        email: null,
-        phone: null,
+        name: info?.name ?? "Sem nome",
+        email: info?.email ?? null,
+        phone: info?.phone ?? null,
       });
     }
     if (contactUpserts.length > 0) {
@@ -218,7 +295,10 @@ export async function syncGhlAppointments(opts?: {
     const toUpdate = res.events.filter((e) => existing.has(e.id));
 
     if (toInsert.length > 0) {
-      const rows = toInsert.map((e) => ({
+      const rows = toInsert.map((e) => {
+        const gid = e.contactId ?? e.contact?.id ?? null;
+        const info = gid ? contactInfo.get(gid) ?? null : null;
+        return {
         ghl_appointment_id: e.id,
         ghl_contact_id: e.contactId ?? null,
         contact_id:
@@ -228,8 +308,11 @@ export async function syncGhlAppointments(opts?: {
         artist_id: artist.id,
         calendar_id: calId,
         contact_name:
+          info?.name ??
           e.contact?.name ??
           ([e.contact?.firstName, e.contact?.lastName].filter(Boolean).join(" ") || null),
+        contact_phone: info?.phone ?? null,
+        contact_email: info?.email ?? null,
         start_at: e.startTime,
         end_at: e.endTime,
         status: mapStatus(e.appointmentStatus),
@@ -237,7 +320,8 @@ export async function syncGhlAppointments(opts?: {
         // for events created directly in GHL (outside the app's checkout flow).
         commission_pct: artistCommissionPct,
         notes: e.title ?? null,
-      }));
+        };
+      });
       // ignoreDuplicates: another concurrent run may have inserted between our
       // SELECT and INSERT. Treat that as a no-op, not a batch failure.
       const { error: insErr, count } = await supabaseAdmin
@@ -267,6 +351,8 @@ export async function syncGhlAppointments(opts?: {
         (e.contactId && contactIdMap.get(e.contactId)) ??
         (e.contact?.id && contactIdMap.get(e.contact.id)) ??
         null;
+      const gid = e.contactId ?? e.contact?.id ?? null;
+      const info = gid ? contactInfo.get(gid) ?? null : null;
       const { error: upErr } = await supabaseAdmin
         .from("appointments" as never)
         .update(
@@ -274,9 +360,9 @@ export async function syncGhlAppointments(opts?: {
             start_at: e.startTime,
             end_at: e.endTime,
             status: mapStatus(e.appointmentStatus),
-            contact_name:
-              e.contact?.name ??
-              ([e.contact?.firstName, e.contact?.lastName].filter(Boolean).join(" ") || null),
+            ...(info?.name ? { contact_name: info.name } : {}),
+            ...(info?.phone ? { contact_phone: info.phone } : {}),
+            ...(info?.email ? { contact_email: info.email } : {}),
             ghl_contact_id: e.contactId ?? null,
             ...(linkedContactId ? { contact_id: linkedContactId } : {}),
             calendar_id: calId,
@@ -299,6 +385,90 @@ export async function syncGhlAppointments(opts?: {
     inserted,
     updated,
     failures,
+    errors: errors.slice(0, 20),
+  };
+}
+export interface BackfillContactsResult {
+  scanned: number;
+  updatedAppointments: number;
+  updatedContacts: number;
+  notFound: number;
+  errors: string[];
+}
+
+/**
+ * Fill in client name/phone/email for appointments that were mirrored from GHL
+ * before contact enrichment existed (contact_name NULL, contacts.name = "Sem nome").
+ */
+export async function backfillContactNames(limit = 500): Promise<BackfillContactsResult> {
+  const token = process.env.GHL_TOKEN;
+  if (!token) throw new Error("GHL_TOKEN ausente no servidor");
+
+  const errors: string[] = [];
+  const { data, error } = await supabaseAdmin
+    .from("appointments" as never)
+    .select("id, ghl_contact_id, contact_id, contact_name")
+    .not("ghl_contact_id", "is", null)
+    .is("contact_name", null)
+    .limit(limit);
+  if (error) throw new Error(error.message);
+
+  const rows = (data ?? []) as Array<{
+    id: string;
+    ghl_contact_id: string;
+    contact_id: string | null;
+    contact_name: string | null;
+  }>;
+
+  const cache = new Map<string, GhlContactInfo | null>();
+  await resolveContacts([...new Set(rows.map((r) => r.ghl_contact_id))], token, cache);
+
+  let updatedAppointments = 0;
+  let notFound = 0;
+  const contactPatched = new Set<string>();
+  let updatedContacts = 0;
+
+  for (const row of rows) {
+    const info = cache.get(row.ghl_contact_id) ?? null;
+    if (!info?.name) {
+      notFound++;
+      continue;
+    }
+    const { error: aErr } = await supabaseAdmin
+      .from("appointments" as never)
+      .update({
+        contact_name: info.name,
+        ...(info.phone ? { contact_phone: info.phone } : {}),
+        ...(info.email ? { contact_email: info.email } : {}),
+      } as never)
+      .eq("id", row.id);
+    if (aErr) {
+      errors.push(`appointment ${row.id}: ${aErr.message}`);
+      continue;
+    }
+    updatedAppointments++;
+
+    if (row.contact_id && !contactPatched.has(row.contact_id)) {
+      contactPatched.add(row.contact_id);
+      const { error: cErr } = await supabaseAdmin
+        .from("contacts" as never)
+        .update({
+          name: info.name,
+          ...(info.phone ? { phone: info.phone } : {}),
+          ...(info.email ? { email: info.email } : {}),
+          synced_at: new Date().toISOString(),
+        } as never)
+        .eq("id", row.contact_id);
+      if (cErr) errors.push(`contact ${row.contact_id}: ${cErr.message}`);
+      else updatedContacts++;
+    }
+  }
+
+  return {
+    scanned: rows.length,
+    updatedAppointments,
+    updatedContacts,
+    notFound,
     errors: errors.slice(0, 20),
   };
 }
