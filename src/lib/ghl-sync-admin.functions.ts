@@ -46,3 +46,11 @@ export const unscheduleGhlSync = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+export const backfillGhlContactNames = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.userId);
+    const { backfillContactNames } = await import("@/lib/sync.server");
+    return await backfillContactNames(500);
+  });
