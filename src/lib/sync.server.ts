@@ -286,7 +286,10 @@ export async function syncGhlAppointments(opts?: {
     const toUpdate = res.events.filter((e) => existing.has(e.id));
 
     if (toInsert.length > 0) {
-      const rows = toInsert.map((e) => ({
+      const rows = toInsert.map((e) => {
+        const gid = e.contactId ?? e.contact?.id ?? null;
+        const info = gid ? contactInfo.get(gid) ?? null : null;
+        return {
         ghl_appointment_id: e.id,
         ghl_contact_id: e.contactId ?? null,
         contact_id:
@@ -296,8 +299,11 @@ export async function syncGhlAppointments(opts?: {
         artist_id: artist.id,
         calendar_id: calId,
         contact_name:
+          info?.name ??
           e.contact?.name ??
           ([e.contact?.firstName, e.contact?.lastName].filter(Boolean).join(" ") || null),
+        contact_phone: info?.phone ?? null,
+        contact_email: info?.email ?? null,
         start_at: e.startTime,
         end_at: e.endTime,
         status: mapStatus(e.appointmentStatus),
@@ -305,7 +311,8 @@ export async function syncGhlAppointments(opts?: {
         // for events created directly in GHL (outside the app's checkout flow).
         commission_pct: artistCommissionPct,
         notes: e.title ?? null,
-      }));
+        };
+      });
       // ignoreDuplicates: another concurrent run may have inserted between our
       // SELECT and INSERT. Treat that as a no-op, not a batch failure.
       const { error: insErr, count } = await supabaseAdmin
@@ -335,6 +342,8 @@ export async function syncGhlAppointments(opts?: {
         (e.contactId && contactIdMap.get(e.contactId)) ??
         (e.contact?.id && contactIdMap.get(e.contact.id)) ??
         null;
+      const gid = e.contactId ?? e.contact?.id ?? null;
+      const info = gid ? contactInfo.get(gid) ?? null : null;
       const { error: upErr } = await supabaseAdmin
         .from("appointments" as never)
         .update(
@@ -342,9 +351,9 @@ export async function syncGhlAppointments(opts?: {
             start_at: e.startTime,
             end_at: e.endTime,
             status: mapStatus(e.appointmentStatus),
-            contact_name:
-              e.contact?.name ??
-              ([e.contact?.firstName, e.contact?.lastName].filter(Boolean).join(" ") || null),
+            ...(info?.name ? { contact_name: info.name } : {}),
+            ...(info?.phone ? { contact_phone: info.phone } : {}),
+            ...(info?.email ? { contact_email: info.email } : {}),
             ghl_contact_id: e.contactId ?? null,
             ...(linkedContactId ? { contact_id: linkedContactId } : {}),
             calendar_id: calId,
