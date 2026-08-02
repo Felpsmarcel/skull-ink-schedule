@@ -101,14 +101,20 @@ async function ghlGetContact(
   token: string,
 ): Promise<GhlContactInfo | null> {
   try {
-    const res = await fetch(`${GHL_BASE}/contacts/${contactId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Version: "2021-07-28",
-        Accept: "application/json",
-      },
-    });
-    if (!res.ok) return null;
+    // GHL rate-limits contact reads; retry on 429 with backoff.
+    let res: Response | null = null;
+    for (let attempt = 0; attempt < 4; attempt++) {
+      res = await fetch(`${GHL_BASE}/contacts/${contactId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Version: "2021-07-28",
+          Accept: "application/json",
+        },
+      });
+      if (res.status !== 429) break;
+      await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
+    }
+    if (!res || !res.ok) return null;
     const raw = (await res.json()) as {
       contact?: {
         contactName?: string;
@@ -143,11 +149,14 @@ async function resolveContacts(
   cache: Map<string, GhlContactInfo | null>,
 ): Promise<void> {
   const pending = ids.filter((id) => !cache.has(id));
-  const CONCURRENCY = 5;
+  const CONCURRENCY = 3;
   for (let i = 0; i < pending.length; i += CONCURRENCY) {
     const slice = pending.slice(i, i + CONCURRENCY);
     const results = await Promise.all(slice.map((id) => ghlGetContact(id, token)));
     slice.forEach((id, idx) => cache.set(id, results[idx] ?? null));
+    if (i + CONCURRENCY < pending.length) {
+      await new Promise((r) => setTimeout(r, 150));
+    }
   }
 }
 
