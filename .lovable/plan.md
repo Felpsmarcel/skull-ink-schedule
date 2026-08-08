@@ -1,61 +1,143 @@
-# Nova Home operacional antes da Agenda — avaliação de impacto
+# Check-in no Totem — escopo corrigido (Fase 1)
 
-## Veredito: impacto BAIXO
+Escopo revisado conforme pedido: **sem foto, sem impressão térmica, QR Code apenas digital**. A arquitetura fica preparada para a foto no futuro, mas nada aparece ao cliente e nada bloqueia o check-in.
 
-A mudança é quase 100% por **adição**. Nada da agenda, financeiro, admin ou autenticação precisa ser refatorado. O único ajuste em código existente é para onde o login redireciona e onde a navegação inferior aponta.
+## Removido do fluxo inicial
 
-## Quanto do código atual muda
+- Pedido de autorização de foto, câmera, contagem regressiva e captura automática.
+- Obrigatoriedade de `photo_url` e `photo_consent`.
+- Qualquer impressão de senha ou QR em papel.
 
-Praticamente nada de lógica. Apenas 3 pontos de navegação e 1 rota nova:
+As colunas de foto ficam criadas e opcionais (nulas), sem UI. A captura futura será acionada pela equipe durante o atendimento, não pelo cliente.
 
-- Redirecionamento pós-login: hoje `/` manda o usuário autenticado para `/agenda`; passaria a mandar para `/home`.
-- Barra inferior (mobile) e barra do topo (desktop): ganham o item "Home" (a Agenda continua lá).
-- Logo do topo hoje leva para `/agenda`; passaria a levar para `/home`.
+## Fluxo do totem (o que o cliente vê)
 
-Todo o resto (agenda dia/semana/mês, wizard de agendamento, financeiro, relatórios, movimentações, onboarding, admin) fica intocado.
+1. Boas-vindas (tela cheia, sem menus, sem login).
+2. "Tenho agendamento" ou "Sou novo cliente".
+3. Busca por nome ou telefone.
+4. Validação do telefone (confirmação dos últimos dígitos).
+5. Sistema localiza ou cria o contato.
+6. Sistema localiza o agendamento do dia e a oportunidade.
+7. Confirmação dos dados do atendimento (horário, tatuador).
+8. Botão "Confirmar minha chegada".
+9. Registro do check-in + atualização no CRM.
+10. QR Code digital na tela, para o cliente ler com o próprio celular.
+11. Cliente entra na fila interna e aparece na Home da equipe em "Clientes aguardando".
+12. Equipe inicia o atendimento pela Home.
 
-## O que já existe e pode ser reutilizado
+## Rotas
 
-- **Dados da agenda de hoje**: hook `useStaffDayAgenda` (grade do dia com livre/ocupado) e `useStaffRangeAgenda` — já usados pela Agenda, sem query nova.
-- **Status de pagamento por agendamento**: `useDayAppointmentStatuses` (badges pago/pendente).
-- **Próximo atendimento**: derivado dos mesmos eventos do dia, ordenando por hora — sem backend novo.
-- **Papel do usuário** (`useCurrentUser` / `useIsAdmin`) para mostrar só os atalhos que o usuário tem.
-- **Atalhos**: as mesmas rotas já listadas no Menu (financeiro, registrar pagamento, relatórios, equipe, links, reconciliar).
-- Componentes visuais já prontos: cartões, `StatusBadge`, `Avatar`, ícones, layout `AuthShell` (topo + navegação inferior herdados automaticamente).
-- Resumo financeiro do dia, se quisermos, via `useFinance` existente.
+Públicas (sem login, tela de totem e página do cliente):
 
-## Arquivos novos
+- `/totem` — boas-vindas.
+- `/totem/buscar` — busca e validação de telefone.
+- `/totem/confirmar` — confirmação dos dados + "Confirmar minha chegada".
+- `/totem/pronto` — exibe o QR Code digital e o código do atendimento.
+- `/a/$token` — página segura do atendimento, aberta ao escanear o QR.
 
-- `src/routes/_authenticated/home.tsx` — a página.
-- `src/components/home/*` — 3 a 4 cartões pequenos: resumo de hoje, próximo atendimento, clientes aguardando, grade de atalhos.
+Internas (área autenticada):
 
-## Arquivos existentes modificados
+- `/home` — seção "Clientes aguardando" com a fila do dia e ação "Iniciar atendimento".
+- `/admin/fila` — visão administrativa da fila, com histórico do dia.
 
-- `src/routes/index.tsx` — destino do redirecionamento autenticado.
-- `src/components/layout/bottom-nav.tsx` — item Home.
-- `src/components/layout/auth-shell.tsx` — link Home no topo e destino do logo.
+Servidor:
 
-(`src/routeTree.gen.ts` é regenerado automaticamente.)
+- `src/lib/checkin.functions.ts` — buscar contato, validar telefone, criar check-in, ler status por token, avançar status.
+- `src/lib/checkin-ghl.server.ts` — toda a conversa com o CRM (contato, agendamento, oportunidade, tag, campos, workflow).
+- `src/routes/api/public/hooks/checkin-status.ts` — webhook opcional para o CRM devolver mudanças de status.
 
-## "Clientes aguardando" e "Check-in"
+A página `/a/$token` e o totem leem dados por funções seguras no banco (security definer), nunca com acesso direto de leitura pública às tabelas.
 
-Esses dois são os únicos pontos sem base pronta hoje: não existe conceito de fila/check-in no sistema. Implementação mínima e segura:
+## Tabela nova: `checkins`
 
-- **Clientes aguardando**: na primeira versão, mostrar os atendimentos de hoje cujo horário já passou ou está em curso e ainda não têm pagamento registrado — usando apenas dados já disponíveis. Nada de tabela nova.
-- **Botão "Check-in"**: presente na Home, mas desabilitado com rótulo "em breve" (ou levando a uma tela placeholder) até o módulo ser construído.
+Campos de identificação e vínculo:
 
-## Riscos
+- `id`, `created_at`, `updated_at`
+- `contact_id` (contato local), `ghl_contact_id`
+- `appointment_id` (quando existir), `ghl_appointment_id`
+- `ghl_opportunity_id`
+- `artist_id` (tatuador responsável, quando conhecido)
+- `codigo_atendimento` — código curto legível, ex. `GF-042`, reiniciado por dia
 
-- **Agenda**: nenhum — não é tocada.
-- **Autenticação**: nenhum — o portão `_authenticated` e o gate de onboarding continuam iguais; a Home fica dentro do mesmo portão.
-- **Navegação**: risco baixo e controlado — a Agenda continua acessível por `/agenda` e pela barra inferior; nada de link antigo quebra.
-- Ponto de atenção: o gate de onboarding continua obrigando tatuadores novos a concluir o onboarding antes de ver a Home — comportamento desejado, sem mudança.
+Estado e horários:
 
-## Implementação mínima e mais segura (ordem sugerida)
+- `status` — `aguardando`, `em_atendimento`, `concluido`, `nao_compareceu`, `cancelado`
+- `arrived_at`, `started_at`, `finished_at`
+- `scheduled_at` (horário agendado, copiado no momento do check-in)
+- `source` — padrão `Totem GF`
 
-1. Criar `/home` só de leitura, reutilizando os hooks da agenda.
-2. Adicionar Home às barras de navegação, mantendo Agenda.
-3. Trocar o redirecionamento pós-login para `/home`.
-4. Deixar o Check-in como botão "em breve".
+QR Code:
 
-Nenhuma migração de banco, nenhuma função de servidor nova, nenhuma alteração de permissões.
+- `qr_token` — token aleatório e único, sem dado pessoal
+- `qr_url`
+- `qr_created_at`, `qr_expires_at` (expira no fim do dia)
+
+Comunicação e futuro:
+
+- `consentimento_comunicacao` (booleano) e `notificado_em`
+- `photo_url`, `photo_consent`, `photo_taken_at` — todos nulos e sem UI nesta fase
+
+Regras de acesso:
+
+- Equipe autenticada vê e atualiza a fila; admin vê tudo.
+- O público não lê a tabela diretamente. A página `/a/$token` usa uma função segura que recebe o token e devolve **apenas** código do atendimento, status, horário agendado, primeiro nome do tatuador e aviso de que a equipe foi notificada — sem telefone, e-mail ou nome completo do cliente.
+- Um índice único evita dois check-ins ativos para o mesmo contato no mesmo dia (anti-duplicidade).
+
+## O QR Code
+
+- Contém apenas `https://www.gftattoocalendar.com/a/<token>`. Nenhum nome, telefone ou identificador do CRM.
+- Token aleatório longo, de uso único por atendimento, com validade até o fim do dia.
+- Gerado no servidor no momento do check-in; a imagem é desenhada na própria tela do totem.
+- O mesmo link é enviado por WhatsApp ou SMS **somente** quando existir consentimento de comunicação registrado.
+
+## Integração com o HighLevel
+
+No momento em que o cliente confirma a chegada, o servidor executa, em ordem, com tolerância a falha parcial:
+
+1. Localizar o contato por telefone; criar apenas se não existir (evita duplicados).
+2. Localizar o agendamento do dia desse contato.
+3. Localizar a oportunidade correspondente; reutilizar a existente em vez de criar outra.
+4. Aplicar a tag `check-in-totem-gf`.
+5. Atualizar o campo de status para **Aguardando atendimento**.
+6. Salvar o código e a URL digital do atendimento no contato/oportunidade.
+7. Acionar o workflow de confirmação.
+8. Gravar tudo em `checkins` para a fila interna aparecer na hora.
+
+Se o CRM falhar, o check-in **não** é perdido: fica gravado localmente com estado de sincronização pendente e é reprocessado, igual ao que já existe hoje para os lançamentos financeiros. O cliente vê o QR normalmente.
+
+### Campos personalizados necessários no CRM
+
+- `checkin_status` — texto/lista: Aguardando atendimento, Em atendimento, Concluído
+- `checkin_codigo` — código do atendimento
+- `checkin_url` — link digital do atendimento
+- `checkin_arrived_at` — data e hora da chegada
+- `checkin_source` — origem (Totem GF)
+
+### Tag
+
+- `check-in-totem-gf`
+
+### Workflows
+
+- **Confirmação de chegada** — disparado pela tag; envia ao cliente a confirmação com o link do atendimento (WhatsApp/SMS conforme consentimento) e notifica a equipe.
+- **Aviso à equipe** — notificação interna de novo cliente aguardando.
+- (Opcional, fase seguinte) **Sem atendimento em X minutos** — alerta se alguém ficar muito tempo na fila.
+
+## Avaliação técnica revisada
+
+Impacto: **MÉDIO** (antes seria ALTO por causa da câmera, consentimento de imagem, armazenamento de fotos e impressão).
+
+Com o escopo cortado, o que resta é: uma tabela, um conjunto de rotas novas, a página do QR e a sequência de chamadas ao CRM. Nada da agenda, financeiro ou autenticação existente muda. As duas partes que exigem cuidado real são a **anti-duplicidade no CRM** e a **fila do dia na Home** — o resto é trabalho direto.
+
+O que já existe e será reaproveitado: acesso ao CRM (contatos, agendamentos, busca por telefone), o padrão de sincronização com estado pendente e reprocessamento, funções seguras de leitura pública (já usadas no histórico de pagamentos) e a seção "Clientes aguardando" prevista na Home.
+
+Fora desta fase, propositalmente: captura de foto, impressão térmica, senha em papel, autoatendimento de pagamento no totem.
+
+## Ordem de implementação
+
+1. Tabela `checkins` + funções seguras de leitura por token.
+2. Fluxo do totem até o registro local do check-in (já funcional sem o CRM).
+3. QR digital + página `/a/$token`.
+4. Integração com o CRM (contato, agendamento, oportunidade, tag, campos, workflow) com fila de reprocessamento.
+5. "Clientes aguardando" na Home + ação "Iniciar atendimento".
+6. Envio do link por WhatsApp/SMS quando houver consentimento.
