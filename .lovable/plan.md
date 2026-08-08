@@ -1,34 +1,61 @@
-## Diagnóstico (verificado nos dados)
+# Nova Home operacional antes da Agenda — avaliação de impacto
 
-A coluna "Cliente" aparece "—" porque **nenhum agendamento tem nome de cliente gravado**:
+## Veredito: impacto BAIXO
 
-- 462 agendamentos: `contact_name` está vazio em **462** (100%). Todos têm `ghl_contact_id`.
-- Os 314 contactos criados pelo sync têm nome literal **"Sem nome"** e telefone vazio.
+A mudança é quase 100% por **adição**. Nada da agenda, financeiro, admin ou autenticação precisa ser refatorado. O único ajuste em código existente é para onde o login redireciona e onde a navegação inferior aponta.
 
-Causa: o sync lê o endpoint de eventos do calendário do GHL, que devolve apenas o **ID** do contacto — não o nome. O código tenta ler `e.contact.name` / `firstName` / `lastName`, campos que esse endpoint nunca envia, então grava `NULL` no agendamento e "Sem nome" no contacto.
+## Quanto do código atual muda
 
-O relatório está correto: ele mostra exatamente o que está na base (vazio).
+Praticamente nada de lógica. Apenas 3 pontos de navegação e 1 rota nova:
 
-Nota: "Estilo" e "Tamanho" também estão vazios em todos os registos — são campos preenchidos só pelo fluxo interno de agendamento, não vêm do GHL. Fora do escopo deste fix.
+- Redirecionamento pós-login: hoje `/` manda o usuário autenticado para `/agenda`; passaria a mandar para `/home`.
+- Barra inferior (mobile) e barra do topo (desktop): ganham o item "Home" (a Agenda continua lá).
+- Logo do topo hoje leva para `/agenda`; passaria a levar para `/home`.
 
-## O que vou fazer
+Todo o resto (agenda dia/semana/mês, wizard de agendamento, financeiro, relatórios, movimentações, onboarding, admin) fica intocado.
 
-1. **Buscar o contacto no GHL durante o sync**
-   Para cada ID de contacto novo, consultar o cadastro do contacto no GHL e trazer nome, telefone e email. Fazer isso em lote, com cache por execução (o mesmo cliente aparece em vários agendamentos) e sem quebrar o sync se uma consulta falhar — nesse caso mantém o registo e regista a falha.
+## O que já existe e pode ser reutilizado
 
-2. **Gravar de verdade**
-   - `contacts`: nome real, telefone e email (deixa de ser "Sem nome").
-   - `appointments.contact_name` / `contact_phone` / `contact_email`: preenchidos no insert e atualizados nos agendamentos já existentes.
+- **Dados da agenda de hoje**: hook `useStaffDayAgenda` (grade do dia com livre/ocupado) e `useStaffRangeAgenda` — já usados pela Agenda, sem query nova.
+- **Status de pagamento por agendamento**: `useDayAppointmentStatuses` (badges pago/pendente).
+- **Próximo atendimento**: derivado dos mesmos eventos do dia, ordenando por hora — sem backend novo.
+- **Papel do usuário** (`useCurrentUser` / `useIsAdmin`) para mostrar só os atalhos que o usuário tem.
+- **Atalhos**: as mesmas rotas já listadas no Menu (financeiro, registrar pagamento, relatórios, equipe, links, reconciliar).
+- Componentes visuais já prontos: cartões, `StatusBadge`, `Avatar`, ícones, layout `AuthShell` (topo + navegação inferior herdados automaticamente).
+- Resumo financeiro do dia, se quisermos, via `useFinance` existente.
 
-3. **Preencher o histórico (backfill)**
-   Rotina administrativa que percorre os 462 agendamentos sem nome, busca os contactos no GHL e preenche. Disparada por botão no painel admin, com contagem de quantos foram preenchidos.
+## Arquivos novos
 
-4. **Rede de segurança na exibição**
-   No relatório de agendamentos, quando o nome do agendamento estiver vazio, usar o nome do contacto ligado; só mostrar "—" se ambos estiverem vazios. Assim o relatório aproveita qualquer nome já disponível sem esperar o backfill.
+- `src/routes/_authenticated/home.tsx` — a página.
+- `src/components/home/*` — 3 a 4 cartões pequenos: resumo de hoje, próximo atendimento, clientes aguardando, grade de atalhos.
 
-## Detalhes técnicos
+## Arquivos existentes modificados
 
-- `src/lib/sync.server.ts`: nova função de enriquecimento via `GET /contacts/{id}` (API GHL v2, mesmo token/`Version` já usados), com `Map` de cache e concorrência limitada; usar o resultado nos upserts de `contacts` e nos insert/update de `appointments`.
-- Nova server fn de backfill em `src/lib/ghl-sync-admin.functions.ts` (admin-only) + botão em `/admin/reconciliar` ou junto do `SyncGhlButton`.
-- Migração para atualizar `public.get_monthly_report`: `COALESCE(NULLIF(a.contact_name,''), c.name)` com `LEFT JOIN public.contacts c ON c.id = a.contact_id`, ignorando o placeholder "Sem nome".
-- Sem alteração de schema; campos já existem.
+- `src/routes/index.tsx` — destino do redirecionamento autenticado.
+- `src/components/layout/bottom-nav.tsx` — item Home.
+- `src/components/layout/auth-shell.tsx` — link Home no topo e destino do logo.
+
+(`src/routeTree.gen.ts` é regenerado automaticamente.)
+
+## "Clientes aguardando" e "Check-in"
+
+Esses dois são os únicos pontos sem base pronta hoje: não existe conceito de fila/check-in no sistema. Implementação mínima e segura:
+
+- **Clientes aguardando**: na primeira versão, mostrar os atendimentos de hoje cujo horário já passou ou está em curso e ainda não têm pagamento registrado — usando apenas dados já disponíveis. Nada de tabela nova.
+- **Botão "Check-in"**: presente na Home, mas desabilitado com rótulo "em breve" (ou levando a uma tela placeholder) até o módulo ser construído.
+
+## Riscos
+
+- **Agenda**: nenhum — não é tocada.
+- **Autenticação**: nenhum — o portão `_authenticated` e o gate de onboarding continuam iguais; a Home fica dentro do mesmo portão.
+- **Navegação**: risco baixo e controlado — a Agenda continua acessível por `/agenda` e pela barra inferior; nada de link antigo quebra.
+- Ponto de atenção: o gate de onboarding continua obrigando tatuadores novos a concluir o onboarding antes de ver a Home — comportamento desejado, sem mudança.
+
+## Implementação mínima e mais segura (ordem sugerida)
+
+1. Criar `/home` só de leitura, reutilizando os hooks da agenda.
+2. Adicionar Home às barras de navegação, mantendo Agenda.
+3. Trocar o redirecionamento pós-login para `/home`.
+4. Deixar o Check-in como botão "em breve".
+
+Nenhuma migração de banco, nenhuma função de servidor nova, nenhuma alteração de permissões.
