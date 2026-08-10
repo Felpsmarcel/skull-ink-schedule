@@ -72,12 +72,19 @@ function TotemPronto() {
       {isLoading ? (
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       ) : data ? (
-        <p className="text-4xl font-bold tracking-widest">{data.codigo}</p>
+        <p data-testid="checkin-codigo" className="text-4xl font-bold tracking-widest">
+          {data.codigo}
+        </p>
       ) : null}
 
       <div className="rounded-2xl border border-border bg-card p-4">
         {qrDataUrl ? (
-          <img src={qrDataUrl} alt="QR Code do seu atendimento" className="h-64 w-64" />
+          <img
+            data-testid="checkin-qr"
+            src={qrDataUrl}
+            alt="QR Code do seu atendimento"
+            className="h-64 w-64"
+          />
         ) : (
           <div className="grid h-64 w-64 place-items-center">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
