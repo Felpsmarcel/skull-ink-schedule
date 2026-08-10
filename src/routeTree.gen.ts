@@ -13,6 +13,8 @@ import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as TotemIndexRouteImport } from './routes/totem.index'
+import { Route as TotemBuscarRouteImport } from './routes/totem.buscar'
 import { Route as MovimentacaoHistoricoRouteImport } from './routes/movimentacao.historico'
 import { Route as MovimentacaoSlugRouteImport } from './routes/movimentacao.$slug'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
@@ -72,6 +74,16 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TotemIndexRoute = TotemIndexRouteImport.update({
+  id: '/totem/',
+  path: '/totem/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TotemBuscarRoute = TotemBuscarRouteImport.update({
+  id: '/totem/buscar',
+  path: '/totem/buscar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MovimentacaoHistoricoRoute = MovimentacaoHistoricoRouteImport.update({
@@ -319,6 +331,8 @@ export interface FileRoutesByFullPath {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/movimentacao/$slug': typeof MovimentacaoSlugRoute
   '/movimentacao/historico': typeof MovimentacaoHistoricoRoute
+  '/totem/buscar': typeof TotemBuscarRoute
+  '/totem/': typeof TotemIndexRoute
   '/ghl-test': typeof AuthenticatedAdminGhlTestRoute
   '/reconciliar': typeof AuthenticatedAdminReconciliarRoute
   '/appointments/new': typeof AuthenticatedAppointmentsNewRouteWithChildren
@@ -364,6 +378,8 @@ export interface FileRoutesByTo {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/movimentacao/$slug': typeof MovimentacaoSlugRoute
   '/movimentacao/historico': typeof MovimentacaoHistoricoRoute
+  '/totem/buscar': typeof TotemBuscarRoute
+  '/totem': typeof TotemIndexRoute
   '/ghl-test': typeof AuthenticatedAdminGhlTestRoute
   '/reconciliar': typeof AuthenticatedAdminReconciliarRoute
   '/onboarding/bem-vindo': typeof AuthenticatedOnboardingBemVindoRoute
@@ -411,6 +427,8 @@ export interface FileRoutesById {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/movimentacao/$slug': typeof MovimentacaoSlugRoute
   '/movimentacao/historico': typeof MovimentacaoHistoricoRoute
+  '/totem/buscar': typeof TotemBuscarRoute
+  '/totem/': typeof TotemIndexRoute
   '/_authenticated/_admin/ghl-test': typeof AuthenticatedAdminGhlTestRoute
   '/_authenticated/_admin/reconciliar': typeof AuthenticatedAdminReconciliarRoute
   '/_authenticated/appointments/new': typeof AuthenticatedAppointmentsNewRouteWithChildren
@@ -458,6 +476,8 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/movimentacao/$slug'
     | '/movimentacao/historico'
+    | '/totem/buscar'
+    | '/totem/'
     | '/ghl-test'
     | '/reconciliar'
     | '/appointments/new'
@@ -503,6 +523,8 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/movimentacao/$slug'
     | '/movimentacao/historico'
+    | '/totem/buscar'
+    | '/totem'
     | '/ghl-test'
     | '/reconciliar'
     | '/onboarding/bem-vindo'
@@ -549,6 +571,8 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/movimentacao/$slug'
     | '/movimentacao/historico'
+    | '/totem/buscar'
+    | '/totem/'
     | '/_authenticated/_admin/ghl-test'
     | '/_authenticated/_admin/reconciliar'
     | '/_authenticated/appointments/new'
@@ -590,6 +614,8 @@ export interface RootRouteChildren {
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   MovimentacaoSlugRoute: typeof MovimentacaoSlugRoute
   MovimentacaoHistoricoRoute: typeof MovimentacaoHistoricoRoute
+  TotemBuscarRoute: typeof TotemBuscarRoute
+  TotemIndexRoute: typeof TotemIndexRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   ApiPublicHooksSendRemindersRoute: typeof ApiPublicHooksSendRemindersRoute
   ApiPublicHooksSyncGhlRoute: typeof ApiPublicHooksSyncGhlRoute
@@ -628,6 +654,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/totem/': {
+      id: '/totem/'
+      path: '/totem'
+      fullPath: '/totem/'
+      preLoaderRoute: typeof TotemIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/totem/buscar': {
+      id: '/totem/buscar'
+      path: '/totem/buscar'
+      fullPath: '/totem/buscar'
+      preLoaderRoute: typeof TotemBuscarRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/movimentacao/historico': {
@@ -1044,6 +1084,8 @@ const rootRouteChildren: RootRouteChildren = {
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   MovimentacaoSlugRoute: MovimentacaoSlugRoute,
   MovimentacaoHistoricoRoute: MovimentacaoHistoricoRoute,
+  TotemBuscarRoute: TotemBuscarRoute,
+  TotemIndexRoute: TotemIndexRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   ApiPublicHooksSendRemindersRoute: ApiPublicHooksSendRemindersRoute,
   ApiPublicHooksSyncGhlRoute: ApiPublicHooksSyncGhlRoute,
