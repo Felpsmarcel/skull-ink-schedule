@@ -80,13 +80,19 @@ export function FilaAguardando({ showConcluidos = false }: { showConcluidos?: bo
       {rows.map((r) => (
         <li
           key={r.id}
+          data-testid="fila-item"
           className="rounded-lg border border-border bg-card p-3"
         >
           <div className="flex items-start gap-3">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <span className="truncate text-sm font-semibold">{r.clienteNome}</span>
-                <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-bold tracking-wider">
+                <span data-testid="fila-nome" className="truncate text-sm font-semibold">
+                  {r.clienteNome}
+                </span>
+                <span
+                  data-testid="fila-codigo"
+                  className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-bold tracking-wider"
+                >
                   {r.codigo}
                 </span>
                 {r.syncStatus === "failed" ? (
