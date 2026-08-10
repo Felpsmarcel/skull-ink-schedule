@@ -27,6 +27,7 @@ import { Route as AuthenticatedServicesRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedReviewsRouteImport } from './routes/_authenticated/reviews'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedMenuRouteImport } from './routes/_authenticated/menu'
+import { Route as AuthenticatedHomeRouteImport } from './routes/_authenticated/home'
 import { Route as AuthenticatedFinanceiroRouteImport } from './routes/_authenticated/financeiro'
 import { Route as AuthenticatedAgendaRouteImport } from './routes/_authenticated/agenda'
 import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/_admin/route'
@@ -56,6 +57,7 @@ import { Route as AuthenticatedAppointmentsNewAgendaRouteImport } from './routes
 import { Route as AuthenticatedAdminRelatoriosAgendamentosRouteImport } from './routes/_authenticated/_admin/relatorios.agendamentos'
 import { Route as AuthenticatedAdminAdminVendedoresRouteImport } from './routes/_authenticated/_admin/admin.vendedores'
 import { Route as AuthenticatedAdminAdminMovimentacaoLinksRouteImport } from './routes/_authenticated/_admin/admin.movimentacao-links'
+import { Route as AuthenticatedAdminAdminFilaRouteImport } from './routes/_authenticated/_admin/admin.fila'
 import { Route as AuthenticatedAdminAdminEquipeRouteImport } from './routes/_authenticated/_admin/admin.equipe'
 import { Route as AuthenticatedMovimentacaoHistoricoIdEditarRouteImport } from './routes/_authenticated/movimentacao.historico.$id.editar'
 import { Route as AuthenticatedAdminAdminMovimentacaoNovoRouteImport } from './routes/_authenticated/_admin/admin.movimentacao.novo'
@@ -147,6 +149,11 @@ const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
 const AuthenticatedMenuRoute = AuthenticatedMenuRouteImport.update({
   id: '/menu',
   path: '/menu',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedHomeRoute = AuthenticatedHomeRouteImport.update({
+  id: '/home',
+  path: '/home',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedFinanceiroRoute = AuthenticatedFinanceiroRouteImport.update({
@@ -315,6 +322,12 @@ const AuthenticatedAdminAdminMovimentacaoLinksRoute =
     path: '/admin/movimentacao-links',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
+const AuthenticatedAdminAdminFilaRoute =
+  AuthenticatedAdminAdminFilaRouteImport.update({
+    id: '/admin/fila',
+    path: '/admin/fila',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
 const AuthenticatedAdminAdminEquipeRoute =
   AuthenticatedAdminAdminEquipeRouteImport.update({
     id: '/admin/equipe',
@@ -340,6 +353,7 @@ export interface FileRoutesByFullPath {
   '/unsubscribe': typeof UnsubscribeRoute
   '/agenda': typeof AuthenticatedAgendaRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
+  '/home': typeof AuthenticatedHomeRoute
   '/menu': typeof AuthenticatedMenuRoute
   '/onboarding': typeof AuthenticatedOnboardingRouteWithChildren
   '/reviews': typeof AuthenticatedReviewsRoute
@@ -366,6 +380,7 @@ export interface FileRoutesByFullPath {
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/movimentacao/': typeof AuthenticatedMovimentacaoIndexRoute
   '/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
+  '/admin/fila': typeof AuthenticatedAdminAdminFilaRoute
   '/admin/movimentacao-links': typeof AuthenticatedAdminAdminMovimentacaoLinksRoute
   '/admin/vendedores': typeof AuthenticatedAdminAdminVendedoresRoute
   '/relatorios/agendamentos': typeof AuthenticatedAdminRelatoriosAgendamentosRoute
@@ -390,6 +405,7 @@ export interface FileRoutesByTo {
   '/unsubscribe': typeof UnsubscribeRoute
   '/agenda': typeof AuthenticatedAgendaRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
+  '/home': typeof AuthenticatedHomeRoute
   '/menu': typeof AuthenticatedMenuRoute
   '/onboarding': typeof AuthenticatedOnboardingRouteWithChildren
   '/reviews': typeof AuthenticatedReviewsRoute
@@ -415,6 +431,7 @@ export interface FileRoutesByTo {
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/movimentacao': typeof AuthenticatedMovimentacaoIndexRoute
   '/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
+  '/admin/fila': typeof AuthenticatedAdminAdminFilaRoute
   '/admin/movimentacao-links': typeof AuthenticatedAdminAdminMovimentacaoLinksRoute
   '/admin/vendedores': typeof AuthenticatedAdminAdminVendedoresRoute
   '/relatorios/agendamentos': typeof AuthenticatedAdminRelatoriosAgendamentosRoute
@@ -442,6 +459,7 @@ export interface FileRoutesById {
   '/_authenticated/_admin': typeof AuthenticatedAdminRouteRouteWithChildren
   '/_authenticated/agenda': typeof AuthenticatedAgendaRoute
   '/_authenticated/financeiro': typeof AuthenticatedFinanceiroRoute
+  '/_authenticated/home': typeof AuthenticatedHomeRoute
   '/_authenticated/menu': typeof AuthenticatedMenuRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRouteWithChildren
   '/_authenticated/reviews': typeof AuthenticatedReviewsRoute
@@ -468,6 +486,7 @@ export interface FileRoutesById {
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/_authenticated/movimentacao/': typeof AuthenticatedMovimentacaoIndexRoute
   '/_authenticated/_admin/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
+  '/_authenticated/_admin/admin/fila': typeof AuthenticatedAdminAdminFilaRoute
   '/_authenticated/_admin/admin/movimentacao-links': typeof AuthenticatedAdminAdminMovimentacaoLinksRoute
   '/_authenticated/_admin/admin/vendedores': typeof AuthenticatedAdminAdminVendedoresRoute
   '/_authenticated/_admin/relatorios/agendamentos': typeof AuthenticatedAdminRelatoriosAgendamentosRoute
@@ -494,6 +513,7 @@ export interface FileRouteTypes {
     | '/unsubscribe'
     | '/agenda'
     | '/financeiro'
+    | '/home'
     | '/menu'
     | '/onboarding'
     | '/reviews'
@@ -520,6 +540,7 @@ export interface FileRouteTypes {
     | '/lovable/email/suppression'
     | '/movimentacao/'
     | '/admin/equipe'
+    | '/admin/fila'
     | '/admin/movimentacao-links'
     | '/admin/vendedores'
     | '/relatorios/agendamentos'
@@ -544,6 +565,7 @@ export interface FileRouteTypes {
     | '/unsubscribe'
     | '/agenda'
     | '/financeiro'
+    | '/home'
     | '/menu'
     | '/onboarding'
     | '/reviews'
@@ -569,6 +591,7 @@ export interface FileRouteTypes {
     | '/lovable/email/suppression'
     | '/movimentacao'
     | '/admin/equipe'
+    | '/admin/fila'
     | '/admin/movimentacao-links'
     | '/admin/vendedores'
     | '/relatorios/agendamentos'
@@ -595,6 +618,7 @@ export interface FileRouteTypes {
     | '/_authenticated/_admin'
     | '/_authenticated/agenda'
     | '/_authenticated/financeiro'
+    | '/_authenticated/home'
     | '/_authenticated/menu'
     | '/_authenticated/onboarding'
     | '/_authenticated/reviews'
@@ -621,6 +645,7 @@ export interface FileRouteTypes {
     | '/lovable/email/suppression'
     | '/_authenticated/movimentacao/'
     | '/_authenticated/_admin/admin/equipe'
+    | '/_authenticated/_admin/admin/fila'
     | '/_authenticated/_admin/admin/movimentacao-links'
     | '/_authenticated/_admin/admin/vendedores'
     | '/_authenticated/_admin/relatorios/agendamentos'
@@ -791,6 +816,13 @@ declare module '@tanstack/react-router' {
       path: '/menu'
       fullPath: '/menu'
       preLoaderRoute: typeof AuthenticatedMenuRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/home': {
+      id: '/_authenticated/home'
+      path: '/home'
+      fullPath: '/home'
+      preLoaderRoute: typeof AuthenticatedHomeRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/financeiro': {
@@ -996,6 +1028,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminAdminMovimentacaoLinksRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
+    '/_authenticated/_admin/admin/fila': {
+      id: '/_authenticated/_admin/admin/fila'
+      path: '/admin/fila'
+      fullPath: '/admin/fila'
+      preLoaderRoute: typeof AuthenticatedAdminAdminFilaRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
     '/_authenticated/_admin/admin/equipe': {
       id: '/_authenticated/_admin/admin/equipe'
       path: '/admin/equipe'
@@ -1024,6 +1063,7 @@ interface AuthenticatedAdminRouteRouteChildren {
   AuthenticatedAdminGhlTestRoute: typeof AuthenticatedAdminGhlTestRoute
   AuthenticatedAdminReconciliarRoute: typeof AuthenticatedAdminReconciliarRoute
   AuthenticatedAdminAdminEquipeRoute: typeof AuthenticatedAdminAdminEquipeRoute
+  AuthenticatedAdminAdminFilaRoute: typeof AuthenticatedAdminAdminFilaRoute
   AuthenticatedAdminAdminMovimentacaoLinksRoute: typeof AuthenticatedAdminAdminMovimentacaoLinksRoute
   AuthenticatedAdminAdminVendedoresRoute: typeof AuthenticatedAdminAdminVendedoresRoute
   AuthenticatedAdminRelatoriosAgendamentosRoute: typeof AuthenticatedAdminRelatoriosAgendamentosRoute
@@ -1035,6 +1075,7 @@ const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren
     AuthenticatedAdminGhlTestRoute: AuthenticatedAdminGhlTestRoute,
     AuthenticatedAdminReconciliarRoute: AuthenticatedAdminReconciliarRoute,
     AuthenticatedAdminAdminEquipeRoute: AuthenticatedAdminAdminEquipeRoute,
+    AuthenticatedAdminAdminFilaRoute: AuthenticatedAdminAdminFilaRoute,
     AuthenticatedAdminAdminMovimentacaoLinksRoute:
       AuthenticatedAdminAdminMovimentacaoLinksRoute,
     AuthenticatedAdminAdminVendedoresRoute:
@@ -1104,6 +1145,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRouteRoute: typeof AuthenticatedAdminRouteRouteWithChildren
   AuthenticatedAgendaRoute: typeof AuthenticatedAgendaRoute
   AuthenticatedFinanceiroRoute: typeof AuthenticatedFinanceiroRoute
+  AuthenticatedHomeRoute: typeof AuthenticatedHomeRoute
   AuthenticatedMenuRoute: typeof AuthenticatedMenuRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRouteWithChildren
   AuthenticatedReviewsRoute: typeof AuthenticatedReviewsRoute
@@ -1118,6 +1160,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRouteRoute: AuthenticatedAdminRouteRouteWithChildren,
   AuthenticatedAgendaRoute: AuthenticatedAgendaRoute,
   AuthenticatedFinanceiroRoute: AuthenticatedFinanceiroRoute,
+  AuthenticatedHomeRoute: AuthenticatedHomeRoute,
   AuthenticatedMenuRoute: AuthenticatedMenuRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRouteWithChildren,
   AuthenticatedReviewsRoute: AuthenticatedReviewsRoute,
