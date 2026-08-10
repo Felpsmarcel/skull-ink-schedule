@@ -423,6 +423,137 @@ export type Database = {
           },
         ]
       }
+      checkins: {
+        Row: {
+          appointment_id: string | null
+          arrived_at: string
+          artist_id: string | null
+          cliente_nome: string
+          cliente_telefone: string | null
+          codigo_atendimento: string
+          consentimento_comunicacao: boolean
+          contact_id: string | null
+          created_at: string
+          finished_at: string | null
+          ghl_appointment_id: string | null
+          ghl_contact_id: string | null
+          ghl_last_synced_at: string | null
+          ghl_opportunity_id: string | null
+          ghl_sync_attempts: number
+          ghl_sync_error: string | null
+          ghl_sync_status: Database["public"]["Enums"]["movimentacao_sync_status"]
+          id: string
+          notificado_em: string | null
+          photo_consent: boolean | null
+          photo_taken_at: string | null
+          photo_url: string | null
+          qr_created_at: string
+          qr_expires_at: string | null
+          qr_token: string
+          qr_url: string | null
+          scheduled_at: string | null
+          source: string
+          started_at: string | null
+          status: Database["public"]["Enums"]["checkin_status"]
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          arrived_at?: string
+          artist_id?: string | null
+          cliente_nome: string
+          cliente_telefone?: string | null
+          codigo_atendimento: string
+          consentimento_comunicacao?: boolean
+          contact_id?: string | null
+          created_at?: string
+          finished_at?: string | null
+          ghl_appointment_id?: string | null
+          ghl_contact_id?: string | null
+          ghl_last_synced_at?: string | null
+          ghl_opportunity_id?: string | null
+          ghl_sync_attempts?: number
+          ghl_sync_error?: string | null
+          ghl_sync_status?: Database["public"]["Enums"]["movimentacao_sync_status"]
+          id?: string
+          notificado_em?: string | null
+          photo_consent?: boolean | null
+          photo_taken_at?: string | null
+          photo_url?: string | null
+          qr_created_at?: string
+          qr_expires_at?: string | null
+          qr_token: string
+          qr_url?: string | null
+          scheduled_at?: string | null
+          source?: string
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["checkin_status"]
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          arrived_at?: string
+          artist_id?: string | null
+          cliente_nome?: string
+          cliente_telefone?: string | null
+          codigo_atendimento?: string
+          consentimento_comunicacao?: boolean
+          contact_id?: string | null
+          created_at?: string
+          finished_at?: string | null
+          ghl_appointment_id?: string | null
+          ghl_contact_id?: string | null
+          ghl_last_synced_at?: string | null
+          ghl_opportunity_id?: string | null
+          ghl_sync_attempts?: number
+          ghl_sync_error?: string | null
+          ghl_sync_status?: Database["public"]["Enums"]["movimentacao_sync_status"]
+          id?: string
+          notificado_em?: string | null
+          photo_consent?: boolean | null
+          photo_taken_at?: string | null
+          photo_url?: string | null
+          qr_created_at?: string
+          qr_expires_at?: string | null
+          qr_token?: string
+          qr_url?: string | null
+          scheduled_at?: string | null
+          source?: string
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["checkin_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checkins_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checkins_artist_id_fkey"
+            columns: ["artist_id"]
+            isOneToOne: false
+            referencedRelation: "artists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checkins_artist_id_fkey"
+            columns: ["artist_id"]
+            isOneToOne: false
+            referencedRelation: "artists_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checkins_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contacts: {
         Row: {
           created_at: string
@@ -1136,6 +1267,17 @@ export type Database = {
         Args: { p_id: string; p_page_size?: number }
         Returns: number
       }
+      get_checkin_by_token: {
+        Args: { p_token: string }
+        Returns: {
+          arrived_at: string
+          codigo_atendimento: string
+          expirado: boolean
+          scheduled_at: string
+          status: string
+          tatuador_primeiro_nome: string
+        }[]
+      }
       get_monthly_report: {
         Args: {
           p_artist?: string
@@ -1322,6 +1464,22 @@ export type Database = {
         }[]
       }
       ghl_sync_status: { Args: never; Returns: Json }
+      list_checkins_hoje: {
+        Args: never
+        Returns: {
+          appointment_id: string
+          arrived_at: string
+          artist_id: string
+          cliente_nome: string
+          codigo_atendimento: string
+          ghl_sync_status: string
+          id: string
+          scheduled_at: string
+          started_at: string
+          status: string
+          tatuador: string
+        }[]
+      }
       list_movimentacoes_historico: {
         Args: { p_page?: number; p_page_size?: number }
         Returns: {
@@ -1350,6 +1508,7 @@ export type Database = {
         }
         Returns: number
       }
+      next_checkin_codigo: { Args: never; Returns: string }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
@@ -1368,6 +1527,12 @@ export type Database = {
         | "cancelled"
         | "completed"
         | "no_show"
+      checkin_status:
+        | "aguardando"
+        | "em_atendimento"
+        | "concluido"
+        | "nao_compareceu"
+        | "cancelado"
       forma_pagamento_enum: "cartao" | "dinheiro" | "sumup" | "transferencia"
       movimentacao_sync_status: "pending" | "synced" | "failed"
       movimentacao_tipo: "sinal" | "sessao" | "saldo" | "produto" | "estorno"
@@ -1510,6 +1675,13 @@ export const Constants = {
         "cancelled",
         "completed",
         "no_show",
+      ],
+      checkin_status: [
+        "aguardando",
+        "em_atendimento",
+        "concluido",
+        "nao_compareceu",
+        "cancelado",
       ],
       forma_pagamento_enum: ["cartao", "dinheiro", "sumup", "transferencia"],
       movimentacao_sync_status: ["pending", "synced", "failed"],
