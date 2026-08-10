@@ -377,6 +377,9 @@ export const confirmarChegada = createServerFn({ method: "POST" })
           ghl_contact_id: result.ghlContactId ?? data.ghlContactId ?? null,
           ghl_appointment_id: result.ghlAppointmentId ?? null,
           ghl_opportunity_id: result.ghlOpportunityId ?? null,
+          // O envio ao cliente é feito pelo workflow do CRM, e só com consentimento.
+          notificado_em:
+            data.consentimento && result.workflowTriggered ? new Date().toISOString() : null,
         })
         .eq("id", row.id);
     } catch (syncError) {
