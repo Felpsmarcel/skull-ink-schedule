@@ -90,7 +90,9 @@ export function FilaAguardando({ showConcluidos = false }: { showConcluidos?: bo
                   {r.codigo}
                 </span>
                 {r.syncStatus === "failed" ? (
-                  <AlertTriangle className="h-3.5 w-3.5 text-destructive" title="Sync CRM falhou" />
+                  <span title="Sincronização com o CRM falhou">
+                    <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
+                  </span>
                 ) : null}
               </div>
               <p className="mt-0.5 flex items-center gap-1 text-[11px] text-muted-foreground">
