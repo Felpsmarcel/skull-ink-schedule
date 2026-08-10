@@ -36,7 +36,8 @@ function MovimentacaoNovoPage() {
           Novo lançamento manual
         </h1>
         <Link
-          to="/relatorios/movimentacoes?origem=manual"
+          to="/relatorios/movimentacoes"
+          search={{ origem: "manual" }}
           className="rounded-md p-2 hover:bg-muted"
           aria-label="Ver lançamentos manuais"
         >

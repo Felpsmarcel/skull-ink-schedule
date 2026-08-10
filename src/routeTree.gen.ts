@@ -13,15 +13,21 @@ import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as TotemIndexRouteImport } from './routes/totem.index'
+import { Route as TotemProntoRouteImport } from './routes/totem.pronto'
+import { Route as TotemConfirmarRouteImport } from './routes/totem.confirmar'
+import { Route as TotemBuscarRouteImport } from './routes/totem.buscar'
 import { Route as MovimentacaoHistoricoRouteImport } from './routes/movimentacao.historico'
 import { Route as MovimentacaoSlugRouteImport } from './routes/movimentacao.$slug'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as AuthUpdatePasswordRouteImport } from './routes/auth_.update-password'
 import { Route as AuthRecoverRouteImport } from './routes/auth_.recover'
+import { Route as ATokenRouteImport } from './routes/a.$token'
 import { Route as AuthenticatedServicesRouteImport } from './routes/_authenticated/services'
 import { Route as AuthenticatedReviewsRouteImport } from './routes/_authenticated/reviews'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedMenuRouteImport } from './routes/_authenticated/menu'
+import { Route as AuthenticatedHomeRouteImport } from './routes/_authenticated/home'
 import { Route as AuthenticatedFinanceiroRouteImport } from './routes/_authenticated/financeiro'
 import { Route as AuthenticatedAgendaRouteImport } from './routes/_authenticated/agenda'
 import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/_admin/route'
@@ -51,6 +57,7 @@ import { Route as AuthenticatedAppointmentsNewAgendaRouteImport } from './routes
 import { Route as AuthenticatedAdminRelatoriosAgendamentosRouteImport } from './routes/_authenticated/_admin/relatorios.agendamentos'
 import { Route as AuthenticatedAdminAdminVendedoresRouteImport } from './routes/_authenticated/_admin/admin.vendedores'
 import { Route as AuthenticatedAdminAdminMovimentacaoLinksRouteImport } from './routes/_authenticated/_admin/admin.movimentacao-links'
+import { Route as AuthenticatedAdminAdminFilaRouteImport } from './routes/_authenticated/_admin/admin.fila'
 import { Route as AuthenticatedAdminAdminEquipeRouteImport } from './routes/_authenticated/_admin/admin.equipe'
 import { Route as AuthenticatedMovimentacaoHistoricoIdEditarRouteImport } from './routes/_authenticated/movimentacao.historico.$id.editar'
 import { Route as AuthenticatedAdminAdminMovimentacaoNovoRouteImport } from './routes/_authenticated/_admin/admin.movimentacao.novo'
@@ -72,6 +79,26 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TotemIndexRoute = TotemIndexRouteImport.update({
+  id: '/totem/',
+  path: '/totem/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TotemProntoRoute = TotemProntoRouteImport.update({
+  id: '/totem/pronto',
+  path: '/totem/pronto',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TotemConfirmarRoute = TotemConfirmarRouteImport.update({
+  id: '/totem/confirmar',
+  path: '/totem/confirmar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TotemBuscarRoute = TotemBuscarRouteImport.update({
+  id: '/totem/buscar',
+  path: '/totem/buscar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MovimentacaoHistoricoRoute = MovimentacaoHistoricoRouteImport.update({
@@ -99,6 +126,11 @@ const AuthRecoverRoute = AuthRecoverRouteImport.update({
   path: '/auth/recover',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ATokenRoute = ATokenRouteImport.update({
+  id: '/a/$token',
+  path: '/a/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedServicesRoute = AuthenticatedServicesRouteImport.update({
   id: '/services',
   path: '/services',
@@ -117,6 +149,11 @@ const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
 const AuthenticatedMenuRoute = AuthenticatedMenuRouteImport.update({
   id: '/menu',
   path: '/menu',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedHomeRoute = AuthenticatedHomeRouteImport.update({
+  id: '/home',
+  path: '/home',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedFinanceiroRoute = AuthenticatedFinanceiroRouteImport.update({
@@ -285,6 +322,12 @@ const AuthenticatedAdminAdminMovimentacaoLinksRoute =
     path: '/admin/movimentacao-links',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
+const AuthenticatedAdminAdminFilaRoute =
+  AuthenticatedAdminAdminFilaRouteImport.update({
+    id: '/admin/fila',
+    path: '/admin/fila',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
 const AuthenticatedAdminAdminEquipeRoute =
   AuthenticatedAdminAdminEquipeRouteImport.update({
     id: '/admin/equipe',
@@ -310,15 +353,21 @@ export interface FileRoutesByFullPath {
   '/unsubscribe': typeof UnsubscribeRoute
   '/agenda': typeof AuthenticatedAgendaRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
+  '/home': typeof AuthenticatedHomeRoute
   '/menu': typeof AuthenticatedMenuRoute
   '/onboarding': typeof AuthenticatedOnboardingRouteWithChildren
   '/reviews': typeof AuthenticatedReviewsRoute
   '/services': typeof AuthenticatedServicesRoute
+  '/a/$token': typeof ATokenRoute
   '/auth/recover': typeof AuthRecoverRoute
   '/auth/update-password': typeof AuthUpdatePasswordRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/movimentacao/$slug': typeof MovimentacaoSlugRoute
   '/movimentacao/historico': typeof MovimentacaoHistoricoRoute
+  '/totem/buscar': typeof TotemBuscarRoute
+  '/totem/confirmar': typeof TotemConfirmarRoute
+  '/totem/pronto': typeof TotemProntoRoute
+  '/totem/': typeof TotemIndexRoute
   '/ghl-test': typeof AuthenticatedAdminGhlTestRoute
   '/reconciliar': typeof AuthenticatedAdminReconciliarRoute
   '/appointments/new': typeof AuthenticatedAppointmentsNewRouteWithChildren
@@ -331,6 +380,7 @@ export interface FileRoutesByFullPath {
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/movimentacao/': typeof AuthenticatedMovimentacaoIndexRoute
   '/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
+  '/admin/fila': typeof AuthenticatedAdminAdminFilaRoute
   '/admin/movimentacao-links': typeof AuthenticatedAdminAdminMovimentacaoLinksRoute
   '/admin/vendedores': typeof AuthenticatedAdminAdminVendedoresRoute
   '/relatorios/agendamentos': typeof AuthenticatedAdminRelatoriosAgendamentosRoute
@@ -355,15 +405,21 @@ export interface FileRoutesByTo {
   '/unsubscribe': typeof UnsubscribeRoute
   '/agenda': typeof AuthenticatedAgendaRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
+  '/home': typeof AuthenticatedHomeRoute
   '/menu': typeof AuthenticatedMenuRoute
   '/onboarding': typeof AuthenticatedOnboardingRouteWithChildren
   '/reviews': typeof AuthenticatedReviewsRoute
   '/services': typeof AuthenticatedServicesRoute
+  '/a/$token': typeof ATokenRoute
   '/auth/recover': typeof AuthRecoverRoute
   '/auth/update-password': typeof AuthUpdatePasswordRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/movimentacao/$slug': typeof MovimentacaoSlugRoute
   '/movimentacao/historico': typeof MovimentacaoHistoricoRoute
+  '/totem/buscar': typeof TotemBuscarRoute
+  '/totem/confirmar': typeof TotemConfirmarRoute
+  '/totem/pronto': typeof TotemProntoRoute
+  '/totem': typeof TotemIndexRoute
   '/ghl-test': typeof AuthenticatedAdminGhlTestRoute
   '/reconciliar': typeof AuthenticatedAdminReconciliarRoute
   '/onboarding/bem-vindo': typeof AuthenticatedOnboardingBemVindoRoute
@@ -375,6 +431,7 @@ export interface FileRoutesByTo {
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/movimentacao': typeof AuthenticatedMovimentacaoIndexRoute
   '/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
+  '/admin/fila': typeof AuthenticatedAdminAdminFilaRoute
   '/admin/movimentacao-links': typeof AuthenticatedAdminAdminMovimentacaoLinksRoute
   '/admin/vendedores': typeof AuthenticatedAdminAdminVendedoresRoute
   '/relatorios/agendamentos': typeof AuthenticatedAdminRelatoriosAgendamentosRoute
@@ -402,15 +459,21 @@ export interface FileRoutesById {
   '/_authenticated/_admin': typeof AuthenticatedAdminRouteRouteWithChildren
   '/_authenticated/agenda': typeof AuthenticatedAgendaRoute
   '/_authenticated/financeiro': typeof AuthenticatedFinanceiroRoute
+  '/_authenticated/home': typeof AuthenticatedHomeRoute
   '/_authenticated/menu': typeof AuthenticatedMenuRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRouteWithChildren
   '/_authenticated/reviews': typeof AuthenticatedReviewsRoute
   '/_authenticated/services': typeof AuthenticatedServicesRoute
+  '/a/$token': typeof ATokenRoute
   '/auth_/recover': typeof AuthRecoverRoute
   '/auth_/update-password': typeof AuthUpdatePasswordRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/movimentacao/$slug': typeof MovimentacaoSlugRoute
   '/movimentacao/historico': typeof MovimentacaoHistoricoRoute
+  '/totem/buscar': typeof TotemBuscarRoute
+  '/totem/confirmar': typeof TotemConfirmarRoute
+  '/totem/pronto': typeof TotemProntoRoute
+  '/totem/': typeof TotemIndexRoute
   '/_authenticated/_admin/ghl-test': typeof AuthenticatedAdminGhlTestRoute
   '/_authenticated/_admin/reconciliar': typeof AuthenticatedAdminReconciliarRoute
   '/_authenticated/appointments/new': typeof AuthenticatedAppointmentsNewRouteWithChildren
@@ -423,6 +486,7 @@ export interface FileRoutesById {
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/_authenticated/movimentacao/': typeof AuthenticatedMovimentacaoIndexRoute
   '/_authenticated/_admin/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
+  '/_authenticated/_admin/admin/fila': typeof AuthenticatedAdminAdminFilaRoute
   '/_authenticated/_admin/admin/movimentacao-links': typeof AuthenticatedAdminAdminMovimentacaoLinksRoute
   '/_authenticated/_admin/admin/vendedores': typeof AuthenticatedAdminAdminVendedoresRoute
   '/_authenticated/_admin/relatorios/agendamentos': typeof AuthenticatedAdminRelatoriosAgendamentosRoute
@@ -449,15 +513,21 @@ export interface FileRouteTypes {
     | '/unsubscribe'
     | '/agenda'
     | '/financeiro'
+    | '/home'
     | '/menu'
     | '/onboarding'
     | '/reviews'
     | '/services'
+    | '/a/$token'
     | '/auth/recover'
     | '/auth/update-password'
     | '/email/unsubscribe'
     | '/movimentacao/$slug'
     | '/movimentacao/historico'
+    | '/totem/buscar'
+    | '/totem/confirmar'
+    | '/totem/pronto'
+    | '/totem/'
     | '/ghl-test'
     | '/reconciliar'
     | '/appointments/new'
@@ -470,6 +540,7 @@ export interface FileRouteTypes {
     | '/lovable/email/suppression'
     | '/movimentacao/'
     | '/admin/equipe'
+    | '/admin/fila'
     | '/admin/movimentacao-links'
     | '/admin/vendedores'
     | '/relatorios/agendamentos'
@@ -494,15 +565,21 @@ export interface FileRouteTypes {
     | '/unsubscribe'
     | '/agenda'
     | '/financeiro'
+    | '/home'
     | '/menu'
     | '/onboarding'
     | '/reviews'
     | '/services'
+    | '/a/$token'
     | '/auth/recover'
     | '/auth/update-password'
     | '/email/unsubscribe'
     | '/movimentacao/$slug'
     | '/movimentacao/historico'
+    | '/totem/buscar'
+    | '/totem/confirmar'
+    | '/totem/pronto'
+    | '/totem'
     | '/ghl-test'
     | '/reconciliar'
     | '/onboarding/bem-vindo'
@@ -514,6 +591,7 @@ export interface FileRouteTypes {
     | '/lovable/email/suppression'
     | '/movimentacao'
     | '/admin/equipe'
+    | '/admin/fila'
     | '/admin/movimentacao-links'
     | '/admin/vendedores'
     | '/relatorios/agendamentos'
@@ -540,15 +618,21 @@ export interface FileRouteTypes {
     | '/_authenticated/_admin'
     | '/_authenticated/agenda'
     | '/_authenticated/financeiro'
+    | '/_authenticated/home'
     | '/_authenticated/menu'
     | '/_authenticated/onboarding'
     | '/_authenticated/reviews'
     | '/_authenticated/services'
+    | '/a/$token'
     | '/auth_/recover'
     | '/auth_/update-password'
     | '/email/unsubscribe'
     | '/movimentacao/$slug'
     | '/movimentacao/historico'
+    | '/totem/buscar'
+    | '/totem/confirmar'
+    | '/totem/pronto'
+    | '/totem/'
     | '/_authenticated/_admin/ghl-test'
     | '/_authenticated/_admin/reconciliar'
     | '/_authenticated/appointments/new'
@@ -561,6 +645,7 @@ export interface FileRouteTypes {
     | '/lovable/email/suppression'
     | '/_authenticated/movimentacao/'
     | '/_authenticated/_admin/admin/equipe'
+    | '/_authenticated/_admin/admin/fila'
     | '/_authenticated/_admin/admin/movimentacao-links'
     | '/_authenticated/_admin/admin/vendedores'
     | '/_authenticated/_admin/relatorios/agendamentos'
@@ -585,11 +670,16 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   UnsubscribeRoute: typeof UnsubscribeRoute
+  ATokenRoute: typeof ATokenRoute
   AuthRecoverRoute: typeof AuthRecoverRoute
   AuthUpdatePasswordRoute: typeof AuthUpdatePasswordRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   MovimentacaoSlugRoute: typeof MovimentacaoSlugRoute
   MovimentacaoHistoricoRoute: typeof MovimentacaoHistoricoRoute
+  TotemBuscarRoute: typeof TotemBuscarRoute
+  TotemConfirmarRoute: typeof TotemConfirmarRoute
+  TotemProntoRoute: typeof TotemProntoRoute
+  TotemIndexRoute: typeof TotemIndexRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   ApiPublicHooksSendRemindersRoute: typeof ApiPublicHooksSendRemindersRoute
   ApiPublicHooksSyncGhlRoute: typeof ApiPublicHooksSyncGhlRoute
@@ -630,6 +720,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/totem/': {
+      id: '/totem/'
+      path: '/totem'
+      fullPath: '/totem/'
+      preLoaderRoute: typeof TotemIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/totem/pronto': {
+      id: '/totem/pronto'
+      path: '/totem/pronto'
+      fullPath: '/totem/pronto'
+      preLoaderRoute: typeof TotemProntoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/totem/confirmar': {
+      id: '/totem/confirmar'
+      path: '/totem/confirmar'
+      fullPath: '/totem/confirmar'
+      preLoaderRoute: typeof TotemConfirmarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/totem/buscar': {
+      id: '/totem/buscar'
+      path: '/totem/buscar'
+      fullPath: '/totem/buscar'
+      preLoaderRoute: typeof TotemBuscarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/movimentacao/historico': {
       id: '/movimentacao/historico'
       path: '/movimentacao/historico'
@@ -665,6 +783,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRecoverRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/a/$token': {
+      id: '/a/$token'
+      path: '/a/$token'
+      fullPath: '/a/$token'
+      preLoaderRoute: typeof ATokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/services': {
       id: '/_authenticated/services'
       path: '/services'
@@ -691,6 +816,13 @@ declare module '@tanstack/react-router' {
       path: '/menu'
       fullPath: '/menu'
       preLoaderRoute: typeof AuthenticatedMenuRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/home': {
+      id: '/_authenticated/home'
+      path: '/home'
+      fullPath: '/home'
+      preLoaderRoute: typeof AuthenticatedHomeRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/financeiro': {
@@ -896,6 +1028,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminAdminMovimentacaoLinksRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
+    '/_authenticated/_admin/admin/fila': {
+      id: '/_authenticated/_admin/admin/fila'
+      path: '/admin/fila'
+      fullPath: '/admin/fila'
+      preLoaderRoute: typeof AuthenticatedAdminAdminFilaRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
     '/_authenticated/_admin/admin/equipe': {
       id: '/_authenticated/_admin/admin/equipe'
       path: '/admin/equipe'
@@ -924,6 +1063,7 @@ interface AuthenticatedAdminRouteRouteChildren {
   AuthenticatedAdminGhlTestRoute: typeof AuthenticatedAdminGhlTestRoute
   AuthenticatedAdminReconciliarRoute: typeof AuthenticatedAdminReconciliarRoute
   AuthenticatedAdminAdminEquipeRoute: typeof AuthenticatedAdminAdminEquipeRoute
+  AuthenticatedAdminAdminFilaRoute: typeof AuthenticatedAdminAdminFilaRoute
   AuthenticatedAdminAdminMovimentacaoLinksRoute: typeof AuthenticatedAdminAdminMovimentacaoLinksRoute
   AuthenticatedAdminAdminVendedoresRoute: typeof AuthenticatedAdminAdminVendedoresRoute
   AuthenticatedAdminRelatoriosAgendamentosRoute: typeof AuthenticatedAdminRelatoriosAgendamentosRoute
@@ -935,6 +1075,7 @@ const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren
     AuthenticatedAdminGhlTestRoute: AuthenticatedAdminGhlTestRoute,
     AuthenticatedAdminReconciliarRoute: AuthenticatedAdminReconciliarRoute,
     AuthenticatedAdminAdminEquipeRoute: AuthenticatedAdminAdminEquipeRoute,
+    AuthenticatedAdminAdminFilaRoute: AuthenticatedAdminAdminFilaRoute,
     AuthenticatedAdminAdminMovimentacaoLinksRoute:
       AuthenticatedAdminAdminMovimentacaoLinksRoute,
     AuthenticatedAdminAdminVendedoresRoute:
@@ -1004,6 +1145,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRouteRoute: typeof AuthenticatedAdminRouteRouteWithChildren
   AuthenticatedAgendaRoute: typeof AuthenticatedAgendaRoute
   AuthenticatedFinanceiroRoute: typeof AuthenticatedFinanceiroRoute
+  AuthenticatedHomeRoute: typeof AuthenticatedHomeRoute
   AuthenticatedMenuRoute: typeof AuthenticatedMenuRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRouteWithChildren
   AuthenticatedReviewsRoute: typeof AuthenticatedReviewsRoute
@@ -1018,6 +1160,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRouteRoute: AuthenticatedAdminRouteRouteWithChildren,
   AuthenticatedAgendaRoute: AuthenticatedAgendaRoute,
   AuthenticatedFinanceiroRoute: AuthenticatedFinanceiroRoute,
+  AuthenticatedHomeRoute: AuthenticatedHomeRoute,
   AuthenticatedMenuRoute: AuthenticatedMenuRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRouteWithChildren,
   AuthenticatedReviewsRoute: AuthenticatedReviewsRoute,
@@ -1039,11 +1182,16 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   UnsubscribeRoute: UnsubscribeRoute,
+  ATokenRoute: ATokenRoute,
   AuthRecoverRoute: AuthRecoverRoute,
   AuthUpdatePasswordRoute: AuthUpdatePasswordRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   MovimentacaoSlugRoute: MovimentacaoSlugRoute,
   MovimentacaoHistoricoRoute: MovimentacaoHistoricoRoute,
+  TotemBuscarRoute: TotemBuscarRoute,
+  TotemConfirmarRoute: TotemConfirmarRoute,
+  TotemProntoRoute: TotemProntoRoute,
+  TotemIndexRoute: TotemIndexRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   ApiPublicHooksSendRemindersRoute: ApiPublicHooksSendRemindersRoute,
   ApiPublicHooksSyncGhlRoute: ApiPublicHooksSyncGhlRoute,
@@ -1056,13 +1204,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
