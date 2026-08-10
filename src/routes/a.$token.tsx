@@ -61,8 +61,13 @@ function AtendimentoPublico() {
               <p className="text-xs uppercase tracking-wider text-muted-foreground">
                 Código do atendimento
               </p>
-              <p className="mt-1 text-4xl font-bold tracking-widest">{data.codigo}</p>
-              <span className="mt-3 inline-block rounded-full bg-primary/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-primary">
+              <p data-testid="publico-codigo" className="mt-1 text-4xl font-bold tracking-widest">
+                {data.codigo}
+              </p>
+              <span
+                data-testid="publico-status"
+                className="mt-3 inline-block rounded-full bg-primary/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-primary"
+              >
                 {STATUS_LABEL[data.status]}
               </span>
             </div>
