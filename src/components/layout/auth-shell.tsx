@@ -1,7 +1,7 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { CalendarDays, LogOut, Plus, User as UserIcon, Wallet, AlertTriangle } from "lucide-react";
+import { CalendarDays, Home, LogOut, Plus, User as UserIcon, Wallet, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsAdmin } from "@/hooks/use-current-user";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,11 +42,12 @@ function TopBar() {
 
   return (
     <header className="sticky top-0 z-40 hidden h-14 items-center justify-between gap-4 border-b border-border bg-background/95 px-6 backdrop-blur sm:flex">
-      <Link to="/agenda" className="flex items-center gap-2">
+      <Link to="/home" className="flex items-center gap-2">
         <img src={gfMark} alt="" className="h-7 w-7 object-contain" />
         <span className="font-display text-sm uppercase tracking-[0.2em]">GF Tattoo</span>
       </Link>
       <nav className="flex items-center gap-1">
+        <TopLink to="/home" icon={<Home className="h-4 w-4" />} label="Hoje" />
         <TopLink to="/agenda" icon={<CalendarDays className="h-4 w-4" />} label={t("nav.agenda")} />
         <TopLink to="/appointments/new" icon={<Plus className="h-4 w-4" />} label={t("nav.new")} />
         <TopLink to="/financeiro" icon={<Wallet className="h-4 w-4" />} label={t("nav.financeiro", { defaultValue: "Financeiro" })} />
