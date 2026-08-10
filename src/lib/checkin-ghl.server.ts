@@ -28,6 +28,8 @@ export interface CheckinSyncResult {
   ghlContactId?: string;
   ghlAppointmentId?: string;
   ghlOpportunityId?: string;
+  /** Workflow de confirmação acionado (é ele que envia WhatsApp/SMS ao cliente). */
+  workflowTriggered?: boolean;
   error?: string;
   steps: string[];
 }
@@ -204,12 +206,14 @@ export async function syncCheckinToGhl(input: CheckinSyncInput): Promise<Checkin
 
     // Workflow de confirmação (opcional; só corre se o ID estiver configurado)
     const workflowId = await getSetting("ghl_checkin_workflow_id");
+    let workflowTriggered = false;
     if (workflowId) {
       const wf = await call(
         `/contacts/${contactId}/workflow/${workflowId}`,
         { method: "POST", body: JSON.stringify({ eventStartTime: input.arrivedAtISO }) },
         token,
       );
+      workflowTriggered = wf.ok;
       steps.push(wf.ok ? "workflow: acionado" : `workflow: falhou (${wf.status})`);
     } else {
       steps.push("workflow: não configurado");
@@ -220,6 +224,7 @@ export async function syncCheckinToGhl(input: CheckinSyncInput): Promise<Checkin
       ghlContactId: contactId,
       ghlAppointmentId: appointment?.id,
       ghlOpportunityId: opportunityId ?? undefined,
+      workflowTriggered,
       steps,
     };
   } catch (error) {
