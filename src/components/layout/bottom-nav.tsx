@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { CalendarDays, Plus, User as UserIcon, Wallet } from "lucide-react";
+import { CalendarDays, Home, Plus, User as UserIcon, Wallet } from "lucide-react";
 import { haptic } from "@/lib/haptics";
 
 export function BottomNav() {
@@ -8,8 +8,8 @@ export function BottomNav() {
   const navigate = useNavigate();
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 mx-auto flex max-w-md items-end justify-around border-t border-border bg-background/95 px-6 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur sm:hidden">
+      <NavLink to="/home" icon={<Home className="h-5 w-5" />} label="Hoje" />
       <NavLink to="/agenda" icon={<CalendarDays className="h-5 w-5" />} label={t("nav.agenda")} />
-      <NavLink to="/financeiro" icon={<Wallet className="h-5 w-5" />} label={t("nav.financeiro", { defaultValue: "Financeiro" })} />
       <button
         type="button"
         onClick={() => {
@@ -21,6 +21,7 @@ export function BottomNav() {
       >
         <Plus className="h-7 w-7" />
       </button>
+      <NavLink to="/financeiro" icon={<Wallet className="h-5 w-5" />} label={t("nav.financeiro", { defaultValue: "Financeiro" })} />
       <NavLink to="/menu" icon={<UserIcon className="h-5 w-5" />} label={t("nav.profile", { defaultValue: "Perfil" })} />
     </nav>
   );
