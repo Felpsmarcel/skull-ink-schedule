@@ -16,7 +16,19 @@ export interface GhlFetchResult<T = unknown> {
 }
 
 export async function ghlFetch<T = unknown>(params: GhlFetchParams): Promise<GhlFetchResult<T>> {
-  const { data, error } = await supabase.functions.invoke("ghl-proxy", { body: params });
+  // Garante um access token válido: a sessão em cache pode estar expirada,
+  // e o proxy responde 401 "JWT inválido" nesse caso.
+  let token = (await supabase.auth.getSession()).data.session?.access_token ?? null;
+  if (!token) {
+    token = (await supabase.auth.refreshSession()).data.session?.access_token ?? null;
+  }
+  if (!token) {
+    throw new Error("Sessão expirada. Faça login novamente para usar a integração GHL.");
+  }
+  const { data, error } = await supabase.functions.invoke("ghl-proxy", {
+    body: params,
+    headers: { Authorization: `Bearer ${token}` },
+  });
   if (error) throw new Error(`ghl-proxy invoke error: ${error.message}`);
   return data as GhlFetchResult<T>;
 }
