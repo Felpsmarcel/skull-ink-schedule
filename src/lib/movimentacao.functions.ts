@@ -892,15 +892,13 @@ export interface MovimentacaoEditRow {
   total: number;
   data_tatuagem: string | null;
   observacoes: string | null;
+  descricao_projeto: string | null;
   ghl_sync_status: "pending" | "synced" | "failed";
   deleted_at: string | null;
   canEdit: boolean;
   registrado_por_nome: string | null;
   registrado_em: string | null;
 }
-
-export type MovimentacaoEditRowFull = MovimentacaoEditRow;
-
 
 function canEditRow(
   role: string | null,
@@ -922,7 +920,7 @@ export const getMovimentacaoForEdit = createServerFn({ method: "GET" })
     const { data: rowRaw, error } = await supabaseAdmin
       .from("movimentacoes" as never)
       .select(
-        "id, created_at, nome_cliente, data_pagamento, artist_id, recebido_por_app_user_id, link_origem, tipo_movimento, valor_cartao, valor_dinheiro, valor_sumup, valor_transferencia, total, data_tatuagem, observacoes, ghl_sync_status, deleted_at, registrado_por_nome, registrado_em",
+        "id, created_at, nome_cliente, data_pagamento, artist_id, recebido_por_app_user_id, link_origem, tipo_movimento, valor_cartao, valor_dinheiro, valor_sumup, valor_transferencia, total, data_tatuagem, observacoes, descricao_projeto, ghl_sync_status, deleted_at, registrado_por_nome, registrado_em",
       )
       .eq("id", data.id)
       .maybeSingle();
