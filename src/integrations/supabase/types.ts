@@ -727,6 +727,7 @@ export type Database = {
           data_pagamento: string
           data_tatuagem: string | null
           deleted_at: string | null
+          descricao_projeto: string | null
           forma_pagamento:
             | Database["public"]["Enums"]["forma_pagamento_enum"]
             | null
@@ -766,6 +767,7 @@ export type Database = {
           data_pagamento: string
           data_tatuagem?: string | null
           deleted_at?: string | null
+          descricao_projeto?: string | null
           forma_pagamento?:
             | Database["public"]["Enums"]["forma_pagamento_enum"]
             | null
@@ -805,6 +807,7 @@ export type Database = {
           data_pagamento?: string
           data_tatuagem?: string | null
           deleted_at?: string | null
+          descricao_projeto?: string | null
           forma_pagamento?:
             | Database["public"]["Enums"]["forma_pagamento_enum"]
             | null
@@ -1403,6 +1406,8 @@ export type Database = {
               artist_id: string
               created_at: string
               data_pagamento: string
+              data_tatuagem: string
+              descricao_projeto: string
               ghl_sync_status: string
               id: string
               link_origem: string
