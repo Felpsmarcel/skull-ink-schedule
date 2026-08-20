@@ -138,6 +138,7 @@ interface FormState {
   valor_transferencia: string;
   data_tatuagem: string;
   observacoes: string;
+  descricao_projeto: string;
   chave_idempotencia: string;
 }
 
@@ -159,6 +160,7 @@ function initialState(context: SlugContext | undefined, mode: "link" | "manual")
     valor_transferencia: "",
     data_tatuagem: "",
     observacoes: "",
+    descricao_projeto: "",
     chave_idempotencia: newIdempotencyKey(),
   };
 }
@@ -241,6 +243,7 @@ export function MovimentacaoForm({ context, artists, artistsLoading, mode = "lin
         valor_transferencia: parseAmount(form.valor_transferencia),
         data_tatuagem: form.data_tatuagem || null,
         observacoes: form.observacoes || null,
+        descricao_projeto: form.descricao_projeto || null,
         chave_idempotencia: form.chave_idempotencia,
       };
       if (isManual) {
@@ -809,7 +812,7 @@ function StepThree({ form, set, total, isSinal, sinalErro, artists }: StepThreeP
           }`}
         >
           <Label htmlFor="data_tatuagem">
-            {isSinal ? "Data da sessão *" : "Data da sessão"}
+            {isSinal ? "Data da tatuagem *" : "Data da tatuagem"}
           </Label>
           <Input
             id="data_tatuagem"
@@ -820,9 +823,22 @@ function StepThree({ form, set, total, isSinal, sinalErro, artists }: StepThreeP
             required={isSinal}
           />
           {sinalErro && (
-            <p className="text-xs text-destructive">Informe a data da sessão agendada.</p>
+            <p className="text-xs text-destructive">Informe a data da tatuagem agendada.</p>
           )}
         </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="descricao_projeto">Descrição do projeto</Label>
+        <Textarea
+          id="descricao_projeto"
+          value={form.descricao_projeto}
+          onChange={(e) => set("descricao_projeto", e.target.value)}
+          rows={3}
+          maxLength={500}
+          placeholder="Ex.: cover-up braço direito, estilo blackwork"
+          className="text-base"
+        />
       </div>
 
       <div className="space-y-1.5">
