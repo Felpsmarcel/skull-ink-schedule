@@ -899,6 +899,8 @@ export interface MovimentacaoEditRow {
   registrado_em: string | null;
 }
 
+// (descricao_projeto incluído abaixo no tipo de edição)
+
 
 function canEditRow(
   role: string | null,
