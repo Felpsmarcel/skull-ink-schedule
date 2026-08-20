@@ -899,7 +899,7 @@ export interface MovimentacaoEditRow {
   registrado_em: string | null;
 }
 
-// (descricao_projeto incluído abaixo no tipo de edição)
+export type MovimentacaoEditRowFull = MovimentacaoEditRow;
 
 
 function canEditRow(
