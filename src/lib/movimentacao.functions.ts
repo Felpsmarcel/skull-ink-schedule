@@ -899,6 +899,7 @@ export interface MovimentacaoEditRow {
   registrado_em: string | null;
 }
 
+
 function canEditRow(
   role: string | null,
   userId: string,
@@ -977,8 +978,9 @@ const AUDIT_FIELD_LABELS: Record<string, string> = {
   valor_sumup: "SumUp",
   valor_transferencia: "Transferência",
   total: "Total",
-  data_tatuagem: "Data da sessão",
+  data_tatuagem: "Data da tatuagem",
   observacoes: "Observações",
+  descricao_projeto: "Descrição do projeto",
   ghl_sync_status: "Sync CRM",
   deleted_at: "Apagado em",
   link_origem: "Link",
@@ -1041,6 +1043,12 @@ const UpdateInput = z.object({
   valor_dinheiro: z.number().min(0),
   valor_sumup: z.number().min(0),
   valor_transferencia: z.number().min(0),
+  data_tatuagem: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .nullable()
+    .optional(),
+  descricao_projeto: z.string().trim().max(500).nullable().optional(),
 });
 
 export const updateMovimentacao = createServerFn({ method: "POST" })
@@ -1087,6 +1095,8 @@ export const updateMovimentacao = createServerFn({ method: "POST" })
         valor_dinheiro: data.valor_dinheiro,
         valor_sumup: data.valor_sumup,
         valor_transferencia: data.valor_transferencia,
+        data_tatuagem: data.data_tatuagem ?? null,
+        descricao_projeto: data.descricao_projeto?.trim() || null,
         ghl_sync_status: "pending",
       } as never)
       .eq("id", data.id);
