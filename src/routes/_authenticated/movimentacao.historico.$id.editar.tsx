@@ -79,6 +79,8 @@ function EditarPage() {
     valor_dinheiro: string;
     valor_sumup: string;
     valor_transferencia: string;
+    data_tatuagem: string;
+    descricao_projeto: string;
   }>(null);
 
   useEffect(() => {
@@ -91,6 +93,8 @@ function EditarPage() {
       valor_dinheiro: String(rowQ.data.valor_dinheiro ?? 0),
       valor_sumup: String(rowQ.data.valor_sumup ?? 0),
       valor_transferencia: String(rowQ.data.valor_transferencia ?? 0),
+      data_tatuagem: rowQ.data.data_tatuagem ?? "",
+      descricao_projeto: rowQ.data.descricao_projeto ?? "",
     });
   }, [rowQ.data, form]);
 
@@ -109,6 +113,8 @@ function EditarPage() {
       valor_dinheiro: number;
       valor_sumup: number;
       valor_transferencia: number;
+      data_tatuagem: string | null;
+      descricao_projeto: string | null;
     }) => doUpdate({ data: { id, ...input } }),
     onSuccess: () => {
       toast.success("Alterações guardadas.");
@@ -194,6 +200,8 @@ function EditarPage() {
       valor_dinheiro: Number(form.valor_dinheiro) || 0,
       valor_sumup: Number(form.valor_sumup) || 0,
       valor_transferencia: Number(form.valor_transferencia) || 0,
+      data_tatuagem: form.data_tatuagem || null,
+      descricao_projeto: form.descricao_projeto || null,
     });
   };
 
@@ -258,6 +266,25 @@ function EditarPage() {
         </Field>
 
         <div className="grid grid-cols-2 gap-3">
+          <div className="col-span-2 flex flex-col gap-3">
+            <Field label="Descrição do projeto">
+              <textarea
+                rows={3}
+                maxLength={500}
+                value={form.descricao_projeto}
+                onChange={(e) => setForm({ ...form, descricao_projeto: e.target.value })}
+                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-900"
+              />
+            </Field>
+            <Field label="Data da tatuagem">
+              <input
+                type="date"
+                value={form.data_tatuagem}
+                onChange={(e) => setForm({ ...form, data_tatuagem: e.target.value })}
+                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-900"
+              />
+            </Field>
+          </div>
           <MoneyField
             label="Cartão"
             value={form.valor_cartao}

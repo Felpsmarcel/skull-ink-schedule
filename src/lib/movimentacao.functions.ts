@@ -250,6 +250,7 @@ const CreateInput = z
     chave_idempotencia: z.string().uuid("Chave de idempotência inválida."),
     registrado_por_id: z.enum([...STAFF_RECEBEDOR_IDS, "outro"] as [string, ...string[]]),
     registrado_por_nome: z.string().trim().max(80).nullable().optional(),
+    descricao_projeto: z.string().trim().max(500).nullable().optional(),
   })
   .refine((v) => !(v.valor_cartao > 0 && v.valor_sumup > 0), {
     message: "SumUp e Cartão são métodos exclusivos.",
@@ -260,7 +261,7 @@ const CreateInput = z
     { message: "O total deve ser superior a €0.", path: ["valor_dinheiro"] },
   )
   .refine((v) => v.tipo_movimento !== "sinal" || Boolean(v.data_tatuagem), {
-    message: "Informe a data da sessão agendada.",
+    message: "Informe a data da tatuagem agendada.",
     path: ["data_tatuagem"],
   })
   .refine((v) => v.registrado_por_id !== "outro" || (v.registrado_por_nome ?? "").length >= 2, {
@@ -298,6 +299,7 @@ async function insertMovimentacaoRows(
     chave_idempotencia: string;
     artist_name: string;
     recebido_por_nome: string;
+    descricao_projeto?: string | null;
   },
 ): Promise<CreateResult> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -353,6 +355,7 @@ async function insertMovimentacaoRows(
       observacoes: params.observacoes?.trim() || null,
       chave_idempotencia: params.chave_idempotencia,
       chave_grupo: groupKey,
+      descricao_projeto: params.descricao_projeto?.trim() || null,
       ghl_sync_status: "pending" as const,
     };
 
@@ -381,6 +384,7 @@ async function insertMovimentacaoRows(
       total: Number(row.total),
       data_tatuagem: params.data_tatuagem ?? null,
       observacoes: params.observacoes?.trim() || null,
+      descricao_projeto: params.descricao_projeto?.trim() || null,
     });
 
     if (sync.ok) {
@@ -464,6 +468,7 @@ export const createMovimentacao = createServerFn({ method: "POST" })
       chave_idempotencia: data.chave_idempotencia,
       artist_name: artistRow.name,
       recebido_por_nome: recebedor.displayName,
+      descricao_projeto: data.descricao_projeto ?? null,
     });
   });
 
@@ -487,6 +492,7 @@ const CreateManualInput = z
       .optional(),
     observacoes: z.string().max(1000).nullable().optional(),
     chave_idempotencia: z.string().uuid("Chave de idempotência inválida."),
+    descricao_projeto: z.string().trim().max(500).nullable().optional(),
   })
   .refine((v) => !(v.valor_cartao > 0 && v.valor_sumup > 0), {
     message: "SumUp e Cartão são métodos exclusivos.",
@@ -497,7 +503,7 @@ const CreateManualInput = z
     { message: "O total deve ser superior a €0.", path: ["valor_dinheiro"] },
   )
   .refine((v) => v.tipo_movimento !== "sinal" || Boolean(v.data_tatuagem), {
-    message: "Informe a data da sessão agendada.",
+    message: "Informe a data da tatuagem agendada.",
     path: ["data_tatuagem"],
   });
 
@@ -545,6 +551,7 @@ export const createMovimentacaoManual = createServerFn({ method: "POST" })
       chave_idempotencia: data.chave_idempotencia,
       artist_name: artistRow.name,
       recebido_por_nome: recebedor.displayName,
+      descricao_projeto: data.descricao_projeto ?? null,
     });
   });
 
@@ -885,6 +892,7 @@ export interface MovimentacaoEditRow {
   total: number;
   data_tatuagem: string | null;
   observacoes: string | null;
+  descricao_projeto: string | null;
   ghl_sync_status: "pending" | "synced" | "failed";
   deleted_at: string | null;
   canEdit: boolean;
@@ -912,7 +920,7 @@ export const getMovimentacaoForEdit = createServerFn({ method: "GET" })
     const { data: rowRaw, error } = await supabaseAdmin
       .from("movimentacoes" as never)
       .select(
-        "id, created_at, nome_cliente, data_pagamento, artist_id, recebido_por_app_user_id, link_origem, tipo_movimento, valor_cartao, valor_dinheiro, valor_sumup, valor_transferencia, total, data_tatuagem, observacoes, ghl_sync_status, deleted_at, registrado_por_nome, registrado_em",
+        "id, created_at, nome_cliente, data_pagamento, artist_id, recebido_por_app_user_id, link_origem, tipo_movimento, valor_cartao, valor_dinheiro, valor_sumup, valor_transferencia, total, data_tatuagem, observacoes, descricao_projeto, ghl_sync_status, deleted_at, registrado_por_nome, registrado_em",
       )
       .eq("id", data.id)
       .maybeSingle();
@@ -970,8 +978,9 @@ const AUDIT_FIELD_LABELS: Record<string, string> = {
   valor_sumup: "SumUp",
   valor_transferencia: "Transferência",
   total: "Total",
-  data_tatuagem: "Data da sessão",
+  data_tatuagem: "Data da tatuagem",
   observacoes: "Observações",
+  descricao_projeto: "Descrição do projeto",
   ghl_sync_status: "Sync CRM",
   deleted_at: "Apagado em",
   link_origem: "Link",
@@ -1034,6 +1043,12 @@ const UpdateInput = z.object({
   valor_dinheiro: z.number().min(0),
   valor_sumup: z.number().min(0),
   valor_transferencia: z.number().min(0),
+  data_tatuagem: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .nullable()
+    .optional(),
+  descricao_projeto: z.string().trim().max(500).nullable().optional(),
 });
 
 export const updateMovimentacao = createServerFn({ method: "POST" })
@@ -1080,6 +1095,8 @@ export const updateMovimentacao = createServerFn({ method: "POST" })
         valor_dinheiro: data.valor_dinheiro,
         valor_sumup: data.valor_sumup,
         valor_transferencia: data.valor_transferencia,
+        data_tatuagem: data.data_tatuagem ?? null,
+        descricao_projeto: data.descricao_projeto?.trim() || null,
         ghl_sync_status: "pending",
       } as never)
       .eq("id", data.id);
@@ -1270,6 +1287,8 @@ export const getMovimentacoesReport = createServerFn({ method: "GET" })
       valor_transferencia: Number(r.valor_transferencia ?? 0),
       total: Number(r.total ?? 0),
       ghl_sync_status: (r.ghl_sync_status as ReportRow["ghl_sync_status"]) ?? "pending",
+      data_tatuagem: r.data_tatuagem ? String(r.data_tatuagem) : null,
+      descricao_projeto: r.descricao_projeto ? String(r.descricao_projeto) : null,
     }));
     return { rows, role: me.role };
   });
