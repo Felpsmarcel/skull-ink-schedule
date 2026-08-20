@@ -1,7 +1,13 @@
 // Slug → identidade para links individuais de registro de pagamento.
 // IDs vindos do banco (verificados em 2026-07). Se um artista mudar, atualizar aqui.
 
-export type MovimentacaoSlug = "gabriel" | "andre" | "joyce" | "augusto" | "nivia";
+export type MovimentacaoSlug =
+  | "gabriel"
+  | "andre"
+  | "joyce"
+  | "augusto"
+  | "nivia"
+  | "marquezine";
 
 export interface SlugTargetArtist {
   slug: Exclude<MovimentacaoSlug, "nivia">;
@@ -44,6 +50,12 @@ export const MOVIMENTACAO_SLUGS: Record<MovimentacaoSlug, SlugTarget> = {
     artistId: "99923ac0-7976-45dd-b19a-0b160af0c831",
     displayName: "Augusto",
   },
+  marquezine: {
+    slug: "marquezine",
+    kind: "artist",
+    artistId: "3841eeda-0557-42cb-9fd7-21f335cc1c11",
+    displayName: "Miguel Marquezine",
+  },
   nivia: {
     slug: "nivia",
     kind: "seller",
@@ -57,6 +69,7 @@ export const MOVIMENTACAO_SLUG_LIST: MovimentacaoSlug[] = [
   "andre",
   "joyce",
   "augusto",
+  "marquezine",
   "nivia",
 ];
 
@@ -79,7 +92,13 @@ export function findSlugForSeller(sellerId: string): MovimentacaoSlug | null {
 // Lista fechada usada no seletor "Recebido por" do formulário público.
 // appUserId aponta para app_users(id) real — validado no banco em 2026-07.
 
-export type StaffRecebedorId = "gabriel" | "nivia" | "augusto" | "andre" | "joyce";
+export type StaffRecebedorId =
+  | "gabriel"
+  | "nivia"
+  | "augusto"
+  | "andre"
+  | "joyce"
+  | "marquezine";
 
 export interface StaffRecebedor {
   id: StaffRecebedorId;
@@ -93,6 +112,7 @@ export const STAFF_RECEBEDORES: StaffRecebedor[] = [
   { id: "augusto", displayName: "Augusto", appUserId: "952d9a08-873e-46d5-a2f2-c3b7800f72b9" },
   { id: "andre",   displayName: "André",   appUserId: "8d2b3fe0-7481-4c72-9d83-ce671bd6c241" },
   { id: "joyce",   displayName: "Joyce",   appUserId: "e638e244-a6e2-446c-86d5-322bb277274e" },
+  { id: "marquezine", displayName: "Miguel Marquezine", appUserId: "55cf1ae7-a670-432d-95da-cf2abc87719d" },
 ];
 
 export const STAFF_RECEBEDOR_IDS: [StaffRecebedorId, ...StaffRecebedorId[]] = [
@@ -101,6 +121,7 @@ export const STAFF_RECEBEDOR_IDS: [StaffRecebedorId, ...StaffRecebedorId[]] = [
   "augusto",
   "andre",
   "joyce",
+  "marquezine",
 ];
 
 export function getStaffRecebedor(id: StaffRecebedorId): StaffRecebedor {
@@ -116,4 +137,5 @@ export const SLUG_DEFAULT_RECEBEDOR: Record<MovimentacaoSlug, StaffRecebedorId> 
   joyce: "joyce",
   augusto: "augusto",
   nivia: "nivia",
+  marquezine: "marquezine",
 };
