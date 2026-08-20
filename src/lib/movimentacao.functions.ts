@@ -468,6 +468,7 @@ export const createMovimentacao = createServerFn({ method: "POST" })
       chave_idempotencia: data.chave_idempotencia,
       artist_name: artistRow.name,
       recebido_por_nome: recebedor.displayName,
+      descricao_projeto: data.descricao_projeto ?? null,
     });
   });
 
@@ -491,6 +492,7 @@ const CreateManualInput = z
       .optional(),
     observacoes: z.string().max(1000).nullable().optional(),
     chave_idempotencia: z.string().uuid("Chave de idempotência inválida."),
+    descricao_projeto: z.string().trim().max(500).nullable().optional(),
   })
   .refine((v) => !(v.valor_cartao > 0 && v.valor_sumup > 0), {
     message: "SumUp e Cartão são métodos exclusivos.",
@@ -501,7 +503,7 @@ const CreateManualInput = z
     { message: "O total deve ser superior a €0.", path: ["valor_dinheiro"] },
   )
   .refine((v) => v.tipo_movimento !== "sinal" || Boolean(v.data_tatuagem), {
-    message: "Informe a data da sessão agendada.",
+    message: "Informe a data da tatuagem agendada.",
     path: ["data_tatuagem"],
   });
 
@@ -549,6 +551,7 @@ export const createMovimentacaoManual = createServerFn({ method: "POST" })
       chave_idempotencia: data.chave_idempotencia,
       artist_name: artistRow.name,
       recebido_por_nome: recebedor.displayName,
+      descricao_projeto: data.descricao_projeto ?? null,
     });
   });
 
