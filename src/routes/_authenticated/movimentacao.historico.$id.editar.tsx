@@ -79,6 +79,8 @@ function EditarPage() {
     valor_dinheiro: string;
     valor_sumup: string;
     valor_transferencia: string;
+    data_tatuagem: string;
+    descricao_projeto: string;
   }>(null);
 
   useEffect(() => {
@@ -91,6 +93,8 @@ function EditarPage() {
       valor_dinheiro: String(rowQ.data.valor_dinheiro ?? 0),
       valor_sumup: String(rowQ.data.valor_sumup ?? 0),
       valor_transferencia: String(rowQ.data.valor_transferencia ?? 0),
+      data_tatuagem: rowQ.data.data_tatuagem ?? "",
+      descricao_projeto: rowQ.data.descricao_projeto ?? "",
     });
   }, [rowQ.data, form]);
 
@@ -109,6 +113,8 @@ function EditarPage() {
       valor_dinheiro: number;
       valor_sumup: number;
       valor_transferencia: number;
+      data_tatuagem: string | null;
+      descricao_projeto: string | null;
     }) => doUpdate({ data: { id, ...input } }),
     onSuccess: () => {
       toast.success("Alterações guardadas.");
@@ -194,6 +200,8 @@ function EditarPage() {
       valor_dinheiro: Number(form.valor_dinheiro) || 0,
       valor_sumup: Number(form.valor_sumup) || 0,
       valor_transferencia: Number(form.valor_transferencia) || 0,
+      data_tatuagem: form.data_tatuagem || null,
+      descricao_projeto: form.descricao_projeto || null,
     });
   };
 
