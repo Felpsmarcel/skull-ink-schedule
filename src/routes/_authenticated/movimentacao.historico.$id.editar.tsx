@@ -266,6 +266,25 @@ function EditarPage() {
         </Field>
 
         <div className="grid grid-cols-2 gap-3">
+          <div className="col-span-2 flex flex-col gap-3">
+            <Field label="Descrição do projeto">
+              <textarea
+                rows={3}
+                maxLength={500}
+                value={form.descricao_projeto}
+                onChange={(e) => setForm({ ...form, descricao_projeto: e.target.value })}
+                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-900"
+              />
+            </Field>
+            <Field label="Data da tatuagem">
+              <input
+                type="date"
+                value={form.data_tatuagem}
+                onChange={(e) => setForm({ ...form, data_tatuagem: e.target.value })}
+                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-900"
+              />
+            </Field>
+          </div>
           <MoneyField
             label="Cartão"
             value={form.valor_cartao}
