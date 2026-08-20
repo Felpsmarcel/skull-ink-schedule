@@ -1287,6 +1287,8 @@ export const getMovimentacoesReport = createServerFn({ method: "GET" })
       valor_transferencia: Number(r.valor_transferencia ?? 0),
       total: Number(r.total ?? 0),
       ghl_sync_status: (r.ghl_sync_status as ReportRow["ghl_sync_status"]) ?? "pending",
+      data_tatuagem: r.data_tatuagem ? String(r.data_tatuagem) : null,
+      descricao_projeto: r.descricao_projeto ? String(r.descricao_projeto) : null,
     }));
     return { rows, role: me.role };
   });
