@@ -18,6 +18,8 @@ export interface ReportRow {
   valor_transferencia: number;
   total: number;
   ghl_sync_status: "pending" | "synced" | "failed";
+  data_tatuagem?: string | null;
+  descricao_projeto?: string | null;
 }
 
 export interface BreakdownItem {
