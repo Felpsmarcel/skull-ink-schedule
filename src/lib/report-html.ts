@@ -163,6 +163,8 @@ export function buildReportHtml(
       (r) => `<tr>
         <td>${esc(formatDate(r.data_pagamento))}</td>
         <td>${esc(r.nome_cliente)}</td>
+        <td>${esc(r.descricao_projeto ?? "—")}</td>
+        <td>${esc(r.data_tatuagem ? formatDate(r.data_tatuagem) : "—")}</td>
         <td>${esc(r.tatuador ?? "—")}</td>
         <td>${esc(r.recebido_por_nome ?? "—")}</td>
         <td>${esc(r.registrado_por_nome ?? "—")}</td>
@@ -223,9 +225,9 @@ ${breakdownHtml("Totais por tipo de movimento", agg.porTipo)}
 <section>
   <h2>Detalhe dos pagamentos</h2>
   <table>
-    <thead><tr><th>Data</th><th>Cliente</th><th>Tatuador</th><th>Recebido por</th><th>Registado por</th><th>Tipo</th><th>Formas</th><th class="num">Total</th><th>GHL</th></tr></thead>
-    <tbody>${detalhe || `<tr><td colspan="9">Sem pagamentos no período.</td></tr>`}</tbody>
-    <tfoot><tr><td colspan="7">Total</td><td class="num">${esc(formatCurrency(agg.total))}</td><td></td></tr></tfoot>
+    <thead><tr><th>Data</th><th>Cliente</th><th>Projeto</th><th>Data tatuagem</th><th>Tatuador</th><th>Recebido por</th><th>Registado por</th><th>Tipo</th><th>Formas</th><th class="num">Total</th><th>GHL</th></tr></thead>
+    <tbody>${detalhe || `<tr><td colspan="11">Sem pagamentos no período.</td></tr>`}</tbody>
+    <tfoot><tr><td colspan="9">Total</td><td class="num">${esc(formatCurrency(agg.total))}</td><td></td></tr></tfoot>
   </table>
 </section>
 </body>
@@ -247,6 +249,8 @@ export function downloadReportHtml(html: string, filename: string) {
 const CSV_COLUMNS: Array<{ label: string; pick: (r: ReportRow) => unknown }> = [
   { label: "Data", pick: (r) => r.data_pagamento },
   { label: "Cliente", pick: (r) => r.nome_cliente },
+  { label: "Descrição do projeto", pick: (r) => r.descricao_projeto ?? "" },
+  { label: "Data da tatuagem", pick: (r) => r.data_tatuagem ?? "" },
   { label: "Tatuador", pick: (r) => r.tatuador ?? "" },
   { label: "Recebido por", pick: (r) => r.recebido_por_nome ?? "" },
   { label: "Registado por", pick: (r) => r.registrado_por_nome ?? "" },
