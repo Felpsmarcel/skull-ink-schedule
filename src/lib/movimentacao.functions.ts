@@ -250,6 +250,7 @@ const CreateInput = z
     chave_idempotencia: z.string().uuid("Chave de idempotência inválida."),
     registrado_por_id: z.enum([...STAFF_RECEBEDOR_IDS, "outro"] as [string, ...string[]]),
     registrado_por_nome: z.string().trim().max(80).nullable().optional(),
+    descricao_projeto: z.string().trim().max(500).nullable().optional(),
   })
   .refine((v) => !(v.valor_cartao > 0 && v.valor_sumup > 0), {
     message: "SumUp e Cartão são métodos exclusivos.",
@@ -260,7 +261,7 @@ const CreateInput = z
     { message: "O total deve ser superior a €0.", path: ["valor_dinheiro"] },
   )
   .refine((v) => v.tipo_movimento !== "sinal" || Boolean(v.data_tatuagem), {
-    message: "Informe a data da sessão agendada.",
+    message: "Informe a data da tatuagem agendada.",
     path: ["data_tatuagem"],
   })
   .refine((v) => v.registrado_por_id !== "outro" || (v.registrado_por_nome ?? "").length >= 2, {
@@ -298,6 +299,7 @@ async function insertMovimentacaoRows(
     chave_idempotencia: string;
     artist_name: string;
     recebido_por_nome: string;
+    descricao_projeto?: string | null;
   },
 ): Promise<CreateResult> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -353,6 +355,7 @@ async function insertMovimentacaoRows(
       observacoes: params.observacoes?.trim() || null,
       chave_idempotencia: params.chave_idempotencia,
       chave_grupo: groupKey,
+      descricao_projeto: params.descricao_projeto?.trim() || null,
       ghl_sync_status: "pending" as const,
     };
 
@@ -381,6 +384,7 @@ async function insertMovimentacaoRows(
       total: Number(row.total),
       data_tatuagem: params.data_tatuagem ?? null,
       observacoes: params.observacoes?.trim() || null,
+      descricao_projeto: params.descricao_projeto?.trim() || null,
     });
 
     if (sync.ok) {
