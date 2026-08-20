@@ -32,6 +32,7 @@ export interface MovimentacaoSyncPayload {
   total: number;
   data_tatuagem: string | null;
   observacoes: string | null;
+  descricao_projeto?: string | null;
 }
 
 export interface MovimentacaoSyncResult {
@@ -159,6 +160,7 @@ export async function syncMovimentacaoToGhl(
       total: payload.total,
       data_tatuagem: payload.data_tatuagem ?? "",
       observacoes: payload.observacoes ?? "",
+      descricao_projeto: payload.descricao_projeto ?? "",
     };
     const create = await ghlFetch(
       `/objects/${encodeURIComponent(objectKey)}/records`,
