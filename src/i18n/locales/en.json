@@ -123,6 +123,7 @@
         "noContact": "Pick a client.",
         "noCalendar": "Pick an artist.",
         "noStart": "Pick a time.",
+        "noProject": "Choose or confirm the project/opportunity.",
         "slotTaken": "That slot was just taken. Pick another."
       },
       "wizard": {
