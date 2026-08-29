@@ -31,10 +31,27 @@ function AuthRoute() {
   return <ClientOnly fallback={null}><AuthPage /></ClientOnly>;
 }
 
+/** Só aceita caminhos relativos do próprio domínio (evita open redirect). */
+function safeRelative(path: string | undefined): string | null {
+  if (!path || !path.startsWith("/") || path.startsWith("//")) return null;
+  return path;
+}
+
 function AuthPage() {
   const navigate = useNavigate();
   const router = useRouter();
   const { redirect } = Route.useSearch();
+
+  // Destinos com query string (ex.: /.lovable/oauth/consent?authorization_id=…)
+  // não passam pelo router tipado — usa navegação nativa nesse caso.
+  const goAfterAuth = () => {
+    const target = safeRelative(redirect);
+    if (target && target.includes("?")) {
+      window.location.href = target;
+      return;
+    }
+    navigate({ to: target ?? "/agenda", replace: true });
+  };
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -45,13 +62,14 @@ function AuthPage() {
     let cancelled = false;
     supabase.auth.getSession().then(({ data }) => {
       if (!cancelled && data.session) {
-        navigate({ to: redirect ?? "/agenda", replace: true });
+        goAfterAuth();
       }
     });
     return () => {
       cancelled = true;
     };
-  }, [navigate, redirect]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [redirect]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -64,14 +82,16 @@ function AuthPage() {
       return;
     }
     await router.invalidate();
-    navigate({ to: redirect ?? "/agenda", replace: true });
+    goAfterAuth();
   }
 
   async function handleGoogle() {
     setError(null);
     setGoogleLoading(true);
     const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
+      redirect_uri: safeRelative(redirect)
+        ? `${window.location.origin}/auth?redirect=${encodeURIComponent(redirect!)}`
+        : window.location.origin,
     });
     if (result.error) {
       setGoogleLoading(false);
@@ -80,7 +100,7 @@ function AuthPage() {
     }
     if (result.redirected) return;
     await router.invalidate();
-    navigate({ to: redirect ?? "/agenda", replace: true });
+    goAfterAuth();
   }
 
   return (

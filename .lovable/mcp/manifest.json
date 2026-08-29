@@ -1,0 +1,141 @@
+{
+  "version": 1,
+  "sdk_version": "0.28.0",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://aaljamsgeyeejtfpkxkn.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "gf-tattoo-studio",
+      "version": "0.1.0",
+      "title": "GF TATTOO STUDIO"
+    },
+    "tools": [
+      {
+        "name": "list_appointments",
+        "title": "Listar agendamentos",
+        "description": "Lista agendamentos da agenda do estúdio num intervalo de datas, com cliente, tatuador, horário e status.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "from": {
+              "type": "string",
+              "description": "Data inicial (YYYY-MM-DD)."
+            },
+            "to": {
+              "type": "string",
+              "description": "Data final inclusiva (YYYY-MM-DD)."
+            },
+            "limit": {
+              "description": "Máximo de linhas (padrão 50).",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          },
+          "required": [
+            "from",
+            "to"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_movimentacoes",
+        "title": "Listar registos de pagamento",
+        "description": "Lista os registos de pagamento (movimentações) num intervalo de datas, com cliente, tatuador, formas de pagamento e total.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "from": {
+              "type": "string",
+              "description": "Data de pagamento inicial (YYYY-MM-DD)."
+            },
+            "to": {
+              "type": "string",
+              "description": "Data de pagamento final inclusiva (YYYY-MM-DD)."
+            },
+            "limit": {
+              "description": "Máximo de linhas (padrão 50).",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          },
+          "required": [
+            "from",
+            "to"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "resumo_financeiro",
+        "title": "Resumo financeiro",
+        "description": "Resume os pagamentos registados num intervalo de datas: total geral, total por forma de pagamento e total por tatuador.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "from": {
+              "type": "string",
+              "description": "Data de pagamento inicial (YYYY-MM-DD)."
+            },
+            "to": {
+              "type": "string",
+              "description": "Data de pagamento final inclusiva (YYYY-MM-DD)."
+            }
+          },
+          "required": [
+            "from",
+            "to"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_artists",
+        "title": "Listar tatuadores",
+        "description": "Lista os tatuadores do estúdio com comissão, status ativo e contactos.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "only_active": {
+              "description": "Apenas tatuadores ativos (padrão true).",
+              "type": "boolean"
+            }
+          }
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
