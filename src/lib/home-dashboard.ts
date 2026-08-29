@@ -13,7 +13,7 @@ export const HOME_TZ = "Europe/Brussels";
  * Registros criados a partir desta data são considerados falha operacional
  * nova; anteriores são legado/histórico e só aparecem no detalhe de Gestão.
  */
-export const TRACEABILITY_ACTIVATED_AT = "2026-08-28T00:00:00.000Z";
+export const TRACEABILITY_ACTIVATED_AT = "2026-08-29T14:37:33.000Z";
 
 export type HomeRole = "admin" | "recepcao" | "artist";
 
@@ -31,6 +31,84 @@ export function canSeeFinance(role: HomeRole): boolean {
 
 export function canSeeGestao(role: HomeRole): boolean {
   return role === "admin";
+}
+
+/* ------------------------- Escopo por artista ------------------------- */
+
+/**
+ * Escopo de dados do utilizador. `none` é fail-closed: artista sem
+ * artist_id vinculado não pode ver nada (nem a operação global).
+ */
+export type ArtistScope =
+  | { kind: "all" }
+  | { kind: "artist"; artistId: string }
+  | { kind: "none" };
+
+export function resolveArtistScope(
+  role: HomeRole,
+  artistId: string | null | undefined,
+): ArtistScope {
+  if (role !== "artist") return { kind: "all" };
+  const id = typeof artistId === "string" ? artistId.trim() : "";
+  if (!id) return { kind: "none" };
+  return { kind: "artist", artistId: id };
+}
+
+/** Filtro estrito: linhas sem artist_id ou de outro artista são excluídas. */
+export function filterByScope<T>(
+  rows: T[],
+  scope: ArtistScope,
+  getArtistId: (row: T) => string | null | undefined,
+): T[] {
+  if (scope.kind === "none") return [];
+  if (scope.kind === "all") return rows;
+  return rows.filter((row) => {
+    const id = getArtistId(row);
+    return typeof id === "string" && id === scope.artistId;
+  });
+}
+
+/* ---------------------------- Ações por perfil ---------------------------- */
+
+export interface HomeActions {
+  agenda: boolean;
+  checkin: boolean;
+  pagamento: boolean;
+  financeiro: boolean;
+  gestao: boolean;
+  /** Link "Ver todos" da fila só para quem gere a operação global. */
+  filaVerTodos: boolean;
+}
+
+export function homeActions(role: HomeRole): HomeActions {
+  if (role === "artist") {
+    return {
+      agenda: true,
+      checkin: false,
+      pagamento: false,
+      financeiro: false,
+      gestao: false,
+      filaVerTodos: false,
+    };
+  }
+  if (role === "recepcao") {
+    return {
+      agenda: true,
+      checkin: true,
+      pagamento: true,
+      financeiro: false,
+      gestao: false,
+      filaVerTodos: true,
+    };
+  }
+  return {
+    agenda: true,
+    checkin: true,
+    pagamento: true,
+    financeiro: true,
+    gestao: true,
+    filaVerTodos: true,
+  };
 }
 
 /* ------------------------- Próximo cliente ------------------------- */
@@ -54,6 +132,8 @@ export interface SelectNextOptions {
   dayEndMs: number;
   /** Quando presente, restringe ao artista (visão do tatuador). */
   artistId?: string | null;
+  /** Escopo explícito (prevalece sobre `artistId`). */
+  scope?: ArtistScope;
 }
 
 /**
@@ -64,9 +144,10 @@ export function selectNextAppointment(
   candidates: NextCandidate[],
   opts: SelectNextOptions,
 ): NextCandidate | null {
-  const eligible = candidates
+  const scope: ArtistScope =
+    opts.scope ?? (opts.artistId ? { kind: "artist", artistId: opts.artistId } : { kind: "all" });
+  const eligible = filterByScope(candidates, scope, (c) => c.artistId)
     .filter((c) => !CANCELLED.has(c.status))
-    .filter((c) => !opts.artistId || c.artistId === opts.artistId)
     .filter((c) => {
       const start = Date.parse(c.startAt);
       const end = Date.parse(c.endAt);
@@ -151,9 +232,24 @@ export interface HomeNextClient {
   status: string;
 }
 
+export interface HomeFilaItem {
+  /** Código curto do atendimento (não é ID técnico do registo). */
+  codigo: string;
+  clientName: string;
+  status: "aguardando" | "em_atendimento";
+  /** Hora de chegada/agendada, já formatada no fuso do estúdio. */
+  timeLabel: string;
+  esperaMin: number;
+  artistName: string | null;
+}
+
+export const MAX_FILA_HOME = 4;
+
 export interface HomeFila {
   aguardando: number;
   emAtendimento: number;
+  /** Lista curta já filtrada por papel no servidor (máximo 4). */
+  itens: HomeFilaItem[];
 }
 
 export interface HomeGestao {
@@ -174,6 +270,7 @@ export interface HomeDashboard {
   updatedAtISO: string;
   next: HomeNextClient | null;
   fila: HomeFila;
+  actions: HomeActions;
   /** Presente somente para admin — nunca enviado a outros perfis. */
   gestao?: HomeGestao;
 }
