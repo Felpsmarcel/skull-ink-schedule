@@ -236,6 +236,10 @@ export const createAppointmentRecord = createServerFn({ method: "POST" })
     const row = {
       ghl_appointment_id: ghlEventId,
       ghl_contact_id: data.contactId,
+      project_id: data.projectId ?? null,
+      ghl_opportunity_id: data.ghlOpportunityId ?? null,
+      chave_idempotencia: data.idempotencyKey ?? null,
+
       artist_id: data.artistId,
       calendar_id: data.calendarId,
       contact_name: data.contactName ?? null,
