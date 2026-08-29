@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeader } from "@tanstack/react-start/server";
 import { z } from "zod";
+import { validatePaymentLink } from "@/lib/linking";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { ReportRow } from "@/lib/report-html";
 import {
@@ -251,6 +252,9 @@ const CreateInput = z
     registrado_por_id: z.enum([...STAFF_RECEBEDOR_IDS, "outro"] as [string, ...string[]]),
     registrado_por_nome: z.string().trim().max(80).nullable().optional(),
     descricao_projeto: z.string().trim().max(500).nullable().optional(),
+    project_id: z.string().uuid().nullable().optional(),
+    appointment_id: z.string().uuid().nullable().optional(),
+    sem_vinculo_justificativa: z.string().trim().max(500).nullable().optional(),
   })
   .refine((v) => !(v.valor_cartao > 0 && v.valor_sumup > 0), {
     message: "SumUp e Cartão são métodos exclusivos.",
@@ -264,6 +268,20 @@ const CreateInput = z
     message: "Informe a data da tatuagem agendada.",
     path: ["data_tatuagem"],
   })
+  .refine(
+    (v) =>
+      validatePaymentLink({
+        tipo: v.tipo_movimento,
+        projectId: v.project_id ?? null,
+        appointmentId: v.appointment_id ?? null,
+        semVinculoJustificativa: v.sem_vinculo_justificativa ?? null,
+      }).ok,
+    {
+      message:
+        "Sinal e sessão precisam de projeto/agendamento. Sem vínculo, justifique com pelo menos 10 caracteres.",
+      path: ["sem_vinculo_justificativa"],
+    },
+  )
   .refine((v) => v.registrado_por_id !== "outro" || (v.registrado_por_nome ?? "").length >= 2, {
     message: "Indique quem está a registar.",
     path: ["registrado_por_nome"],
@@ -300,6 +318,10 @@ async function insertMovimentacaoRows(
     artist_name: string;
     recebido_por_nome: string;
     descricao_projeto?: string | null;
+    project_id?: string | null;
+    appointment_id?: string | null;
+    ghl_appointment_id?: string | null;
+    sem_vinculo_justificativa?: string | null;
   },
 ): Promise<CreateResult> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -356,6 +378,10 @@ async function insertMovimentacaoRows(
       chave_idempotencia: params.chave_idempotencia,
       chave_grupo: groupKey,
       descricao_projeto: params.descricao_projeto?.trim() || null,
+      project_id: params.project_id ?? null,
+      appointment_id: params.appointment_id ?? null,
+      ghl_appointment_id: params.ghl_appointment_id ?? null,
+      sem_vinculo_justificativa: params.sem_vinculo_justificativa?.trim() || null,
       ghl_sync_status: "pending" as const,
     };
 
@@ -469,6 +495,10 @@ export const createMovimentacao = createServerFn({ method: "POST" })
       artist_name: artistRow.name,
       recebido_por_nome: recebedor.displayName,
       descricao_projeto: data.descricao_projeto ?? null,
+      project_id: link.project_id,
+      appointment_id: link.appointment_id,
+      ghl_appointment_id: link.ghl_appointment_id,
+      sem_vinculo_justificativa: data.sem_vinculo_justificativa ?? null,
     });
   });
 
@@ -493,6 +523,9 @@ const CreateManualInput = z
     observacoes: z.string().max(1000).nullable().optional(),
     chave_idempotencia: z.string().uuid("Chave de idempotência inválida."),
     descricao_projeto: z.string().trim().max(500).nullable().optional(),
+    project_id: z.string().uuid().nullable().optional(),
+    appointment_id: z.string().uuid().nullable().optional(),
+    sem_vinculo_justificativa: z.string().trim().max(500).nullable().optional(),
   })
   .refine((v) => !(v.valor_cartao > 0 && v.valor_sumup > 0), {
     message: "SumUp e Cartão são métodos exclusivos.",
@@ -505,7 +538,21 @@ const CreateManualInput = z
   .refine((v) => v.tipo_movimento !== "sinal" || Boolean(v.data_tatuagem), {
     message: "Informe a data da tatuagem agendada.",
     path: ["data_tatuagem"],
-  });
+  })
+  .refine(
+    (v) =>
+      validatePaymentLink({
+        tipo: v.tipo_movimento,
+        projectId: v.project_id ?? null,
+        appointmentId: v.appointment_id ?? null,
+        semVinculoJustificativa: v.sem_vinculo_justificativa ?? null,
+      }).ok,
+    {
+      message:
+        "Sinal e sessão precisam de projeto/agendamento. Sem vínculo, justifique com pelo menos 10 caracteres.",
+      path: ["sem_vinculo_justificativa"],
+    },
+  );
 
 export const createMovimentacaoManual = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -552,6 +599,10 @@ export const createMovimentacaoManual = createServerFn({ method: "POST" })
       artist_name: artistRow.name,
       recebido_por_nome: recebedor.displayName,
       descricao_projeto: data.descricao_projeto ?? null,
+      project_id: link.project_id,
+      appointment_id: link.appointment_id,
+      ghl_appointment_id: link.ghl_appointment_id,
+      sem_vinculo_justificativa: data.sem_vinculo_justificativa ?? null,
     });
   });
 
