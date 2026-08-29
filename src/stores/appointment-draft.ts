@@ -85,7 +85,14 @@ export const useAppointmentDraft = create<State>()(
   persist(
     (set) => ({
       ...initial,
-      setContact: (contact) => set({ contact }),
+      setContact: (contact) =>
+        set((st) => ({
+          contact,
+          // Trocar de cliente invalida a decisão de projeto/oportunidade.
+          project:
+            st.contact?.id === contact?.id ? st.project : { ...initialProject },
+        })),
+
       setCalendar: (calendarId) => set({ calendarId }),
       setStart: (startISO) => set({ startISO }),
       addService: (s) =>
