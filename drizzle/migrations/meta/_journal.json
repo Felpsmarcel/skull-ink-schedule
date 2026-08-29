@@ -29,6 +29,13 @@
       "when": 1788013269329,
       "tag": "0003_appointments_project_fk",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788013294847,
+      "tag": "0004_appointments_link_indexes",
+      "breakpoints": true
     }
   ]
 }
