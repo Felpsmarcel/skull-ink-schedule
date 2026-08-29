@@ -71,6 +71,13 @@
       "when": 1788014929349,
       "tag": "0009_booking_operations_payload",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1788021316373,
+      "tag": "0010_operational_events",
+      "breakpoints": true
     }
   ]
 }

@@ -1028,6 +1028,66 @@ export type Database = {
         }
         Relationships: []
       }
+      operational_events: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          created_at: string
+          fingerprint: string
+          first_seen_at: string
+          id: string
+          kind: string
+          last_seen_at: string
+          message: string
+          occurrences: number
+          resolved_at: string | null
+          resolved_by: string | null
+          safe_context: Json
+          severity: Database["public"]["Enums"]["operational_severity"]
+          source: string
+          status: Database["public"]["Enums"]["operational_status"]
+          updated_at: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          created_at?: string
+          fingerprint: string
+          first_seen_at?: string
+          id?: string
+          kind: string
+          last_seen_at?: string
+          message: string
+          occurrences?: number
+          resolved_at?: string | null
+          resolved_by?: string | null
+          safe_context?: Json
+          severity?: Database["public"]["Enums"]["operational_severity"]
+          source: string
+          status?: Database["public"]["Enums"]["operational_status"]
+          updated_at?: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          created_at?: string
+          fingerprint?: string
+          first_seen_at?: string
+          id?: string
+          kind?: string
+          last_seen_at?: string
+          message?: string
+          occurrences?: number
+          resolved_at?: string | null
+          resolved_by?: string | null
+          safe_context?: Json
+          severity?: Database["public"]["Enums"]["operational_severity"]
+          source?: string
+          status?: Database["public"]["Enums"]["operational_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       payments: {
         Row: {
           amount_eur: number
@@ -1713,7 +1773,19 @@ export type Database = {
           valor_transferencia: number
         }[]
       }
+      log_operational_event: {
+        Args: {
+          p_fingerprint: string
+          p_kind: string
+          p_message: string
+          p_safe_context?: Json
+          p_severity: string
+          p_source: string
+        }
+        Returns: string
+      }
       next_checkin_codigo: { Args: never; Returns: string }
+      operational_health: { Args: never; Returns: Json }
       schedule_ghl_sync: { Args: never; Returns: string }
       unschedule_ghl_sync: { Args: never; Returns: string }
     }
@@ -1733,6 +1805,8 @@ export type Database = {
       forma_pagamento_enum: "cartao" | "dinheiro" | "sumup" | "transferencia"
       movimentacao_sync_status: "pending" | "synced" | "failed"
       movimentacao_tipo: "sinal" | "sessao" | "saldo" | "produto" | "estorno"
+      operational_severity: "critica" | "alta" | "media" | "baixa"
+      operational_status: "open" | "acknowledged" | "resolved"
       payment_method: "cash" | "card" | "transfer" | "payconiq" | "other"
       payment_status: "pending" | "paid" | "refunded"
       payment_type: "deposit" | "final" | "refund"
@@ -1891,6 +1965,8 @@ export const Constants = {
       forma_pagamento_enum: ["cartao", "dinheiro", "sumup", "transferencia"],
       movimentacao_sync_status: ["pending", "synced", "failed"],
       movimentacao_tipo: ["sinal", "sessao", "saldo", "produto", "estorno"],
+      operational_severity: ["critica", "alta", "media", "baixa"],
+      operational_status: ["open", "acknowledged", "resolved"],
       payment_method: ["cash", "card", "transfer", "payconiq", "other"],
       payment_status: ["pending", "paid", "refunded"],
       payment_type: ["deposit", "final", "refund"],
