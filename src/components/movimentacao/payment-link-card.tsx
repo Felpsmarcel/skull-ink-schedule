@@ -5,8 +5,9 @@ import { Link } from "@tanstack/react-router";
 import { Banknote, Copy, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { getMySlug } from "@/lib/movimentacao.functions";
+import { MOVIMENTACAO_PROD_ORIGIN } from "@/config/movimentacao-slugs";
 
-const PROD_ORIGIN = "https://www.gftattoocalendar.com";
+const PROD_ORIGIN = MOVIMENTACAO_PROD_ORIGIN;
 
 export function PaymentLinkCard() {
   const fetchSlug = useServerFn(getMySlug);
