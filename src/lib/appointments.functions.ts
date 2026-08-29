@@ -85,6 +85,26 @@ export const createAppointmentRecord = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<CreateAppointmentResult> => {
     const { supabase, userId } = context;
 
+    // 0. Idempotência: reenvio do mesmo formulário devolve o agendamento já criado.
+    if (data.idempotencyKey) {
+      const { data: prev } = await supabase
+        .from("appointments")
+        .select("id, ghl_appointment_id, total_eur, commission_pct")
+        .eq("chave_idempotencia", data.idempotencyKey)
+        .maybeSingle();
+      if (prev) {
+        return {
+          appointmentId: prev.id,
+          ghlEventId: prev.ghl_appointment_id,
+          totalEur: Number(prev.total_eur ?? 0),
+          commissionPct: Number(prev.commission_pct ?? 40),
+          reused: true,
+        };
+      }
+    }
+
+
+
     // 1. Authorize: admin OR artist who owns this artistId.
     const { data: meRow, error: meErr } = await supabase
       .from("app_users" as never)
