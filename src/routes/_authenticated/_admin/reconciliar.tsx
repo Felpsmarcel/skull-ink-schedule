@@ -44,6 +44,11 @@ import {
 } from "@/lib/sync.functions";
 import { SyncGhlButton } from "@/components/sync-ghl-button";
 import { backfillGhlContactNames } from "@/lib/ghl-sync-admin.functions";
+import {
+  listBookingOperations,
+  reconcileBookingOperation,
+  type BookingOperationRow,
+} from "@/lib/booking.functions";
 
 export const Route = createFileRoute("/_authenticated/_admin/reconciliar")({
   head: () => ({
@@ -153,6 +158,10 @@ function ReconciliarPage() {
             </Button>
           </div>
         </div>
+
+        <BookingOperationsCard />
+
+
 
         <Alert>
           <AlertTriangle className="h-4 w-4" />
@@ -291,5 +300,81 @@ function FailureCard({
         </Collapsible>
       ) : null}
     </li>
+  );
+}
+/* ---------- Fase 3: operações de agendamento pendentes de reconciliação ---------- */
+
+function BookingOperationsCard() {
+  const qc = useQueryClient();
+  const listOps = useServerFn(listBookingOperations);
+  const reconcile = useServerFn(reconcileBookingOperation);
+
+  const opsQ = useQuery<BookingOperationRow[]>({
+    queryKey: ["booking-operations", "pending"],
+    queryFn: () => listOps({ data: { onlyPending: true } }),
+  });
+
+  const reconcileM = useMutation({
+    mutationFn: (operationId: string) => reconcile({ data: { operationId } }),
+    onSuccess: (r) => {
+      toast.success(
+        r.reused
+          ? "Agendamento já existia — operação marcada como concluída."
+          : "Agendamento reconciliado sem recriar nada no CRM.",
+      );
+      qc.invalidateQueries({ queryKey: ["booking-operations"] });
+      qc.invalidateQueries({ queryKey: ["agenda"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : String(e)),
+  });
+
+  const rows = opsQ.data ?? [];
+
+  return (
+    <div className="rounded-lg border border-border bg-card p-4">
+      <p className="flex items-center gap-2 text-sm font-semibold">
+        <Hash className="h-4 w-4" /> Operações de agendamento
+      </p>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Criações de agendamento que não terminaram. Reprocessa apenas a gravação
+        local — nunca cria contato, oportunidade ou evento novos no CRM.
+      </p>
+
+      {opsQ.isLoading ? (
+        <Skeleton className="mt-3 h-16 w-full rounded-md" />
+      ) : rows.length === 0 ? (
+        <p className="mt-3 text-xs text-muted-foreground">
+          Nenhuma operação pendente.
+        </p>
+      ) : (
+        <ul className="mt-3 space-y-2">
+          {rows.map((op) => (
+            <li key={op.id} className="rounded-md border border-border p-2 text-xs">
+              <div className="flex items-center justify-between gap-2">
+                <StatusBadge variant={op.status === "reconciliation_required" ? "danger" : "warning"}>
+                  {op.status} · {op.step}
+                </StatusBadge>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={!op.ghlAppointmentId || reconcileM.isPending}
+                  onClick={() => reconcileM.mutate(op.id)}
+                >
+                  Reconciliar
+                </Button>
+              </div>
+              <p className="mt-1 break-all text-muted-foreground">
+                chave {op.idempotencyKey} · tentativas {op.attempts}
+              </p>
+              <p className="break-all text-muted-foreground">
+                contato {op.ghlContactId ?? "—"} · oportunidade {op.ghlOpportunityId ?? "—"} ·
+                evento {op.ghlAppointmentId ?? "—"}
+              </p>
+              {op.error ? <p className="mt-1 text-destructive">{op.error}</p> : null}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
