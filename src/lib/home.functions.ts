@@ -310,6 +310,7 @@ async function buildGestao(supabase: any, nowMs: number): Promise<NonNullable<Ho
     vinculosNovos,
     marcoRastreabilidade: marco,
     degraded,
+    incidentesAbertos,
   };
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
