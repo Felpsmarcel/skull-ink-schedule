@@ -258,6 +258,18 @@ async function buildGestao(supabase: any, nowMs: number): Promise<NonNullable<Ho
         fail("agendamentos passados", error);
       }
     })(),
+    (async () => {
+      try {
+        const { count, error } = await supabase
+          .from("operational_events")
+          .select("id", { count: "exact", head: true })
+          .neq("status", "resolved");
+        if (error) throw new Error(error.message);
+        incidentesAbertos = Number(count ?? 0);
+      } catch (error) {
+        fail("incidentes técnicos", error);
+      }
+    })(),
   ]);
 
   const all: Pendencia[] = [
