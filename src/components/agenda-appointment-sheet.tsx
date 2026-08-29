@@ -24,6 +24,11 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
+import { Link2 as LinkIcon } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { useIsAdmin } from "@/hooks/use-current-user";
+import { getAppointmentLinkInfo } from "@/lib/projects.functions";
+import { LINK_STATUS_LABELS } from "@/lib/linking";
 import { StatusBadge, bucketToVariant, bucketLabel } from "@/components/ui/status-badge";
 import { LoadingState } from "@/components/ui/loading-state";
 import { ErrorState } from "@/components/ui/error-state";
@@ -218,6 +223,8 @@ export function AgendaAppointmentSheet({
             <FinanceSection ghlEventId={slot.ghlEventId} locale={locale} />
           ) : null}
 
+          {slot?.ghlEventId ? <LinkAuditSection ghlEventId={slot.ghlEventId} /> : null}
+
           {debug ? (
             <details className="rounded border border-border/60 bg-muted/40 p-2 text-[10px]">
               <summary className="cursor-pointer font-semibold">debug</summary>
@@ -232,6 +239,52 @@ export function AgendaAppointmentSheet({
         </div>
       </SheetContent>
     </Sheet>
+  );
+}
+
+
+/* ====================== Rastreabilidade (admin) ====================== */
+
+function LinkAuditSection({ ghlEventId }: { ghlEventId: string }) {
+  const isAdmin = useIsAdmin();
+  const fetchInfo = useServerFn(getAppointmentLinkInfo);
+  const q = useQuery({
+    queryKey: ["appointment-link", ghlEventId],
+    queryFn: () => fetchInfo({ data: { ghlEventId } }),
+    enabled: isAdmin,
+    staleTime: 60_000,
+  });
+
+  if (!isAdmin) return null;
+  const info = q.data;
+
+  return (
+    <div className="rounded border border-border/60 bg-muted/30 p-2">
+      <div className="mb-1.5 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <LinkIcon className="h-3 w-3" /> Rastreabilidade
+      </div>
+      {q.isLoading ? (
+        <LoadingState inline size="sm" />
+      ) : !info ? (
+        <p className="text-[11px] text-muted-foreground">Sem dados de vínculo.</p>
+      ) : (
+        <>
+          <Badge
+            variant={info.status === "vinculado" ? "default" : "secondary"}
+            className="text-[10px]"
+          >
+            {LINK_STATUS_LABELS[info.status]}
+          </Badge>
+          <div className="mt-1.5 space-y-0.5 font-mono text-[10px] text-muted-foreground">
+            <div>project: {info.projectId ?? "—"}</div>
+            <div>opportunity: {info.ghlOpportunityId ?? "—"}</div>
+            <div>appointment: {info.ghlAppointmentId ?? "—"}</div>
+            <div>contact: {info.ghlContactId ?? "—"}</div>
+            <div>pagamento: {info.hasPayment ? "sim" : "não"}</div>
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 
