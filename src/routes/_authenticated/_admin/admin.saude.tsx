@@ -56,11 +56,8 @@ function SaudePage() {
     retry: false,
   });
 
-  const mutate = (fn: (args: { data: { id: string } }) => Promise<unknown>, label: string) =>
-    useMutationFactory(fn, label, qc);
-
-  const ackMutation = mutate(ack, "Incidente reconhecido");
-  const resolveMutation = mutate(resolve, "Incidente resolvido");
+  const ackMutation = useIncidentMutation(ack, "Incidente reconhecido", qc);
+  const resolveMutation = useIncidentMutation(resolve, "Incidente resolvido", qc);
 
   return (
     <div className="min-h-svh bg-background pb-[calc(env(safe-area-inset-bottom)+7rem)] text-foreground sm:pb-24">
