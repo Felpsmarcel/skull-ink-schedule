@@ -736,6 +736,7 @@ export type Database = {
       }
       movimentacoes: {
         Row: {
+          appointment_id: string | null
           artist_id: string
           chave_grupo: string | null
           chave_idempotencia: string
@@ -747,6 +748,7 @@ export type Database = {
           forma_pagamento:
             | Database["public"]["Enums"]["forma_pagamento_enum"]
             | null
+          ghl_appointment_id: string | null
           ghl_contact_id: string | null
           ghl_custom_object_id: string | null
           ghl_last_synced_at: string | null
@@ -759,6 +761,7 @@ export type Database = {
           nome_cliente: string
           observacoes: string | null
           origem_lancamento: string
+          project_id: string | null
           recebido_por_app_user_id: string
           referencia: string | null
           registrado_em: string | null
@@ -767,6 +770,7 @@ export type Database = {
           registrado_por_nome: string | null
           registrado_por_staff_id: string | null
           registrado_user_agent: string | null
+          sem_vinculo_justificativa: string | null
           tipo_movimento: Database["public"]["Enums"]["movimentacao_tipo"]
           total: number | null
           updated_at: string
@@ -776,6 +780,7 @@ export type Database = {
           valor_transferencia: number
         }
         Insert: {
+          appointment_id?: string | null
           artist_id: string
           chave_grupo?: string | null
           chave_idempotencia: string
@@ -787,6 +792,7 @@ export type Database = {
           forma_pagamento?:
             | Database["public"]["Enums"]["forma_pagamento_enum"]
             | null
+          ghl_appointment_id?: string | null
           ghl_contact_id?: string | null
           ghl_custom_object_id?: string | null
           ghl_last_synced_at?: string | null
@@ -799,6 +805,7 @@ export type Database = {
           nome_cliente: string
           observacoes?: string | null
           origem_lancamento?: string
+          project_id?: string | null
           recebido_por_app_user_id: string
           referencia?: string | null
           registrado_em?: string | null
@@ -807,6 +814,7 @@ export type Database = {
           registrado_por_nome?: string | null
           registrado_por_staff_id?: string | null
           registrado_user_agent?: string | null
+          sem_vinculo_justificativa?: string | null
           tipo_movimento: Database["public"]["Enums"]["movimentacao_tipo"]
           total?: number | null
           updated_at?: string
@@ -816,6 +824,7 @@ export type Database = {
           valor_transferencia?: number
         }
         Update: {
+          appointment_id?: string | null
           artist_id?: string
           chave_grupo?: string | null
           chave_idempotencia?: string
@@ -827,6 +836,7 @@ export type Database = {
           forma_pagamento?:
             | Database["public"]["Enums"]["forma_pagamento_enum"]
             | null
+          ghl_appointment_id?: string | null
           ghl_contact_id?: string | null
           ghl_custom_object_id?: string | null
           ghl_last_synced_at?: string | null
@@ -839,6 +849,7 @@ export type Database = {
           nome_cliente?: string
           observacoes?: string | null
           origem_lancamento?: string
+          project_id?: string | null
           recebido_por_app_user_id?: string
           referencia?: string | null
           registrado_em?: string | null
@@ -847,6 +858,7 @@ export type Database = {
           registrado_por_nome?: string | null
           registrado_por_staff_id?: string | null
           registrado_user_agent?: string | null
+          sem_vinculo_justificativa?: string | null
           tipo_movimento?: Database["public"]["Enums"]["movimentacao_tipo"]
           total?: number | null
           updated_at?: string
