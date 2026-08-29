@@ -446,6 +446,40 @@ async function insertMovimentacaoRows(
   };
 }
 
+/**
+ * Resolve os vínculos de rastreabilidade do lançamento. O agendamento é a
+ * fonte autoritativa: quando indicado, o project_id/ghl ids vêm dele — nunca
+ * de semelhança de nome.
+ */
+async function resolveMovimentacaoLink(input: {
+  project_id?: string | null;
+  appointment_id?: string | null;
+}): Promise<{
+  project_id: string | null;
+  appointment_id: string | null;
+  ghl_appointment_id: string | null;
+}> {
+  const out = {
+    project_id: input.project_id ?? null,
+    appointment_id: input.appointment_id ?? null,
+    ghl_appointment_id: null as string | null,
+  };
+  if (!out.appointment_id) return out;
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: appt } = await supabaseAdmin
+    .from("appointments" as never)
+    .select("id, project_id, ghl_appointment_id")
+    .eq("id", out.appointment_id)
+    .maybeSingle();
+  const row = appt as
+    | { id: string; project_id: string | null; ghl_appointment_id: string | null }
+    | null;
+  if (!row) throw new Error("Agendamento indicado não existe.");
+  out.project_id = out.project_id ?? row.project_id;
+  out.ghl_appointment_id = row.ghl_appointment_id;
+  return out;
+}
+
 export const createMovimentacao = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => CreateInput.parse(data))
   .handler(async ({ data }): Promise<CreateResult> => {
@@ -453,6 +487,7 @@ export const createMovimentacao = createServerFn({ method: "POST" })
     const slug = data.slug;
 
     const recebedor = getStaffRecebedor(data.recebido_por_id);
+    const link = await resolveMovimentacaoLink(data);
     const registradoStaff =
       data.registrado_por_id === "outro"
         ? null
@@ -559,6 +594,7 @@ export const createMovimentacaoManual = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => CreateManualInput.parse(data))
   .handler(async ({ data, context }): Promise<CreateResult> => {
     const recebedor = getStaffRecebedor(data.recebido_por_id);
+    const link = await resolveMovimentacaoLink(data);
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
