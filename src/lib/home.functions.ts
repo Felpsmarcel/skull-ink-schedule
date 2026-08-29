@@ -4,11 +4,16 @@ import {
   TRACEABILITY_ACTIVATED_AT,
   brusselsTime,
   brusselsToday,
+  buildFilaItems,
+  homeActions,
   homeRole,
+  resolveArtistScope,
   prioritizePendencias,
   selectNextAppointment,
   stripUnauthorized,
+  type FilaSource,
   type HomeDashboard,
+  type HomeFilaItem,
   type NextCandidate,
   type Pendencia,
 } from "@/lib/home-dashboard";
@@ -30,52 +35,73 @@ export const getHomeDashboard = createServerFn({ method: "GET" })
       .maybeSingle();
     const prof = (profile ?? null) as { role: string | null; artist_id: string | null } | null;
     const role = homeRole(prof?.role);
-    const artistId = role === "artist" ? (prof?.artist_id ?? null) : null;
+    const scope = resolveArtistScope(role, prof?.artist_id ?? null);
+    const artistId = scope.kind === "artist" ? scope.artistId : null;
 
     const now = new Date();
     const nowMs = now.getTime();
     const dayEndMs = brusselsDayEndMs(now);
 
     /* ------------------------- operação (sempre) ------------------------- */
+    // Fail-closed: artista sem artist_id vinculado não consulta nada global.
     let candidates: NextCandidate[] = [];
-    try {
-      let q = supabase
-        .from("appointments")
-        .select("id, ghl_appointment_id, start_at, end_at, status, contact_name, artist_id, artists(name)")
-        .gte("end_at", new Date(nowMs).toISOString())
-        .lte("start_at", new Date(dayEndMs).toISOString())
-        .order("start_at", { ascending: true })
-        .limit(20);
-      if (artistId) q = q.eq("artist_id", artistId);
-      const { data } = await q;
-      candidates = ((data ?? []) as Array<Record<string, unknown>>).map((r) => ({
-        id: String(r.id),
-        ghlAppointmentId: (r.ghl_appointment_id as string | null) ?? null,
-        startAt: String(r.start_at),
-        endAt: String(r.end_at),
-        status: String(r.status),
-        clientName: (r.contact_name as string | null) ?? null,
-        artistId: String(r.artist_id),
-        artistName: ((r.artists as { name?: string } | null)?.name as string | undefined) ?? null,
-      }));
-    } catch (error) {
-      console.warn("home: appointments unavailable", sanitize(error));
+    if (scope.kind !== "none") {
+      try {
+        let q = supabase
+          .from("appointments")
+          .select("id, ghl_appointment_id, start_at, end_at, status, contact_name, artist_id, artists(name)")
+          .gte("end_at", new Date(nowMs).toISOString())
+          .lte("start_at", new Date(dayEndMs).toISOString())
+          .order("start_at", { ascending: true })
+          .limit(20);
+        if (artistId) q = q.eq("artist_id", artistId);
+        const { data } = await q;
+        candidates = ((data ?? []) as Array<Record<string, unknown>>).map((r) => ({
+          id: String(r.id),
+          ghlAppointmentId: (r.ghl_appointment_id as string | null) ?? null,
+          startAt: String(r.start_at),
+          endAt: String(r.end_at),
+          status: String(r.status),
+          clientName: (r.contact_name as string | null) ?? null,
+          artistId: r.artist_id ? String(r.artist_id) : "",
+          artistName: ((r.artists as { name?: string } | null)?.name as string | undefined) ?? null,
+        }));
+      } catch (error) {
+        console.warn("home: appointments unavailable", sanitize(error));
+      }
     }
 
-    const next = selectNextAppointment(candidates, { nowMs, dayEndMs, artistId });
+    const next = selectNextAppointment(candidates, { nowMs, dayEndMs, scope });
 
     let aguardando = 0;
     let emAtendimento = 0;
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data } = await (supabase as any).rpc("list_checkins_hoje");
-      for (const row of (data ?? []) as Array<{ status?: string; artist_id?: string | null }>) {
-        if (artistId && row.artist_id && row.artist_id !== artistId) continue;
-        if (row.status === "aguardando") aguardando += 1;
-        if (row.status === "em_atendimento") emAtendimento += 1;
+    let filaItens: HomeFilaItem[] = [];
+    if (scope.kind !== "none") {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data } = await (supabase as any).rpc("list_checkins_hoje");
+        const rows: FilaSource[] = (
+          (data ?? []) as Array<Record<string, unknown>>
+        ).map((r) => ({
+          codigo: String(r.codigo_atendimento ?? ""),
+          clienteNome: (r.cliente_nome as string | null) ?? null,
+          status: String(r.status ?? ""),
+          arrivedAt: (r.arrived_at as string | null) ?? null,
+          scheduledAt: (r.scheduled_at as string | null) ?? null,
+          artistId: (r.artist_id as string | null) ?? null,
+          artistName: (r.tatuador as string | null) ?? null,
+        }));
+        const visible = scope.kind === "artist"
+          ? rows.filter((r) => r.artistId === scope.artistId)
+          : rows;
+        for (const row of visible) {
+          if (row.status === "aguardando") aguardando += 1;
+          if (row.status === "em_atendimento") emAtendimento += 1;
+        }
+        filaItens = buildFilaItems(rows, scope, nowMs);
+      } catch (error) {
+        console.warn("home: fila unavailable", sanitize(error));
       }
-    } catch (error) {
-      console.warn("home: fila unavailable", sanitize(error));
     }
 
     const dashboard: HomeDashboard = {
@@ -91,7 +117,8 @@ export const getHomeDashboard = createServerFn({ method: "GET" })
             status: next.status,
           }
         : null,
-      fila: { aguardando, emAtendimento },
+      fila: { aguardando, emAtendimento, itens: filaItens },
+      actions: homeActions(role),
     };
 
     /* --------------------------- gestão (admin) --------------------------- */
