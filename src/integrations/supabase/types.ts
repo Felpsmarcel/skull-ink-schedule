@@ -124,6 +124,7 @@ export type Database = {
         Row: {
           artist_id: string
           calendar_id: string | null
+          chave_idempotencia: string | null
           commission_pct: number
           contact_email: string | null
           contact_id: string | null
@@ -136,6 +137,7 @@ export type Database = {
           end_at: string
           ghl_appointment_id: string | null
           ghl_contact_id: string | null
+          ghl_opportunity_id: string | null
           id: string
           internal_note: string | null
           manual_payment_status: string | null
@@ -143,6 +145,7 @@ export type Database = {
           manual_payment_status_by: string | null
           notes: string | null
           original_eur: number
+          project_id: string | null
           seller_id: string | null
           services: Json
           start_at: string
@@ -155,6 +158,7 @@ export type Database = {
         Insert: {
           artist_id: string
           calendar_id?: string | null
+          chave_idempotencia?: string | null
           commission_pct?: number
           contact_email?: string | null
           contact_id?: string | null
@@ -167,6 +171,7 @@ export type Database = {
           end_at: string
           ghl_appointment_id?: string | null
           ghl_contact_id?: string | null
+          ghl_opportunity_id?: string | null
           id?: string
           internal_note?: string | null
           manual_payment_status?: string | null
@@ -174,6 +179,7 @@ export type Database = {
           manual_payment_status_by?: string | null
           notes?: string | null
           original_eur?: number
+          project_id?: string | null
           seller_id?: string | null
           services?: Json
           start_at: string
@@ -186,6 +192,7 @@ export type Database = {
         Update: {
           artist_id?: string
           calendar_id?: string | null
+          chave_idempotencia?: string | null
           commission_pct?: number
           contact_email?: string | null
           contact_id?: string | null
@@ -198,6 +205,7 @@ export type Database = {
           end_at?: string
           ghl_appointment_id?: string | null
           ghl_contact_id?: string | null
+          ghl_opportunity_id?: string | null
           id?: string
           internal_note?: string | null
           manual_payment_status?: string | null
@@ -205,6 +213,7 @@ export type Database = {
           manual_payment_status_by?: string | null
           notes?: string | null
           original_eur?: number
+          project_id?: string | null
           seller_id?: string | null
           services?: Json
           start_at?: string
