@@ -7,7 +7,8 @@ export type DraftValidationReason =
   | "noCalendar"
   | "noStaff"
   | "noStart"
-  | "noServices";
+  | "noServices"
+  | "noProject";
 
 export interface ValidatedDraft {
   contact: GhlContact;
@@ -31,6 +32,9 @@ export function validateAppointmentDraft(
   if (!staff) return { ok: false, reason: "noStaff" };
   if (!draft.startISO) return { ok: false, reason: "noStart" };
   if (!draft.services || draft.services.length === 0) return { ok: false, reason: "noServices" };
+  if (!draft.project || draft.project.decision === null) {
+    return { ok: false, reason: "noProject" };
+  }
   return {
     ok: true,
     data: {
@@ -54,12 +58,20 @@ export function reasonToI18nKey(r: DraftValidationReason): string {
       return "appt.errors.noStart";
     case "noServices":
       return "appt.noServices";
+    case "noProject":
+      return "appt.errors.noProject";
   }
 }
 
-export type WizardStep = "cliente" | "agenda" | "servicos" | "revisao";
+export type WizardStep = "cliente" | "projeto" | "agenda" | "servicos" | "revisao";
 
-export const WIZARD_STEPS: WizardStep[] = ["cliente", "agenda", "servicos", "revisao"];
+export const WIZARD_STEPS: WizardStep[] = [
+  "cliente",
+  "projeto",
+  "agenda",
+  "servicos",
+  "revisao",
+];
 
 export function reasonToStep(r: DraftValidationReason): WizardStep {
   switch (r) {
@@ -71,6 +83,8 @@ export function reasonToStep(r: DraftValidationReason): WizardStep {
       return "agenda";
     case "noServices":
       return "servicos";
+    case "noProject":
+      return "projeto";
   }
 }
 

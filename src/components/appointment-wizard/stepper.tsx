@@ -5,6 +5,7 @@ import { WIZARD_STEPS, type WizardStep } from "@/lib/appointment-draft-validate"
 
 const STEP_PATH = {
   cliente: "/appointments/new/cliente",
+  projeto: "/appointments/new/projeto",
   agenda: "/appointments/new/agenda",
   servicos: "/appointments/new/servicos",
   revisao: "/appointments/new/revisao",
@@ -17,6 +18,7 @@ export interface StepperProps {
 
 const LABELS: Record<WizardStep, string> = {
   cliente: "Cliente",
+  projeto: "Projeto",
   agenda: "Agenda",
   servicos: "Serviços",
   revisao: "Revisão",
