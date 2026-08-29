@@ -284,3 +284,49 @@ export function stripUnauthorized(dashboard: HomeDashboard): HomeDashboard {
   const { gestao: _gestao, ...rest } = dashboard;
   return rest;
 }
+
+/* ------------------------------ Fila do dia ------------------------------ */
+
+export interface FilaSource {
+  codigo: string;
+  clienteNome: string | null;
+  status: string;
+  arrivedAt: string | null;
+  scheduledAt: string | null;
+  artistId: string | null;
+  artistName: string | null;
+}
+
+const FILA_ATIVA = new Set(["aguardando", "em_atendimento"]);
+
+/**
+ * Fila ativa compacta: filtrada por escopo (fail-closed para artista sem
+ * vínculo), "em atendimento" primeiro, depois por chegada, limitada a 4.
+ * Nunca inclui telefone, e-mail ou IDs técnicos.
+ */
+export function buildFilaItems(
+  rows: FilaSource[],
+  scope: ArtistScope,
+  nowMs: number,
+  limit: number = MAX_FILA_HOME,
+): HomeFilaItem[] {
+  return filterByScope(rows, scope, (r) => r.artistId)
+    .filter((r) => FILA_ATIVA.has(r.status))
+    .sort((a, b) => {
+      if (a.status !== b.status) return a.status === "em_atendimento" ? -1 : 1;
+      return Date.parse(a.arrivedAt ?? "") - Date.parse(b.arrivedAt ?? "");
+    })
+    .slice(0, limit)
+    .map((r) => {
+      const ref = r.arrivedAt ?? r.scheduledAt;
+      const refMs = ref ? Date.parse(ref) : Number.NaN;
+      return {
+        codigo: r.codigo,
+        clientName: r.clienteNome?.trim() || "Cliente sem nome",
+        status: r.status as HomeFilaItem["status"],
+        timeLabel: ref && !Number.isNaN(refMs) ? brusselsTime(ref) : "—",
+        esperaMin: Number.isNaN(refMs) ? 0 : Math.max(0, Math.round((nowMs - refMs) / 60000)),
+        artistName: r.artistName,
+      };
+    });
+}
