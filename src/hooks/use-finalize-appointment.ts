@@ -93,6 +93,7 @@ export function useFinalizeAppointment() {
 
       await queryClient.invalidateQueries({ queryKey: ["agenda"] });
       await queryClient.invalidateQueries({ queryKey: ["finance-summary"] });
+      await queryClient.invalidateQueries({ queryKey: ["home-dashboard"] });
       const final = totalFinalEur(draft);
       haptic("success");
       toast.success(`${t("appt.created")} · ${formatPrice(final)}`);

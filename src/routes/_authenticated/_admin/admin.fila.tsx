@@ -28,7 +28,10 @@ function FilaAdminPage() {
         <h1 className="flex-1 text-base font-bold uppercase tracking-wider">Fila do dia</h1>
         <button
           type="button"
-          onClick={() => void qc.invalidateQueries({ queryKey: ["fila-hoje"] })}
+          onClick={() => {
+            void qc.invalidateQueries({ queryKey: ["fila-hoje"] });
+            void qc.invalidateQueries({ queryKey: ["home-dashboard"] });
+          }}
           className="rounded-md p-2 hover:bg-muted"
           aria-label="Atualizar"
         >

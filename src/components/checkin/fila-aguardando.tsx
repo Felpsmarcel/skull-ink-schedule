@@ -47,6 +47,7 @@ export function FilaAguardando({ showConcluidos = false }: { showConcluidos?: bo
     mutationFn: (vars: { id: string; status: CheckinStatus }) => updateStatus({ data: vars }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["fila-hoje"] });
+      void qc.invalidateQueries({ queryKey: ["home-dashboard"] });
       toast.success("Fila atualizada");
     },
     onError: () => toast.error("Não foi possível atualizar a fila"),
