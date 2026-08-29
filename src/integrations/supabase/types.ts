@@ -1211,6 +1211,95 @@ export type Database = {
         }
         Relationships: []
       }
+      tattoo_projects: {
+        Row: {
+          artist_id: string | null
+          body_part: string | null
+          chave_idempotencia: string | null
+          contact_id: string | null
+          created_at: string
+          created_by: string | null
+          deposit_eur: number
+          description: string | null
+          ghl_contact_id: string | null
+          ghl_opportunity_id: string | null
+          ghl_pipeline_id: string | null
+          id: string
+          project_type: Database["public"]["Enums"]["tattoo_project_type"]
+          quoted_total_eur: number
+          status: Database["public"]["Enums"]["tattoo_project_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          artist_id?: string | null
+          body_part?: string | null
+          chave_idempotencia?: string | null
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deposit_eur?: number
+          description?: string | null
+          ghl_contact_id?: string | null
+          ghl_opportunity_id?: string | null
+          ghl_pipeline_id?: string | null
+          id?: string
+          project_type?: Database["public"]["Enums"]["tattoo_project_type"]
+          quoted_total_eur?: number
+          status?: Database["public"]["Enums"]["tattoo_project_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          artist_id?: string | null
+          body_part?: string | null
+          chave_idempotencia?: string | null
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deposit_eur?: number
+          description?: string | null
+          ghl_contact_id?: string | null
+          ghl_opportunity_id?: string | null
+          ghl_pipeline_id?: string | null
+          id?: string
+          project_type?: Database["public"]["Enums"]["tattoo_project_type"]
+          quoted_total_eur?: number
+          status?: Database["public"]["Enums"]["tattoo_project_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tattoo_projects_artist_id_fkey"
+            columns: ["artist_id"]
+            isOneToOne: false
+            referencedRelation: "artists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tattoo_projects_artist_id_fkey"
+            columns: ["artist_id"]
+            isOneToOne: false
+            referencedRelation: "artists_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tattoo_projects_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tattoo_projects_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       artists_public: {
@@ -1546,6 +1635,14 @@ export type Database = {
       payment_type: "deposit" | "final" | "refund"
       quote_status: "draft" | "sent" | "accepted" | "rejected" | "expired"
       service_modality: "presencial" | "consulta_online" | "hibrido"
+      tattoo_project_status:
+        | "lead"
+        | "quoted"
+        | "scheduled"
+        | "in_progress"
+        | "completed"
+        | "cancelled"
+      tattoo_project_type: "new_tattoo" | "cover_up" | "retouch"
       user_role: "admin" | "artist" | "seller"
     }
     CompositeTypes: {
@@ -1696,6 +1793,15 @@ export const Constants = {
       payment_type: ["deposit", "final", "refund"],
       quote_status: ["draft", "sent", "accepted", "rejected", "expired"],
       service_modality: ["presencial", "consulta_online", "hibrido"],
+      tattoo_project_status: [
+        "lead",
+        "quoted",
+        "scheduled",
+        "in_progress",
+        "completed",
+        "cancelled",
+      ],
+      tattoo_project_type: ["new_tattoo", "cover_up", "retouch"],
       user_role: ["admin", "artist", "seller"],
     },
   },

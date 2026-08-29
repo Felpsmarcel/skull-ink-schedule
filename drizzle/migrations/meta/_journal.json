@@ -8,6 +8,13 @@
       "when": 1788011441260,
       "tag": "0000_scope_checkins_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788013186280,
+      "tag": "0001_tattoo_projects_table",
+      "breakpoints": true
     }
   ]
 }
