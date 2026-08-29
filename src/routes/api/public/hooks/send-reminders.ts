@@ -26,10 +26,7 @@ export const Route = createFileRoute('/api/public/hooks/send-reminders')({
         }
 
         const { supabaseAdmin } = await import('@/integrations/supabase/client.server')
-        const template = TEMPLATES['appointment-reminder']
-        if (!template) {
-          return Response.json({ error: 'template_missing' }, { status: 500 })
-        }
+
 
         const now = new Date()
         const from = new Date(now.getTime() + 23 * 3600_000).toISOString()
