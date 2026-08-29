@@ -1382,6 +1382,7 @@ export type Database = {
       }
     }
     Functions: {
+      count_vinculos_incompletos: { Args: never; Returns: Json }
       current_artist_id: { Args: never; Returns: string }
       current_seller_id: { Args: never; Returns: string }
       current_user_role: {

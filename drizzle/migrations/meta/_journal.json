@@ -50,6 +50,13 @@
       "when": 1788013339879,
       "tag": "0006_movimentacoes_link_fk_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1788013368636,
+      "tag": "0007_count_vinculos_incompletos",
+      "breakpoints": true
     }
   ]
 }
