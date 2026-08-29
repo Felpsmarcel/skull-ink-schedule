@@ -27,7 +27,13 @@ const CreateInputSchema = z.object({
   services: z.array(ServiceLineSchema).min(1),
   sellerId: z.string().uuid().nullish(),
   depositEur: z.number().min(0).max(1_000_000).default(0),
+  /** Fase 2 — rastreabilidade: projeto/oportunidade do CRM. */
+  projectId: z.string().uuid().nullish(),
+  ghlOpportunityId: z.string().min(3).nullish(),
+  /** Chave de idempotência para impedir duplicação em reenvios. */
+  idempotencyKey: z.string().min(8).max(80).nullish(),
 });
+
 
 export type CreateAppointmentInput = z.infer<typeof CreateInputSchema>;
 
