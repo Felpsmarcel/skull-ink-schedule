@@ -167,8 +167,7 @@ function SaudePage() {
   );
 }
 
-// eslint-disable-next-line react-hooks/rules-of-hooks
-function useMutationFactory(
+function useIncidentMutation(
   fn: (args: { data: { id: string } }) => Promise<unknown>,
   label: string,
   qc: ReturnType<typeof useQueryClient>,
