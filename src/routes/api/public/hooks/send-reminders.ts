@@ -1,11 +1,5 @@
-import * as React from 'react'
-import { render } from 'react-email'
 import { createFileRoute } from '@tanstack/react-router'
-import { TEMPLATES } from '@/lib/email-templates/registry'
-
-const SITE_NAME = 'GF Tattoo Studio'
-const SENDER_DOMAIN = 'notify.gftattooacademy.info'
-const FROM_DOMAIN = 'notify.gftattooacademy.info'
+import { sendTemplateEmail } from '@/lib/email-templates/send-email'
 
 function whenLabel(iso: string): string {
   return new Intl.DateTimeFormat('pt-PT', {
@@ -18,11 +12,6 @@ function whenLabel(iso: string): string {
   }).format(new Date(iso))
 }
 
-function generateToken(): string {
-  const bytes = new Uint8Array(32)
-  crypto.getRandomValues(bytes)
-  return Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('')
-}
 
 export const Route = createFileRoute('/api/public/hooks/send-reminders')({
   server: {
