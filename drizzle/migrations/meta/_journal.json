@@ -57,6 +57,20 @@
       "when": 1788013368636,
       "tag": "0007_count_vinculos_incompletos",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1788014891724,
+      "tag": "0008_booking_operations_and_unique_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1788014929349,
+      "tag": "0009_booking_operations_payload",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,1 @@
+ALTER TABLE public.booking_operations ADD COLUMN payload jsonb;

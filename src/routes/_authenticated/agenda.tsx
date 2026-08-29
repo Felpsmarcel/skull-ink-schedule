@@ -72,11 +72,14 @@ export const Route = createFileRoute("/_authenticated/agenda")({
       rawView === "week" || rawView === "month" || rawView === "day"
         ? (rawView as View)
         : undefined;
-    const out: { debug?: boolean; view?: View } = {};
+    const novo = typeof s.novo === "string" && s.novo.length > 2 ? s.novo : undefined;
+    const out: { debug?: boolean; view?: View; novo?: string } = {};
     if (on) out.debug = true;
     if (view && view !== "day") out.view = view;
+    if (novo) out.novo = novo;
     return out;
   },
+
   component: AgendaPage,
 });
 
@@ -97,7 +100,7 @@ function defaultTimeLabels(): string[] {
 function AgendaPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate({ from: "/agenda" });
-  const search = Route.useSearch() as { debug?: boolean; view?: View };
+  const search = Route.useSearch() as { debug?: boolean; view?: View; novo?: string };
   const debug = search.debug === true;
   const view: View = search.view ?? "day";
   const setView = (v: View) =>
@@ -331,6 +334,8 @@ function DayView({
   debug: boolean;
 }) {
   const { t } = useTranslation();
+  const daySearch = Route.useSearch() as { novo?: string };
+
   const { agendas } = useStaffDayAgenda(date, {
     artistId: restrictArtistId,
     enabled: meReady,
@@ -559,6 +564,8 @@ function DayView({
                         agenda={a}
                         statusMap={statusMap}
                         nextEventId={nextEventInfo.id}
+                        highlightEventId={search.novo ?? null}
+
                         onOpen={(slot) =>
                           setOpenSlot({
                             slot,
@@ -611,13 +618,16 @@ function StaffColumn({
   agenda,
   statusMap,
   nextEventId,
+  highlightEventId = null,
   onOpen,
 }: {
   agenda: ReturnType<typeof useStaffDayAgenda>["agendas"][number];
   statusMap: Map<string, PaymentBucket>;
   nextEventId: string | null;
+  highlightEventId?: string | null;
   onOpen: (slot: GridSlot) => void;
 }) {
+
   const { t } = useTranslation();
   const { staff, slots, isLoading, error } = agenda;
 
@@ -678,6 +688,7 @@ function StaffColumn({
               calendarId={staff.calendarId}
               statusMap={statusMap}
               isNext={Boolean(nextEventId && slot.ghlEventId === nextEventId)}
+              isHighlighted={Boolean(highlightEventId && slot.ghlEventId === highlightEventId)}
               onOpen={onOpen}
             />
           ))
@@ -692,14 +703,17 @@ function SlotCell({
   calendarId,
   statusMap,
   isNext,
+  isHighlighted,
   onOpen,
 }: {
   slot: import("@/lib/agenda-grid").GridSlot;
   calendarId: string;
   statusMap: Map<string, PaymentBucket>;
   isNext?: boolean;
+  isHighlighted?: boolean;
   onOpen: (slot: GridSlot) => void;
 }) {
+
   const { t } = useTranslation();
   const navigate = useNavigate();
   const draft = useAppointmentDraft();
@@ -751,7 +765,11 @@ function SlotCell({
         type="button"
         onClick={() => onOpen(slot)}
         title={`${slot.contactName ?? t("agenda.client")} — ${slot.serviceName ?? t("agenda.booked")}`}
-        className="absolute left-[3px] right-[3px] top-[2px] z-[1] flex flex-col justify-start gap-0.5 overflow-hidden rounded-md border border-border border-l-4 border-l-foreground bg-background px-1.5 py-1 text-left text-foreground shadow-sm transition-all hover:-translate-y-[1px] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-foreground/40 sm:px-2 sm:py-1.5"
+        className={cn(
+          "absolute left-[3px] right-[3px] top-[2px] z-[1] flex flex-col justify-start gap-0.5 overflow-hidden rounded-md border border-border border-l-4 border-l-foreground bg-background px-1.5 py-1 text-left text-foreground shadow-sm transition-all hover:-translate-y-[1px] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-foreground/40 sm:px-2 sm:py-1.5",
+          isHighlighted && "ring-2 ring-primary ring-offset-2 ring-offset-background",
+        )}
+
         style={{ height: cardHeight }}
       >
         {isNext ? (

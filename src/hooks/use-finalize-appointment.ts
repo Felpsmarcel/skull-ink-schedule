@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -11,8 +12,7 @@ import {
   totalDurationMin,
   totalFinalEur,
 } from "@/stores/appointment-draft";
-import { finalizeAppointment } from "@/lib/appointments";
-import { ensureTattooProject } from "@/lib/projects.functions";
+import { finalizeBooking } from "@/lib/booking.functions";
 import {
   validateAppointmentDraft,
   reasonToI18nKey,
@@ -28,8 +28,10 @@ export function useFinalizeAppointment() {
   const draft = useAppointmentDraft();
   const { data: artists = [] } = useArtists();
   const [saving, setSaving] = useState(false);
+  const book = useServerFn(finalizeBooking);
 
   async function run() {
+    if (saving) return;
     const v = validateAppointmentDraft(draft, artists);
     if (!v.ok) {
       toast.error(t(reasonToI18nKey(v.reason)));
@@ -42,55 +44,60 @@ export function useFinalizeAppointment() {
       const durationMin = Math.max(15, totalDurationMin(draft) || 60);
       const endISO = new Date(startMs + durationMin * 60_000).toISOString();
       const title = services.map((l) => l.service.name).join(" + ");
-      const totalForProject = totalFinalEur(draft);
 
-      // Fase 2: garante projeto/oportunidade antes de criar o agendamento.
-      // Idempotente — reenvios devolvem o mesmo projeto.
-      const proj = await ensureTattooProject({
+      // Uma única chamada server-side orquestra contato → projeto → evento →
+      // persistência, com chave de idempotência estável.
+      const res = await book({
         data: {
-          ghlContactId: contact.id,
-          contactName:
-            contact.contactName ??
-            ([contact.firstName, contact.lastName].filter(Boolean).join(" ") || null),
           artistId: staff.id,
-          title: draft.project.description.trim() || title,
-          description: draft.project.description.trim() || null,
-          projectType: draft.project.projectType,
-          bodyPart: draft.project.bodyPart.trim() || null,
-          quotedTotalEur: totalForProject,
+          calendarId: staff.calendarId,
+          locationId: LOCATION_ID,
+          startISO,
+          endISO,
+          title,
+          notes: notes || null,
+          status: "confirmed",
+          services: services.map((l) => ({
+            id: l.service.id,
+            discountPct: l.discountPct,
+            overridePriceEur: l.overridePriceEur ?? null,
+          })),
+          sellerId: draft.sellerId ?? null,
           depositEur: draft.depositEur ?? 0,
-          reuseProjectId: draft.project.reuseProjectId,
-          reuseOpportunityId: draft.project.reuseOpportunityId,
-          confirmNewOpportunity: draft.project.decision === "new",
-          idempotencyKey: `proj-${draft.idempotencyKey}`,
+          contact: {
+            ghlContactId: contact.id,
+            name:
+              contact.contactName ??
+              ([contact.firstName, contact.lastName].filter(Boolean).join(" ") || null),
+            phone: contact.phone ?? null,
+            email: contact.email ?? null,
+          },
+          project: {
+            decision: draft.project.decision === "new" ? "new" : "reuse",
+            reuseProjectId: draft.project.reuseProjectId,
+            reuseOpportunityId: draft.project.reuseOpportunityId,
+            projectType: draft.project.projectType,
+            description: draft.project.description.trim() || null,
+            bodyPart: draft.project.bodyPart.trim() || null,
+            confirmNew: draft.project.decision === "new",
+          },
+          idempotencyKey: `appt-${draft.idempotencyKey}`,
         },
       });
-      if (proj.warning) toast.warning(proj.warning);
 
-      const res = await finalizeAppointment({
-        artistId: staff.id,
-        calendarId: staff.calendarId,
-        locationId: LOCATION_ID,
-        contact,
-        startISO,
-        endISO,
-        title,
-        notes: notes || undefined,
-        status: "confirmed",
-        services,
-        sellerId: draft.sellerId ?? null,
-        depositEur: draft.depositEur ?? 0,
-        projectId: proj.projectId,
-        ghlOpportunityId: proj.ghlOpportunityId,
-        idempotencyKey: `appt-${draft.idempotencyKey}`,
-      });
+      if (res.kind === "contact_conflict") {
+        toast.error(res.reason);
+        navigate({ to: "/appointments/new/cliente" });
+        return;
+      }
 
       await queryClient.invalidateQueries({ queryKey: ["agenda"] });
       await queryClient.invalidateQueries({ queryKey: ["finance-summary"] });
       const final = totalFinalEur(draft);
       haptic("success");
       toast.success(`${t("appt.created")} · ${formatPrice(final)}`);
-      if (res.warning) toast.warning(res.warning);
+      for (const w of res.warnings) toast.warning(w);
+
 
       // Fire-and-forget notification emails. Failures never abort the flow.
       const whenLabel = new Intl.DateTimeFormat("pt-PT", {
@@ -145,18 +152,23 @@ export function useFinalizeAppointment() {
         });
       }
 
+      const created = res.ghlEventId;
       draft.reset();
-      navigate({ to: "/agenda" });
+      navigate({ to: "/agenda", search: created ? { novo: created } : {} });
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      const slotTaken = /slot.*(no longer|not).*available|no longer available/i.test(msg);
+      const slotTaken =
+        /slot.*(no longer|not).*available|no longer available|deixou de estar disponível|neste horário/i.test(
+          msg,
+        );
       if (slotTaken) {
         toast.error(t("appt.errors.slotTaken"));
         draft.setStart(null);
-        navigate({ to: "/appointments/new" });
+        navigate({ to: "/appointments/new/agenda" });
       } else {
         toast.error(msg);
       }
+
     } finally {
       setSaving(false);
     }

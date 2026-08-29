@@ -439,6 +439,92 @@ export type Database = {
           },
         ]
       }
+      booking_operations: {
+        Row: {
+          appointment_id: string | null
+          artist_id: string | null
+          attempts: number
+          created_at: string
+          error: string | null
+          ghl_appointment_id: string | null
+          ghl_contact_id: string | null
+          ghl_opportunity_id: string | null
+          id: string
+          idempotency_key: string
+          payload: Json | null
+          project_id: string | null
+          start_at: string | null
+          status: string
+          step: string
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          artist_id?: string | null
+          attempts?: number
+          created_at?: string
+          error?: string | null
+          ghl_appointment_id?: string | null
+          ghl_contact_id?: string | null
+          ghl_opportunity_id?: string | null
+          id?: string
+          idempotency_key: string
+          payload?: Json | null
+          project_id?: string | null
+          start_at?: string | null
+          status?: string
+          step?: string
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          artist_id?: string | null
+          attempts?: number
+          created_at?: string
+          error?: string | null
+          ghl_appointment_id?: string | null
+          ghl_contact_id?: string | null
+          ghl_opportunity_id?: string | null
+          id?: string
+          idempotency_key?: string
+          payload?: Json | null
+          project_id?: string | null
+          start_at?: string | null
+          status?: string
+          step?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_operations_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_operations_artist_id_fkey"
+            columns: ["artist_id"]
+            isOneToOne: false
+            referencedRelation: "artists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_operations_artist_id_fkey"
+            columns: ["artist_id"]
+            isOneToOne: false
+            referencedRelation: "artists_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_operations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "tattoo_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       checkins: {
         Row: {
           appointment_id: string | null
