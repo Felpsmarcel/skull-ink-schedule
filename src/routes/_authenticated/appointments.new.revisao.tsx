@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { PROJECT_TYPE_LABELS } from "@/lib/linking";
 import { cn } from "@/lib/utils";
 
 import { useArtists } from "@/hooks/use-artists";
@@ -161,6 +162,44 @@ function RevisaoStep() {
               </SelectContent>
             </Select>
           </div>
+        </section>
+
+        <section className="rounded-lg border border-border bg-card p-3 text-sm">
+          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Projeto e oportunidade
+          </h2>
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">Decisão</span>
+            <span className="font-medium">
+              {draft.project.decision === "reuse"
+                ? "Usar oportunidade/projeto existente"
+                : draft.project.decision === "new"
+                  ? "Criar novo projeto"
+                  : "—"}
+            </span>
+          </div>
+          <div className="mt-1 flex items-center justify-between">
+            <span className="text-muted-foreground">Tipo</span>
+            <span className="font-medium">
+              {PROJECT_TYPE_LABELS[draft.project.projectType]}
+            </span>
+          </div>
+          {draft.project.bodyPart ? (
+            <div className="mt-1 flex items-center justify-between">
+              <span className="text-muted-foreground">Local do corpo</span>
+              <span className="font-medium">{draft.project.bodyPart}</span>
+            </div>
+          ) : null}
+          {draft.project.description ? (
+            <p className="mt-2 whitespace-pre-wrap text-xs text-muted-foreground">
+              {draft.project.description}
+            </p>
+          ) : null}
+          {draft.project.reuseOpportunityId ? (
+            <p className="mt-2 font-mono text-[10px] text-muted-foreground">
+              Oportunidade: {draft.project.reuseOpportunityId}
+            </p>
+          ) : null}
         </section>
 
         <section className="rounded-lg border border-border bg-card p-3">
