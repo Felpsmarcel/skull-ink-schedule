@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { ChevronRight, LogOut, Wallet, RefreshCw, Bell, Languages, FileText, Users, UserSquare2, Banknote, Link2, BarChart3, QrCode } from "lucide-react";
+import { ChevronRight, LogOut, Wallet, RefreshCw, Bell, Languages, FileText, Users, UserSquare2, Banknote, Link2, BarChart3, QrCode, Bot } from "lucide-react";
 import { toast } from "sonner";
 import "@/i18n";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -74,6 +74,7 @@ function MenuPage() {
           <Row to="/movimentacao" icon={<Banknote className="h-4 w-4" />} label="Registrar pagamento" />
           <Row to="/relatorios/movimentacoes" icon={<BarChart3 className="h-4 w-4" />} label="Relatório de pagamentos" />
           <Row to="/totem" icon={<QrCode className="h-4 w-4" />} label="Abrir totem de check-in" />
+          <Row to="/connect" icon={<Bot className="h-4 w-4" />} label="Ligar assistente de IA" />
           {isAdmin && (
             <>
               <Row to="/admin/fila" icon={<Users className="h-4 w-4" />} label="Fila do dia" />
