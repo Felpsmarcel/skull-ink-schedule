@@ -33,6 +33,8 @@ import {
 } from "@/lib/movimentacao.functions";
 import { STAFF_RECEBEDORES, type StaffRecebedorId } from "@/config/movimentacao-slugs";
 import { haptic } from "@/lib/haptics";
+import { VinculoProjeto } from "@/components/movimentacao/vinculo-projeto";
+import { validatePaymentLink } from "@/lib/linking";
 
 interface Props {
   context?: SlugContext;
