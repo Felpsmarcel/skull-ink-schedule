@@ -12,6 +12,7 @@ import {
   totalFinalEur,
 } from "@/stores/appointment-draft";
 import { finalizeAppointment } from "@/lib/appointments";
+import { ensureTattooProject } from "@/lib/projects.functions";
 import {
   validateAppointmentDraft,
   reasonToI18nKey,
@@ -41,6 +42,30 @@ export function useFinalizeAppointment() {
       const durationMin = Math.max(15, totalDurationMin(draft) || 60);
       const endISO = new Date(startMs + durationMin * 60_000).toISOString();
       const title = services.map((l) => l.service.name).join(" + ");
+      const totalForProject = totalFinalEur(draft);
+
+      // Fase 2: garante projeto/oportunidade antes de criar o agendamento.
+      // Idempotente — reenvios devolvem o mesmo projeto.
+      const proj = await ensureTattooProject({
+        data: {
+          ghlContactId: contact.id,
+          contactName:
+            contact.contactName ??
+            ([contact.firstName, contact.lastName].filter(Boolean).join(" ") || null),
+          artistId: staff.id,
+          title: draft.project.description.trim() || title,
+          description: draft.project.description.trim() || null,
+          projectType: draft.project.projectType,
+          bodyPart: draft.project.bodyPart.trim() || null,
+          quotedTotalEur: totalForProject,
+          depositEur: draft.depositEur ?? 0,
+          reuseProjectId: draft.project.reuseProjectId,
+          reuseOpportunityId: draft.project.reuseOpportunityId,
+          confirmNewOpportunity: draft.project.decision === "new",
+          idempotencyKey: `proj-${draft.idempotencyKey}`,
+        },
+      });
+      if (proj.warning) toast.warning(proj.warning);
 
       const res = await finalizeAppointment({
         artistId: staff.id,
@@ -55,6 +80,9 @@ export function useFinalizeAppointment() {
         services,
         sellerId: draft.sellerId ?? null,
         depositEur: draft.depositEur ?? 0,
+        projectId: proj.projectId,
+        ghlOpportunityId: proj.ghlOpportunityId,
+        idempotencyKey: `appt-${draft.idempotencyKey}`,
       });
 
       await queryClient.invalidateQueries({ queryKey: ["agenda"] });

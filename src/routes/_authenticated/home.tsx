@@ -1,5 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { BarChart3, Banknote, CalendarDays, QrCode, Users, Wallet } from "lucide-react";
+import { BarChart3, Banknote, CalendarDays, Link2Off, QrCode, Users, Wallet } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { getVinculosIncompletos } from "@/lib/projects.functions";
 import { FilaAguardando, useFilaHoje } from "@/components/checkin/fila-aguardando";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import gfMark from "@/assets/gf-mark.png";
@@ -24,6 +27,14 @@ function HomePage() {
   const { data: fila } = useFilaHoje();
   const aguardando = (fila ?? []).filter((r) => r.status === "aguardando").length;
   const emAtendimento = (fila ?? []).filter((r) => r.status === "em_atendimento").length;
+  const fetchVinculos = useServerFn(getVinculosIncompletos);
+  const vinculosQ = useQuery({
+    queryKey: ["vinculos-incompletos"],
+    queryFn: () => fetchVinculos(),
+    enabled: isAdmin,
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
 
   return (
     <div className="min-h-svh bg-background pb-[calc(env(safe-area-inset-bottom)+7rem)] text-foreground sm:pb-24">
@@ -37,6 +48,25 @@ function HomePage() {
           <Stat label="Aguardando" value={aguardando} />
           <Stat label="Em atendimento" value={emAtendimento} />
         </div>
+
+        {isAdmin && vinculosQ.data ? (
+          <Link
+            to="/relatorios/movimentacoes"
+            className="flex items-center gap-3 rounded-lg border border-border bg-card p-4"
+          >
+            <Link2Off className="h-5 w-5 text-amber-500" />
+            <div className="flex-1">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                Vínculos incompletos
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {vinculosQ.data.appointmentsSemProjeto} agendamentos ·{" "}
+                {vinculosQ.data.movimentacoesSemVinculo} pagamentos
+              </p>
+            </div>
+            <span className="text-3xl font-bold">{vinculosQ.data.total}</span>
+          </Link>
+        ) : null}
 
         <div className="grid grid-cols-2 gap-3">
           <BigAction to="/agenda" icon={<CalendarDays className="h-5 w-5" />} label="Agenda" />

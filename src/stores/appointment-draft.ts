@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { GhlContact } from "@/lib/ghl";
 import type { Service } from "@/lib/services";
+import type { ProjectType } from "@/lib/linking";
 
 export interface DraftServiceLine {
   service: Service;
@@ -9,6 +10,17 @@ export interface DraftServiceLine {
   discountPct: number;
   /** Override price in EUR (used when the service has `price_on_request`). */
   overridePriceEur: number | null;
+}
+
+/** Fase 2 — decisão explícita de projeto/oportunidade no CRM. */
+export interface DraftProject {
+  /** "reuse" = usar projeto/oportunidade existente, "new" = criar novo. */
+  decision: "reuse" | "new" | null;
+  reuseProjectId: string | null;
+  reuseOpportunityId: string | null;
+  projectType: ProjectType;
+  bodyPart: string;
+  description: string;
 }
 
 export interface AppointmentDraft {
@@ -21,6 +33,9 @@ export interface AppointmentDraft {
   sellerId: string | null;
   /** Deposit already paid by the client, in EUR. */
   depositEur: number;
+  project: DraftProject;
+  /** Chave de idempotência do rascunho (impede duplicação em reenvios). */
+  idempotencyKey: string;
 }
 
 interface State extends AppointmentDraft {
@@ -34,8 +49,24 @@ interface State extends AppointmentDraft {
   setNotes: (n: string) => void;
   setSeller: (id: string | null) => void;
   setDeposit: (eur: number) => void;
+  setProject: (patch: Partial<DraftProject>) => void;
   reset: () => void;
 }
+
+function newKey(): string {
+  const c = globalThis.crypto as Crypto | undefined;
+  if (c?.randomUUID) return c.randomUUID();
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+const initialProject: DraftProject = {
+  decision: null,
+  reuseProjectId: null,
+  reuseOpportunityId: null,
+  projectType: "new_tattoo",
+  bodyPart: "",
+  description: "",
+};
 
 const initial: AppointmentDraft = {
   contact: null,
@@ -45,13 +76,23 @@ const initial: AppointmentDraft = {
   notes: "",
   sellerId: null,
   depositEur: 0,
+  project: initialProject,
+  idempotencyKey: newKey(),
 };
+
 
 export const useAppointmentDraft = create<State>()(
   persist(
     (set) => ({
       ...initial,
-      setContact: (contact) => set({ contact }),
+      setContact: (contact) =>
+        set((st) => ({
+          contact,
+          // Trocar de cliente invalida a decisão de projeto/oportunidade.
+          project:
+            st.contact?.id === contact?.id ? st.project : { ...initialProject },
+        })),
+
       setCalendar: (calendarId) => set({ calendarId }),
       setStart: (startISO) => set({ startISO }),
       addService: (s) =>
@@ -91,11 +132,13 @@ export const useAppointmentDraft = create<State>()(
       setSeller: (sellerId) => set({ sellerId }),
       setDeposit: (eur) =>
         set({ depositEur: Number.isFinite(eur) ? Math.max(0, eur) : 0 }),
-      reset: () => set({ ...initial }),
+      setProject: (patch) => set((st) => ({ project: { ...st.project, ...patch } })),
+      reset: () => set({ ...initial, project: { ...initialProject }, idempotencyKey: newKey() }),
     }),
     {
       name: "gf-appointment-draft",
-      version: 4,
+      version: 5,
+
       storage: createJSONStorage(() =>
         typeof window !== "undefined" ? sessionStorage : (undefined as unknown as Storage),
       ),

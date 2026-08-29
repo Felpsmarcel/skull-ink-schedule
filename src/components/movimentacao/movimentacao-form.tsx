@@ -33,6 +33,8 @@ import {
 } from "@/lib/movimentacao.functions";
 import { STAFF_RECEBEDORES, type StaffRecebedorId } from "@/config/movimentacao-slugs";
 import { haptic } from "@/lib/haptics";
+import { VinculoProjeto } from "@/components/movimentacao/vinculo-projeto";
+import { validatePaymentLink } from "@/lib/linking";
 
 interface Props {
   context?: SlugContext;
@@ -139,6 +141,9 @@ interface FormState {
   data_tatuagem: string;
   observacoes: string;
   descricao_projeto: string;
+  project_id: string | null;
+  appointment_id: string | null;
+  sem_vinculo_justificativa: string;
   chave_idempotencia: string;
 }
 
@@ -161,6 +166,9 @@ function initialState(context: SlugContext | undefined, mode: "link" | "manual")
     data_tatuagem: "",
     observacoes: "",
     descricao_projeto: "",
+    project_id: null,
+    appointment_id: null,
+    sem_vinculo_justificativa: "",
     chave_idempotencia: newIdempotencyKey(),
   };
 }
@@ -224,8 +232,14 @@ export function MovimentacaoForm({ context, artists, artistsLoading, mode = "lin
     (form.registrado_por_id !== "outro"
       ? true
       : form.registrado_por_nome.trim().length >= 2);
+  const vinculoOk = validatePaymentLink({
+    tipo: form.tipo_movimento,
+    projectId: form.project_id,
+    appointmentId: form.appointment_id,
+    semVinculoJustificativa: form.sem_vinculo_justificativa,
+  }).ok;
   const step1Valid =
-    form.nome_cliente.trim().length >= 2 && !!form.artist_id && registradorValid;
+    form.nome_cliente.trim().length >= 2 && !!form.artist_id && registradorValid && vinculoOk;
   const step2Valid = total > 0 && !exclusivoErro;
   const step3Valid = !sinalErro;
 
@@ -244,6 +258,9 @@ export function MovimentacaoForm({ context, artists, artistsLoading, mode = "lin
         data_tatuagem: form.data_tatuagem || null,
         observacoes: form.observacoes || null,
         descricao_projeto: form.descricao_projeto || null,
+        project_id: form.project_id,
+        appointment_id: form.appointment_id,
+        sem_vinculo_justificativa: form.sem_vinculo_justificativa.trim() || null,
         chave_idempotencia: form.chave_idempotencia,
       };
       if (isManual) {
@@ -420,6 +437,7 @@ export function MovimentacaoForm({ context, artists, artistsLoading, mode = "lin
             artistsLoading={artistsLoading}
             recentClients={recentClientsQ.data ?? []}
             showRegistrador={!isManual}
+            canPickAppointment={isManual}
           />
         )}
 
@@ -493,6 +511,7 @@ interface StepOneProps {
   artistsLoading?: boolean;
   recentClients: string[];
   showRegistrador?: boolean;
+  canPickAppointment?: boolean;
 }
 
 function StepOne({
@@ -503,6 +522,7 @@ function StepOne({
   artistsLoading,
   recentClients,
   showRegistrador,
+  canPickAppointment,
 }: StepOneProps) {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -518,6 +538,27 @@ function StepOne({
 
   return (
     <div className="space-y-5">
+      <VinculoProjeto
+        canPickAppointment={Boolean(canPickAppointment)}
+        tipo={form.tipo_movimento}
+        clientName={form.nome_cliente}
+        value={{
+          projectId: form.project_id,
+          appointmentId: form.appointment_id,
+          justificativa: form.sem_vinculo_justificativa,
+        }}
+        onChange={(patch) => {
+          if ("projectId" in patch) set("project_id", patch.projectId ?? null);
+          if ("appointmentId" in patch) set("appointment_id", patch.appointmentId ?? null);
+          if (patch.justificativa !== undefined)
+            set("sem_vinculo_justificativa", patch.justificativa);
+        }}
+        onPick={(t) => {
+          if (t.contactName) set("nome_cliente", t.contactName);
+          set("artist_id", t.artistId);
+          set("data_tatuagem", t.startAt.slice(0, 10));
+        }}
+      />
       <div className="space-y-1.5">
         <Label htmlFor="recebido_por_id">Recebido por *</Label>
         <Select

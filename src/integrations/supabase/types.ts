@@ -124,6 +124,7 @@ export type Database = {
         Row: {
           artist_id: string
           calendar_id: string | null
+          chave_idempotencia: string | null
           commission_pct: number
           contact_email: string | null
           contact_id: string | null
@@ -136,6 +137,7 @@ export type Database = {
           end_at: string
           ghl_appointment_id: string | null
           ghl_contact_id: string | null
+          ghl_opportunity_id: string | null
           id: string
           internal_note: string | null
           manual_payment_status: string | null
@@ -143,6 +145,7 @@ export type Database = {
           manual_payment_status_by: string | null
           notes: string | null
           original_eur: number
+          project_id: string | null
           seller_id: string | null
           services: Json
           start_at: string
@@ -155,6 +158,7 @@ export type Database = {
         Insert: {
           artist_id: string
           calendar_id?: string | null
+          chave_idempotencia?: string | null
           commission_pct?: number
           contact_email?: string | null
           contact_id?: string | null
@@ -167,6 +171,7 @@ export type Database = {
           end_at: string
           ghl_appointment_id?: string | null
           ghl_contact_id?: string | null
+          ghl_opportunity_id?: string | null
           id?: string
           internal_note?: string | null
           manual_payment_status?: string | null
@@ -174,6 +179,7 @@ export type Database = {
           manual_payment_status_by?: string | null
           notes?: string | null
           original_eur?: number
+          project_id?: string | null
           seller_id?: string | null
           services?: Json
           start_at: string
@@ -186,6 +192,7 @@ export type Database = {
         Update: {
           artist_id?: string
           calendar_id?: string | null
+          chave_idempotencia?: string | null
           commission_pct?: number
           contact_email?: string | null
           contact_id?: string | null
@@ -198,6 +205,7 @@ export type Database = {
           end_at?: string
           ghl_appointment_id?: string | null
           ghl_contact_id?: string | null
+          ghl_opportunity_id?: string | null
           id?: string
           internal_note?: string | null
           manual_payment_status?: string | null
@@ -205,6 +213,7 @@ export type Database = {
           manual_payment_status_by?: string | null
           notes?: string | null
           original_eur?: number
+          project_id?: string | null
           seller_id?: string | null
           services?: Json
           start_at?: string
@@ -234,6 +243,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "tattoo_projects"
             referencedColumns: ["id"]
           },
           {
@@ -720,6 +736,7 @@ export type Database = {
       }
       movimentacoes: {
         Row: {
+          appointment_id: string | null
           artist_id: string
           chave_grupo: string | null
           chave_idempotencia: string
@@ -731,6 +748,7 @@ export type Database = {
           forma_pagamento:
             | Database["public"]["Enums"]["forma_pagamento_enum"]
             | null
+          ghl_appointment_id: string | null
           ghl_contact_id: string | null
           ghl_custom_object_id: string | null
           ghl_last_synced_at: string | null
@@ -743,6 +761,7 @@ export type Database = {
           nome_cliente: string
           observacoes: string | null
           origem_lancamento: string
+          project_id: string | null
           recebido_por_app_user_id: string
           referencia: string | null
           registrado_em: string | null
@@ -751,6 +770,7 @@ export type Database = {
           registrado_por_nome: string | null
           registrado_por_staff_id: string | null
           registrado_user_agent: string | null
+          sem_vinculo_justificativa: string | null
           tipo_movimento: Database["public"]["Enums"]["movimentacao_tipo"]
           total: number | null
           updated_at: string
@@ -760,6 +780,7 @@ export type Database = {
           valor_transferencia: number
         }
         Insert: {
+          appointment_id?: string | null
           artist_id: string
           chave_grupo?: string | null
           chave_idempotencia: string
@@ -771,6 +792,7 @@ export type Database = {
           forma_pagamento?:
             | Database["public"]["Enums"]["forma_pagamento_enum"]
             | null
+          ghl_appointment_id?: string | null
           ghl_contact_id?: string | null
           ghl_custom_object_id?: string | null
           ghl_last_synced_at?: string | null
@@ -783,6 +805,7 @@ export type Database = {
           nome_cliente: string
           observacoes?: string | null
           origem_lancamento?: string
+          project_id?: string | null
           recebido_por_app_user_id: string
           referencia?: string | null
           registrado_em?: string | null
@@ -791,6 +814,7 @@ export type Database = {
           registrado_por_nome?: string | null
           registrado_por_staff_id?: string | null
           registrado_user_agent?: string | null
+          sem_vinculo_justificativa?: string | null
           tipo_movimento: Database["public"]["Enums"]["movimentacao_tipo"]
           total?: number | null
           updated_at?: string
@@ -800,6 +824,7 @@ export type Database = {
           valor_transferencia?: number
         }
         Update: {
+          appointment_id?: string | null
           artist_id?: string
           chave_grupo?: string | null
           chave_idempotencia?: string
@@ -811,6 +836,7 @@ export type Database = {
           forma_pagamento?:
             | Database["public"]["Enums"]["forma_pagamento_enum"]
             | null
+          ghl_appointment_id?: string | null
           ghl_contact_id?: string | null
           ghl_custom_object_id?: string | null
           ghl_last_synced_at?: string | null
@@ -823,6 +849,7 @@ export type Database = {
           nome_cliente?: string
           observacoes?: string | null
           origem_lancamento?: string
+          project_id?: string | null
           recebido_por_app_user_id?: string
           referencia?: string | null
           registrado_em?: string | null
@@ -831,6 +858,7 @@ export type Database = {
           registrado_por_nome?: string | null
           registrado_por_staff_id?: string | null
           registrado_user_agent?: string | null
+          sem_vinculo_justificativa?: string | null
           tipo_movimento?: Database["public"]["Enums"]["movimentacao_tipo"]
           total?: number | null
           updated_at?: string
@@ -840,6 +868,13 @@ export type Database = {
           valor_transferencia?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "movimentacoes_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "movimentacoes_artist_id_fkey"
             columns: ["artist_id"]
@@ -852,6 +887,13 @@ export type Database = {
             columns: ["artist_id"]
             isOneToOne: false
             referencedRelation: "artists_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "tattoo_projects"
             referencedColumns: ["id"]
           },
           {
@@ -1211,6 +1253,95 @@ export type Database = {
         }
         Relationships: []
       }
+      tattoo_projects: {
+        Row: {
+          artist_id: string | null
+          body_part: string | null
+          chave_idempotencia: string | null
+          contact_id: string | null
+          created_at: string
+          created_by: string | null
+          deposit_eur: number
+          description: string | null
+          ghl_contact_id: string | null
+          ghl_opportunity_id: string | null
+          ghl_pipeline_id: string | null
+          id: string
+          project_type: Database["public"]["Enums"]["tattoo_project_type"]
+          quoted_total_eur: number
+          status: Database["public"]["Enums"]["tattoo_project_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          artist_id?: string | null
+          body_part?: string | null
+          chave_idempotencia?: string | null
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deposit_eur?: number
+          description?: string | null
+          ghl_contact_id?: string | null
+          ghl_opportunity_id?: string | null
+          ghl_pipeline_id?: string | null
+          id?: string
+          project_type?: Database["public"]["Enums"]["tattoo_project_type"]
+          quoted_total_eur?: number
+          status?: Database["public"]["Enums"]["tattoo_project_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          artist_id?: string | null
+          body_part?: string | null
+          chave_idempotencia?: string | null
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deposit_eur?: number
+          description?: string | null
+          ghl_contact_id?: string | null
+          ghl_opportunity_id?: string | null
+          ghl_pipeline_id?: string | null
+          id?: string
+          project_type?: Database["public"]["Enums"]["tattoo_project_type"]
+          quoted_total_eur?: number
+          status?: Database["public"]["Enums"]["tattoo_project_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tattoo_projects_artist_id_fkey"
+            columns: ["artist_id"]
+            isOneToOne: false
+            referencedRelation: "artists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tattoo_projects_artist_id_fkey"
+            columns: ["artist_id"]
+            isOneToOne: false
+            referencedRelation: "artists_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tattoo_projects_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tattoo_projects_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       artists_public: {
@@ -1251,6 +1382,7 @@ export type Database = {
       }
     }
     Functions: {
+      count_vinculos_incompletos: { Args: never; Returns: Json }
       current_artist_id: { Args: never; Returns: string }
       current_seller_id: { Args: never; Returns: string }
       current_user_role: {
@@ -1546,6 +1678,14 @@ export type Database = {
       payment_type: "deposit" | "final" | "refund"
       quote_status: "draft" | "sent" | "accepted" | "rejected" | "expired"
       service_modality: "presencial" | "consulta_online" | "hibrido"
+      tattoo_project_status:
+        | "lead"
+        | "quoted"
+        | "scheduled"
+        | "in_progress"
+        | "completed"
+        | "cancelled"
+      tattoo_project_type: "new_tattoo" | "cover_up" | "retouch"
       user_role: "admin" | "artist" | "seller"
     }
     CompositeTypes: {
@@ -1696,6 +1836,15 @@ export const Constants = {
       payment_type: ["deposit", "final", "refund"],
       quote_status: ["draft", "sent", "accepted", "rejected", "expired"],
       service_modality: ["presencial", "consulta_online", "hibrido"],
+      tattoo_project_status: [
+        "lead",
+        "quoted",
+        "scheduled",
+        "in_progress",
+        "completed",
+        "cancelled",
+      ],
+      tattoo_project_type: ["new_tattoo", "cover_up", "retouch"],
       user_role: ["admin", "artist", "seller"],
     },
   },

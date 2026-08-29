@@ -123,6 +123,7 @@
         "noContact": "Selecione um cliente.",
         "noCalendar": "Escolha um tatuador.",
         "noStart": "Escolha um horário.",
+        "noProject": "Escolha ou confirme o projeto/oportunidade.",
         "slotTaken": "Esse horário já foi ocupado. Escolha outro."
       },
       "wizard": {

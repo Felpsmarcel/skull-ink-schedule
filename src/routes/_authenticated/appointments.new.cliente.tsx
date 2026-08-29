@@ -56,7 +56,7 @@ function ClienteStep() {
       <WizardFooter
         primary={canContinue ? t("appt.wizard.next") : t("appt.cta.selectClient")}
         primaryDisabled={!canContinue}
-        onPrimary={() => navigate({ to: "/appointments/new/agenda" })}
+        onPrimary={() => navigate({ to: "/appointments/new/projeto" })}
       />
     </>
   );

@@ -27,7 +27,13 @@ const CreateInputSchema = z.object({
   services: z.array(ServiceLineSchema).min(1),
   sellerId: z.string().uuid().nullish(),
   depositEur: z.number().min(0).max(1_000_000).default(0),
+  /** Fase 2 — rastreabilidade: projeto/oportunidade do CRM. */
+  projectId: z.string().uuid().nullish(),
+  ghlOpportunityId: z.string().min(3).nullish(),
+  /** Chave de idempotência para impedir duplicação em reenvios. */
+  idempotencyKey: z.string().min(8).max(80).nullish(),
 });
+
 
 export type CreateAppointmentInput = z.infer<typeof CreateInputSchema>;
 
@@ -36,8 +42,11 @@ export interface CreateAppointmentResult {
   ghlEventId: string | null;
   totalEur: number;
   commissionPct: number;
+  /** true quando o reenvio devolveu o agendamento já criado (idempotência). */
+  reused?: boolean;
   warning?: string;
 }
+
 
 const GHL_BASE = "https://services.leadconnectorhq.com";
 const GHL_VERSION = "2021-04-15";
@@ -75,6 +84,26 @@ export const createAppointmentRecord = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => CreateInputSchema.parse(data))
   .handler(async ({ data, context }): Promise<CreateAppointmentResult> => {
     const { supabase, userId } = context;
+
+    // 0. Idempotência: reenvio do mesmo formulário devolve o agendamento já criado.
+    if (data.idempotencyKey) {
+      const { data: prev } = await supabase
+        .from("appointments")
+        .select("id, ghl_appointment_id, total_eur, commission_pct")
+        .eq("chave_idempotencia", data.idempotencyKey)
+        .maybeSingle();
+      if (prev) {
+        return {
+          appointmentId: prev.id,
+          ghlEventId: prev.ghl_appointment_id,
+          totalEur: Number(prev.total_eur ?? 0),
+          commissionPct: Number(prev.commission_pct ?? 40),
+          reused: true,
+        };
+      }
+    }
+
+
 
     // 1. Authorize: admin OR artist who owns this artistId.
     const { data: meRow, error: meErr } = await supabase
@@ -207,6 +236,10 @@ export const createAppointmentRecord = createServerFn({ method: "POST" })
     const row = {
       ghl_appointment_id: ghlEventId,
       ghl_contact_id: data.contactId,
+      project_id: data.projectId ?? null,
+      ghl_opportunity_id: data.ghlOpportunityId ?? null,
+      chave_idempotencia: data.idempotencyKey ?? null,
+
       artist_id: data.artistId,
       calendar_id: data.calendarId,
       contact_name: data.contactName ?? null,

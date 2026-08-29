@@ -17,6 +17,7 @@ function WizardLayout() {
   const { data: artists = [] } = useArtists();
   const completed = {
     cliente: Boolean(draft.contact),
+    projeto: draft.project?.decision !== null,
     agenda: Boolean(
       draft.calendarId &&
         artists.some((a) => a.calendarId === draft.calendarId) &&

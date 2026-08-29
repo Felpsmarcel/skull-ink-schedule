@@ -8,6 +8,55 @@
       "when": 1788011441260,
       "tag": "0000_scope_checkins_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788013186280,
+      "tag": "0001_tattoo_projects_table",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788013229381,
+      "tag": "0002_appointments_project_link",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788013269329,
+      "tag": "0003_appointments_project_fk",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788013294847,
+      "tag": "0004_appointments_link_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1788013312303,
+      "tag": "0005_movimentacoes_link_columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788013339879,
+      "tag": "0006_movimentacoes_link_fk_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1788013368636,
+      "tag": "0007_count_vinculos_incompletos",
+      "breakpoints": true
     }
   ]
 }
