@@ -9,6 +9,7 @@ import {
   type FilaRow,
 } from "@/lib/checkin.functions";
 import { haptic } from "@/lib/haptics";
+import { useCurrentUser } from "@/hooks/use-current-user";
 
 function hora(iso: string | null) {
   if (!iso) return "—";
@@ -35,7 +36,11 @@ export function useFilaHoje() {
 
 export function FilaAguardando({ showConcluidos = false }: { showConcluidos?: boolean }) {
   const { data, isLoading, error } = useFilaHoje();
+  const { data: me } = useCurrentUser();
   const qc = useQueryClient();
+  // Só o admin ou o tatuador da própria linha pode mudar o estado da fila.
+  const podeAgir = (row: FilaRow) =>
+    me?.role === "admin" || (me?.role === "artist" && !!row.artistId && row.artistId === me?.artistId);
   const updateStatus = useServerFn(setCheckinStatus);
 
   const mutation = useMutation({
@@ -110,7 +115,7 @@ export function FilaAguardando({ showConcluidos = false }: { showConcluidos?: bo
             </div>
 
             <div className="flex shrink-0 gap-1.5">
-              {r.status === "aguardando" ? (
+              {!podeAgir(r) ? null : r.status === "aguardando" ? (
                 <>
                   <button
                     type="button"
