@@ -249,59 +249,52 @@ export const inviteArtist = createServerFn({ method: "POST" })
         .maybeSingle();
       const artistName = (artistRow as { name?: string } | null)?.name ?? null;
 
-      const { TEMPLATES } = await import("@/lib/email-templates/registry");
-      const React = await import("react");
-      const { render } = await import("react-email");
-      const template = TEMPLATES["team-welcome"];
-      if (template) {
-        // Se temos actionUrl (fluxo com link), permitir reenvio; se é apenas
-        // o boas-vindas puro (sem link), manter idempotência para não spammar.
-        const messageId = actionUrl
-          ? `team-welcome-${invitedUserId}-${Date.now()}`
-          : `team-welcome-${invitedUserId}`;
-        const existing = actionUrl
-          ? { data: null }
-          : await supabaseAdmin
-              .from("email_send_log" as never)
-              .select("id")
-              .eq("message_id", messageId)
-              .limit(1)
-              .maybeSingle();
-        if (!existing.data) {
-          const props: { artistName: string | null; agendaUrl: string; inviteUrl?: string } = {
-            artistName,
-            agendaUrl: `${PROD_ORIGIN}/agenda`,
-          };
-          if (actionUrl) props.inviteUrl = actionUrl;
-          const element = React.createElement(template.component, props);
-          const html = await render(element);
-          const text = await render(element, { plainText: true });
-          const subject =
-            typeof template.subject === "function" ? template.subject(props) : template.subject;
-          await supabaseAdmin.from("email_send_log" as never).insert({
-            message_id: messageId,
-            template_name: "team-welcome",
-            recipient_email: data.email,
-            status: "pending",
-          } as never);
-          await supabaseAdmin.rpc("enqueue_email" as never, {
-            queue_name: "transactional_emails",
-            payload: {
+      const { sendTemplateEmail } = await import("@/lib/email-templates/send-email");
+      // Se temos actionUrl (fluxo com link), permitir reenvio; se é apenas
+      // o boas-vindas puro (sem link), manter idempotência para não spammar.
+      const messageId = actionUrl
+        ? `team-welcome-${invitedUserId}-${Date.now()}`
+        : `team-welcome-${invitedUserId}`;
+      const existing = actionUrl
+        ? { data: null }
+        : await supabaseAdmin
+            .from("email_send_log" as never)
+            .select("id")
+            .eq("message_id", messageId)
+            .limit(1)
+            .maybeSingle();
+      if (!existing.data) {
+        const props: { artistName: string | null; agendaUrl: string; inviteUrl?: string } = {
+          artistName,
+          agendaUrl: `${PROD_ORIGIN}/agenda`,
+        };
+        if (actionUrl) props.inviteUrl = actionUrl;
+
+        const logRow = async (status: string, errorMessage?: string) => {
+          const { error: logErr } = await supabaseAdmin
+            .from("email_send_log" as never)
+            .insert({
               message_id: messageId,
-              to: data.email,
-              from: "GF Tattoo Studio <noreply@notify.gftattooacademy.info>",
-              sender_domain: "notify.gftattooacademy.info",
-              subject,
-              html,
-              text,
-              purpose: "transactional",
-              label: "team-welcome",
-              idempotency_key: messageId,
-              queued_at: new Date().toISOString(),
-            },
-          } as never);
+              template_name: "team-welcome",
+              recipient_email: data.email,
+              status,
+              ...(errorMessage ? { error_message: errorMessage } : {}),
+            } as never);
+          if (logErr) console.error("[inviteArtist] log write failed", logErr.message);
+        };
+
+        try {
+          const result = await sendTemplateEmail("team-welcome", data.email, {
+            idempotencyKey: messageId,
+            templateData: props,
+          });
+          await logRow(result.sent ? "sent" : "suppressed");
+        } catch (sendErr) {
+          await logRow("failed", sendErr instanceof Error ? sendErr.message : "unknown");
+          throw sendErr;
         }
       }
+
     } catch (welcomeErr) {
       console.error("[inviteArtist] team-welcome email failed", welcomeErr);
     }

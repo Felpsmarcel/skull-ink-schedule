@@ -9,7 +9,6 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as ConnectRouteImport } from './routes/connect'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -21,7 +20,6 @@ import { Route as TotemConfirmarRouteImport } from './routes/totem.confirmar'
 import { Route as TotemBuscarRouteImport } from './routes/totem.buscar'
 import { Route as MovimentacaoHistoricoRouteImport } from './routes/movimentacao.historico'
 import { Route as MovimentacaoSlugRouteImport } from './routes/movimentacao.$slug'
-import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as AuthUpdatePasswordRouteImport } from './routes/auth_.update-password'
 import { Route as AuthRecoverRouteImport } from './routes/auth_.recover'
 import { Route as ATokenRouteImport } from './routes/a.$token'
@@ -36,7 +34,7 @@ import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } fr
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/_admin/route'
 import { Route as AuthenticatedMovimentacaoIndexRouteImport } from './routes/_authenticated/movimentacao.index'
-import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
+import { Route as LovableEmailEventsRouteImport } from './routes/lovable/email/events'
 import { Route as AuthenticatedRelatoriosMovimentacoesRouteImport } from './routes/_authenticated/relatorios.movimentacoes'
 import { Route as AuthenticatedOnboardingServicosRouteImport } from './routes/_authenticated/onboarding.servicos'
 import { Route as AuthenticatedOnboardingProntoRouteImport } from './routes/_authenticated/onboarding.pronto'
@@ -49,9 +47,7 @@ import { Route as AuthenticatedAdminGhlTestRouteImport } from './routes/_authent
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as AuthenticatedAppointmentsNewIndexRouteImport } from './routes/_authenticated/appointments.new.index'
-import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
-import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as ApiPublicHooksSyncGhlRouteImport } from './routes/api/public/hooks/sync-ghl'
@@ -68,11 +64,6 @@ import { Route as AuthenticatedAdminAdminEquipeRouteImport } from './routes/_aut
 import { Route as AuthenticatedMovimentacaoHistoricoIdEditarRouteImport } from './routes/_authenticated/movimentacao.historico.$id.editar'
 import { Route as AuthenticatedAdminAdminMovimentacaoNovoRouteImport } from './routes/_authenticated/_admin/admin.movimentacao.novo'
 
-const UnsubscribeRoute = UnsubscribeRouteImport.update({
-  id: '/unsubscribe',
-  path: '/unsubscribe',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const McpRoute = McpRouteImport.update({
   id: '/mcp',
   path: '/mcp',
@@ -125,11 +116,6 @@ const MovimentacaoHistoricoRoute = MovimentacaoHistoricoRouteImport.update({
 const MovimentacaoSlugRoute = MovimentacaoSlugRouteImport.update({
   id: '/movimentacao/$slug',
   path: '/movimentacao/$slug',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
-  id: '/email/unsubscribe',
-  path: '/email/unsubscribe',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthUpdatePasswordRoute = AuthUpdatePasswordRouteImport.update({
@@ -204,9 +190,9 @@ const AuthenticatedMovimentacaoIndexRoute =
     path: '/movimentacao/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const LovableEmailSuppressionRoute = LovableEmailSuppressionRouteImport.update({
-  id: '/lovable/email/suppression',
-  path: '/lovable/email/suppression',
+const LovableEmailEventsRoute = LovableEmailEventsRouteImport.update({
+  id: '/lovable/email/events',
+  path: '/lovable/email/events',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedRelatoriosMovimentacoesRoute =
@@ -280,22 +266,10 @@ const AuthenticatedAppointmentsNewIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedAppointmentsNewRoute,
   } as any)
-const LovableEmailTransactionalSendRoute =
-  LovableEmailTransactionalSendRouteImport.update({
-    id: '/lovable/email/transactional/send',
-    path: '/lovable/email/transactional/send',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const LovableEmailTransactionalPreviewRoute =
   LovableEmailTransactionalPreviewRouteImport.update({
     id: '/lovable/email/transactional/preview',
     path: '/lovable/email/transactional/preview',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const LovableEmailQueueProcessRoute =
-  LovableEmailQueueProcessRouteImport.update({
-    id: '/lovable/email/queue/process',
-    path: '/lovable/email/queue/process',
     getParentRoute: () => rootRouteImport,
   } as any)
 const LovableEmailAuthWebhookRoute = LovableEmailAuthWebhookRouteImport.update({
@@ -391,7 +365,6 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/connect': typeof ConnectRoute
   '/mcp': typeof McpRoute
-  '/unsubscribe': typeof UnsubscribeRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/agenda': typeof AuthenticatedAgendaRoute
@@ -404,7 +377,6 @@ export interface FileRoutesByFullPath {
   '/a/$token': typeof ATokenRoute
   '/auth/recover': typeof AuthRecoverRoute
   '/auth/update-password': typeof AuthUpdatePasswordRoute
-  '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/movimentacao/$slug': typeof MovimentacaoSlugRoute
   '/movimentacao/historico': typeof MovimentacaoHistoricoRoute
   '/totem/buscar': typeof TotemBuscarRoute
@@ -422,7 +394,7 @@ export interface FileRoutesByFullPath {
   '/onboarding/pronto': typeof AuthenticatedOnboardingProntoRoute
   '/onboarding/servicos': typeof AuthenticatedOnboardingServicosRoute
   '/relatorios/movimentacoes': typeof AuthenticatedRelatoriosMovimentacoesRoute
-  '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/lovable/email/events': typeof LovableEmailEventsRoute
   '/movimentacao/': typeof AuthenticatedMovimentacaoIndexRoute
   '/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
   '/admin/fila': typeof AuthenticatedAdminAdminFilaRoute
@@ -437,9 +409,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/sync-ghl': typeof ApiPublicHooksSyncGhlRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
-  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
-  '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
   '/appointments/new/': typeof AuthenticatedAppointmentsNewIndexRoute
   '/admin/movimentacao/novo': typeof AuthenticatedAdminAdminMovimentacaoNovoRoute
   '/movimentacao/historico/$id/editar': typeof AuthenticatedMovimentacaoHistoricoIdEditarRoute
@@ -449,7 +419,6 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/connect': typeof ConnectRoute
   '/mcp': typeof McpRoute
-  '/unsubscribe': typeof UnsubscribeRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/agenda': typeof AuthenticatedAgendaRoute
@@ -462,7 +431,6 @@ export interface FileRoutesByTo {
   '/a/$token': typeof ATokenRoute
   '/auth/recover': typeof AuthRecoverRoute
   '/auth/update-password': typeof AuthUpdatePasswordRoute
-  '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/movimentacao/$slug': typeof MovimentacaoSlugRoute
   '/movimentacao/historico': typeof MovimentacaoHistoricoRoute
   '/totem/buscar': typeof TotemBuscarRoute
@@ -479,7 +447,7 @@ export interface FileRoutesByTo {
   '/onboarding/pronto': typeof AuthenticatedOnboardingProntoRoute
   '/onboarding/servicos': typeof AuthenticatedOnboardingServicosRoute
   '/relatorios/movimentacoes': typeof AuthenticatedRelatoriosMovimentacoesRoute
-  '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/lovable/email/events': typeof LovableEmailEventsRoute
   '/movimentacao': typeof AuthenticatedMovimentacaoIndexRoute
   '/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
   '/admin/fila': typeof AuthenticatedAdminAdminFilaRoute
@@ -494,9 +462,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/sync-ghl': typeof ApiPublicHooksSyncGhlRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
-  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
-  '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
   '/appointments/new': typeof AuthenticatedAppointmentsNewIndexRoute
   '/admin/movimentacao/novo': typeof AuthenticatedAdminAdminMovimentacaoNovoRoute
   '/movimentacao/historico/$id/editar': typeof AuthenticatedMovimentacaoHistoricoIdEditarRoute
@@ -508,7 +474,6 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/connect': typeof ConnectRoute
   '/mcp': typeof McpRoute
-  '/unsubscribe': typeof UnsubscribeRoute
   '/_authenticated/_admin': typeof AuthenticatedAdminRouteRouteWithChildren
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -522,7 +487,6 @@ export interface FileRoutesById {
   '/a/$token': typeof ATokenRoute
   '/auth_/recover': typeof AuthRecoverRoute
   '/auth_/update-password': typeof AuthUpdatePasswordRoute
-  '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/movimentacao/$slug': typeof MovimentacaoSlugRoute
   '/movimentacao/historico': typeof MovimentacaoHistoricoRoute
   '/totem/buscar': typeof TotemBuscarRoute
@@ -540,7 +504,7 @@ export interface FileRoutesById {
   '/_authenticated/onboarding/pronto': typeof AuthenticatedOnboardingProntoRoute
   '/_authenticated/onboarding/servicos': typeof AuthenticatedOnboardingServicosRoute
   '/_authenticated/relatorios/movimentacoes': typeof AuthenticatedRelatoriosMovimentacoesRoute
-  '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/lovable/email/events': typeof LovableEmailEventsRoute
   '/_authenticated/movimentacao/': typeof AuthenticatedMovimentacaoIndexRoute
   '/_authenticated/_admin/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
   '/_authenticated/_admin/admin/fila': typeof AuthenticatedAdminAdminFilaRoute
@@ -555,9 +519,7 @@ export interface FileRoutesById {
   '/api/public/hooks/sync-ghl': typeof ApiPublicHooksSyncGhlRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
-  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
-  '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
   '/_authenticated/appointments/new/': typeof AuthenticatedAppointmentsNewIndexRoute
   '/_authenticated/_admin/admin/movimentacao/novo': typeof AuthenticatedAdminAdminMovimentacaoNovoRoute
   '/_authenticated/movimentacao/historico/$id/editar': typeof AuthenticatedMovimentacaoHistoricoIdEditarRoute
@@ -569,7 +531,6 @@ export interface FileRouteTypes {
     | '/auth'
     | '/connect'
     | '/mcp'
-    | '/unsubscribe'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/agenda'
@@ -582,7 +543,6 @@ export interface FileRouteTypes {
     | '/a/$token'
     | '/auth/recover'
     | '/auth/update-password'
-    | '/email/unsubscribe'
     | '/movimentacao/$slug'
     | '/movimentacao/historico'
     | '/totem/buscar'
@@ -600,7 +560,7 @@ export interface FileRouteTypes {
     | '/onboarding/pronto'
     | '/onboarding/servicos'
     | '/relatorios/movimentacoes'
-    | '/lovable/email/suppression'
+    | '/lovable/email/events'
     | '/movimentacao/'
     | '/admin/equipe'
     | '/admin/fila'
@@ -615,9 +575,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/sync-ghl'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
-    | '/lovable/email/queue/process'
     | '/lovable/email/transactional/preview'
-    | '/lovable/email/transactional/send'
     | '/appointments/new/'
     | '/admin/movimentacao/novo'
     | '/movimentacao/historico/$id/editar'
@@ -627,7 +585,6 @@ export interface FileRouteTypes {
     | '/auth'
     | '/connect'
     | '/mcp'
-    | '/unsubscribe'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/agenda'
@@ -640,7 +597,6 @@ export interface FileRouteTypes {
     | '/a/$token'
     | '/auth/recover'
     | '/auth/update-password'
-    | '/email/unsubscribe'
     | '/movimentacao/$slug'
     | '/movimentacao/historico'
     | '/totem/buscar'
@@ -657,7 +613,7 @@ export interface FileRouteTypes {
     | '/onboarding/pronto'
     | '/onboarding/servicos'
     | '/relatorios/movimentacoes'
-    | '/lovable/email/suppression'
+    | '/lovable/email/events'
     | '/movimentacao'
     | '/admin/equipe'
     | '/admin/fila'
@@ -672,9 +628,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/sync-ghl'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
-    | '/lovable/email/queue/process'
     | '/lovable/email/transactional/preview'
-    | '/lovable/email/transactional/send'
     | '/appointments/new'
     | '/admin/movimentacao/novo'
     | '/movimentacao/historico/$id/editar'
@@ -685,7 +639,6 @@ export interface FileRouteTypes {
     | '/auth'
     | '/connect'
     | '/mcp'
-    | '/unsubscribe'
     | '/_authenticated/_admin'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -699,7 +652,6 @@ export interface FileRouteTypes {
     | '/a/$token'
     | '/auth_/recover'
     | '/auth_/update-password'
-    | '/email/unsubscribe'
     | '/movimentacao/$slug'
     | '/movimentacao/historico'
     | '/totem/buscar'
@@ -717,7 +669,7 @@ export interface FileRouteTypes {
     | '/_authenticated/onboarding/pronto'
     | '/_authenticated/onboarding/servicos'
     | '/_authenticated/relatorios/movimentacoes'
-    | '/lovable/email/suppression'
+    | '/lovable/email/events'
     | '/_authenticated/movimentacao/'
     | '/_authenticated/_admin/admin/equipe'
     | '/_authenticated/_admin/admin/fila'
@@ -732,9 +684,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/sync-ghl'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
-    | '/lovable/email/queue/process'
     | '/lovable/email/transactional/preview'
-    | '/lovable/email/transactional/send'
     | '/_authenticated/appointments/new/'
     | '/_authenticated/_admin/admin/movimentacao/novo'
     | '/_authenticated/movimentacao/historico/$id/editar'
@@ -746,13 +696,11 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   ConnectRoute: typeof ConnectRoute
   McpRoute: typeof McpRoute
-  UnsubscribeRoute: typeof UnsubscribeRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   ATokenRoute: typeof ATokenRoute
   AuthRecoverRoute: typeof AuthRecoverRoute
   AuthUpdatePasswordRoute: typeof AuthUpdatePasswordRoute
-  EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   MovimentacaoSlugRoute: typeof MovimentacaoSlugRoute
   MovimentacaoHistoricoRoute: typeof MovimentacaoHistoricoRoute
   TotemBuscarRoute: typeof TotemBuscarRoute
@@ -761,25 +709,16 @@ export interface RootRouteChildren {
   TotemIndexRoute: typeof TotemIndexRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
-  LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
+  LovableEmailEventsRoute: typeof LovableEmailEventsRoute
   ApiPublicHooksSendRemindersRoute: typeof ApiPublicHooksSendRemindersRoute
   ApiPublicHooksSyncGhlRoute: typeof ApiPublicHooksSyncGhlRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
-  LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
   LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
-  LovableEmailTransactionalSendRoute: typeof LovableEmailTransactionalSendRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/unsubscribe': {
-      id: '/unsubscribe'
-      path: '/unsubscribe'
-      fullPath: '/unsubscribe'
-      preLoaderRoute: typeof UnsubscribeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/mcp': {
       id: '/mcp'
       path: '/mcp'
@@ -855,13 +794,6 @@ declare module '@tanstack/react-router' {
       path: '/movimentacao/$slug'
       fullPath: '/movimentacao/$slug'
       preLoaderRoute: typeof MovimentacaoSlugRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/email/unsubscribe': {
-      id: '/email/unsubscribe'
-      path: '/email/unsubscribe'
-      fullPath: '/email/unsubscribe'
-      preLoaderRoute: typeof EmailUnsubscribeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth_/update-password': {
@@ -962,11 +894,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMovimentacaoIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/lovable/email/suppression': {
-      id: '/lovable/email/suppression'
-      path: '/lovable/email/suppression'
-      fullPath: '/lovable/email/suppression'
-      preLoaderRoute: typeof LovableEmailSuppressionRouteImport
+    '/lovable/email/events': {
+      id: '/lovable/email/events'
+      path: '/lovable/email/events'
+      fullPath: '/lovable/email/events'
+      preLoaderRoute: typeof LovableEmailEventsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/relatorios/movimentacoes': {
@@ -1053,25 +985,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppointmentsNewIndexRouteImport
       parentRoute: typeof AuthenticatedAppointmentsNewRoute
     }
-    '/lovable/email/transactional/send': {
-      id: '/lovable/email/transactional/send'
-      path: '/lovable/email/transactional/send'
-      fullPath: '/lovable/email/transactional/send'
-      preLoaderRoute: typeof LovableEmailTransactionalSendRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/lovable/email/transactional/preview': {
       id: '/lovable/email/transactional/preview'
       path: '/lovable/email/transactional/preview'
       fullPath: '/lovable/email/transactional/preview'
       preLoaderRoute: typeof LovableEmailTransactionalPreviewRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/lovable/email/queue/process': {
-      id: '/lovable/email/queue/process'
-      path: '/lovable/email/queue/process'
-      fullPath: '/lovable/email/queue/process'
-      preLoaderRoute: typeof LovableEmailQueueProcessRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/lovable/email/auth/webhook': {
@@ -1306,14 +1224,12 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   ConnectRoute: ConnectRoute,
   McpRoute: McpRoute,
-  UnsubscribeRoute: UnsubscribeRoute,
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   ATokenRoute: ATokenRoute,
   AuthRecoverRoute: AuthRecoverRoute,
   AuthUpdatePasswordRoute: AuthUpdatePasswordRoute,
-  EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   MovimentacaoSlugRoute: MovimentacaoSlugRoute,
   MovimentacaoHistoricoRoute: MovimentacaoHistoricoRoute,
   TotemBuscarRoute: TotemBuscarRoute,
@@ -1322,14 +1238,12 @@ const rootRouteChildren: RootRouteChildren = {
   TotemIndexRoute: TotemIndexRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
-  LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
+  LovableEmailEventsRoute: LovableEmailEventsRoute,
   ApiPublicHooksSendRemindersRoute: ApiPublicHooksSendRemindersRoute,
   ApiPublicHooksSyncGhlRoute: ApiPublicHooksSyncGhlRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
-  LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
   LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
-  LovableEmailTransactionalSendRoute: LovableEmailTransactionalSendRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

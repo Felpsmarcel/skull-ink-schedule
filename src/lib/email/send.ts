@@ -1,39 +1,27 @@
-import { supabase } from '@/integrations/supabase/client'
+import { sendAppEmail } from '@/lib/email.functions'
+import type { APP_EMAIL_TEMPLATES } from '@/lib/email/schema'
 
 interface SendArgs {
-  templateName: string
-  recipientEmail?: string
+  templateName: (typeof APP_EMAIL_TEMPLATES)[number]
+  recipientEmail: string
   idempotencyKey?: string
   templateData?: Record<string, unknown>
 }
 
 /**
- * Client-side helper — POSTs to the internal transactional send route with the
- * user's Supabase JWT. Failure is caught and logged; caller decides whether to
- * surface it. Do NOT let email failure abort a user-facing flow like checkout.
+ * Thin client wrapper — hands the send to the authenticated server function,
+ * which sends through Lovable's managed email API. Failure is caught and
+ * logged; email failure must never abort a user-facing flow.
  */
 export async function sendTransactionalEmail(args: SendArgs): Promise<{ ok: boolean; error?: string }> {
   try {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.access_token) {
-      return { ok: false, error: 'no_session' }
-    }
-    const res = await fetch('/lovable/email/transactional/send', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify(args),
-    })
-    if (!res.ok) {
-      const text = await res.text().catch(() => '')
-      console.error('[sendTransactionalEmail] failed', res.status, text)
-      return { ok: false, error: `http_${res.status}` }
+    const result = await sendAppEmail({ data: args })
+    if (!result.sent) {
+      return { ok: false, error: result.reason }
     }
     return { ok: true }
   } catch (err) {
-    console.error('[sendTransactionalEmail] threw', err)
+    console.error('[sendTransactionalEmail] failed', err)
     return { ok: false, error: err instanceof Error ? err.message : 'unknown' }
   }
 }

@@ -1,11 +1,5 @@
-import * as React from 'react'
-import { render } from 'react-email'
 import { createFileRoute } from '@tanstack/react-router'
-import { TEMPLATES } from '@/lib/email-templates/registry'
-
-const SITE_NAME = 'GF Tattoo Studio'
-const SENDER_DOMAIN = 'notify.gftattooacademy.info'
-const FROM_DOMAIN = 'notify.gftattooacademy.info'
+import { sendTemplateEmail } from '@/lib/email-templates/send-email'
 
 function whenLabel(iso: string): string {
   return new Intl.DateTimeFormat('pt-PT', {
@@ -18,11 +12,6 @@ function whenLabel(iso: string): string {
   }).format(new Date(iso))
 }
 
-function generateToken(): string {
-  const bytes = new Uint8Array(32)
-  crypto.getRandomValues(bytes)
-  return Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('')
-}
 
 export const Route = createFileRoute('/api/public/hooks/send-reminders')({
   server: {
@@ -37,10 +26,7 @@ export const Route = createFileRoute('/api/public/hooks/send-reminders')({
         }
 
         const { supabaseAdmin } = await import('@/integrations/supabase/client.server')
-        const template = TEMPLATES['appointment-reminder']
-        if (!template) {
-          return Response.json({ error: 'template_missing' }, { status: 500 })
-        }
+
 
         const now = new Date()
         const from = new Date(now.getTime() + 23 * 3600_000).toISOString()
@@ -93,103 +79,44 @@ export const Route = createFileRoute('/api/public/hooks/send-reminders')({
             continue
           }
 
-          const email = a.contact_email.toLowerCase()
-
-          // Suppression check.
-          const { data: suppressed } = await supabaseAdmin
-            .from('suppressed_emails' as never)
-            .select('id')
-            .eq('email', email)
-            .maybeSingle()
-          if (suppressed) {
-            await supabaseAdmin.from('email_send_log' as never).insert({
-              message_id: messageId,
-              template_name: 'appointment-reminder',
-              recipient_email: a.contact_email,
-              status: 'suppressed',
-            } as never)
-            skipped++
-            continue
-          }
-
-          // Ensure unsubscribe token.
-          const { data: tok } = await supabaseAdmin
-            .from('email_unsubscribe_tokens' as never)
-            .select('token, used_at')
-            .eq('email', email)
-            .maybeSingle()
-          let unsubToken: string
-          if (tok && !(tok as { used_at: string | null }).used_at) {
-            unsubToken = (tok as { token: string }).token
-          } else {
-            unsubToken = generateToken()
-            await supabaseAdmin
-              .from('email_unsubscribe_tokens' as never)
-              .upsert({ token: unsubToken, email } as never, {
-                onConflict: 'email',
-                ignoreDuplicates: true,
-              })
-            const { data: stored } = await supabaseAdmin
-              .from('email_unsubscribe_tokens' as never)
-              .select('token')
-              .eq('email', email)
-              .maybeSingle()
-            if (stored) unsubToken = (stored as { token: string }).token
-          }
-
           const servicesSummary = (a.services ?? [])
             .map((s) => s?.name)
             .filter(Boolean)
             .join(', ')
-          const props = {
-            clientName: a.contact_name ?? undefined,
-            artistName: a.artists?.name ?? undefined,
-            whenLabel: whenLabel(a.start_at),
-            servicesSummary,
-          }
-          const element = React.createElement(template.component, props)
-          const html = await render(element)
-          const text = await render(element, { plainText: true })
-          const subject =
-            typeof template.subject === 'function' ? template.subject(props) : template.subject
 
-          await supabaseAdmin.from('email_send_log' as never).insert({
-            message_id: messageId,
-            template_name: 'appointment-reminder',
-            recipient_email: a.contact_email,
-            status: 'pending',
-          } as never)
-
-          const { error: enqErr } = await supabaseAdmin.rpc('enqueue_email' as never, {
-            queue_name: 'transactional_emails',
-            payload: {
-              message_id: messageId,
-              to: a.contact_email,
-              from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
-              sender_domain: SENDER_DOMAIN,
-              subject,
-              html,
-              text,
-              purpose: 'transactional',
-              label: 'appointment-reminder',
-              idempotency_key: messageId,
-              unsubscribe_token: unsubToken,
-              queued_at: new Date().toISOString(),
-            },
-          } as never)
-
-          if (enqErr) {
-            await supabaseAdmin.from('email_send_log' as never).insert({
+          const logRow = async (status: string, errorMessage?: string) => {
+            const { error: logErr } = await supabaseAdmin.from('email_send_log' as never).insert({
               message_id: messageId,
               template_name: 'appointment-reminder',
               recipient_email: a.contact_email,
-              status: 'failed',
-              error_message: enqErr.message,
+              status,
+              ...(errorMessage ? { error_message: errorMessage } : {}),
             } as never)
-            continue
+            if (logErr) console.error('[send-reminders] log write failed', logErr.message)
           }
-          sent++
+
+          try {
+            const result = await sendTemplateEmail('appointment-reminder', a.contact_email, {
+              idempotencyKey: messageId,
+              templateData: {
+                clientName: a.contact_name ?? undefined,
+                artistName: a.artists?.name ?? undefined,
+                whenLabel: whenLabel(a.start_at),
+                servicesSummary,
+              },
+            })
+            if (!result.sent) {
+              await logRow('suppressed')
+              skipped++
+              continue
+            }
+            await logRow('sent')
+            sent++
+          } catch (err) {
+            await logRow('failed', err instanceof Error ? err.message : 'unknown')
+          }
         }
+
 
         return Response.json({ ok: true, considered: rows.length, sent, skipped })
       },
