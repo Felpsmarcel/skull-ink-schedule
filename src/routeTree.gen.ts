@@ -46,6 +46,7 @@ import { Route as AuthenticatedAppointmentsNewRouteImport } from './routes/_auth
 import { Route as AuthenticatedAdminReconciliarRouteImport } from './routes/_authenticated/_admin/reconciliar'
 import { Route as AuthenticatedAdminGhlTestRouteImport } from './routes/_authenticated/_admin/ghl-test'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
+import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as AuthenticatedAppointmentsNewIndexRouteImport } from './routes/_authenticated/appointments.new.index'
 import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
@@ -262,6 +263,11 @@ const Char91DotmcpChar93InvokeToolToolRoute =
     path: '/.mcp/invoke-tool/$tool',
     getParentRoute: () => rootRouteImport,
   } as any)
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedAppointmentsNewIndexRoute =
   AuthenticatedAppointmentsNewIndexRouteImport.update({
     id: '/',
@@ -398,6 +404,7 @@ export interface FileRoutesByFullPath {
   '/totem/confirmar': typeof TotemConfirmarRoute
   '/totem/pronto': typeof TotemProntoRoute
   '/totem/': typeof TotemIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/ghl-test': typeof AuthenticatedAdminGhlTestRoute
   '/reconciliar': typeof AuthenticatedAdminReconciliarRoute
@@ -454,6 +461,7 @@ export interface FileRoutesByTo {
   '/totem/confirmar': typeof TotemConfirmarRoute
   '/totem/pronto': typeof TotemProntoRoute
   '/totem': typeof TotemIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/ghl-test': typeof AuthenticatedAdminGhlTestRoute
   '/reconciliar': typeof AuthenticatedAdminReconciliarRoute
@@ -512,6 +520,7 @@ export interface FileRoutesById {
   '/totem/confirmar': typeof TotemConfirmarRoute
   '/totem/pronto': typeof TotemProntoRoute
   '/totem/': typeof TotemIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/_authenticated/_admin/ghl-test': typeof AuthenticatedAdminGhlTestRoute
   '/_authenticated/_admin/reconciliar': typeof AuthenticatedAdminReconciliarRoute
@@ -570,6 +579,7 @@ export interface FileRouteTypes {
     | '/totem/confirmar'
     | '/totem/pronto'
     | '/totem/'
+    | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/ghl-test'
     | '/reconciliar'
@@ -626,6 +636,7 @@ export interface FileRouteTypes {
     | '/totem/confirmar'
     | '/totem/pronto'
     | '/totem'
+    | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/ghl-test'
     | '/reconciliar'
@@ -683,6 +694,7 @@ export interface FileRouteTypes {
     | '/totem/confirmar'
     | '/totem/pronto'
     | '/totem/'
+    | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/_authenticated/_admin/ghl-test'
     | '/_authenticated/_admin/reconciliar'
@@ -734,6 +746,7 @@ export interface RootRouteChildren {
   TotemConfirmarRoute: typeof TotemConfirmarRoute
   TotemProntoRoute: typeof TotemProntoRoute
   TotemIndexRoute: typeof TotemIndexRoute
+  DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   ApiPublicHooksSendRemindersRoute: typeof ApiPublicHooksSendRemindersRoute
@@ -1004,6 +1017,13 @@ declare module '@tanstack/react-router' {
       path: '/.mcp/invoke-tool/$tool'
       fullPath: '/.mcp/invoke-tool/$tool'
       preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.lovable/oauth/consent': {
+      id: '/.lovable/oauth/consent'
+      path: '/.lovable/oauth/consent'
+      fullPath: '/.lovable/oauth/consent'
+      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/appointments/new/': {
@@ -1279,6 +1299,7 @@ const rootRouteChildren: RootRouteChildren = {
   TotemConfirmarRoute: TotemConfirmarRoute,
   TotemProntoRoute: TotemProntoRoute,
   TotemIndexRoute: TotemIndexRoute,
+  DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   ApiPublicHooksSendRemindersRoute: ApiPublicHooksSendRemindersRoute,
