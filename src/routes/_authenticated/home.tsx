@@ -1,10 +1,21 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { BarChart3, Banknote, CalendarDays, Link2Off, QrCode, Users, Wallet } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
-import { getVinculosIncompletos } from "@/lib/projects.functions";
-import { FilaAguardando, useFilaHoje } from "@/components/checkin/fila-aguardando";
-import { useCurrentUser } from "@/hooks/use-current-user";
+import { useState } from "react";
+import {
+  AlertTriangle,
+  Banknote,
+  CalendarDays,
+  ChevronDown,
+  ChevronRight,
+  Clock,
+  QrCode,
+  RefreshCw,
+  Wallet,
+} from "lucide-react";
+import { FilaAguardando } from "@/components/checkin/fila-aguardando";
+import { useHomeDashboard } from "@/hooks/use-home-dashboard";
+import { brusselsTime, canSeeFinance, type Pendencia } from "@/lib/home-dashboard";
+import { formatCurrency } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import gfMark from "@/assets/gf-mark.png";
 
 export const Route = createFileRoute("/_authenticated/home")({
@@ -13,7 +24,7 @@ export const Route = createFileRoute("/_authenticated/home")({
       { title: "Central operacional — GF Tattoo Studio" },
       {
         name: "description",
-        content: "Fila de clientes, agenda do dia e atalhos do GF Tattoo Studio.",
+        content: "Próximo cliente, fila do dia e ações rápidas do GF Tattoo Studio.",
       },
       { name: "robots", content: "noindex,nofollow" },
     ],
@@ -22,129 +33,238 @@ export const Route = createFileRoute("/_authenticated/home")({
 });
 
 function HomePage() {
-  const { data: me } = useCurrentUser();
-  const isAdmin = me?.role === "admin";
-  const { data: fila } = useFilaHoje();
-  const aguardando = (fila ?? []).filter((r) => r.status === "aguardando").length;
-  const emAtendimento = (fila ?? []).filter((r) => r.status === "em_atendimento").length;
-  const fetchVinculos = useServerFn(getVinculosIncompletos);
-  const vinculosQ = useQuery({
-    queryKey: ["vinculos-incompletos"],
-    queryFn: () => fetchVinculos(),
-    enabled: isAdmin,
-    staleTime: 5 * 60_000,
-    retry: false,
-  });
+  const { data, isLoading, isFetching, error, dataUpdatedAt } = useHomeDashboard();
+  const role = data?.role;
+  const gestao = data?.gestao;
 
   return (
     <div className="min-h-svh bg-background pb-[calc(env(safe-area-inset-bottom)+7rem)] text-foreground sm:pb-24">
       <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-border bg-background/95 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] backdrop-blur">
         <img src={gfMark} alt="" className="h-7 w-7 object-contain" />
-        <h1 className="flex-1 text-base font-bold uppercase tracking-wider">Hoje</h1>
+        <div className="flex-1">
+          <h1 className="text-base font-bold uppercase tracking-wider">Hoje</h1>
+          <p className="text-[11px] capitalize text-muted-foreground">
+            {data?.dateLabel ?? "—"}
+          </p>
+        </div>
+        <span
+          className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground"
+          aria-live="polite"
+        >
+          <RefreshCw className={cn("h-3.5 w-3.5", isFetching && "animate-spin")} aria-hidden />
+          {dataUpdatedAt ? brusselsTime(new Date(dataUpdatedAt).toISOString()) : "—"}
+        </span>
       </header>
 
       <div className="mx-auto max-w-md space-y-5 px-4 py-4 sm:max-w-3xl">
-        <div className="grid grid-cols-2 gap-3">
-          <Stat label="Aguardando" value={aguardando} />
-          <Stat label="Em atendimento" value={emAtendimento} />
-        </div>
-
-        {isAdmin && vinculosQ.data ? (
-          <Link
-            to="/relatorios/movimentacoes"
-            className="flex items-center gap-3 rounded-lg border border-border bg-card p-4"
-          >
-            <Link2Off className="h-5 w-5 text-amber-500" />
-            <div className="flex-1">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                Vínculos incompletos
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {vinculosQ.data.appointmentsSemProjeto} agendamentos ·{" "}
-                {vinculosQ.data.movimentacoesSemVinculo} pagamentos
-              </p>
-            </div>
-            <span className="text-3xl font-bold">{vinculosQ.data.total}</span>
-          </Link>
+        {error ? (
+          <p className="rounded-lg border border-border bg-card p-3 text-xs text-muted-foreground">
+            Não foi possível atualizar agora. Os dados podem estar desatualizados.
+          </p>
         ) : null}
 
-        <div className="grid grid-cols-2 gap-3">
-          <BigAction to="/agenda" icon={<CalendarDays className="h-5 w-5" />} label="Agenda" />
-          <BigAction to="/totem" icon={<QrCode className="h-5 w-5" />} label="Check-in" />
+        {/* 1. Próximo cliente */}
+        {isLoading ? (
+          <div className="h-28 animate-pulse rounded-lg border border-border bg-card" />
+        ) : data?.next ? (
+          <section className="rounded-lg border border-border bg-card p-4">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              Próximo cliente
+            </p>
+            <div className="mt-2 flex items-center gap-3">
+              <span className="text-3xl font-bold tabular-nums">{data.next.timeLabel}</span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold">{data.next.clientName}</p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {data.next.artistName ?? "Sem tatuador"} · {statusLabel(data.next.status)}
+                </p>
+              </div>
+            </div>
+            <Link
+              to="/agenda"
+              search={data.next.ghlAppointmentId ? { novo: data.next.ghlAppointmentId } : {}}
+              className="mt-3 flex min-h-11 items-center justify-center rounded-md bg-primary text-sm font-bold uppercase tracking-wider text-primary-foreground active:scale-[0.98]"
+            >
+              Abrir
+            </Link>
+          </section>
+        ) : (
+          <section className="rounded-lg border border-dashed border-border bg-card p-5 text-center">
+            <p className="text-sm text-muted-foreground">Nenhum cliente restante hoje.</p>
+          </section>
+        )}
+
+        {/* 2. Faixa fila */}
+        <div className="flex items-stretch divide-x divide-border overflow-hidden rounded-lg border border-border bg-card">
+          <FaixaItem label="Aguardando" value={data?.fila.aguardando ?? 0} />
+          <FaixaItem label="Em atendimento" value={data?.fila.emAtendimento ?? 0} />
         </div>
 
+        {/* 3. Ações rápidas */}
         <section>
           <h2 className="mb-2 px-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-            Clientes aguardando
+            Ações rápidas
           </h2>
+          <div className="grid grid-cols-3 gap-3">
+            <Acao to="/agenda" icon={<CalendarDays className="h-5 w-5" />} label="Agenda" />
+            <Acao to="/totem" icon={<QrCode className="h-5 w-5" />} label="Check-in" />
+            <Acao
+              to="/movimentacao"
+              icon={<Banknote className="h-5 w-5" />}
+              label="Pagamento"
+            />
+          </div>
+          {role && canSeeFinance(role) ? (
+            <Link
+              to="/financeiro"
+              className="mt-3 flex min-h-11 items-center gap-2 rounded-md border border-border bg-card px-3 text-sm text-muted-foreground"
+            >
+              <Wallet className="h-4 w-4" aria-hidden />
+              <span className="flex-1">Financeiro</span>
+              <ChevronRight className="h-4 w-4" aria-hidden />
+            </Link>
+          ) : null}
+        </section>
+
+        {/* 4. Fila do dia */}
+        <section>
+          <div className="mb-2 flex items-center justify-between px-1">
+            <h2 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              Fila do dia
+            </h2>
+            {role === "admin" ? (
+              <Link to="/admin/fila" className="text-[10px] uppercase tracking-wider text-muted-foreground underline">
+                Ver todos
+              </Link>
+            ) : null}
+          </div>
           <FilaAguardando />
         </section>
 
-        <section>
-          <h2 className="mb-2 px-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-            Atalhos
-          </h2>
-          <div className="grid grid-cols-2 gap-3">
-            <Shortcut to="/financeiro" icon={<Wallet className="h-4 w-4" />} label="Financeiro" />
-            <Shortcut
-              to="/movimentacao"
-              icon={<Banknote className="h-4 w-4" />}
-              label="Registrar pagamento"
-            />
-            <Shortcut
-              to="/relatorios/movimentacoes"
-              icon={<BarChart3 className="h-4 w-4" />}
-              label="Relatório"
-            />
-            {isAdmin ? (
-              <Shortcut to="/admin/fila" icon={<Users className="h-4 w-4" />} label="Fila do dia" />
-            ) : null}
-          </div>
-        </section>
+        {/* 5. Gestão (admin) */}
+        {gestao ? <GestaoSection gestao={gestao} /> : null}
       </div>
     </div>
   );
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
+function statusLabel(status: string): string {
+  switch (status) {
+    case "confirmed":
+      return "Confirmado";
+    case "pending":
+      return "Pendente";
+    case "completed":
+      return "Concluído";
+    default:
+      return status;
+  }
+}
+
+function FaixaItem({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-lg border border-border bg-card p-4">
-      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+    <div className="flex flex-1 items-center gap-2 px-4 py-3">
+      <Clock className="h-4 w-4 text-muted-foreground" aria-hidden />
+      <span className="flex-1 text-[11px] uppercase tracking-wider text-muted-foreground">
         {label}
-      </p>
-      <p className="mt-1 text-3xl font-bold">{value}</p>
+      </span>
+      <span className="text-xl font-bold tabular-nums">{value}</span>
     </div>
   );
 }
 
-function BigAction({
-  to,
-  icon,
-  label,
-}: {
-  to: string;
-  icon: React.ReactNode;
-  label: string;
-}) {
+function Acao({ to, icon, label }: { to: string; icon: React.ReactNode; label: string }) {
   return (
     <Link
       to={to}
-      className="flex min-h-20 flex-col justify-center gap-1.5 rounded-lg bg-primary px-4 text-primary-foreground active:scale-[0.98]"
+      className="flex min-h-20 flex-col items-center justify-center gap-1.5 rounded-lg bg-primary px-2 text-center text-primary-foreground active:scale-[0.98]"
     >
       {icon}
-      <span className="text-sm font-bold uppercase tracking-wider">{label}</span>
+      <span className="text-[11px] font-bold uppercase tracking-wider">{label}</span>
     </Link>
   );
 }
 
-function Shortcut({ to, icon, label }: { to: string; icon: React.ReactNode; label: string }) {
+function GestaoSection({
+  gestao,
+}: {
+  gestao: NonNullable<import("@/lib/home-dashboard").HomeDashboard["gestao"]>;
+}) {
+  const [open, setOpen] = useState(false);
+  const alertas = gestao.pendencias.length;
+
   return (
-    <Link
-      to={to}
-      className="flex min-h-16 items-center gap-2 rounded-lg border border-border bg-card px-3 text-sm"
-    >
-      <span className="text-muted-foreground">{icon}</span>
-      <span className="flex-1">{label}</span>
-    </Link>
+    <section className="rounded-lg border border-border bg-card">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex min-h-12 w-full items-center gap-2 px-4 py-3 text-left"
+      >
+        <span className="flex-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+          Gestão
+        </span>
+        {alertas > 0 ? (
+          <span className="rounded-full bg-destructive px-2 py-0.5 text-[10px] font-bold text-destructive-foreground">
+            {alertas}
+          </span>
+        ) : null}
+        <ChevronDown className={cn("h-4 w-4 text-muted-foreground", open && "rotate-180")} aria-hidden />
+      </button>
+
+      {open ? (
+        <div className="space-y-3 border-t border-border px-4 py-4">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">Recebido hoje</span>
+            <span className="text-lg font-bold tabular-nums">
+              {formatCurrency(gestao.recebidoHoje)}
+            </span>
+          </div>
+
+          {gestao.pendencias.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Sem pendências operacionais.</p>
+          ) : (
+            <ul className="space-y-2">
+              {gestao.pendencias.map((p) => (
+                <PendenciaRow key={p.kind} p={p} />
+              ))}
+            </ul>
+          )}
+
+          <p className="text-[11px] text-muted-foreground">
+            Vínculos incompletos: {gestao.vinculosNovos} novos desde a ativação da
+            rastreabilidade · {gestao.vinculosHistorico} no histórico.
+          </p>
+
+          {gestao.degraded ? (
+            <p className="text-[11px] text-muted-foreground">
+              Alguns indicadores de gestão não carregaram nesta atualização.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function PendenciaRow({ p }: { p: Pendencia }) {
+  return (
+    <li>
+      <Link
+        to={p.to}
+        className="flex min-h-12 items-center gap-3 rounded-md border border-border px-3 py-2"
+      >
+        <AlertTriangle
+          className={cn(
+            "h-4 w-4",
+            p.severity === "critica" ? "text-destructive" : "text-muted-foreground",
+          )}
+          aria-hidden
+        />
+        <span className="flex-1 text-xs">{p.label}</span>
+        <span className="text-base font-bold tabular-nums">{p.count}</span>
+        <ChevronRight className="h-4 w-4 text-muted-foreground" aria-hidden />
+      </Link>
+    </li>
   );
 }
