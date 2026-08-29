@@ -43,6 +43,13 @@
       "when": 1788013312303,
       "tag": "0005_movimentacoes_link_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788013339879,
+      "tag": "0006_movimentacoes_link_fk_indexes",
+      "breakpoints": true
     }
   ]
 }

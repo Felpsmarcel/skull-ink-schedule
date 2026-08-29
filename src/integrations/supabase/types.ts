@@ -869,6 +869,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "movimentacoes_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "movimentacoes_artist_id_fkey"
             columns: ["artist_id"]
             isOneToOne: false
@@ -880,6 +887,13 @@ export type Database = {
             columns: ["artist_id"]
             isOneToOne: false
             referencedRelation: "artists_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "tattoo_projects"
             referencedColumns: ["id"]
           },
           {
