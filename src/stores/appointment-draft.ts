@@ -125,11 +125,13 @@ export const useAppointmentDraft = create<State>()(
       setSeller: (sellerId) => set({ sellerId }),
       setDeposit: (eur) =>
         set({ depositEur: Number.isFinite(eur) ? Math.max(0, eur) : 0 }),
-      reset: () => set({ ...initial }),
+      setProject: (patch) => set((st) => ({ project: { ...st.project, ...patch } })),
+      reset: () => set({ ...initial, project: { ...initialProject }, idempotencyKey: newKey() }),
     }),
     {
       name: "gf-appointment-draft",
-      version: 4,
+      version: 5,
+
       storage: createJSONStorage(() =>
         typeof window !== "undefined" ? sessionStorage : (undefined as unknown as Storage),
       ),
