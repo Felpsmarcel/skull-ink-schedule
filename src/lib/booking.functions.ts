@@ -466,7 +466,7 @@ export const finalizeBooking = createServerFn({ method: "POST" })
         total_eur: priced.totalEur,
         original_eur: priced.originalEur,
         commission_pct: commissionPct,
-        services: priced.lines,
+        services: priced.lines as unknown as never,
         notes: data.notes ?? null,
         seller_id: sellerId,
         deposit_eur: depositEur,
