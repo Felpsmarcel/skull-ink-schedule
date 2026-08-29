@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { GF_PIPELINE_ID } from "@/lib/linking";
+import { appointmentLinkStatus, GF_PIPELINE_ID, type LinkStatus } from "@/lib/linking";
 
 /* ------------------------------- Tipos ------------------------------- */
 
@@ -393,3 +393,61 @@ export const getVinculosIncompletos = createServerFn({ method: "POST" })
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
+
+/* ------------------- 6. Rastreabilidade de um agendamento ------------------- */
+
+export interface AppointmentLinkInfo {
+  appointmentId: string | null;
+  projectId: string | null;
+  ghlAppointmentId: string | null;
+  ghlOpportunityId: string | null;
+  ghlContactId: string | null;
+  hasPayment: boolean;
+  status: LinkStatus;
+}
+
+export const getAppointmentLinkInfo = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z.object({ ghlEventId: z.string().min(3) }).parse(data),
+  )
+  .handler(async ({ data, context }): Promise<AppointmentLinkInfo> => {
+    const { supabase } = context;
+    const { data: appt, error } = await supabase
+      .from("appointments")
+      .select("id, project_id, ghl_appointment_id, ghl_opportunity_id, ghl_contact_id")
+      .eq("ghl_appointment_id", data.ghlEventId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!appt) {
+      return {
+        appointmentId: null,
+        projectId: null,
+        ghlAppointmentId: null,
+        ghlOpportunityId: null,
+        ghlContactId: null,
+        hasPayment: false,
+        status: "vinculo_incompleto",
+      };
+    }
+    const { count } = await supabase
+      .from("movimentacoes")
+      .select("id", { count: "exact", head: true })
+      .eq("appointment_id", appt.id)
+      .is("deleted_at", null);
+    const hasPayment = (count ?? 0) > 0;
+    return {
+      appointmentId: appt.id,
+      projectId: appt.project_id,
+      ghlAppointmentId: appt.ghl_appointment_id,
+      ghlOpportunityId: appt.ghl_opportunity_id,
+      ghlContactId: appt.ghl_contact_id,
+      hasPayment,
+      status: appointmentLinkStatus({
+        projectId: appt.project_id,
+        ghlOpportunityId: appt.ghl_opportunity_id,
+        ghlAppointmentId: appt.ghl_appointment_id,
+        hasPayment,
+      }),
+    };
+  });
