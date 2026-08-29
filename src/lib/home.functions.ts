@@ -146,6 +146,7 @@ async function buildGestao(supabase: any, nowMs: number): Promise<NonNullable<Ho
   let reconciliation = 0;
   let sessoesSemPagamento = 0;
   let passadosConfirmados = 0;
+  let incidentesAbertos = 0;
 
   const hojeKey = new Date(nowMs).toLocaleDateString("en-CA", { timeZone: "Europe/Brussels" });
 
