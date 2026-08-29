@@ -42,8 +42,11 @@ export interface CreateAppointmentResult {
   ghlEventId: string | null;
   totalEur: number;
   commissionPct: number;
+  /** true quando o reenvio devolveu o agendamento já criado (idempotência). */
+  reused?: boolean;
   warning?: string;
 }
+
 
 const GHL_BASE = "https://services.leadconnectorhq.com";
 const GHL_VERSION = "2021-04-15";
