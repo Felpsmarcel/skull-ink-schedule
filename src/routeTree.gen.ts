@@ -59,6 +59,7 @@ import { Route as AuthenticatedAppointmentsNewClienteRouteImport } from './route
 import { Route as AuthenticatedAppointmentsNewAgendaRouteImport } from './routes/_authenticated/appointments.new.agenda'
 import { Route as AuthenticatedAdminRelatoriosAgendamentosRouteImport } from './routes/_authenticated/_admin/relatorios.agendamentos'
 import { Route as AuthenticatedAdminAdminVendedoresRouteImport } from './routes/_authenticated/_admin/admin.vendedores'
+import { Route as AuthenticatedAdminAdminSaudeRouteImport } from './routes/_authenticated/_admin/admin.saude'
 import { Route as AuthenticatedAdminAdminMovimentacaoLinksRouteImport } from './routes/_authenticated/_admin/admin.movimentacao-links'
 import { Route as AuthenticatedAdminAdminFilaRouteImport } from './routes/_authenticated/_admin/admin.fila'
 import { Route as AuthenticatedAdminAdminEquipeRouteImport } from './routes/_authenticated/_admin/admin.equipe'
@@ -336,6 +337,12 @@ const AuthenticatedAdminAdminVendedoresRoute =
     path: '/admin/vendedores',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
+const AuthenticatedAdminAdminSaudeRoute =
+  AuthenticatedAdminAdminSaudeRouteImport.update({
+    id: '/admin/saude',
+    path: '/admin/saude',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
 const AuthenticatedAdminAdminMovimentacaoLinksRoute =
   AuthenticatedAdminAdminMovimentacaoLinksRouteImport.update({
     id: '/admin/movimentacao-links',
@@ -406,6 +413,7 @@ export interface FileRoutesByFullPath {
   '/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
   '/admin/fila': typeof AuthenticatedAdminAdminFilaRoute
   '/admin/movimentacao-links': typeof AuthenticatedAdminAdminMovimentacaoLinksRoute
+  '/admin/saude': typeof AuthenticatedAdminAdminSaudeRoute
   '/admin/vendedores': typeof AuthenticatedAdminAdminVendedoresRoute
   '/relatorios/agendamentos': typeof AuthenticatedAdminRelatoriosAgendamentosRoute
   '/appointments/new/agenda': typeof AuthenticatedAppointmentsNewAgendaRoute
@@ -460,6 +468,7 @@ export interface FileRoutesByTo {
   '/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
   '/admin/fila': typeof AuthenticatedAdminAdminFilaRoute
   '/admin/movimentacao-links': typeof AuthenticatedAdminAdminMovimentacaoLinksRoute
+  '/admin/saude': typeof AuthenticatedAdminAdminSaudeRoute
   '/admin/vendedores': typeof AuthenticatedAdminAdminVendedoresRoute
   '/relatorios/agendamentos': typeof AuthenticatedAdminRelatoriosAgendamentosRoute
   '/appointments/new/agenda': typeof AuthenticatedAppointmentsNewAgendaRoute
@@ -518,6 +527,7 @@ export interface FileRoutesById {
   '/_authenticated/_admin/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
   '/_authenticated/_admin/admin/fila': typeof AuthenticatedAdminAdminFilaRoute
   '/_authenticated/_admin/admin/movimentacao-links': typeof AuthenticatedAdminAdminMovimentacaoLinksRoute
+  '/_authenticated/_admin/admin/saude': typeof AuthenticatedAdminAdminSaudeRoute
   '/_authenticated/_admin/admin/vendedores': typeof AuthenticatedAdminAdminVendedoresRoute
   '/_authenticated/_admin/relatorios/agendamentos': typeof AuthenticatedAdminRelatoriosAgendamentosRoute
   '/_authenticated/appointments/new/agenda': typeof AuthenticatedAppointmentsNewAgendaRoute
@@ -575,6 +585,7 @@ export interface FileRouteTypes {
     | '/admin/equipe'
     | '/admin/fila'
     | '/admin/movimentacao-links'
+    | '/admin/saude'
     | '/admin/vendedores'
     | '/relatorios/agendamentos'
     | '/appointments/new/agenda'
@@ -629,6 +640,7 @@ export interface FileRouteTypes {
     | '/admin/equipe'
     | '/admin/fila'
     | '/admin/movimentacao-links'
+    | '/admin/saude'
     | '/admin/vendedores'
     | '/relatorios/agendamentos'
     | '/appointments/new/agenda'
@@ -686,6 +698,7 @@ export interface FileRouteTypes {
     | '/_authenticated/_admin/admin/equipe'
     | '/_authenticated/_admin/admin/fila'
     | '/_authenticated/_admin/admin/movimentacao-links'
+    | '/_authenticated/_admin/admin/saude'
     | '/_authenticated/_admin/admin/vendedores'
     | '/_authenticated/_admin/relatorios/agendamentos'
     | '/_authenticated/appointments/new/agenda'
@@ -1082,6 +1095,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminAdminVendedoresRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
+    '/_authenticated/_admin/admin/saude': {
+      id: '/_authenticated/_admin/admin/saude'
+      path: '/admin/saude'
+      fullPath: '/admin/saude'
+      preLoaderRoute: typeof AuthenticatedAdminAdminSaudeRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
     '/_authenticated/_admin/admin/movimentacao-links': {
       id: '/_authenticated/_admin/admin/movimentacao-links'
       path: '/admin/movimentacao-links'
@@ -1126,6 +1146,7 @@ interface AuthenticatedAdminRouteRouteChildren {
   AuthenticatedAdminAdminEquipeRoute: typeof AuthenticatedAdminAdminEquipeRoute
   AuthenticatedAdminAdminFilaRoute: typeof AuthenticatedAdminAdminFilaRoute
   AuthenticatedAdminAdminMovimentacaoLinksRoute: typeof AuthenticatedAdminAdminMovimentacaoLinksRoute
+  AuthenticatedAdminAdminSaudeRoute: typeof AuthenticatedAdminAdminSaudeRoute
   AuthenticatedAdminAdminVendedoresRoute: typeof AuthenticatedAdminAdminVendedoresRoute
   AuthenticatedAdminRelatoriosAgendamentosRoute: typeof AuthenticatedAdminRelatoriosAgendamentosRoute
   AuthenticatedAdminAdminMovimentacaoNovoRoute: typeof AuthenticatedAdminAdminMovimentacaoNovoRoute
@@ -1139,6 +1160,7 @@ const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren
     AuthenticatedAdminAdminFilaRoute: AuthenticatedAdminAdminFilaRoute,
     AuthenticatedAdminAdminMovimentacaoLinksRoute:
       AuthenticatedAdminAdminMovimentacaoLinksRoute,
+    AuthenticatedAdminAdminSaudeRoute: AuthenticatedAdminAdminSaudeRoute,
     AuthenticatedAdminAdminVendedoresRoute:
       AuthenticatedAdminAdminVendedoresRoute,
     AuthenticatedAdminRelatoriosAgendamentosRoute:

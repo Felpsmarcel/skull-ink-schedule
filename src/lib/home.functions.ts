@@ -146,6 +146,7 @@ async function buildGestao(supabase: any, nowMs: number): Promise<NonNullable<Ho
   let reconciliation = 0;
   let sessoesSemPagamento = 0;
   let passadosConfirmados = 0;
+  let incidentesAbertos = 0;
 
   const hojeKey = new Date(nowMs).toLocaleDateString("en-CA", { timeZone: "Europe/Brussels" });
 
@@ -257,6 +258,18 @@ async function buildGestao(supabase: any, nowMs: number): Promise<NonNullable<Ho
         fail("agendamentos passados", error);
       }
     })(),
+    (async () => {
+      try {
+        const { count, error } = await supabase
+          .from("operational_events")
+          .select("id", { count: "exact", head: true })
+          .neq("status", "resolved");
+        if (error) throw new Error(error.message);
+        incidentesAbertos = Number(count ?? 0);
+      } catch (error) {
+        fail("incidentes técnicos", error);
+      }
+    })(),
   ]);
 
   const all: Pendencia[] = [
@@ -297,6 +310,7 @@ async function buildGestao(supabase: any, nowMs: number): Promise<NonNullable<Ho
     vinculosNovos,
     marcoRastreabilidade: marco,
     degraded,
+    incidentesAbertos,
   };
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */

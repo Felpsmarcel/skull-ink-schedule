@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import {
+  Activity,
   AlertTriangle,
   Banknote,
   CalendarDays,
@@ -273,6 +274,16 @@ function GestaoSection({
               ))}
             </ul>
           )}
+
+          <Link
+            to="/admin/saude"
+            className="flex min-h-11 items-center gap-2 rounded-md border border-border px-3 text-xs"
+          >
+            <Activity className="h-4 w-4 text-muted-foreground" aria-hidden />
+            <span className="flex-1">Saúde do sistema</span>
+            <span className="text-base font-bold tabular-nums">{gestao.incidentesAbertos}</span>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" aria-hidden />
+          </Link>
 
           <p className="text-[11px] text-muted-foreground">
             Vínculos incompletos: {gestao.vinculosNovos} novos desde a ativação da

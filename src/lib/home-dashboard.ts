@@ -262,6 +262,8 @@ export interface HomeGestao {
   marcoRastreabilidade: string;
   /** Bloco de gestão degradou (falha parcial) mas a operação carregou. */
   degraded: boolean;
+  /** Fase 5 — incidentes técnicos abertos (uma linha, sem poluir a Home). */
+  incidentesAbertos: number;
 }
 
 export interface HomeDashboard {

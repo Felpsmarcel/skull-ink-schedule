@@ -4,6 +4,7 @@
  * at module scope.
  */
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { logIncident } from "@/lib/observability.server";
 
 const GHL_BASE = "https://services.leadconnectorhq.com";
 const GHL_VERSION = "2021-04-15";
@@ -205,6 +206,12 @@ export async function syncGhlAppointments(opts?: {
         reason,
         payload: { calendarId: calId, raw: res.raw },
       } as never);
+      await logIncident({
+        source: "ghl",
+        kind: "sync_calendar",
+        message: reason,
+        context: { calendarId: calId },
+      });
       failures++;
       continue;
     }
@@ -338,6 +345,12 @@ export async function syncGhlAppointments(opts?: {
           reason: `bulk upsert failed: ${insErr.message}`,
           payload: { calendarId: calId, eventIds: toInsert.map((e) => e.id) },
         } as never);
+        await logIncident({
+          source: "supabase",
+          kind: "sync_upsert",
+          message: insErr.message,
+          context: { calendarId: calId, count: toInsert.length },
+        });
         failures += toInsert.length;
       } else {
         inserted += count ?? rows.length;
