@@ -18,6 +18,9 @@ export interface FinalizeInput {
   services: DraftServiceLine[];
   sellerId?: string | null;
   depositEur?: number;
+  projectId?: string | null;
+  ghlOpportunityId?: string | null;
+  idempotencyKey?: string | null;
 }
 
 export type FinalizeResult = CreateAppointmentResult;
@@ -51,6 +54,9 @@ export async function finalizeAppointment(input: FinalizeInput): Promise<Finaliz
       })),
       sellerId: input.sellerId ?? null,
       depositEur: input.depositEur ?? 0,
+      projectId: input.projectId ?? null,
+      ghlOpportunityId: input.ghlOpportunityId ?? null,
+      idempotencyKey: input.idempotencyKey ?? null,
     },
   });
 }
