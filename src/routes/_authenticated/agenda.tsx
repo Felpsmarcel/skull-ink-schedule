@@ -564,7 +564,8 @@ function DayView({
                         agenda={a}
                         statusMap={statusMap}
                         nextEventId={nextEventInfo.id}
-                        highlightEventId={search.novo ?? null}
+                        highlightEventId={daySearch.novo ?? null}
+
 
                         onOpen={(slot) =>
                           setOpenSlot({
