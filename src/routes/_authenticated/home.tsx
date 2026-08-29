@@ -11,9 +11,8 @@ import {
   RefreshCw,
   Wallet,
 } from "lucide-react";
-import { FilaAguardando } from "@/components/checkin/fila-aguardando";
 import { useHomeDashboard } from "@/hooks/use-home-dashboard";
-import { brusselsTime, canSeeFinance, type Pendencia } from "@/lib/home-dashboard";
+import { brusselsTime, type HomeFilaItem, type Pendencia } from "@/lib/home-dashboard";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import gfMark from "@/assets/gf-mark.png";
@@ -34,7 +33,7 @@ export const Route = createFileRoute("/_authenticated/home")({
 
 function HomePage() {
   const { data, isLoading, isFetching, error, dataUpdatedAt } = useHomeDashboard();
-  const role = data?.role;
+  const actions = data?.actions;
   const gestao = data?.gestao;
 
   return (
@@ -105,16 +104,25 @@ function HomePage() {
           <h2 className="mb-2 px-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
             Ações rápidas
           </h2>
-          <div className="grid grid-cols-3 gap-3">
+          <div
+            className={cn(
+              "grid gap-3",
+              actions?.pagamento ? "grid-cols-3" : "grid-cols-1",
+            )}
+          >
             <Acao to="/agenda" icon={<CalendarDays className="h-5 w-5" />} label="Agenda" />
-            <Acao to="/totem" icon={<QrCode className="h-5 w-5" />} label="Check-in" />
-            <Acao
-              to="/movimentacao"
-              icon={<Banknote className="h-5 w-5" />}
-              label="Pagamento"
-            />
+            {actions?.checkin ? (
+              <Acao to="/totem" icon={<QrCode className="h-5 w-5" />} label="Check-in" />
+            ) : null}
+            {actions?.pagamento ? (
+              <Acao
+                to="/movimentacao"
+                icon={<Banknote className="h-5 w-5" />}
+                label="Pagamento"
+              />
+            ) : null}
           </div>
-          {role && canSeeFinance(role) ? (
+          {actions?.financeiro ? (
             <Link
               to="/financeiro"
               className="mt-3 flex min-h-11 items-center gap-2 rounded-md border border-border bg-card px-3 text-sm text-muted-foreground"
@@ -132,13 +140,23 @@ function HomePage() {
             <h2 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
               Fila do dia
             </h2>
-            {role === "admin" ? (
+            {actions?.filaVerTodos ? (
               <Link to="/admin/fila" className="text-[10px] uppercase tracking-wider text-muted-foreground underline">
                 Ver todos
               </Link>
             ) : null}
           </div>
-          <FilaAguardando />
+          {isLoading ? (
+            <div className="h-16 animate-pulse rounded-lg border border-border bg-card" />
+          ) : (data?.fila.itens.length ?? 0) === 0 ? (
+            <p className="rounded-lg border border-dashed border-border bg-card p-4 text-center text-xs text-muted-foreground">
+              Ninguém na fila agora.
+            </p>
+          ) : (
+            <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
+              {data?.fila.itens.map((item) => <FilaRowHome key={item.codigo} item={item} />)}
+            </ul>
+          )}
         </section>
 
         {/* 5. Gestão (admin) */}
@@ -182,6 +200,31 @@ function Acao({ to, icon, label }: { to: string; icon: React.ReactNode; label: s
       {icon}
       <span className="text-[11px] font-bold uppercase tracking-wider">{label}</span>
     </Link>
+  );
+}
+
+function FilaRowHome({ item }: { item: HomeFilaItem }) {
+  return (
+    <li className="flex items-center gap-3 px-3 py-3">
+      <span
+        className={cn(
+          "h-2 w-2 shrink-0 rounded-full",
+          item.status === "em_atendimento" ? "bg-primary" : "bg-muted-foreground",
+        )}
+        aria-hidden
+      />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-semibold">{item.clientName}</p>
+        <p className="truncate text-[11px] text-muted-foreground">
+          {item.status === "em_atendimento" ? "Em atendimento" : "Aguardando"}
+          {item.artistName ? ` · ${item.artistName}` : ""}
+        </p>
+      </div>
+      <div className="shrink-0 text-right">
+        <p className="text-xs font-bold tabular-nums">{item.timeLabel}</p>
+        <p className="text-[10px] text-muted-foreground tabular-nums">{item.esperaMin} min</p>
+      </div>
+    </li>
   );
 }
 
