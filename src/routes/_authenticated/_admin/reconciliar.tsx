@@ -154,6 +154,10 @@ function ReconciliarPage() {
           </div>
         </div>
 
+        <BookingOperationsCard />
+
+
+
         <Alert>
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Como funciona</AlertTitle>
