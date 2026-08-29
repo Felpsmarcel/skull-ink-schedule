@@ -37,6 +37,7 @@ import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]
 import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/_admin/route'
 import { Route as AuthenticatedMovimentacaoIndexRouteImport } from './routes/_authenticated/movimentacao.index'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
+import { Route as LovableEmailEventsRouteImport } from './routes/lovable/email/events'
 import { Route as AuthenticatedRelatoriosMovimentacoesRouteImport } from './routes/_authenticated/relatorios.movimentacoes'
 import { Route as AuthenticatedOnboardingServicosRouteImport } from './routes/_authenticated/onboarding.servicos'
 import { Route as AuthenticatedOnboardingProntoRouteImport } from './routes/_authenticated/onboarding.pronto'
@@ -207,6 +208,11 @@ const AuthenticatedMovimentacaoIndexRoute =
 const LovableEmailSuppressionRoute = LovableEmailSuppressionRouteImport.update({
   id: '/lovable/email/suppression',
   path: '/lovable/email/suppression',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LovableEmailEventsRoute = LovableEmailEventsRouteImport.update({
+  id: '/lovable/email/events',
+  path: '/lovable/email/events',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedRelatoriosMovimentacoesRoute =
@@ -422,6 +428,7 @@ export interface FileRoutesByFullPath {
   '/onboarding/pronto': typeof AuthenticatedOnboardingProntoRoute
   '/onboarding/servicos': typeof AuthenticatedOnboardingServicosRoute
   '/relatorios/movimentacoes': typeof AuthenticatedRelatoriosMovimentacoesRoute
+  '/lovable/email/events': typeof LovableEmailEventsRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/movimentacao/': typeof AuthenticatedMovimentacaoIndexRoute
   '/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
@@ -479,6 +486,7 @@ export interface FileRoutesByTo {
   '/onboarding/pronto': typeof AuthenticatedOnboardingProntoRoute
   '/onboarding/servicos': typeof AuthenticatedOnboardingServicosRoute
   '/relatorios/movimentacoes': typeof AuthenticatedRelatoriosMovimentacoesRoute
+  '/lovable/email/events': typeof LovableEmailEventsRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/movimentacao': typeof AuthenticatedMovimentacaoIndexRoute
   '/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
@@ -540,6 +548,7 @@ export interface FileRoutesById {
   '/_authenticated/onboarding/pronto': typeof AuthenticatedOnboardingProntoRoute
   '/_authenticated/onboarding/servicos': typeof AuthenticatedOnboardingServicosRoute
   '/_authenticated/relatorios/movimentacoes': typeof AuthenticatedRelatoriosMovimentacoesRoute
+  '/lovable/email/events': typeof LovableEmailEventsRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/_authenticated/movimentacao/': typeof AuthenticatedMovimentacaoIndexRoute
   '/_authenticated/_admin/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
@@ -600,6 +609,7 @@ export interface FileRouteTypes {
     | '/onboarding/pronto'
     | '/onboarding/servicos'
     | '/relatorios/movimentacoes'
+    | '/lovable/email/events'
     | '/lovable/email/suppression'
     | '/movimentacao/'
     | '/admin/equipe'
@@ -657,6 +667,7 @@ export interface FileRouteTypes {
     | '/onboarding/pronto'
     | '/onboarding/servicos'
     | '/relatorios/movimentacoes'
+    | '/lovable/email/events'
     | '/lovable/email/suppression'
     | '/movimentacao'
     | '/admin/equipe'
@@ -717,6 +728,7 @@ export interface FileRouteTypes {
     | '/_authenticated/onboarding/pronto'
     | '/_authenticated/onboarding/servicos'
     | '/_authenticated/relatorios/movimentacoes'
+    | '/lovable/email/events'
     | '/lovable/email/suppression'
     | '/_authenticated/movimentacao/'
     | '/_authenticated/_admin/admin/equipe'
@@ -761,6 +773,7 @@ export interface RootRouteChildren {
   TotemIndexRoute: typeof TotemIndexRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
+  LovableEmailEventsRoute: typeof LovableEmailEventsRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   ApiPublicHooksSendRemindersRoute: typeof ApiPublicHooksSendRemindersRoute
   ApiPublicHooksSyncGhlRoute: typeof ApiPublicHooksSyncGhlRoute
@@ -967,6 +980,13 @@ declare module '@tanstack/react-router' {
       path: '/lovable/email/suppression'
       fullPath: '/lovable/email/suppression'
       preLoaderRoute: typeof LovableEmailSuppressionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lovable/email/events': {
+      id: '/lovable/email/events'
+      path: '/lovable/email/events'
+      fullPath: '/lovable/email/events'
+      preLoaderRoute: typeof LovableEmailEventsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/relatorios/movimentacoes': {
@@ -1322,6 +1342,7 @@ const rootRouteChildren: RootRouteChildren = {
   TotemIndexRoute: TotemIndexRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
+  LovableEmailEventsRoute: LovableEmailEventsRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   ApiPublicHooksSendRemindersRoute: ApiPublicHooksSendRemindersRoute,
   ApiPublicHooksSyncGhlRoute: ApiPublicHooksSyncGhlRoute,
