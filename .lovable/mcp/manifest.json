@@ -18,8 +18,8 @@
     "tools": [
       {
         "name": "list_appointments",
-        "title": "Listar agendamentos",
-        "description": "Lista agendamentos da agenda do estúdio num intervalo de datas, com cliente, tatuador, horário e status.",
+        "title": "Listar agendamentos (CRM)",
+        "description": "Lista os agendamentos diretamente dos calendários do CRM (HighLevel) num intervalo de datas, com cliente, tatuador, horário e status.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
