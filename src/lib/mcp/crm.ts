@@ -250,7 +250,7 @@ export async function fetchCrmFinance(
   return { rows, truncated };
 }
 
-export interface CrmFinanceSummary {
+export interface CrmFinanceSummary extends Record<string, unknown> {
   fonte: "crm";
   base: "oportunidades";
   periodo: { from: string; to: string };
