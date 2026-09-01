@@ -31,19 +31,26 @@ function crmToken(): string {
   return token;
 }
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** O CRM limita o débito de pedidos; repetimos em 429 com backoff. */
 async function crmGet<T>(path: string, version = V_DEFAULT): Promise<T> {
-  const res = await fetch(`${GHL_BASE}${path}`, {
-    headers: {
-      Authorization: `Bearer ${crmToken()}`,
-      Version: version,
-      Accept: "application/json",
-    },
-  });
-  const text = await res.text();
-  if (!res.ok) {
-    throw new Error(`CRM ${res.status}: ${text.slice(0, 180)}`);
+  let last = "";
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const res = await fetch(`${GHL_BASE}${path}`, {
+      headers: {
+        Authorization: `Bearer ${crmToken()}`,
+        Version: version,
+        Accept: "application/json",
+      },
+    });
+    const text = await res.text();
+    if (res.ok) return (text ? JSON.parse(text) : {}) as T;
+    last = `CRM ${res.status}: ${text.slice(0, 180)}`;
+    if (res.status !== 429 && res.status < 500) break;
+    await sleep(700 * (attempt + 1));
   }
-  return (text ? JSON.parse(text) : {}) as T;
+  throw new Error(last || "CRM: falha desconhecida");
 }
 
 /* -------------------------------------------------------------------------- */
