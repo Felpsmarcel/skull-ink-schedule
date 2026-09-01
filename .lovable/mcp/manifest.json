@@ -53,8 +53,8 @@
       },
       {
         "name": "list_movimentacoes",
-        "title": "Listar registos de pagamento",
-        "description": "Lista os registos de pagamento (movimentações) num intervalo de datas, com cliente, tatuador, formas de pagamento e total.",
+        "title": "Listar movimentações financeiras (CRM)",
+        "description": "Lista as movimentações financeiras como o CRM (HighLevel) as registou — oportunidades com valor, status, pipeline e tatuador atribuído — num intervalo de datas.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -66,11 +66,11 @@
           "properties": {
             "from": {
               "type": "string",
-              "description": "Data de pagamento inicial (YYYY-MM-DD)."
+              "description": "Data inicial (YYYY-MM-DD)."
             },
             "to": {
               "type": "string",
-              "description": "Data de pagamento final inclusiva (YYYY-MM-DD)."
+              "description": "Data final inclusiva (YYYY-MM-DD)."
             },
             "limit": {
               "description": "Máximo de linhas (padrão 50).",
