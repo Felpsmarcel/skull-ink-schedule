@@ -1,15 +1,16 @@
 import { defineTool } from "@lovable.dev/mcp-js";
 import { z } from "zod";
-import { supabaseForUser } from "../supabase";
+import { resolveScope } from "../scope";
+import { fetchCrmFinance } from "../crm";
 
 export default defineTool({
   name: "list_movimentacoes",
-  title: "Listar registos de pagamento",
+  title: "Listar movimentações financeiras (CRM)",
   description:
-    "Lista os registos de pagamento (movimentações) num intervalo de datas, com cliente, tatuador, formas de pagamento e total.",
+    "Lista as movimentações financeiras como o CRM (HighLevel) as registou — oportunidades com valor, status, pipeline e tatuador atribuído — num intervalo de datas.",
   inputSchema: {
-    from: z.string().describe("Data de pagamento inicial (YYYY-MM-DD)."),
-    to: z.string().describe("Data de pagamento final inclusiva (YYYY-MM-DD)."),
+    from: z.string().describe("Data inicial (YYYY-MM-DD)."),
+    to: z.string().describe("Data final inclusiva (YYYY-MM-DD)."),
     limit: z.number().int().min(1).max(200).optional().describe("Máximo de linhas (padrão 50)."),
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
@@ -17,28 +18,54 @@ export default defineTool({
     if (!ctx.isAuthenticated()) {
       return { content: [{ type: "text", text: "Não autenticado." }], isError: true };
     }
-    const supabase = supabaseForUser(ctx);
-    const { data, error } = await supabase
-      .from("movimentacoes")
-      .select(
-        "id, data_pagamento, data_tatuagem, nome_cliente, descricao_projeto, tipo_movimento, valor_cartao, valor_dinheiro, valor_sumup, valor_transferencia, total, link_origem, registrado_por_nome, artist_id, artists(name)",
-      )
-      .is("deleted_at", null)
-      .gte("data_pagamento", from)
-      .lte("data_pagamento", to)
-      .order("data_pagamento", { ascending: false })
-      .limit(limit ?? 50);
-    if (error) return { content: [{ type: "text", text: error.message }], isError: true };
-    const rows = (data ?? []).map((r) => {
-      const { artists, ...rest } = r as Record<string, unknown> & {
-        artists?: { name?: string } | null;
+    try {
+      const scope = await resolveScope(ctx);
+      if (scope.role === "seller") {
+        return {
+          content: [
+            {
+              type: "text",
+              text: "Os vendedores não têm correspondência no CRM para dados financeiros. Consulta o relatório de lançamentos no aplicativo.",
+            },
+          ],
+          isError: true,
+        };
+      }
+      if (scope.role === "artist" && !scope.restrictToGhlUserId) {
+        return {
+          content: [
+            { type: "text", text: "Este tatuador ainda não está ligado a um utilizador do CRM." },
+          ],
+          isError: true,
+        };
+      }
+      const { rows, truncated } = await fetchCrmFinance(
+        from,
+        to,
+        scope.artistsByUserId,
+        scope.restrictToGhlUserId,
+      );
+      const limited = rows.slice(0, limit ?? 50);
+      const payload = {
+        fonte: "crm" as const,
+        base: "oportunidades" as const,
+        periodo: { from, to },
+        count: limited.length,
+        total_no_periodo: rows.length,
+        total_eur: rows.reduce((sum, r) => sum + r.valor_eur, 0),
+        truncado: truncated,
+        movimentacoes: limited,
       };
-      return { ...rest, artist_name: artists?.name ?? null };
-    });
-    const total = rows.reduce((sum, r) => sum + Number((r as { total?: number }).total ?? 0), 0);
-    return {
-      content: [{ type: "text", text: JSON.stringify({ total_eur: total, rows }) }],
-      structuredContent: { count: rows.length, total_eur: total, movimentacoes: rows },
-    };
+      return {
+        content: [{ type: "text", text: JSON.stringify(payload) }],
+        structuredContent: payload,
+      };
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      return {
+        content: [{ type: "text", text: `Falha ao ler o financeiro do CRM: ${message}` }],
+        isError: true,
+      };
+    }
   },
 });

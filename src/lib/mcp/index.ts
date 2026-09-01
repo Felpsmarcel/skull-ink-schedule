@@ -11,7 +11,7 @@ export default defineMcp({
   title: "GF TATTOO STUDIO",
   version: "0.1.0",
   instructions:
-    "Ferramentas do GF Tattoo Studio. Use `list_appointments` para a agenda, `list_movimentacoes` e `resumo_financeiro` para pagamentos registados, e `list_artists` para os tatuadores. Todos os dados respeitam as permissões do utilizador autenticado.",
+    "Ferramentas do GF Tattoo Studio. `list_appointments`, `list_movimentacoes` e `resumo_financeiro` leem o CRM (HighLevel) ao vivo: a agenda vem dos calendários e o financeiro das oportunidades (valor, status, pipeline, tatuador atribuído). `list_artists` lê a lista de tatuadores e comissões do aplicativo. Tudo respeita as permissões do utilizador autenticado: admin vê tudo, tatuador vê apenas o seu.",
   auth: auth.oauth.issuer({
     issuer: `https://${projectRef}.supabase.co/auth/v1`,
     acceptedAudiences: "authenticated",

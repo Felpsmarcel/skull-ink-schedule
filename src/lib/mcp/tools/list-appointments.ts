@@ -1,12 +1,13 @@
 import { defineTool } from "@lovable.dev/mcp-js";
 import { z } from "zod";
-import { supabaseForUser } from "../supabase";
+import { calendarsFor, resolveScope } from "../scope";
+import { fetchCrmAppointments } from "../crm";
 
 export default defineTool({
   name: "list_appointments",
-  title: "Listar agendamentos",
+  title: "Listar agendamentos (CRM)",
   description:
-    "Lista agendamentos da agenda do estúdio num intervalo de datas, com cliente, tatuador, horário e status.",
+    "Lista os agendamentos diretamente dos calendários do CRM (HighLevel) num intervalo de datas, com cliente, tatuador, horário e status.",
   inputSchema: {
     from: z.string().describe("Data inicial (YYYY-MM-DD)."),
     to: z.string().describe("Data final inclusiva (YYYY-MM-DD)."),
@@ -17,26 +18,36 @@ export default defineTool({
     if (!ctx.isAuthenticated()) {
       return { content: [{ type: "text", text: "Não autenticado." }], isError: true };
     }
-    const supabase = supabaseForUser(ctx);
-    const { data, error } = await supabase
-      .from("appointments")
-      .select(
-        "id, start_at, end_at, status, contact_name, contact_phone, total_eur, deposit_eur, commission_pct, artist_id, artists(name)",
-      )
-      .gte("start_at", `${from}T00:00:00Z`)
-      .lte("start_at", `${to}T23:59:59Z`)
-      .order("start_at", { ascending: true })
-      .limit(limit ?? 50);
-    if (error) return { content: [{ type: "text", text: error.message }], isError: true };
-    const rows = (data ?? []).map((r) => {
-      const { artists, ...rest } = r as Record<string, unknown> & {
-        artists?: { name?: string } | null;
+    try {
+      const scope = await resolveScope(ctx);
+      const calendars = calendarsFor(scope);
+      if (calendars.length === 0) {
+        return {
+          content: [
+            { type: "text", text: "Nenhum calendário do CRM disponível para este utilizador." },
+          ],
+          structuredContent: { fonte: "crm", count: 0, appointments: [] },
+        };
+      }
+      const all = await fetchCrmAppointments(calendars, from, to);
+      const rows = all.slice(0, limit ?? 50);
+      const payload = {
+        fonte: "crm" as const,
+        periodo: { from, to },
+        count: rows.length,
+        total_no_periodo: all.length,
+        appointments: rows,
       };
-      return { ...rest, artist_name: artists?.name ?? null };
-    });
-    return {
-      content: [{ type: "text", text: JSON.stringify(rows) }],
-      structuredContent: { count: rows.length, appointments: rows },
-    };
+      return {
+        content: [{ type: "text", text: JSON.stringify(payload) }],
+        structuredContent: payload,
+      };
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      return {
+        content: [{ type: "text", text: `Falha ao ler a agenda do CRM: ${message}` }],
+        isError: true,
+      };
+    }
   },
 });
