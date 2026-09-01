@@ -88,8 +88,8 @@
       },
       {
         "name": "resumo_financeiro",
-        "title": "Resumo financeiro",
-        "description": "Resume os pagamentos registados num intervalo de datas: total geral, total por forma de pagamento e total por tatuador.",
+        "title": "Resumo financeiro (CRM)",
+        "description": "Resume o financeiro tal como está no CRM (HighLevel) num intervalo de datas: total ganho, em aberto e perdido, com quebra por status e por tatuador.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -101,11 +101,11 @@
           "properties": {
             "from": {
               "type": "string",
-              "description": "Data de pagamento inicial (YYYY-MM-DD)."
+              "description": "Data inicial (YYYY-MM-DD)."
             },
             "to": {
               "type": "string",
-              "description": "Data de pagamento final inclusiva (YYYY-MM-DD)."
+              "description": "Data final inclusiva (YYYY-MM-DD)."
             }
           },
           "required": [
