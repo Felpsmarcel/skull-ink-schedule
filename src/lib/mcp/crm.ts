@@ -250,6 +250,7 @@ export async function fetchCrmFinance(
     if (!body.meta?.nextPage || nextAfter == null || !nextId) break;
     startAfter = nextAfter;
     startAfterId = nextId;
+    await sleep(200);
     if (page === MAX_PAGES - 1) truncated = true;
   }
 
