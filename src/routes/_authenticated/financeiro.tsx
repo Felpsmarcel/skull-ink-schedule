@@ -10,6 +10,9 @@ import { ErrorState } from "@/components/ui/error-state";
 import { StatusBadge, bucketToVariant, bucketLabel } from "@/components/ui/status-badge";
 import { SyncGhlButton } from "@/components/sync-ghl-button";
 import type { PaymentBucket } from "@/lib/finance.functions";
+import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatCard as SharedStatCard } from "@/components/ui/stat-card";
 
 type Period = "today" | "week" | "month" | "all";
 type BucketFilter = "all" | PaymentBucket;
@@ -69,25 +72,22 @@ function FilterRow<V extends string>({
 }) {
   return (
     <div>
-      <div className="mb-1 text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
-      <div className="flex flex-wrap gap-1">
+      <div className="mb-2 text-xs font-semibold uppercase text-muted-foreground">{label}</div>
+      <div className="flex flex-wrap gap-2">
         {options.map((o) => {
           const active = o.v === value;
           return (
-            <button
+            <Button
               key={o.v}
               type="button"
               aria-pressed={active}
               onClick={() => onChange(o.v)}
-              className={
-                "rounded-full border px-3 py-1 text-xs transition " +
-                (active
-                  ? "border-foreground bg-foreground text-background"
-                  : "border-border bg-card text-foreground hover:bg-muted")
-              }
+              variant={active ? "default" : "outline"}
+              size="sm"
+              className="rounded-md"
             >
               {o.l}
-            </button>
+            </Button>
           );
         })}
       </div>
@@ -152,21 +152,11 @@ function FinanceiroPage() {
 
   return (
     <div className="flex min-h-dvh flex-col bg-background pb-[calc(env(safe-area-inset-bottom)+6rem)] sm:pb-20">
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-background/95 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] backdrop-blur">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => navigate({ to: "/agenda" })}
-            className="grid h-9 w-9 place-items-center rounded-md hover:bg-muted"
-            aria-label="Voltar"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <h1 className="flex items-center gap-2 text-base font-semibold">
-            <Wallet className="h-4 w-4" /> Financeiro
-          </h1>
-        </div>
-        <div className="flex items-center gap-2">
+      <PageHeader
+        eyebrow="Visão financeira"
+        title="Financeiro"
+        leading={<Button type="button" variant="ghost" size="icon" onClick={() => navigate({ to: "/agenda" })} aria-label="Voltar"><ArrowLeft className="h-5 w-5" /></Button>}
+        actions={<div className="flex items-center gap-2">
           {isAdmin ? (
             <>
               <SyncGhlButton />
@@ -179,8 +169,8 @@ function FinanceiroPage() {
               </Link>
             </>
           ) : null}
-        </div>
-      </header>
+        </div>}
+      />
 
       <main className="flex-1 space-y-4 p-4">
         {isLoading ? (
@@ -193,7 +183,7 @@ function FinanceiroPage() {
           />
         ) : !data ? null : (
           <>
-            <section className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3">
+            <section className="flex flex-col gap-4 rounded-lg border border-border bg-card p-4">
               <FilterRow
                 label="Período"
                 value={period}
@@ -240,15 +230,17 @@ function FinanceiroPage() {
                 </>
               ) : null}
               {anyFilter ? (
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="sm"
                   onClick={() =>
                     setSearch({ period: "all", bucket: "all", artist: "all", seller: "all" })
                   }
-                  className="self-start rounded-full border border-border px-3 py-1 text-[11px] text-muted-foreground hover:bg-muted"
+                  className="self-start text-muted-foreground"
                 >
                   Limpar filtros
-                </button>
+                </Button>
               ) : null}
             </section>
             {data.role === "artist" ? (
@@ -278,17 +270,8 @@ function FinanceiroPage() {
 }
 
 function StatCard({ label, value, tone }: { label: string; value: string; tone?: "good" | "warn" | "muted" }) {
-  const toneCls =
-    tone === "good"
-      ? "text-emerald-600"
-      : tone === "warn"
-      ? "text-amber-600"
-      : "text-foreground";
   return (
-    <div className="rounded-lg border border-border bg-card p-4">
-      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
-      <div className={`mt-1 text-xl font-bold ${toneCls}`}>{value}</div>
-    </div>
+    <SharedStatCard label={label} value={value} emphasis={tone === "warn"} className={tone === "good" ? "border-success/30" : undefined} />
   );
 }
 

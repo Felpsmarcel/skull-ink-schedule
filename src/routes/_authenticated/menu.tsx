@@ -8,6 +8,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "@/components/ui/sonner";
 import gfMark from "@/assets/gf-mark.png";
 import { PaymentLinkCard } from "@/components/movimentacao/payment-link-card";
+import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
+import { SectionLabel } from "@/components/ui/section-label";
 
 export const Route = createFileRoute("/_authenticated/menu")({
   head: () => ({
@@ -49,21 +52,16 @@ function MenuPage() {
         offset="calc(env(safe-area-inset-top) + 0.5rem)"
         mobileOffset="calc(env(safe-area-inset-top) + 0.5rem)"
       />
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-background/95 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] backdrop-blur">
-        <div className="flex items-center gap-2">
-          <img src={gfMark} alt="" className="h-7 w-7 object-contain" />
-          <h1 className="text-base font-bold uppercase tracking-wider">Menu</h1>
-        </div>
-      </header>
+      <PageHeader eyebrow="Conta e gestão" title="Menu" leading={<img src={gfMark} alt="" className="h-9 w-9 object-contain" />} />
 
       <div className="mx-auto max-w-md space-y-4 px-4 py-4">
-        <div className="flex items-center gap-3 rounded-lg border border-border bg-card p-4">
-          <div className="grid h-12 w-12 place-items-center rounded-full bg-muted text-sm font-bold">
+        <div className="flex items-center gap-4 rounded-lg border border-primary/35 bg-accent/50 p-4">
+          <div className="grid h-12 w-12 place-items-center rounded-md border border-primary/30 bg-background font-display text-sm font-bold text-primary">
             {initials}
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold">{me?.email ?? "—"}</p>
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{roleLabel}</p>
+            <p className="mt-1 text-xs font-semibold uppercase text-primary">{roleLabel}</p>
           </div>
         </div>
 
@@ -94,13 +92,14 @@ function MenuPage() {
           <DisabledRow icon={<Languages className="h-4 w-4" />} label="Idioma" />
         </Section>
 
-        <button
+        <Button
           type="button"
+          variant="outline"
           onClick={handleSignOut}
-          className="flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-3 text-sm font-semibold hover:bg-muted"
+          className="w-full"
         >
           <LogOut className="h-4 w-4" /> Sair
-        </button>
+        </Button>
       </div>
 
     </div>
@@ -110,9 +109,7 @@ function MenuPage() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <h2 className="mb-1.5 px-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-        {title}
-      </h2>
+      <SectionLabel>{title}</SectionLabel>
       <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
         {children}
       </ul>
@@ -123,8 +120,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function Row({ to, icon, label }: { to: string; icon: React.ReactNode; label: string }) {
   return (
     <li>
-      <Link to={to} className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-muted">
-        <span className="text-muted-foreground">{icon}</span>
+      <Link to={to} className="flex min-h-14 items-center gap-3 px-4 py-3 text-sm transition-colors hover:bg-accent">
+        <span className="text-primary">{icon}</span>
         <span className="flex-1">{label}</span>
         <ChevronRight className="h-4 w-4 text-muted-foreground" />
       </Link>
@@ -135,15 +132,16 @@ function Row({ to, icon, label }: { to: string; icon: React.ReactNode; label: st
 function DisabledRow({ icon, label }: { icon: React.ReactNode; label: string }) {
   return (
     <li>
-      <button
+      <Button
         type="button"
+        variant="ghost"
         onClick={() => toast("Em breve")}
-        className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-muted-foreground hover:bg-muted"
+        className="flex min-h-14 w-full justify-start gap-3 rounded-none px-4 py-3 text-left text-sm text-muted-foreground hover:bg-muted"
       >
         <span>{icon}</span>
         <span className="flex-1">{label}</span>
-        <span className="text-[10px] uppercase tracking-wider">Em breve</span>
-      </button>
+        <span className="text-xs font-semibold uppercase">Em breve</span>
+      </Button>
     </li>
   );
 }

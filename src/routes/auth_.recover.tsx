@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
-import gfLockup from "@/assets/gf-lockup.png";
+import { AuthFrame } from "@/components/auth/auth-frame";
 
 export const Route = createFileRoute("/auth_/recover")({
   ssr: false,
@@ -48,26 +48,21 @@ function ResetPage() {
   }
 
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center bg-background px-6">
-      <img src={gfLockup} alt="GF Tattoo Studio" className="mb-4 h-20 w-auto object-contain" />
-      <p className="mb-6 text-xs uppercase tracking-wider text-muted-foreground">
-        Recuperar senha
-      </p>
-
+    <AuthFrame title="Recuperar senha" description="Enviaremos um link seguro para o seu email.">
       {sent ? (
-        <div className="w-full max-w-sm space-y-3 text-center">
-          <p className="text-sm">
+        <div className="space-y-5 text-center">
+          <p className="text-sm leading-6 text-muted-foreground">
             Se este email existe, enviamos um link para redefinir a senha. Verifique sua caixa
             de entrada.
           </p>
-          <Link to="/auth" search={{ redirect: undefined }} className="text-xs underline">
+          <Link to="/auth" search={{ redirect: undefined }} className="text-sm font-semibold text-primary underline-offset-4 hover:underline">
             Voltar para o login
           </Link>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-3">
-          <div className="space-y-1">
-            <Label htmlFor="email">Email</Label>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="space-y-2">
+            <Label htmlFor="email" className="text-xs uppercase text-muted-foreground">Email</Label>
             <Input
               id="email"
               type="email"
@@ -77,18 +72,18 @@ function ResetPage() {
               required
             />
           </div>
-          {error ? <p className="text-xs text-destructive">{error}</p> : null}
+          {error ? <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{error}</p> : null}
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Enviar link
           </Button>
           <div className="text-center">
-            <Link to="/auth" search={{ redirect: undefined }} className="text-xs underline text-muted-foreground">
+            <Link to="/auth" search={{ redirect: undefined }} className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
               Voltar
             </Link>
           </div>
         </form>
       )}
-    </div>
+    </AuthFrame>
   );
 }
