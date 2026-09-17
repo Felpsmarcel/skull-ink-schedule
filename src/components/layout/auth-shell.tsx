@@ -7,6 +7,7 @@ import { useIsAdmin } from "@/hooks/use-current-user";
 import { supabase } from "@/integrations/supabase/client";
 import gfMark from "@/assets/gf-mark.png";
 import { BottomNav } from "@/components/layout/bottom-nav";
+import { Button } from "@/components/ui/button";
 
 const HIDE_CHROME_PREFIXES = ["/appointments/new"];
 
@@ -60,14 +61,16 @@ function TopBar() {
           />
         ) : null}
       </nav>
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="sm"
         onClick={handleSignOut}
         className="ml-auto flex min-h-11 items-center gap-2 rounded-md px-3 text-xs font-semibold uppercase text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <LogOut className="h-4 w-4" />
         Sair
-      </button>
+      </Button>
     </header>
   );
 }
