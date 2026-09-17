@@ -41,12 +41,12 @@ function TopBar() {
   }
 
   return (
-    <header className="sticky top-0 z-40 hidden h-14 items-center justify-between gap-4 border-b border-border bg-background/95 px-6 backdrop-blur sm:flex">
+    <header className="sticky top-0 z-40 hidden h-16 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-4 border-b border-border/80 bg-background/90 px-6 backdrop-blur-xl sm:grid">
       <Link to="/home" className="flex items-center gap-2">
         <img src={gfMark} alt="" className="h-7 w-7 object-contain" />
-        <span className="font-display text-sm uppercase tracking-[0.2em]">GF Tattoo</span>
+        <span className="font-display text-sm font-bold uppercase">GF / Tattoo</span>
       </Link>
-      <nav className="flex items-center gap-1">
+      <nav className="flex items-center gap-1 rounded-lg border border-border bg-card/60 p-1">
         <TopLink to="/home" icon={<Home className="h-4 w-4" />} label="Hoje" />
         <TopLink to="/agenda" icon={<CalendarDays className="h-4 w-4" />} label={t("nav.agenda")} />
         <TopLink to="/appointments/new" icon={<Plus className="h-4 w-4" />} label={t("nav.new")} />
@@ -63,7 +63,7 @@ function TopBar() {
       <button
         type="button"
         onClick={handleSignOut}
-        className="flex items-center gap-2 rounded-md px-3 py-1.5 text-xs uppercase tracking-wider text-muted-foreground hover:bg-muted hover:text-foreground"
+        className="ml-auto flex min-h-11 items-center gap-2 rounded-md px-3 text-xs font-semibold uppercase text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <LogOut className="h-4 w-4" />
         Sair
@@ -77,7 +77,7 @@ function TopLink({ to, icon, label }: { to: string; icon: React.ReactNode; label
     <Link
       to={to}
       activeOptions={{ exact: false }}
-      className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground hover:bg-muted hover:text-foreground data-[status=active]:bg-muted data-[status=active]:text-foreground"
+      className="flex min-h-9 items-center gap-1.5 rounded-md px-3 text-xs font-semibold uppercase text-muted-foreground transition-colors hover:bg-muted hover:text-foreground data-[status=active]:bg-primary data-[status=active]:text-primary-foreground"
     >
       {icon}
       {label}

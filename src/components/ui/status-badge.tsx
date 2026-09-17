@@ -9,10 +9,10 @@ export type StatusVariant =
   | "neutral";
 
 const variantClasses: Record<StatusVariant, string> = {
-  success: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  warning: "bg-amber-50 text-amber-800 border-amber-200",
-  danger: "bg-red-50 text-red-700 border-red-200",
-  info: "bg-sky-50 text-sky-700 border-sky-200",
+  success: "bg-success/10 text-success border-success/30",
+  warning: "bg-warning/10 text-warning border-warning/30",
+  danger: "bg-destructive/10 text-destructive border-destructive/30",
+  info: "bg-info/10 text-info border-info/30",
   neutral: "bg-muted text-muted-foreground border-border",
 };
 
@@ -32,7 +32,7 @@ export function StatusBadge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider",
+        "inline-flex items-center gap-1 rounded-sm border px-2 py-1 text-xs font-semibold uppercase",
         variantClasses[variant],
         className,
       )}

@@ -7,7 +7,7 @@ export function BottomNav() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 mx-auto flex max-w-md items-end justify-around border-t border-border bg-background/95 px-6 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur sm:hidden">
+    <nav aria-label="Navegação principal" data-bottom-nav className="fixed inset-x-0 bottom-0 z-40 mx-auto grid max-w-md grid-cols-5 items-end border-t border-border/80 bg-background/92 px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-[0_-12px_30px_color-mix(in_oklab,var(--background)_70%,transparent)] backdrop-blur-xl sm:hidden">
       <NavLink to="/home" icon={<Home className="h-5 w-5" />} label="Hoje" />
       <NavLink to="/agenda" icon={<CalendarDays className="h-5 w-5" />} label={t("nav.agenda")} />
       <button
@@ -17,7 +17,7 @@ export function BottomNav() {
           navigate({ to: "/appointments/new" });
         }}
         aria-label={t("nav.new")}
-        className="-mt-6 grid h-14 w-14 place-items-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 ring-4 ring-background transition-transform duration-100 active:scale-90"
+        className="-mt-7 grid h-14 w-14 place-self-center rounded-full bg-primary text-primary-foreground shadow-[0_8px_24px_color-mix(in_oklab,var(--primary)_30%,transparent)] ring-4 ring-background transition-transform duration-150 active:scale-90 focus-visible:outline-none focus-visible:ring-primary"
       >
         <Plus className="h-7 w-7" />
       </button>
@@ -33,7 +33,7 @@ function NavLink({ to, icon, label }: { to: string; icon: React.ReactNode; label
       to={to}
       activeOptions={{ exact: false }}
       onClick={() => haptic("tap")}
-      className="flex flex-1 flex-col items-center gap-0.5 py-1 text-[10px] uppercase tracking-wider text-muted-foreground transition-transform duration-100 hover:text-foreground active:scale-95 data-[status=active]:text-primary"
+      className="flex min-w-0 flex-col items-center gap-1 py-1 text-[10px] font-semibold uppercase text-muted-foreground transition-[color,transform] duration-150 hover:text-foreground active:scale-95 data-[status=active]:text-primary focus-visible:outline-none focus-visible:text-primary"
     >
       {icon}
       {label}

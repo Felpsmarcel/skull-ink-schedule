@@ -109,7 +109,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap",
       },
     ],
   }),
@@ -125,7 +125,7 @@ function RootShell({ children }: { children: ReactNode }) {
       <head>
         <HeadContent />
       </head>
-      <body className="min-h-dvh bg-background text-foreground font-sans antialiased overflow-x-hidden">
+      <body className="min-h-dvh overflow-x-hidden bg-background font-sans text-foreground antialiased">
         {children}
         <Scripts />
       </body>
@@ -153,7 +153,7 @@ function RootComponent() {
         <Outlet />
       </div>
       <Toaster
-        theme="light"
+        theme="dark"
         position="top-center"
         offset="calc(env(safe-area-inset-top) + 0.5rem)"
         mobileOffset="calc(env(safe-area-inset-top) + 0.5rem)"
