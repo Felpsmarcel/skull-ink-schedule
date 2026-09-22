@@ -422,17 +422,17 @@ function AdminView({
                 </div>
                 <div>
                   <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Comissão</div>
-                  <div className="text-sm font-semibold text-amber-600">{formatCurrency(r.commissionEur)}</div>
+                  <div className="text-sm font-semibold text-warning">{formatCurrency(r.commissionEur)}</div>
                 </div>
                 <div>
                   <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Estúdio</div>
-                  <div className="text-sm font-semibold text-emerald-600">{formatCurrency(r.studioEur)}</div>
+                  <div className="text-sm font-semibold text-success">{formatCurrency(r.studioEur)}</div>
                 </div>
               </div>
               {r.sellerName ? (
                 <div className="flex items-center justify-between border-t border-border pt-2 text-[11px]">
                   <span className="text-muted-foreground">Vendedor · {r.sellerName}</span>
-                  <span className="font-semibold text-amber-600">
+                  <span className="font-semibold text-warning">
                     {formatCurrency(r.sellerCommissionEur)}
                   </span>
                 </div>
@@ -472,14 +472,14 @@ function AdminView({
                     <div className="text-[11px] text-muted-foreground">{r.servicesSummary}</div>
                   </td>
                   <td className="px-3 py-2 text-right">{formatCurrency(r.totalEur)}</td>
-                  <td className="px-3 py-2 text-right text-amber-600">
+                  <td className="px-3 py-2 text-right text-warning">
                     {formatCurrency(r.commissionEur)}
                   </td>
-                  <td className="px-3 py-2 text-right text-emerald-600">
+                  <td className="px-3 py-2 text-right text-success">
                     {formatCurrency(r.studioEur)}
                   </td>
                   <td className="px-3 py-2 text-muted-foreground">{r.sellerName ?? "—"}</td>
-                  <td className="px-3 py-2 text-right text-amber-600">
+                  <td className="px-3 py-2 text-right text-warning">
                     {r.sellerName ? formatCurrency(r.sellerCommissionEur) : "—"}
                   </td>
                   <td className="px-3 py-2 text-right">
