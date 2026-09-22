@@ -22,6 +22,9 @@ import { LoadingState } from "@/components/ui/loading-state";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatCard } from "@/components/ui/stat-card";
+import { SectionLabel } from "@/components/ui/section-label";
 import { useArtists } from "@/hooks/use-artists";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { getMovimentacoesReport } from "@/lib/movimentacao.functions";
@@ -219,12 +222,12 @@ function RelatorioMovimentacoesPage() {
 
   return (
     <div className="min-h-svh bg-background pb-[calc(env(safe-area-inset-bottom)+7rem)] text-foreground sm:pb-24">
-      <header className="no-print sticky top-0 z-30 flex items-center gap-2 border-b border-border bg-background/95 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] backdrop-blur">
-        <Link to="/menu" className="rounded-md p-2 hover:bg-muted" aria-label="Voltar ao menu">
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-        <h1 className="flex-1 text-base font-bold uppercase tracking-wider">Relatório de pagamentos</h1>
-      </header>
+      <PageHeader
+        className="no-print"
+        eyebrow="Análise financeira"
+        title="Relatório de pagamentos"
+        leading={<Button asChild variant="ghost" size="icon"><Link to="/menu" aria-label="Voltar ao menu"><ArrowLeft className="h-4 w-4" /></Link></Button>}
+      />
 
       <div className="mx-auto w-full max-w-4xl space-y-4 px-4 py-4 print:max-w-none print:px-0">
         {/* Filtros */}
@@ -270,7 +273,7 @@ function RelatorioMovimentacoesPage() {
                   <select
                     value={search.artist}
                     onChange={(e) => setSearch({ artist: e.target.value })}
-                    className="h-11 w-full rounded-md border border-input bg-background px-2 text-sm"
+                    className="h-12 w-full rounded-md border border-input bg-background/60 px-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/25"
                   >
                     <option value="">Todos</option>
                     {(artists ?? []).map((a) => (
@@ -284,7 +287,7 @@ function RelatorioMovimentacoesPage() {
                   <select
                     value={search.recebedor}
                     onChange={(e) => setSearch({ recebedor: e.target.value })}
-                    className="h-11 w-full rounded-md border border-input bg-background px-2 text-sm"
+                    className="h-12 w-full rounded-md border border-input bg-background/60 px-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/25"
                   >
                     <option value="">Todos</option>
                     {STAFF_RECEBEDORES.map((s) => (
@@ -298,7 +301,7 @@ function RelatorioMovimentacoesPage() {
                   <select
                     value={search.registrador}
                     onChange={(e) => setSearch({ registrador: e.target.value })}
-                    className="h-11 w-full rounded-md border border-input bg-background px-2 text-sm"
+                    className="h-12 w-full rounded-md border border-input bg-background/60 px-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/25"
                   >
                     <option value="">Todos</option>
                     {STAFF_RECEBEDORES.map((s) => (
@@ -314,7 +317,7 @@ function RelatorioMovimentacoesPage() {
               <select
                 value={search.tipo}
                 onChange={(e) => setSearch({ tipo: e.target.value })}
-                className="h-11 w-full rounded-md border border-input bg-background px-2 text-sm"
+                className="h-12 w-full rounded-md border border-input bg-background/60 px-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/25"
               >
                 <option value="">Todos</option>
                 {TIPO_OPTIONS.map(([value, label]) => (
@@ -328,7 +331,7 @@ function RelatorioMovimentacoesPage() {
               <select
                 value={search.sync}
                 onChange={(e) => setSearch({ sync: e.target.value })}
-                className="h-11 w-full rounded-md border border-input bg-background px-2 text-sm"
+                className="h-12 w-full rounded-md border border-input bg-background/60 px-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/25"
               >
                 {SYNC_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>
@@ -341,7 +344,7 @@ function RelatorioMovimentacoesPage() {
               <select
                 value={search.origem}
                 onChange={(e) => setSearch({ origem: e.target.value })}
-                className="h-11 w-full rounded-md border border-input bg-background px-2 text-sm"
+                className="h-12 w-full rounded-md border border-input bg-background/60 px-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/25"
               >
                 {ORIGEM_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>
@@ -408,14 +411,10 @@ function RelatorioMovimentacoesPage() {
         ) : (
           <>
             <div className="grid grid-cols-2 gap-3">
-              <Card k="Total recebido" v={formatCurrency(agg.total)} />
-              <Card k="Pagamentos" v={String(agg.count)} />
-              <Card k="Ticket médio" v={formatCurrency(agg.ticketMedio)} />
-              <Card
-                k="Sync pendente"
-                v={formatCurrency(agg.pendenteValor)}
-                sub={`${agg.pendenteCount} registo(s)`}
-              />
+              <StatCard label="Total recebido" value={formatCurrency(agg.total)} emphasis />
+              <StatCard label="Pagamentos" value={String(agg.count)} />
+              <StatCard label="Ticket médio" value={formatCurrency(agg.ticketMedio)} />
+              <StatCard label="Sync pendente" value={formatCurrency(agg.pendenteValor)} detail={`${agg.pendenteCount} registo(s)`} />
             </div>
 
             {estornoRows.length > 0 && (
@@ -455,9 +454,7 @@ function RelatorioMovimentacoesPage() {
             <Breakdown title="Por tipo de movimento" items={agg.porTipo} />
 
             <section className="space-y-2">
-              <h2 className="px-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                Detalhe ({rows.length})
-              </h2>
+               <SectionLabel>Detalhe ({rows.length})</SectionLabel>
               <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
                 {rows.map((r) => (
                   <ReportRowItem key={r.id} row={r} />
@@ -474,20 +471,10 @@ function RelatorioMovimentacoesPage() {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1">
-      <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+      <label className="text-xs font-semibold uppercase text-muted-foreground">
         {label}
       </label>
       {children}
-    </div>
-  );
-}
-
-function Card({ k, v, sub }: { k: string; v: string; sub?: string }) {
-  return (
-    <div className="rounded-lg border border-border bg-card p-3">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{k}</p>
-      <p className="mt-0.5 text-lg font-bold tabular-nums">{v}</p>
-      {sub && <p className="text-[10px] text-muted-foreground">{sub}</p>}
     </div>
   );
 }
@@ -496,9 +483,7 @@ function Breakdown({ title, items }: { title: string; items: BreakdownItem[] }) 
   if (items.length === 0) return null;
   return (
     <section className="space-y-2">
-      <h2 className="px-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-        {title}
-      </h2>
+      <SectionLabel>{title}</SectionLabel>
       <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
         {items.map((i) => (
           <li key={i.label} className="px-4 py-2.5">
@@ -538,9 +523,9 @@ function AlertCard({
   tone: "warn" | "danger";
   action?: React.ReactNode;
 }) {
-  const border = tone === "danger" ? "border-red-500/40" : "border-amber-500/40";
-  const bg = tone === "danger" ? "bg-red-500/10" : "bg-amber-500/10";
-  const text = tone === "danger" ? "text-red-600" : "text-amber-600";
+  const border = tone === "danger" ? "border-destructive/40" : "border-warning/40";
+  const bg = tone === "danger" ? "bg-destructive/10" : "bg-warning/10";
+  const text = tone === "danger" ? "text-destructive" : "text-warning";
   return (
     <div className={`rounded-lg border ${border} ${bg} p-4`}>
       <div className="flex items-start justify-between gap-3">
