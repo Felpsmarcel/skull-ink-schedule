@@ -88,8 +88,8 @@
       },
       {
         "name": "resumo_financeiro",
-        "title": "Resumo financeiro (CRM)",
-        "description": "Resume o financeiro tal como está no CRM (HighLevel) num intervalo de datas: total ganho, em aberto e perdido, com quebra por status e por tatuador.",
+        "title": "Resumo financeiro (CRM + pagamentos reais)",
+        "description": "Resume o financeiro num intervalo de datas: oportunidades do CRM (ganho, em aberto, perdido) e o saldo de pagamentos reais registados no estúdio, com quebra por forma de pagamento e por tatuador.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
