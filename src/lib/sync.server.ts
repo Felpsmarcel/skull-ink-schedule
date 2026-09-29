@@ -234,8 +234,30 @@ export async function syncGhlAppointments(opts?: {
       if (!gid || seenGhl.has(gid)) continue;
       seenGhl.add(gid);
     }
-    await resolveContacts([...seenGhl], token, contactInfo);
-    for (const gid of seenGhl) {
+    // Reuse contacts already stored with a real name — avoids re-fetching
+    // every contact from the CRM and rewriting the contacts table each run.
+    if (seenGhl.size > 0) {
+      const { data: known } = await supabaseAdmin
+        .from("contacts" as never)
+        .select("id, ghl_contact_id, name, phone, email")
+        .in("ghl_contact_id", [...seenGhl]);
+      for (const r of (known ?? []) as Array<{
+        id: string;
+        ghl_contact_id: string;
+        name: string | null;
+        phone: string | null;
+        email: string | null;
+      }>) {
+        contactIdMap.set(r.ghl_contact_id, r.id);
+        if (r.name && r.name !== "Sem nome" && !contactInfo.has(r.ghl_contact_id)) {
+          contactInfo.set(r.ghl_contact_id, { name: r.name, phone: r.phone, email: r.email });
+        }
+      }
+    }
+    const needFetch = [...seenGhl].filter((g) => !contactInfo.has(g));
+    await resolveContacts(needFetch, token, contactInfo);
+    for (const gid of needFetch) {
+      if (contactIdMap.has(gid) && !contactInfo.get(gid)?.name) continue;
       const info = contactInfo.get(gid) ?? null;
       contactUpserts.push({
         ghl_contact_id: gid,
@@ -285,21 +307,54 @@ export async function syncGhlAppointments(opts?: {
     const ids = res.events.map((e) => e.id);
     const { data: existingRows, error: existingErr } = await supabaseAdmin
       .from("appointments" as never)
-      .select("ghl_appointment_id")
+      .select(
+        "ghl_appointment_id, start_at, end_at, status, contact_name, contact_phone, contact_email, ghl_contact_id, contact_id, calendar_id",
+      )
       .in("ghl_appointment_id", ids);
     if (existingErr) {
       errors.push(`select existing: ${existingErr.message}`);
       failures++;
       continue;
     }
-    const existing = new Set(
-      ((existingRows ?? []) as Array<{ ghl_appointment_id: string }>).map(
-        (r) => r.ghl_appointment_id,
-      ),
+    type ExistingRow = {
+      ghl_appointment_id: string;
+      start_at: string | null;
+      end_at: string | null;
+      status: string | null;
+      contact_name: string | null;
+      contact_phone: string | null;
+      contact_email: string | null;
+      ghl_contact_id: string | null;
+      contact_id: string | null;
+      calendar_id: string | null;
+    };
+    const existingMap = new Map(
+      ((existingRows ?? []) as ExistingRow[]).map((r) => [r.ghl_appointment_id, r] as const),
     );
+    const existing = new Set(existingMap.keys());
+    const sameTime = (a: string | null, b: string) =>
+      !!a && new Date(a).getTime() === new Date(b).getTime();
 
     const toInsert = res.events.filter((e) => !existing.has(e.id));
-    const toUpdate = res.events.filter((e) => existing.has(e.id));
+    // Only touch rows that actually changed — unchanged rows cost no writes.
+    const toUpdate = res.events.filter((e) => {
+      const r = existingMap.get(e.id);
+      if (!r) return false;
+      const gid = e.contactId ?? e.contact?.id ?? null;
+      const info = gid ? contactInfo.get(gid) ?? null : null;
+      const linked = gid ? contactIdMap.get(gid) ?? null : null;
+      return (
+        !sameTime(r.start_at, e.startTime) ||
+        !sameTime(r.end_at, e.endTime) ||
+        r.status !== mapStatus(e.appointmentStatus) ||
+        (info?.name != null && r.contact_name !== info.name) ||
+        (info?.phone != null && r.contact_phone !== info.phone) ||
+        (info?.email != null && r.contact_email !== info.email) ||
+        r.ghl_contact_id !== (e.contactId ?? null) ||
+        (linked != null && r.contact_id !== linked) ||
+        r.calendar_id !== calId
+      );
+    });
 
     if (toInsert.length > 0) {
       const rows = toInsert.map((e) => {
