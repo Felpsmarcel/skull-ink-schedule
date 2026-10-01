@@ -9,75 +9,66 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
-import { Route as AuthRouteImport } from './routes/auth'
-import { Route as ConnectRouteImport } from './routes/connect'
 import { Route as McpRouteImport } from './routes/mcp'
-import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
-import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
-import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/_admin/route'
-import { Route as AuthenticatedAgendaRouteImport } from './routes/_authenticated/agenda'
-import { Route as AuthenticatedFinanceiroRouteImport } from './routes/_authenticated/financeiro'
-import { Route as AuthenticatedHomeRouteImport } from './routes/_authenticated/home'
-import { Route as AuthenticatedMenuRouteImport } from './routes/_authenticated/menu'
-import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
-import { Route as AuthenticatedReviewsRouteImport } from './routes/_authenticated/reviews'
-import { Route as AuthenticatedServicesRouteImport } from './routes/_authenticated/services'
-import { Route as ATokenRouteImport } from './routes/a.$token'
-import { Route as AuthRecoverRouteImport } from './routes/auth_.recover'
-import { Route as AuthUpdatePasswordRouteImport } from './routes/auth_.update-password'
-import { Route as MovimentacaoSlugRouteImport } from './routes/movimentacao.$slug'
-import { Route as MovimentacaoHistoricoRouteImport } from './routes/movimentacao.historico'
+import { Route as ConnectRouteImport } from './routes/connect'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as TotemIndexRouteImport } from './routes/totem.index'
-import { Route as TotemBuscarRouteImport } from './routes/totem.buscar'
-import { Route as TotemConfirmarRouteImport } from './routes/totem.confirmar'
 import { Route as TotemProntoRouteImport } from './routes/totem.pronto'
-import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
-import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
-import { Route as AuthenticatedAdminGhlTestRouteImport } from './routes/_authenticated/_admin/ghl-test'
-import { Route as AuthenticatedAdminReconciliarRouteImport } from './routes/_authenticated/_admin/reconciliar'
-import { Route as AuthenticatedAppointmentsNewRouteImport } from './routes/_authenticated/appointments.new'
+import { Route as TotemConfirmarRouteImport } from './routes/totem.confirmar'
+import { Route as TotemBuscarRouteImport } from './routes/totem.buscar'
+import { Route as MovimentacaoHistoricoRouteImport } from './routes/movimentacao.historico'
+import { Route as MovimentacaoSlugRouteImport } from './routes/movimentacao.$slug'
+import { Route as AuthUpdatePasswordRouteImport } from './routes/auth_.update-password'
+import { Route as AuthRecoverRouteImport } from './routes/auth_.recover'
+import { Route as ATokenRouteImport } from './routes/a.$token'
+import { Route as AuthenticatedServicesRouteImport } from './routes/_authenticated/services'
+import { Route as AuthenticatedReviewsRouteImport } from './routes/_authenticated/reviews'
+import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
+import { Route as AuthenticatedMenuRouteImport } from './routes/_authenticated/menu'
+import { Route as AuthenticatedHomeRouteImport } from './routes/_authenticated/home'
+import { Route as AuthenticatedFinanceiroRouteImport } from './routes/_authenticated/financeiro'
+import { Route as AuthenticatedAgendaRouteImport } from './routes/_authenticated/agenda'
+import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
+import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/_admin/route'
 import { Route as AuthenticatedMovimentacaoIndexRouteImport } from './routes/_authenticated/movimentacao.index'
-import { Route as AuthenticatedOnboardingBemVindoRouteImport } from './routes/_authenticated/onboarding.bem-vindo'
-import { Route as AuthenticatedOnboardingDisponibilidadeRouteImport } from './routes/_authenticated/onboarding.disponibilidade'
-import { Route as AuthenticatedOnboardingPerfilRouteImport } from './routes/_authenticated/onboarding.perfil'
-import { Route as AuthenticatedOnboardingProntoRouteImport } from './routes/_authenticated/onboarding.pronto'
-import { Route as AuthenticatedOnboardingServicosRouteImport } from './routes/_authenticated/onboarding.servicos'
-import { Route as AuthenticatedRelatoriosMovimentacoesRouteImport } from './routes/_authenticated/relatorios.movimentacoes'
 import { Route as LovableEmailEventsRouteImport } from './routes/lovable/email/events'
-import { Route as AuthenticatedAdminAdminEquipeRouteImport } from './routes/_authenticated/_admin/admin.equipe'
-import { Route as AuthenticatedAdminAdminFilaRouteImport } from './routes/_authenticated/_admin/admin.fila'
-import { Route as AuthenticatedAdminAdminMovimentacaoLinksRouteImport } from './routes/_authenticated/_admin/admin.movimentacao-links'
-import { Route as AuthenticatedAdminAdminSaudeRouteImport } from './routes/_authenticated/_admin/admin.saude'
-import { Route as AuthenticatedAdminAdminVendedoresRouteImport } from './routes/_authenticated/_admin/admin.vendedores'
-import { Route as AuthenticatedAdminRelatoriosAgendamentosRouteImport } from './routes/_authenticated/_admin/relatorios.agendamentos'
+import { Route as AuthenticatedRelatoriosMovimentacoesRouteImport } from './routes/_authenticated/relatorios.movimentacoes'
+import { Route as AuthenticatedOnboardingServicosRouteImport } from './routes/_authenticated/onboarding.servicos'
+import { Route as AuthenticatedOnboardingProntoRouteImport } from './routes/_authenticated/onboarding.pronto'
+import { Route as AuthenticatedOnboardingPerfilRouteImport } from './routes/_authenticated/onboarding.perfil'
+import { Route as AuthenticatedOnboardingDisponibilidadeRouteImport } from './routes/_authenticated/onboarding.disponibilidade'
+import { Route as AuthenticatedOnboardingBemVindoRouteImport } from './routes/_authenticated/onboarding.bem-vindo'
+import { Route as AuthenticatedAppointmentsNewRouteImport } from './routes/_authenticated/appointments.new'
+import { Route as AuthenticatedAdminReconciliarRouteImport } from './routes/_authenticated/_admin/reconciliar'
+import { Route as AuthenticatedAdminGhlTestRouteImport } from './routes/_authenticated/_admin/ghl-test'
+import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
+import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as AuthenticatedAppointmentsNewIndexRouteImport } from './routes/_authenticated/appointments.new.index'
-import { Route as AuthenticatedAppointmentsNewAgendaRouteImport } from './routes/_authenticated/appointments.new.agenda'
-import { Route as AuthenticatedAppointmentsNewClienteRouteImport } from './routes/_authenticated/appointments.new.cliente'
-import { Route as AuthenticatedAppointmentsNewProjetoRouteImport } from './routes/_authenticated/appointments.new.projeto'
-import { Route as AuthenticatedAppointmentsNewRevisaoRouteImport } from './routes/_authenticated/appointments.new.revisao'
-import { Route as AuthenticatedAppointmentsNewServicosRouteImport } from './routes/_authenticated/appointments.new.servicos'
-import { Route as ApiPublicHooksSendRemindersRouteImport } from './routes/api/public/hooks/send-reminders'
-import { Route as ApiPublicHooksSyncGhlRouteImport } from './routes/api/public/hooks/sync-ghl'
-import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
-import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
-import { Route as AuthenticatedAdminAdminMovimentacaoNovoRouteImport } from './routes/_authenticated/_admin/admin.movimentacao.novo'
+import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
+import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
+import { Route as ApiPublicHooksSyncGhlRouteImport } from './routes/api/public/hooks/sync-ghl'
+import { Route as ApiPublicHooksSendRemindersRouteImport } from './routes/api/public/hooks/send-reminders'
+import { Route as AuthenticatedAppointmentsNewServicosRouteImport } from './routes/_authenticated/appointments.new.servicos'
+import { Route as AuthenticatedAppointmentsNewRevisaoRouteImport } from './routes/_authenticated/appointments.new.revisao'
+import { Route as AuthenticatedAppointmentsNewProjetoRouteImport } from './routes/_authenticated/appointments.new.projeto'
+import { Route as AuthenticatedAppointmentsNewClienteRouteImport } from './routes/_authenticated/appointments.new.cliente'
+import { Route as AuthenticatedAppointmentsNewAgendaRouteImport } from './routes/_authenticated/appointments.new.agenda'
+import { Route as AuthenticatedAdminRelatoriosAgendamentosRouteImport } from './routes/_authenticated/_admin/relatorios.agendamentos'
+import { Route as AuthenticatedAdminAdminVendedoresRouteImport } from './routes/_authenticated/_admin/admin.vendedores'
+import { Route as AuthenticatedAdminAdminSaudeRouteImport } from './routes/_authenticated/_admin/admin.saude'
+import { Route as AuthenticatedAdminAdminMovimentacaoLinksRouteImport } from './routes/_authenticated/_admin/admin.movimentacao-links'
+import { Route as AuthenticatedAdminAdminFilaRouteImport } from './routes/_authenticated/_admin/admin.fila'
+import { Route as AuthenticatedAdminAdminEquipeRouteImport } from './routes/_authenticated/_admin/admin.equipe'
 import { Route as AuthenticatedMovimentacaoHistoricoIdEditarRouteImport } from './routes/_authenticated/movimentacao.historico.$id.editar'
+import { Route as AuthenticatedAdminAdminMovimentacaoNovoRouteImport } from './routes/_authenticated/_admin/admin.movimentacao.novo'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
-  id: '/_authenticated',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthRoute = AuthRouteImport.update({
-  id: '/auth',
-  path: '/auth',
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConnectRoute = ConnectRouteImport.update({
@@ -85,85 +76,18 @@ const ConnectRoute = ConnectRouteImport.update({
   path: '/connect',
   getParentRoute: () => rootRouteImport,
 } as any)
-const McpRoute = McpRouteImport.update({
-  id: '/mcp',
-  path: '/mcp',
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const Char91DotmcpChar93ListToolsRoute =
-  Char91DotmcpChar93ListToolsRouteImport.update({
-    id: '/.mcp/list-tools',
-    path: '/.mcp/list-tools',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const Char91DotwellKnownChar93OauthProtectedResourceRoute =
-  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
-    id: '/.well-known/oauth-protected-resource',
-    path: '/.well-known/oauth-protected-resource',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const AuthenticatedAdminRouteRoute = AuthenticatedAdminRouteRouteImport.update({
-  id: '/_admin',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedAgendaRoute = AuthenticatedAgendaRouteImport.update({
-  id: '/agenda',
-  path: '/agenda',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedFinanceiroRoute = AuthenticatedFinanceiroRouteImport.update({
-  id: '/financeiro',
-  path: '/financeiro',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedHomeRoute = AuthenticatedHomeRouteImport.update({
-  id: '/home',
-  path: '/home',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedMenuRoute = AuthenticatedMenuRouteImport.update({
-  id: '/menu',
-  path: '/menu',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
-  id: '/onboarding',
-  path: '/onboarding',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedReviewsRoute = AuthenticatedReviewsRouteImport.update({
-  id: '/reviews',
-  path: '/reviews',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedServicesRoute = AuthenticatedServicesRouteImport.update({
-  id: '/services',
-  path: '/services',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const ATokenRoute = ATokenRouteImport.update({
-  id: '/a/$token',
-  path: '/a/$token',
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthRecoverRoute = AuthRecoverRouteImport.update({
-  id: '/auth_/recover',
-  path: '/auth/recover',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthUpdatePasswordRoute = AuthUpdatePasswordRouteImport.update({
-  id: '/auth_/update-password',
-  path: '/auth/update-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MovimentacaoSlugRoute = MovimentacaoSlugRouteImport.update({
-  id: '/movimentacao/$slug',
-  path: '/movimentacao/$slug',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MovimentacaoHistoricoRoute = MovimentacaoHistoricoRouteImport.update({
-  id: '/movimentacao/historico',
-  path: '/movimentacao/historico',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TotemIndexRoute = TotemIndexRouteImport.update({
@@ -171,9 +95,9 @@ const TotemIndexRoute = TotemIndexRouteImport.update({
   path: '/totem/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TotemBuscarRoute = TotemBuscarRouteImport.update({
-  id: '/totem/buscar',
-  path: '/totem/buscar',
+const TotemProntoRoute = TotemProntoRouteImport.update({
+  id: '/totem/pronto',
+  path: '/totem/pronto',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TotemConfirmarRoute = TotemConfirmarRouteImport.update({
@@ -181,62 +105,108 @@ const TotemConfirmarRoute = TotemConfirmarRouteImport.update({
   path: '/totem/confirmar',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TotemProntoRoute = TotemProntoRouteImport.update({
-  id: '/totem/pronto',
-  path: '/totem/pronto',
+const TotemBuscarRoute = TotemBuscarRouteImport.update({
+  id: '/totem/buscar',
+  path: '/totem/buscar',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
-  id: '/.lovable/oauth/consent',
-  path: '/.lovable/oauth/consent',
+const MovimentacaoHistoricoRoute = MovimentacaoHistoricoRouteImport.update({
+  id: '/movimentacao/historico',
+  path: '/movimentacao/historico',
   getParentRoute: () => rootRouteImport,
 } as any)
-const Char91DotmcpChar93InvokeToolToolRoute =
-  Char91DotmcpChar93InvokeToolToolRouteImport.update({
-    id: '/.mcp/invoke-tool/$tool',
-    path: '/.mcp/invoke-tool/$tool',
+const MovimentacaoSlugRoute = MovimentacaoSlugRouteImport.update({
+  id: '/movimentacao/$slug',
+  path: '/movimentacao/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthUpdatePasswordRoute = AuthUpdatePasswordRouteImport.update({
+  id: '/auth_/update-password',
+  path: '/auth/update-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRecoverRoute = AuthRecoverRouteImport.update({
+  id: '/auth_/recover',
+  path: '/auth/recover',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ATokenRoute = ATokenRouteImport.update({
+  id: '/a/$token',
+  path: '/a/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedServicesRoute = AuthenticatedServicesRouteImport.update({
+  id: '/services',
+  path: '/services',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedReviewsRoute = AuthenticatedReviewsRouteImport.update({
+  id: '/reviews',
+  path: '/reviews',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedMenuRoute = AuthenticatedMenuRouteImport.update({
+  id: '/menu',
+  path: '/menu',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedHomeRoute = AuthenticatedHomeRouteImport.update({
+  id: '/home',
+  path: '/home',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedFinanceiroRoute = AuthenticatedFinanceiroRouteImport.update({
+  id: '/financeiro',
+  path: '/financeiro',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAgendaRoute = AuthenticatedAgendaRouteImport.update({
+  id: '/agenda',
+  path: '/agenda',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const Char91DotwellKnownChar93OauthProtectedResourceRoute =
+  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
+    id: '/.well-known/oauth-protected-resource',
+    path: '/.well-known/oauth-protected-resource',
     getParentRoute: () => rootRouteImport,
   } as any)
-const AuthenticatedAdminGhlTestRoute =
-  AuthenticatedAdminGhlTestRouteImport.update({
-    id: '/ghl-test',
-    path: '/ghl-test',
-    getParentRoute: () => AuthenticatedAdminRouteRoute,
+const Char91DotmcpChar93ListToolsRoute =
+  Char91DotmcpChar93ListToolsRouteImport.update({
+    id: '/.mcp/list-tools',
+    path: '/.mcp/list-tools',
+    getParentRoute: () => rootRouteImport,
   } as any)
-const AuthenticatedAdminReconciliarRoute =
-  AuthenticatedAdminReconciliarRouteImport.update({
-    id: '/reconciliar',
-    path: '/reconciliar',
-    getParentRoute: () => AuthenticatedAdminRouteRoute,
-  } as any)
-const AuthenticatedAppointmentsNewRoute =
-  AuthenticatedAppointmentsNewRouteImport.update({
-    id: '/appointments/new',
-    path: '/appointments/new',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
+const AuthenticatedAdminRouteRoute = AuthenticatedAdminRouteRouteImport.update({
+  id: '/_admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedMovimentacaoIndexRoute =
   AuthenticatedMovimentacaoIndexRouteImport.update({
     id: '/movimentacao/',
     path: '/movimentacao/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedOnboardingBemVindoRoute =
-  AuthenticatedOnboardingBemVindoRouteImport.update({
-    id: '/bem-vindo',
-    path: '/bem-vindo',
-    getParentRoute: () => AuthenticatedOnboardingRoute,
+const LovableEmailEventsRoute = LovableEmailEventsRouteImport.update({
+  id: '/lovable/email/events',
+  path: '/lovable/email/events',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRelatoriosMovimentacoesRoute =
+  AuthenticatedRelatoriosMovimentacoesRouteImport.update({
+    id: '/relatorios/movimentacoes',
+    path: '/relatorios/movimentacoes',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedOnboardingDisponibilidadeRoute =
-  AuthenticatedOnboardingDisponibilidadeRouteImport.update({
-    id: '/disponibilidade',
-    path: '/disponibilidade',
-    getParentRoute: () => AuthenticatedOnboardingRoute,
-  } as any)
-const AuthenticatedOnboardingPerfilRoute =
-  AuthenticatedOnboardingPerfilRouteImport.update({
-    id: '/perfil',
-    path: '/perfil',
+const AuthenticatedOnboardingServicosRoute =
+  AuthenticatedOnboardingServicosRouteImport.update({
+    id: '/servicos',
+    path: '/servicos',
     getParentRoute: () => AuthenticatedOnboardingRoute,
   } as any)
 const AuthenticatedOnboardingProntoRoute =
@@ -245,81 +215,90 @@ const AuthenticatedOnboardingProntoRoute =
     path: '/pronto',
     getParentRoute: () => AuthenticatedOnboardingRoute,
   } as any)
-const AuthenticatedOnboardingServicosRoute =
-  AuthenticatedOnboardingServicosRouteImport.update({
-    id: '/servicos',
-    path: '/servicos',
+const AuthenticatedOnboardingPerfilRoute =
+  AuthenticatedOnboardingPerfilRouteImport.update({
+    id: '/perfil',
+    path: '/perfil',
     getParentRoute: () => AuthenticatedOnboardingRoute,
   } as any)
-const AuthenticatedRelatoriosMovimentacoesRoute =
-  AuthenticatedRelatoriosMovimentacoesRouteImport.update({
-    id: '/relatorios/movimentacoes',
-    path: '/relatorios/movimentacoes',
+const AuthenticatedOnboardingDisponibilidadeRoute =
+  AuthenticatedOnboardingDisponibilidadeRouteImport.update({
+    id: '/disponibilidade',
+    path: '/disponibilidade',
+    getParentRoute: () => AuthenticatedOnboardingRoute,
+  } as any)
+const AuthenticatedOnboardingBemVindoRoute =
+  AuthenticatedOnboardingBemVindoRouteImport.update({
+    id: '/bem-vindo',
+    path: '/bem-vindo',
+    getParentRoute: () => AuthenticatedOnboardingRoute,
+  } as any)
+const AuthenticatedAppointmentsNewRoute =
+  AuthenticatedAppointmentsNewRouteImport.update({
+    id: '/appointments/new',
+    path: '/appointments/new',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const LovableEmailEventsRoute = LovableEmailEventsRouteImport.update({
-  id: '/lovable/email/events',
-  path: '/lovable/email/events',
+const AuthenticatedAdminReconciliarRoute =
+  AuthenticatedAdminReconciliarRouteImport.update({
+    id: '/reconciliar',
+    path: '/reconciliar',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
+const AuthenticatedAdminGhlTestRoute =
+  AuthenticatedAdminGhlTestRouteImport.update({
+    id: '/ghl-test',
+    path: '/ghl-test',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
+const Char91DotmcpChar93InvokeToolToolRoute =
+  Char91DotmcpChar93InvokeToolToolRouteImport.update({
+    id: '/.mcp/invoke-tool/$tool',
+    path: '/.mcp/invoke-tool/$tool',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedAdminAdminEquipeRoute =
-  AuthenticatedAdminAdminEquipeRouteImport.update({
-    id: '/admin/equipe',
-    path: '/admin/equipe',
-    getParentRoute: () => AuthenticatedAdminRouteRoute,
-  } as any)
-const AuthenticatedAdminAdminFilaRoute =
-  AuthenticatedAdminAdminFilaRouteImport.update({
-    id: '/admin/fila',
-    path: '/admin/fila',
-    getParentRoute: () => AuthenticatedAdminRouteRoute,
-  } as any)
-const AuthenticatedAdminAdminMovimentacaoLinksRoute =
-  AuthenticatedAdminAdminMovimentacaoLinksRouteImport.update({
-    id: '/admin/movimentacao-links',
-    path: '/admin/movimentacao-links',
-    getParentRoute: () => AuthenticatedAdminRouteRoute,
-  } as any)
-const AuthenticatedAdminAdminSaudeRoute =
-  AuthenticatedAdminAdminSaudeRouteImport.update({
-    id: '/admin/saude',
-    path: '/admin/saude',
-    getParentRoute: () => AuthenticatedAdminRouteRoute,
-  } as any)
-const AuthenticatedAdminAdminVendedoresRoute =
-  AuthenticatedAdminAdminVendedoresRouteImport.update({
-    id: '/admin/vendedores',
-    path: '/admin/vendedores',
-    getParentRoute: () => AuthenticatedAdminRouteRoute,
-  } as any)
-const AuthenticatedAdminRelatoriosAgendamentosRoute =
-  AuthenticatedAdminRelatoriosAgendamentosRouteImport.update({
-    id: '/relatorios/agendamentos',
-    path: '/relatorios/agendamentos',
-    getParentRoute: () => AuthenticatedAdminRouteRoute,
-  } as any)
 const AuthenticatedAppointmentsNewIndexRoute =
   AuthenticatedAppointmentsNewIndexRouteImport.update({
     id: '/',
     path: '/',
     getParentRoute: () => AuthenticatedAppointmentsNewRoute,
   } as any)
-const AuthenticatedAppointmentsNewAgendaRoute =
-  AuthenticatedAppointmentsNewAgendaRouteImport.update({
-    id: '/agenda',
-    path: '/agenda',
-    getParentRoute: () => AuthenticatedAppointmentsNewRoute,
+const LovableEmailTransactionalPreviewRoute =
+  LovableEmailTransactionalPreviewRouteImport.update({
+    id: '/lovable/email/transactional/preview',
+    path: '/lovable/email/transactional/preview',
+    getParentRoute: () => rootRouteImport,
   } as any)
-const AuthenticatedAppointmentsNewClienteRoute =
-  AuthenticatedAppointmentsNewClienteRouteImport.update({
-    id: '/cliente',
-    path: '/cliente',
-    getParentRoute: () => AuthenticatedAppointmentsNewRoute,
+const LovableEmailAuthWebhookRoute = LovableEmailAuthWebhookRouteImport.update({
+  id: '/lovable/email/auth/webhook',
+  path: '/lovable/email/auth/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
+  id: '/lovable/email/auth/preview',
+  path: '/lovable/email/auth/preview',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicHooksSyncGhlRoute = ApiPublicHooksSyncGhlRouteImport.update({
+  id: '/api/public/hooks/sync-ghl',
+  path: '/api/public/hooks/sync-ghl',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicHooksSendRemindersRoute =
+  ApiPublicHooksSendRemindersRouteImport.update({
+    id: '/api/public/hooks/send-reminders',
+    path: '/api/public/hooks/send-reminders',
+    getParentRoute: () => rootRouteImport,
   } as any)
-const AuthenticatedAppointmentsNewProjetoRoute =
-  AuthenticatedAppointmentsNewProjetoRouteImport.update({
-    id: '/projeto',
-    path: '/projeto',
+const AuthenticatedAppointmentsNewServicosRoute =
+  AuthenticatedAppointmentsNewServicosRouteImport.update({
+    id: '/servicos',
+    path: '/servicos',
     getParentRoute: () => AuthenticatedAppointmentsNewRoute,
   } as any)
 const AuthenticatedAppointmentsNewRevisaoRoute =
@@ -328,43 +307,58 @@ const AuthenticatedAppointmentsNewRevisaoRoute =
     path: '/revisao',
     getParentRoute: () => AuthenticatedAppointmentsNewRoute,
   } as any)
-const AuthenticatedAppointmentsNewServicosRoute =
-  AuthenticatedAppointmentsNewServicosRouteImport.update({
-    id: '/servicos',
-    path: '/servicos',
+const AuthenticatedAppointmentsNewProjetoRoute =
+  AuthenticatedAppointmentsNewProjetoRouteImport.update({
+    id: '/projeto',
+    path: '/projeto',
     getParentRoute: () => AuthenticatedAppointmentsNewRoute,
   } as any)
-const ApiPublicHooksSendRemindersRoute =
-  ApiPublicHooksSendRemindersRouteImport.update({
-    id: '/api/public/hooks/send-reminders',
-    path: '/api/public/hooks/send-reminders',
-    getParentRoute: () => rootRouteImport,
+const AuthenticatedAppointmentsNewClienteRoute =
+  AuthenticatedAppointmentsNewClienteRouteImport.update({
+    id: '/cliente',
+    path: '/cliente',
+    getParentRoute: () => AuthenticatedAppointmentsNewRoute,
   } as any)
-const ApiPublicHooksSyncGhlRoute = ApiPublicHooksSyncGhlRouteImport.update({
-  id: '/api/public/hooks/sync-ghl',
-  path: '/api/public/hooks/sync-ghl',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
-  id: '/lovable/email/auth/preview',
-  path: '/lovable/email/auth/preview',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LovableEmailAuthWebhookRoute = LovableEmailAuthWebhookRouteImport.update({
-  id: '/lovable/email/auth/webhook',
-  path: '/lovable/email/auth/webhook',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LovableEmailTransactionalPreviewRoute =
-  LovableEmailTransactionalPreviewRouteImport.update({
-    id: '/lovable/email/transactional/preview',
-    path: '/lovable/email/transactional/preview',
-    getParentRoute: () => rootRouteImport,
+const AuthenticatedAppointmentsNewAgendaRoute =
+  AuthenticatedAppointmentsNewAgendaRouteImport.update({
+    id: '/agenda',
+    path: '/agenda',
+    getParentRoute: () => AuthenticatedAppointmentsNewRoute,
   } as any)
-const AuthenticatedAdminAdminMovimentacaoNovoRoute =
-  AuthenticatedAdminAdminMovimentacaoNovoRouteImport.update({
-    id: '/admin/movimentacao/novo',
-    path: '/admin/movimentacao/novo',
+const AuthenticatedAdminRelatoriosAgendamentosRoute =
+  AuthenticatedAdminRelatoriosAgendamentosRouteImport.update({
+    id: '/relatorios/agendamentos',
+    path: '/relatorios/agendamentos',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
+const AuthenticatedAdminAdminVendedoresRoute =
+  AuthenticatedAdminAdminVendedoresRouteImport.update({
+    id: '/admin/vendedores',
+    path: '/admin/vendedores',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
+const AuthenticatedAdminAdminSaudeRoute =
+  AuthenticatedAdminAdminSaudeRouteImport.update({
+    id: '/admin/saude',
+    path: '/admin/saude',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
+const AuthenticatedAdminAdminMovimentacaoLinksRoute =
+  AuthenticatedAdminAdminMovimentacaoLinksRouteImport.update({
+    id: '/admin/movimentacao-links',
+    path: '/admin/movimentacao-links',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
+const AuthenticatedAdminAdminFilaRoute =
+  AuthenticatedAdminAdminFilaRouteImport.update({
+    id: '/admin/fila',
+    path: '/admin/fila',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
+const AuthenticatedAdminAdminEquipeRoute =
+  AuthenticatedAdminAdminEquipeRouteImport.update({
+    id: '/admin/equipe',
+    path: '/admin/equipe',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
 const AuthenticatedMovimentacaoHistoricoIdEditarRoute =
@@ -372,6 +366,12 @@ const AuthenticatedMovimentacaoHistoricoIdEditarRoute =
     id: '/movimentacao/historico/$id/editar',
     path: '/movimentacao/historico/$id/editar',
     getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminAdminMovimentacaoNovoRoute =
+  AuthenticatedAdminAdminMovimentacaoNovoRouteImport.update({
+    id: '/admin/movimentacao/novo',
+    path: '/admin/movimentacao/novo',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -745,25 +745,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated': {
-      id: '/_authenticated'
-      path: ''
-      fullPath: '/'
-      preLoaderRoute: typeof AuthenticatedRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/connect': {
@@ -773,116 +759,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConnectRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/mcp': {
-      id: '/mcp'
-      path: '/mcp'
-      fullPath: '/mcp'
-      preLoaderRoute: typeof McpRouteImport
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/.mcp/list-tools': {
-      id: '/.mcp/list-tools'
-      path: '/.mcp/list-tools'
-      fullPath: '/.mcp/list-tools'
-      preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/.well-known/oauth-protected-resource': {
-      id: '/.well-known/oauth-protected-resource'
-      path: '/.well-known/oauth-protected-resource'
-      fullPath: '/.well-known/oauth-protected-resource'
-      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated/_admin': {
-      id: '/_authenticated/_admin'
+    '/_authenticated': {
+      id: '/_authenticated'
       path: ''
       fullPath: '/'
-      preLoaderRoute: typeof AuthenticatedAdminRouteRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/agenda': {
-      id: '/_authenticated/agenda'
-      path: '/agenda'
-      fullPath: '/agenda'
-      preLoaderRoute: typeof AuthenticatedAgendaRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/financeiro': {
-      id: '/_authenticated/financeiro'
-      path: '/financeiro'
-      fullPath: '/financeiro'
-      preLoaderRoute: typeof AuthenticatedFinanceiroRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/home': {
-      id: '/_authenticated/home'
-      path: '/home'
-      fullPath: '/home'
-      preLoaderRoute: typeof AuthenticatedHomeRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/menu': {
-      id: '/_authenticated/menu'
-      path: '/menu'
-      fullPath: '/menu'
-      preLoaderRoute: typeof AuthenticatedMenuRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/onboarding': {
-      id: '/_authenticated/onboarding'
-      path: '/onboarding'
-      fullPath: '/onboarding'
-      preLoaderRoute: typeof AuthenticatedOnboardingRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/reviews': {
-      id: '/_authenticated/reviews'
-      path: '/reviews'
-      fullPath: '/reviews'
-      preLoaderRoute: typeof AuthenticatedReviewsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/services': {
-      id: '/_authenticated/services'
-      path: '/services'
-      fullPath: '/services'
-      preLoaderRoute: typeof AuthenticatedServicesRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/a/$token': {
-      id: '/a/$token'
-      path: '/a/$token'
-      fullPath: '/a/$token'
-      preLoaderRoute: typeof ATokenRouteImport
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/auth_/recover': {
-      id: '/auth_/recover'
-      path: '/auth/recover'
-      fullPath: '/auth/recover'
-      preLoaderRoute: typeof AuthRecoverRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth_/update-password': {
-      id: '/auth_/update-password'
-      path: '/auth/update-password'
-      fullPath: '/auth/update-password'
-      preLoaderRoute: typeof AuthUpdatePasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/movimentacao/$slug': {
-      id: '/movimentacao/$slug'
-      path: '/movimentacao/$slug'
-      fullPath: '/movimentacao/$slug'
-      preLoaderRoute: typeof MovimentacaoSlugRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/movimentacao/historico': {
-      id: '/movimentacao/historico'
-      path: '/movimentacao/historico'
-      fullPath: '/movimentacao/historico'
-      preLoaderRoute: typeof MovimentacaoHistoricoRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/totem/': {
@@ -892,11 +787,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TotemIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/totem/buscar': {
-      id: '/totem/buscar'
-      path: '/totem/buscar'
-      fullPath: '/totem/buscar'
-      preLoaderRoute: typeof TotemBuscarRouteImport
+    '/totem/pronto': {
+      id: '/totem/pronto'
+      path: '/totem/pronto'
+      fullPath: '/totem/pronto'
+      preLoaderRoute: typeof TotemProntoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/totem/confirmar': {
@@ -906,46 +801,116 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TotemConfirmarRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/totem/pronto': {
-      id: '/totem/pronto'
-      path: '/totem/pronto'
-      fullPath: '/totem/pronto'
-      preLoaderRoute: typeof TotemProntoRouteImport
+    '/totem/buscar': {
+      id: '/totem/buscar'
+      path: '/totem/buscar'
+      fullPath: '/totem/buscar'
+      preLoaderRoute: typeof TotemBuscarRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/.lovable/oauth/consent': {
-      id: '/.lovable/oauth/consent'
-      path: '/.lovable/oauth/consent'
-      fullPath: '/.lovable/oauth/consent'
-      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
+    '/movimentacao/historico': {
+      id: '/movimentacao/historico'
+      path: '/movimentacao/historico'
+      fullPath: '/movimentacao/historico'
+      preLoaderRoute: typeof MovimentacaoHistoricoRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/.mcp/invoke-tool/$tool': {
-      id: '/.mcp/invoke-tool/$tool'
-      path: '/.mcp/invoke-tool/$tool'
-      fullPath: '/.mcp/invoke-tool/$tool'
-      preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
+    '/movimentacao/$slug': {
+      id: '/movimentacao/$slug'
+      path: '/movimentacao/$slug'
+      fullPath: '/movimentacao/$slug'
+      preLoaderRoute: typeof MovimentacaoSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/_admin/ghl-test': {
-      id: '/_authenticated/_admin/ghl-test'
-      path: '/ghl-test'
-      fullPath: '/ghl-test'
-      preLoaderRoute: typeof AuthenticatedAdminGhlTestRouteImport
-      parentRoute: typeof AuthenticatedAdminRouteRoute
+    '/auth_/update-password': {
+      id: '/auth_/update-password'
+      path: '/auth/update-password'
+      fullPath: '/auth/update-password'
+      preLoaderRoute: typeof AuthUpdatePasswordRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/_admin/reconciliar': {
-      id: '/_authenticated/_admin/reconciliar'
-      path: '/reconciliar'
-      fullPath: '/reconciliar'
-      preLoaderRoute: typeof AuthenticatedAdminReconciliarRouteImport
-      parentRoute: typeof AuthenticatedAdminRouteRoute
+    '/auth_/recover': {
+      id: '/auth_/recover'
+      path: '/auth/recover'
+      fullPath: '/auth/recover'
+      preLoaderRoute: typeof AuthRecoverRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/appointments/new': {
-      id: '/_authenticated/appointments/new'
-      path: '/appointments/new'
-      fullPath: '/appointments/new'
-      preLoaderRoute: typeof AuthenticatedAppointmentsNewRouteImport
+    '/a/$token': {
+      id: '/a/$token'
+      path: '/a/$token'
+      fullPath: '/a/$token'
+      preLoaderRoute: typeof ATokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/services': {
+      id: '/_authenticated/services'
+      path: '/services'
+      fullPath: '/services'
+      preLoaderRoute: typeof AuthenticatedServicesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/reviews': {
+      id: '/_authenticated/reviews'
+      path: '/reviews'
+      fullPath: '/reviews'
+      preLoaderRoute: typeof AuthenticatedReviewsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/onboarding': {
+      id: '/_authenticated/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof AuthenticatedOnboardingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/menu': {
+      id: '/_authenticated/menu'
+      path: '/menu'
+      fullPath: '/menu'
+      preLoaderRoute: typeof AuthenticatedMenuRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/home': {
+      id: '/_authenticated/home'
+      path: '/home'
+      fullPath: '/home'
+      preLoaderRoute: typeof AuthenticatedHomeRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/financeiro': {
+      id: '/_authenticated/financeiro'
+      path: '/financeiro'
+      fullPath: '/financeiro'
+      preLoaderRoute: typeof AuthenticatedFinanceiroRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/agenda': {
+      id: '/_authenticated/agenda'
+      path: '/agenda'
+      fullPath: '/agenda'
+      preLoaderRoute: typeof AuthenticatedAgendaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/.well-known/oauth-protected-resource': {
+      id: '/.well-known/oauth-protected-resource'
+      path: '/.well-known/oauth-protected-resource'
+      fullPath: '/.well-known/oauth-protected-resource'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.mcp/list-tools': {
+      id: '/.mcp/list-tools'
+      path: '/.mcp/list-tools'
+      fullPath: '/.mcp/list-tools'
+      preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/_admin': {
+      id: '/_authenticated/_admin'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedAdminRouteRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/movimentacao/': {
@@ -955,25 +920,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMovimentacaoIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/onboarding/bem-vindo': {
-      id: '/_authenticated/onboarding/bem-vindo'
-      path: '/bem-vindo'
-      fullPath: '/onboarding/bem-vindo'
-      preLoaderRoute: typeof AuthenticatedOnboardingBemVindoRouteImport
-      parentRoute: typeof AuthenticatedOnboardingRoute
+    '/lovable/email/events': {
+      id: '/lovable/email/events'
+      path: '/lovable/email/events'
+      fullPath: '/lovable/email/events'
+      preLoaderRoute: typeof LovableEmailEventsRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/onboarding/disponibilidade': {
-      id: '/_authenticated/onboarding/disponibilidade'
-      path: '/disponibilidade'
-      fullPath: '/onboarding/disponibilidade'
-      preLoaderRoute: typeof AuthenticatedOnboardingDisponibilidadeRouteImport
-      parentRoute: typeof AuthenticatedOnboardingRoute
+    '/_authenticated/relatorios/movimentacoes': {
+      id: '/_authenticated/relatorios/movimentacoes'
+      path: '/relatorios/movimentacoes'
+      fullPath: '/relatorios/movimentacoes'
+      preLoaderRoute: typeof AuthenticatedRelatoriosMovimentacoesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/onboarding/perfil': {
-      id: '/_authenticated/onboarding/perfil'
-      path: '/perfil'
-      fullPath: '/onboarding/perfil'
-      preLoaderRoute: typeof AuthenticatedOnboardingPerfilRouteImport
+    '/_authenticated/onboarding/servicos': {
+      id: '/_authenticated/onboarding/servicos'
+      path: '/servicos'
+      fullPath: '/onboarding/servicos'
+      preLoaderRoute: typeof AuthenticatedOnboardingServicosRouteImport
       parentRoute: typeof AuthenticatedOnboardingRoute
     }
     '/_authenticated/onboarding/pronto': {
@@ -983,68 +948,61 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedOnboardingProntoRouteImport
       parentRoute: typeof AuthenticatedOnboardingRoute
     }
-    '/_authenticated/onboarding/servicos': {
-      id: '/_authenticated/onboarding/servicos'
-      path: '/servicos'
-      fullPath: '/onboarding/servicos'
-      preLoaderRoute: typeof AuthenticatedOnboardingServicosRouteImport
+    '/_authenticated/onboarding/perfil': {
+      id: '/_authenticated/onboarding/perfil'
+      path: '/perfil'
+      fullPath: '/onboarding/perfil'
+      preLoaderRoute: typeof AuthenticatedOnboardingPerfilRouteImport
       parentRoute: typeof AuthenticatedOnboardingRoute
     }
-    '/_authenticated/relatorios/movimentacoes': {
-      id: '/_authenticated/relatorios/movimentacoes'
-      path: '/relatorios/movimentacoes'
-      fullPath: '/relatorios/movimentacoes'
-      preLoaderRoute: typeof AuthenticatedRelatoriosMovimentacoesRouteImport
+    '/_authenticated/onboarding/disponibilidade': {
+      id: '/_authenticated/onboarding/disponibilidade'
+      path: '/disponibilidade'
+      fullPath: '/onboarding/disponibilidade'
+      preLoaderRoute: typeof AuthenticatedOnboardingDisponibilidadeRouteImport
+      parentRoute: typeof AuthenticatedOnboardingRoute
+    }
+    '/_authenticated/onboarding/bem-vindo': {
+      id: '/_authenticated/onboarding/bem-vindo'
+      path: '/bem-vindo'
+      fullPath: '/onboarding/bem-vindo'
+      preLoaderRoute: typeof AuthenticatedOnboardingBemVindoRouteImport
+      parentRoute: typeof AuthenticatedOnboardingRoute
+    }
+    '/_authenticated/appointments/new': {
+      id: '/_authenticated/appointments/new'
+      path: '/appointments/new'
+      fullPath: '/appointments/new'
+      preLoaderRoute: typeof AuthenticatedAppointmentsNewRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/lovable/email/events': {
-      id: '/lovable/email/events'
-      path: '/lovable/email/events'
-      fullPath: '/lovable/email/events'
-      preLoaderRoute: typeof LovableEmailEventsRouteImport
+    '/_authenticated/_admin/reconciliar': {
+      id: '/_authenticated/_admin/reconciliar'
+      path: '/reconciliar'
+      fullPath: '/reconciliar'
+      preLoaderRoute: typeof AuthenticatedAdminReconciliarRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/_admin/ghl-test': {
+      id: '/_authenticated/_admin/ghl-test'
+      path: '/ghl-test'
+      fullPath: '/ghl-test'
+      preLoaderRoute: typeof AuthenticatedAdminGhlTestRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/.mcp/invoke-tool/$tool': {
+      id: '/.mcp/invoke-tool/$tool'
+      path: '/.mcp/invoke-tool/$tool'
+      fullPath: '/.mcp/invoke-tool/$tool'
+      preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/_admin/admin/equipe': {
-      id: '/_authenticated/_admin/admin/equipe'
-      path: '/admin/equipe'
-      fullPath: '/admin/equipe'
-      preLoaderRoute: typeof AuthenticatedAdminAdminEquipeRouteImport
-      parentRoute: typeof AuthenticatedAdminRouteRoute
-    }
-    '/_authenticated/_admin/admin/fila': {
-      id: '/_authenticated/_admin/admin/fila'
-      path: '/admin/fila'
-      fullPath: '/admin/fila'
-      preLoaderRoute: typeof AuthenticatedAdminAdminFilaRouteImport
-      parentRoute: typeof AuthenticatedAdminRouteRoute
-    }
-    '/_authenticated/_admin/admin/movimentacao-links': {
-      id: '/_authenticated/_admin/admin/movimentacao-links'
-      path: '/admin/movimentacao-links'
-      fullPath: '/admin/movimentacao-links'
-      preLoaderRoute: typeof AuthenticatedAdminAdminMovimentacaoLinksRouteImport
-      parentRoute: typeof AuthenticatedAdminRouteRoute
-    }
-    '/_authenticated/_admin/admin/saude': {
-      id: '/_authenticated/_admin/admin/saude'
-      path: '/admin/saude'
-      fullPath: '/admin/saude'
-      preLoaderRoute: typeof AuthenticatedAdminAdminSaudeRouteImport
-      parentRoute: typeof AuthenticatedAdminRouteRoute
-    }
-    '/_authenticated/_admin/admin/vendedores': {
-      id: '/_authenticated/_admin/admin/vendedores'
-      path: '/admin/vendedores'
-      fullPath: '/admin/vendedores'
-      preLoaderRoute: typeof AuthenticatedAdminAdminVendedoresRouteImport
-      parentRoute: typeof AuthenticatedAdminRouteRoute
-    }
-    '/_authenticated/_admin/relatorios/agendamentos': {
-      id: '/_authenticated/_admin/relatorios/agendamentos'
-      path: '/relatorios/agendamentos'
-      fullPath: '/relatorios/agendamentos'
-      preLoaderRoute: typeof AuthenticatedAdminRelatoriosAgendamentosRouteImport
-      parentRoute: typeof AuthenticatedAdminRouteRoute
+    '/.lovable/oauth/consent': {
+      id: '/.lovable/oauth/consent'
+      path: '/.lovable/oauth/consent'
+      fullPath: '/.lovable/oauth/consent'
+      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/appointments/new/': {
       id: '/_authenticated/appointments/new/'
@@ -1053,60 +1011,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppointmentsNewIndexRouteImport
       parentRoute: typeof AuthenticatedAppointmentsNewRoute
     }
-    '/_authenticated/appointments/new/agenda': {
-      id: '/_authenticated/appointments/new/agenda'
-      path: '/agenda'
-      fullPath: '/appointments/new/agenda'
-      preLoaderRoute: typeof AuthenticatedAppointmentsNewAgendaRouteImport
-      parentRoute: typeof AuthenticatedAppointmentsNewRoute
-    }
-    '/_authenticated/appointments/new/cliente': {
-      id: '/_authenticated/appointments/new/cliente'
-      path: '/cliente'
-      fullPath: '/appointments/new/cliente'
-      preLoaderRoute: typeof AuthenticatedAppointmentsNewClienteRouteImport
-      parentRoute: typeof AuthenticatedAppointmentsNewRoute
-    }
-    '/_authenticated/appointments/new/projeto': {
-      id: '/_authenticated/appointments/new/projeto'
-      path: '/projeto'
-      fullPath: '/appointments/new/projeto'
-      preLoaderRoute: typeof AuthenticatedAppointmentsNewProjetoRouteImport
-      parentRoute: typeof AuthenticatedAppointmentsNewRoute
-    }
-    '/_authenticated/appointments/new/revisao': {
-      id: '/_authenticated/appointments/new/revisao'
-      path: '/revisao'
-      fullPath: '/appointments/new/revisao'
-      preLoaderRoute: typeof AuthenticatedAppointmentsNewRevisaoRouteImport
-      parentRoute: typeof AuthenticatedAppointmentsNewRoute
-    }
-    '/_authenticated/appointments/new/servicos': {
-      id: '/_authenticated/appointments/new/servicos'
-      path: '/servicos'
-      fullPath: '/appointments/new/servicos'
-      preLoaderRoute: typeof AuthenticatedAppointmentsNewServicosRouteImport
-      parentRoute: typeof AuthenticatedAppointmentsNewRoute
-    }
-    '/api/public/hooks/send-reminders': {
-      id: '/api/public/hooks/send-reminders'
-      path: '/api/public/hooks/send-reminders'
-      fullPath: '/api/public/hooks/send-reminders'
-      preLoaderRoute: typeof ApiPublicHooksSendRemindersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/hooks/sync-ghl': {
-      id: '/api/public/hooks/sync-ghl'
-      path: '/api/public/hooks/sync-ghl'
-      fullPath: '/api/public/hooks/sync-ghl'
-      preLoaderRoute: typeof ApiPublicHooksSyncGhlRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/lovable/email/auth/preview': {
-      id: '/lovable/email/auth/preview'
-      path: '/lovable/email/auth/preview'
-      fullPath: '/lovable/email/auth/preview'
-      preLoaderRoute: typeof LovableEmailAuthPreviewRouteImport
+    '/lovable/email/transactional/preview': {
+      id: '/lovable/email/transactional/preview'
+      path: '/lovable/email/transactional/preview'
+      fullPath: '/lovable/email/transactional/preview'
+      preLoaderRoute: typeof LovableEmailTransactionalPreviewRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/lovable/email/auth/webhook': {
@@ -1116,18 +1025,102 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LovableEmailAuthWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/lovable/email/transactional/preview': {
-      id: '/lovable/email/transactional/preview'
-      path: '/lovable/email/transactional/preview'
-      fullPath: '/lovable/email/transactional/preview'
-      preLoaderRoute: typeof LovableEmailTransactionalPreviewRouteImport
+    '/lovable/email/auth/preview': {
+      id: '/lovable/email/auth/preview'
+      path: '/lovable/email/auth/preview'
+      fullPath: '/lovable/email/auth/preview'
+      preLoaderRoute: typeof LovableEmailAuthPreviewRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/_admin/admin/movimentacao/novo': {
-      id: '/_authenticated/_admin/admin/movimentacao/novo'
-      path: '/admin/movimentacao/novo'
-      fullPath: '/admin/movimentacao/novo'
-      preLoaderRoute: typeof AuthenticatedAdminAdminMovimentacaoNovoRouteImport
+    '/api/public/hooks/sync-ghl': {
+      id: '/api/public/hooks/sync-ghl'
+      path: '/api/public/hooks/sync-ghl'
+      fullPath: '/api/public/hooks/sync-ghl'
+      preLoaderRoute: typeof ApiPublicHooksSyncGhlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/send-reminders': {
+      id: '/api/public/hooks/send-reminders'
+      path: '/api/public/hooks/send-reminders'
+      fullPath: '/api/public/hooks/send-reminders'
+      preLoaderRoute: typeof ApiPublicHooksSendRemindersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/appointments/new/servicos': {
+      id: '/_authenticated/appointments/new/servicos'
+      path: '/servicos'
+      fullPath: '/appointments/new/servicos'
+      preLoaderRoute: typeof AuthenticatedAppointmentsNewServicosRouteImport
+      parentRoute: typeof AuthenticatedAppointmentsNewRoute
+    }
+    '/_authenticated/appointments/new/revisao': {
+      id: '/_authenticated/appointments/new/revisao'
+      path: '/revisao'
+      fullPath: '/appointments/new/revisao'
+      preLoaderRoute: typeof AuthenticatedAppointmentsNewRevisaoRouteImport
+      parentRoute: typeof AuthenticatedAppointmentsNewRoute
+    }
+    '/_authenticated/appointments/new/projeto': {
+      id: '/_authenticated/appointments/new/projeto'
+      path: '/projeto'
+      fullPath: '/appointments/new/projeto'
+      preLoaderRoute: typeof AuthenticatedAppointmentsNewProjetoRouteImport
+      parentRoute: typeof AuthenticatedAppointmentsNewRoute
+    }
+    '/_authenticated/appointments/new/cliente': {
+      id: '/_authenticated/appointments/new/cliente'
+      path: '/cliente'
+      fullPath: '/appointments/new/cliente'
+      preLoaderRoute: typeof AuthenticatedAppointmentsNewClienteRouteImport
+      parentRoute: typeof AuthenticatedAppointmentsNewRoute
+    }
+    '/_authenticated/appointments/new/agenda': {
+      id: '/_authenticated/appointments/new/agenda'
+      path: '/agenda'
+      fullPath: '/appointments/new/agenda'
+      preLoaderRoute: typeof AuthenticatedAppointmentsNewAgendaRouteImport
+      parentRoute: typeof AuthenticatedAppointmentsNewRoute
+    }
+    '/_authenticated/_admin/relatorios/agendamentos': {
+      id: '/_authenticated/_admin/relatorios/agendamentos'
+      path: '/relatorios/agendamentos'
+      fullPath: '/relatorios/agendamentos'
+      preLoaderRoute: typeof AuthenticatedAdminRelatoriosAgendamentosRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/_admin/admin/vendedores': {
+      id: '/_authenticated/_admin/admin/vendedores'
+      path: '/admin/vendedores'
+      fullPath: '/admin/vendedores'
+      preLoaderRoute: typeof AuthenticatedAdminAdminVendedoresRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/_admin/admin/saude': {
+      id: '/_authenticated/_admin/admin/saude'
+      path: '/admin/saude'
+      fullPath: '/admin/saude'
+      preLoaderRoute: typeof AuthenticatedAdminAdminSaudeRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/_admin/admin/movimentacao-links': {
+      id: '/_authenticated/_admin/admin/movimentacao-links'
+      path: '/admin/movimentacao-links'
+      fullPath: '/admin/movimentacao-links'
+      preLoaderRoute: typeof AuthenticatedAdminAdminMovimentacaoLinksRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/_admin/admin/fila': {
+      id: '/_authenticated/_admin/admin/fila'
+      path: '/admin/fila'
+      fullPath: '/admin/fila'
+      preLoaderRoute: typeof AuthenticatedAdminAdminFilaRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
+    '/_authenticated/_admin/admin/equipe': {
+      id: '/_authenticated/_admin/admin/equipe'
+      path: '/admin/equipe'
+      fullPath: '/admin/equipe'
+      preLoaderRoute: typeof AuthenticatedAdminAdminEquipeRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
     '/_authenticated/movimentacao/historico/$id/editar': {
@@ -1136,6 +1129,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/movimentacao/historico/$id/editar'
       preLoaderRoute: typeof AuthenticatedMovimentacaoHistoricoIdEditarRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/_admin/admin/movimentacao/novo': {
+      id: '/_authenticated/_admin/admin/movimentacao/novo'
+      path: '/admin/movimentacao/novo'
+      fullPath: '/admin/movimentacao/novo'
+      preLoaderRoute: typeof AuthenticatedAdminAdminMovimentacaoNovoRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
     }
   }
 }
