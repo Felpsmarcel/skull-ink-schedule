@@ -1,3 +1,4 @@
+import type { ErrorComponentProps } from "@tanstack/react-router";
 import { createFileRoute, Link, Outlet, redirect, useRouter, useRouterState } from "@tanstack/react-router";
 import { getOnboardingStatus } from "@/lib/onboarding.functions";
 import { ErrorState } from "@/components/ui/error-state";
@@ -33,7 +34,7 @@ function OnboardingPending() {
   );
 }
 
-function OnboardingError({ error, reset }: { error: Error; reset: () => void; info?: unknown }) {
+function OnboardingError({ error, reset }: ErrorComponentProps) {
   const router = useRouter();
   return (
     <div className="mx-auto flex min-h-svh max-w-lg items-center justify-center px-5">
