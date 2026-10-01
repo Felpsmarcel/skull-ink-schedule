@@ -33,7 +33,7 @@ function OnboardingPending() {
   );
 }
 
-function OnboardingError({ error, reset }: { error: Error; reset: () => void }) {
+function OnboardingError({ error, reset }: { error: Error; reset: () => void; info?: unknown }) {
   const router = useRouter();
   return (
     <div className="mx-auto flex min-h-svh max-w-lg items-center justify-center px-5">
