@@ -41,7 +41,7 @@ function OnboardingError({ error, reset }: ErrorComponentProps) {
       <ErrorState
         title="Não foi possível abrir a configuração"
         description="Atualize a página ou tente voltar para a agenda."
-        details={error.message}
+        details={(error as Error).message}
         onRetry={() => {
           router.invalidate();
           reset();
