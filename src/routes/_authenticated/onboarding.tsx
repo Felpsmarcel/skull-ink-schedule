@@ -1,3 +1,4 @@
+import type { ErrorComponentProps } from "@tanstack/react-router";
 import { createFileRoute, Link, Outlet, redirect, useRouter, useRouterState } from "@tanstack/react-router";
 import { getOnboardingStatus } from "@/lib/onboarding.functions";
 import { ErrorState } from "@/components/ui/error-state";
@@ -33,14 +34,14 @@ function OnboardingPending() {
   );
 }
 
-function OnboardingError({ error, reset }: { error: Error; reset: () => void }) {
+function OnboardingError({ error, reset }: ErrorComponentProps) {
   const router = useRouter();
   return (
     <div className="mx-auto flex min-h-svh max-w-lg items-center justify-center px-5">
       <ErrorState
         title="Não foi possível abrir a configuração"
         description="Atualize a página ou tente voltar para a agenda."
-        details={error.message}
+        details={(error as Error).message}
         onRetry={() => {
           router.invalidate();
           reset();
