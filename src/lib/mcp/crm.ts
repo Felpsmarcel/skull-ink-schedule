@@ -231,9 +231,8 @@ async function fetchPipelineMaps(signal?: AbortSignal): Promise<PipelineMaps> {
 const MAX_PAGES = 25; // 25 * 100 = 2500 oportunidades por consulta
 
 /**
- * Oportunidades criadas no intervalo pedido. A busca do CRM devolve por
- * ordem decrescente de criação, por isso paginamos com `startAfter` até
- * passar o início do intervalo.
+ * Oportunidades criadas no período civil de Bruxelas. Percorre todos os
+ * cursores sem presumir ordenação; limites ou falhas sinalizam incompletude.
  */
 export async function fetchCrmFinance(
   from: string,
