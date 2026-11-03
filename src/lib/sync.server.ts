@@ -5,6 +5,7 @@
  */
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { logIncident } from "@/lib/observability.server";
+import { ownershipConflict, SYNC_LOCATION_ID, SYNC_DEADLINE_MS } from "@/lib/sync-core";
 
 const GHL_BASE = "https://services.leadconnectorhq.com";
 const GHL_VERSION = "2021-04-15";
@@ -63,6 +64,7 @@ async function ghlGetEvents(
   startMs: number,
   endMs: number,
   token: string,
+  signal: AbortSignal,
 ): Promise<{ ok: boolean; status: number; events: GhlEvent[]; raw: unknown }> {
   const url = new URL(`${GHL_BASE}/calendars/events`);
   url.searchParams.set("calendarId", calendarId);
@@ -70,6 +72,7 @@ async function ghlGetEvents(
   url.searchParams.set("startTime", String(startMs));
   url.searchParams.set("endTime", String(endMs));
   const res = await fetch(url, {
+    signal: AbortSignal.any([signal, AbortSignal.timeout(15_000)]),
     headers: {
       Authorization: `Bearer ${token}`,
       Version: GHL_VERSION,
@@ -100,12 +103,14 @@ export interface GhlContactInfo {
 async function ghlGetContact(
   contactId: string,
   token: string,
+  signal?: AbortSignal,
 ): Promise<GhlContactInfo | null> {
   try {
     // GHL rate-limits contact reads; retry on 429 with backoff.
     let res: Response | null = null;
     for (let attempt = 0; attempt < 4; attempt++) {
       res = await fetch(`${GHL_BASE}/contacts/${contactId}`, {
+        signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(15_000)]) : AbortSignal.timeout(15_000),
         headers: {
           Authorization: `Bearer ${token}`,
           Version: "2021-07-28",
@@ -148,12 +153,13 @@ async function resolveContacts(
   ids: string[],
   token: string,
   cache: Map<string, GhlContactInfo | null>,
+  signal?: AbortSignal,
 ): Promise<void> {
   const pending = ids.filter((id) => !cache.has(id));
   const CONCURRENCY = 3;
   for (let i = 0; i < pending.length; i += CONCURRENCY) {
     const slice = pending.slice(i, i + CONCURRENCY);
-    const results = await Promise.all(slice.map((id) => ghlGetContact(id, token)));
+    const results = await Promise.all(slice.map((id) => ghlGetContact(id, token, signal)));
     slice.forEach((id, idx) => cache.set(id, results[idx] ?? null));
     if (i + CONCURRENCY < pending.length) {
       await new Promise((r) => setTimeout(r, 150));
@@ -161,14 +167,16 @@ async function resolveContacts(
   }
 }
 
-export async function syncGhlAppointments(opts?: {
+async function performSync(runId: string, signal: AbortSignal, opts?: {
   pastDays?: number;
   futureDays?: number;
   locationId?: string;
+  source?: "manual" | "cron";
 }): Promise<SyncResult> {
   const token = process.env.GHL_TOKEN;
   if (!token) throw new Error("GHL_TOKEN ausente no servidor");
-  const locationId = opts?.locationId ?? "9iqrKUVPDddINb9S4Iwd";
+  const locationId = SYNC_LOCATION_ID;
+  if (opts?.locationId && opts.locationId !== locationId) throw new Error("Subconta inválida");
   const pastDays = opts?.pastDays ?? 7;
   const futureDays = opts?.futureDays ?? 90;
 
@@ -194,17 +202,29 @@ export async function syncGhlAppointments(opts?: {
   // Same client shows up across calendars/events — cache per run.
   const contactInfo = new Map<string, GhlContactInfo | null>();
 
+  if (!artists.length) throw new Error("Nenhum calendário vinculado");
+  if (new Set(artists.map(a => a.ghl_calendar_id)).size !== artists.length) throw new Error("Calendário vinculado a vários artistas");
+  const catalog = await fetch(`${GHL_BASE}/calendars/?locationId=${locationId}`, {
+    headers: { Authorization: `Bearer ${token}`, Version: "2021-07-28" },
+    signal: AbortSignal.any([signal, AbortSignal.timeout(15_000)]),
+  });
+  if (!catalog.ok) throw new Error("Não foi possível verificar subconta e calendários");
+  const catalogData = await catalog.json() as { calendars?: Array<{ id: string; locationId?: string }> };
+  const allowed = new Set((catalogData.calendars ?? []).filter(c => !c.locationId || c.locationId === locationId).map(c => c.id));
   for (const artist of artists) {
-    const calId = artist.ghl_calendar_id!;
-    const artistCommissionPct = Number(artist.commission_pct ?? 40);
-    const res = await ghlGetEvents(calId, locationId, startMs, endMs, token);
+    signal.throwIfAborted();
+    const calId = artist.ghl_calendar_id;
+    if (!calId || !allowed.has(calId)) { failures++; errors.push("Calendário fora da subconta"); continue; }
+    if (artist.commission_pct == null || !Number.isFinite(Number(artist.commission_pct))) { failures++; errors.push("Comissão não configurada explicitamente"); continue; }
+    const artistCommissionPct = Number(artist.commission_pct);
+    const res = await ghlGetEvents(calId, locationId, startMs, endMs, token, signal);
     if (!res.ok) {
       const reason = `GHL events ${res.status} cal=${calId}`;
       errors.push(reason);
       await supabaseAdmin.from("ghl_sync_failures" as never).insert({
         ghl_event_id: null,
         reason,
-        payload: { calendarId: calId, raw: res.raw },
+        payload: { calendarId: calId, status: res.status },
       } as never);
       await logIncident({
         source: "ghl",
@@ -216,6 +236,16 @@ export async function syncGhlAppointments(opts?: {
       continue;
     }
     fetched += res.events.length;
+    const { data: ownerRows, error: ownerError } = await supabaseAdmin.from("appointments" as never)
+      .select("ghl_appointment_id, artist_id, calendar_id").in("ghl_appointment_id", res.events.map(e => e.id));
+    if (ownerError) throw new Error("Falha ao verificar propriedade");
+    const owners = new Map(((ownerRows ?? []) as Array<{ ghl_appointment_id: string; artist_id: string; calendar_id: string | null }>).map(r => [r.ghl_appointment_id, r]));
+    res.events = res.events.filter(e => {
+      if (ownershipConflict(owners.get(e.id), artist.id, calId, e.calendarId)) {
+        failures++; errors.push("Conflito de propriedade de evento"); return false;
+      }
+      return true;
+    });
     if (res.events.length === 0) continue;
 
     // Ensure a contacts row exists for every event that carries a GHL contact.
@@ -237,10 +267,11 @@ export async function syncGhlAppointments(opts?: {
     // Reuse contacts already stored with a real name — avoids re-fetching
     // every contact from the CRM and rewriting the contacts table each run.
     if (seenGhl.size > 0) {
-      const { data: known } = await supabaseAdmin
+      const { data: known, error: knownError } = await supabaseAdmin
         .from("contacts" as never)
         .select("id, ghl_contact_id, name, phone, email")
         .in("ghl_contact_id", [...seenGhl]);
+      if (knownError) throw new Error("Falha ao ler contatos existentes");
       for (const r of (known ?? []) as Array<{
         id: string;
         ghl_contact_id: string;
@@ -255,10 +286,12 @@ export async function syncGhlAppointments(opts?: {
       }
     }
     const needFetch = [...seenGhl].filter((g) => !contactInfo.has(g));
-    await resolveContacts(needFetch, token, contactInfo);
+    await resolveContacts(needFetch, token, contactInfo, signal);
+    signal.throwIfAborted();
     for (const gid of needFetch) {
       if (contactIdMap.has(gid) && !contactInfo.get(gid)?.name) continue;
       const info = contactInfo.get(gid) ?? null;
+      if (!info?.name) { failures++; errors.push("Contato não resolvido"); continue; }
       contactUpserts.push({
         ghl_contact_id: gid,
         name: info?.name ?? "Sem nome",
@@ -267,15 +300,9 @@ export async function syncGhlAppointments(opts?: {
       });
     }
     if (contactUpserts.length > 0) {
-      const { data: cRows, error: cErr } = await supabaseAdmin
-        .from("contacts" as never)
-        .upsert(contactUpserts as never, {
-          onConflict: "ghl_contact_id",
-          ignoreDuplicates: false,
-        })
-        .select("id, ghl_contact_id");
+      const { data: cRows, error: cErr } = await supabaseAdmin.rpc("ghl_sync_write" as never, { p_run: runId, p_kind: "contacts", p_rows: contactUpserts } as never);
       if (cErr) {
-        errors.push(`contacts upsert: ${cErr.message}`);
+        failures++; errors.push("Falha ao salvar contatos");
       } else {
         for (const r of (cRows ?? []) as Array<{ id: string; ghl_contact_id: string }>) {
           contactIdMap.set(r.ghl_contact_id, r.id);
@@ -386,13 +413,9 @@ export async function syncGhlAppointments(opts?: {
       });
       // ignoreDuplicates: another concurrent run may have inserted between our
       // SELECT and INSERT. Treat that as a no-op, not a batch failure.
-      const { error: insErr, count } = await supabaseAdmin
-        .from("appointments" as never)
-        .upsert(rows as never, {
-          onConflict: "ghl_appointment_id",
-          ignoreDuplicates: true,
-          count: "exact",
-        });
+      signal.throwIfAborted();
+      const { data: insertedRows, error: insErr } = await supabaseAdmin.rpc("ghl_sync_write" as never,
+        { p_run: runId, p_kind: "insert", p_rows: rows } as never);
       if (insErr) {
         errors.push(`upsert: ${insErr.message}`);
         await supabaseAdmin.from("ghl_sync_failures" as never).insert({
@@ -408,7 +431,7 @@ export async function syncGhlAppointments(opts?: {
         });
         failures += toInsert.length;
       } else {
-        inserted += count ?? rows.length;
+        inserted += Array.isArray(insertedRows) ? insertedRows.length : 0;
       }
     }
 
@@ -421,10 +444,9 @@ export async function syncGhlAppointments(opts?: {
         null;
       const gid = e.contactId ?? e.contact?.id ?? null;
       const info = gid ? contactInfo.get(gid) ?? null : null;
-      const { error: upErr } = await supabaseAdmin
-        .from("appointments" as never)
-        .update(
-          {
+      signal.throwIfAborted();
+      const { data: changedRows, error: upErr } = await supabaseAdmin.rpc("ghl_sync_write" as never, {
+        p_run: runId, p_kind: "update", p_rows: [{ ghl_appointment_id: e.id, artist_id: artist.id,
             start_at: e.startTime,
             end_at: e.endTime,
             status: mapStatus(e.appointmentStatus),
@@ -434,20 +456,19 @@ export async function syncGhlAppointments(opts?: {
             ghl_contact_id: e.contactId ?? null,
             ...(linkedContactId ? { contact_id: linkedContactId } : {}),
             calendar_id: calId,
-          } as never,
-        )
-        .eq("ghl_appointment_id", e.id);
+          }],
+      } as never);
       if (upErr) {
         errors.push(`update ${e.id}: ${upErr.message}`);
         failures++;
       } else {
-        updated++;
+        updated += Array.isArray(changedRows) ? changedRows.length : 0;
       }
     }
   }
 
   return {
-    ok: failures === 0,
+    ok: failures === 0 && errors.length === 0,
     scannedCalendars: artists.length,
     fetchedEvents: fetched,
     inserted,
@@ -456,6 +477,23 @@ export async function syncGhlAppointments(opts?: {
     errors: errors.slice(0, 20),
   };
 }
+export async function syncGhlAppointments(opts?: { pastDays?: number; futureDays?: number; locationId?: string; source?: "manual" | "cron" }): Promise<SyncResult> {
+  const runId = crypto.randomUUID();
+  const { data: acquired, error } = await supabaseAdmin.rpc("ghl_sync_begin" as never, { p_run: runId, p_source: opts?.source ?? "manual" } as never);
+  if (error || !acquired) throw new Error("Sincronização bloqueada ou preparação pendente");
+  const signal = AbortSignal.timeout(SYNC_DEADLINE_MS);
+  let result: SyncResult = { ok: false, scannedCalendars: 0, fetchedEvents: 0, inserted: 0, updated: 0, failures: 1, errors: ["Execução não concluída"] };
+  try {
+    result = await performSync(runId, signal, opts);
+  } catch {
+    result.ok = false;
+  } finally {
+    const { error: finishError } = await supabaseAdmin.rpc("ghl_sync_finish" as never, { p_run: runId, p_result: { ...result, errors: result.errors.length ? ["Falha parcial ou total; revisão necessária"] : [] } } as never);
+    if (finishError) throw new Error("Não foi possível registrar conclusão da sincronização");
+  }
+  return result;
+}
+
 export interface BackfillContactsResult {
   scanned: number;
   updatedAppointments: number;
