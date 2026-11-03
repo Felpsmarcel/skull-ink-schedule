@@ -31,11 +31,11 @@
           "properties": {
             "from": {
               "type": "string",
-              "description": "Data inicial (YYYY-MM-DD)."
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
             },
             "to": {
               "type": "string",
-              "description": "Data final inclusiva (YYYY-MM-DD)."
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
             },
             "limit": {
               "description": "Máximo de linhas (padrão 50).",
@@ -66,11 +66,11 @@
           "properties": {
             "from": {
               "type": "string",
-              "description": "Data inicial (YYYY-MM-DD)."
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
             },
             "to": {
               "type": "string",
-              "description": "Data final inclusiva (YYYY-MM-DD)."
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
             },
             "limit": {
               "description": "Máximo de linhas (padrão 50).",
@@ -89,7 +89,7 @@
       {
         "name": "resumo_financeiro",
         "title": "Resumo financeiro (CRM + pagamentos reais)",
-        "description": "Resume o financeiro num intervalo de datas: oportunidades do CRM (ganho, em aberto, perdido) e o saldo de pagamentos reais registados no estúdio, com quebra por forma de pagamento e por tatuador.",
+        "description": "Resumo completo por período Europe/Brussels; oportunidades e pagamentos separados. Artistas recebem somente contagens próprias, sem bruto ou comissão estimada.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -101,11 +101,11 @@
           "properties": {
             "from": {
               "type": "string",
-              "description": "Data inicial (YYYY-MM-DD)."
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
             },
             "to": {
               "type": "string",
-              "description": "Data final inclusiva (YYYY-MM-DD)."
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
             }
           },
           "required": [
@@ -118,7 +118,7 @@
       {
         "name": "list_artists",
         "title": "Listar tatuadores",
-        "description": "Lista os tatuadores do estúdio com comissão, status ativo e contactos.",
+        "description": "Lista somente os tatuadores autorizados, nome e status ativo.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
