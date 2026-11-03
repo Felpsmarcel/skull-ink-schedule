@@ -45,7 +45,7 @@ export default defineTool({
         to,
         scope.artistsByUserId,
         scope.restrictToGhlUserId,
-        ctx.signal,
+        AbortSignal.timeout(25_000),
       );
       const limited = rows.slice(0, limit ?? 50);
       const payload = {

@@ -20,7 +20,7 @@ export default defineTool({
         { ...scope, role: scope.role === "admin" ? "admin" : "artist" },
         from,
         to,
-        ctx.signal,
+        AbortSignal.timeout(25_000),
       );
       return { content: [{ type: "text", text: JSON.stringify(payload) }] };
     } catch {

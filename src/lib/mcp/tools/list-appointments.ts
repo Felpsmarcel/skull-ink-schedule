@@ -30,7 +30,7 @@ export default defineTool({
           structuredContent: { fonte: "crm", count: 0, appointments: [] },
         };
       }
-      const result = await fetchCrmAppointments(calendars, from, to, ctx.signal);
+      const result = await fetchCrmAppointments(calendars, from, to, AbortSignal.timeout(25_000));
       const all = result.rows;
       const rows = all.slice(0, limit ?? 50);
       const payload = {
