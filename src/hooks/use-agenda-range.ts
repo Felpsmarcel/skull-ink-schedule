@@ -1,6 +1,7 @@
 import { useQueries } from "@tanstack/react-query";
 import { LOCATION_ID, type StaffMember } from "@/config/staff";
 import { useArtists } from "@/hooks/use-artists";
+import { scopedAgendaStaff } from "@/lib/agenda-scope";
 import { getEvents, type GhlEvent } from "@/lib/ghl";
 
 export interface StaffRangeAgenda {
@@ -26,9 +27,7 @@ export function useStaffRangeAgenda(
 ) {
   const enabled = options.enabled ?? true;
   const artistsQuery = useArtists();
-  const staffList: StaffMember[] = (artistsQuery.data ?? []).filter((s) =>
-    options.artistId ? s.id === options.artistId : true,
-  );
+  const staffList: StaffMember[] = scopedAgendaStaff(artistsQuery.data ?? [], options.artistId, enabled);
 
   const queries = useQueries({
     queries: staffList.map((staff) => ({
@@ -47,12 +46,12 @@ export function useStaffRangeAgenda(
   });
 
   const agendas: StaffRangeAgenda[] = staffList.map((staff, i) => {
-    const q = queries[i]!;
+    const q = queries[i];
     return {
       staff,
-      events: q.data ?? [],
-      isLoading: q.isLoading,
-      error: q.error instanceof Error ? q.error.message : undefined,
+      events: q?.data ?? [],
+      isLoading: q?.isLoading ?? false,
+      error: q?.error instanceof Error ? q.error.message : undefined,
     };
   });
 

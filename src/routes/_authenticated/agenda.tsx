@@ -55,6 +55,7 @@ import type { GridSlot } from "@/lib/agenda-grid";
 import { AlertTriangle as AlertTriangleIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { GhlSyncStatus } from "@/components/ghl-sync-status";
+import { agendaScope } from "@/lib/agenda-scope";
 
 type View = "day" | "week" | "month";
 
@@ -119,8 +120,9 @@ function AgendaPage() {
   const [date, setDate] = useState<Date>(() => new Date());
   const [pickerOpen, setPickerOpen] = useState(false);
 
-  const { data: me } = useCurrentUser();
-  const restrictArtistId = me?.role === "artist" ? (me.artistId ?? "unlinked") : null;
+  const { data: me, isPending: mePending } = useCurrentUser();
+  const scope = agendaScope(me);
+  const restrictArtistId = scope.artistId;
 
   const dateLabel = useMemo(() => {
     const locale = resolveIntlLocale(i18n.language);
@@ -162,6 +164,8 @@ function AgendaPage() {
     setDate(d);
     setView("day");
   };
+
+  if (!scope.allowed) return <div role="status" className="p-6 text-muted-foreground">{mePending ? "A carregar…" : "Acesso à agenda não autorizado: vínculo não verificado."}</div>;
 
   return (
     <div className="flex min-h-dvh flex-col bg-muted/40 pb-[calc(env(safe-area-inset-bottom)+6rem)] sm:pb-20">
@@ -831,7 +835,7 @@ function fmtHHmm(ms: number): string {
 
 function WeekView({
   date,
-  restrictArtistId: _restrictArtistId,
+  restrictArtistId,
   meReady,
   onPickDay,
 }: {
@@ -846,9 +850,9 @@ function WeekView({
   const endMs = brusselsWeekEndMs(date);
   const days = enumerateBrusselsDays(startMs, endMs + 1);
 
-  // Show ALL artists in week view — calendar visibility is not restricted.
+  // Same verified artist scope in all three modes.
   const { agendas, isFetching } = useStaffRangeAgenda(startMs, endMs, {
-    artistId: null,
+    artistId: restrictArtistId,
     enabled: meReady,
   });
   const { map: statusMap } = useRangeAppointmentStatuses(startMs, endMs, meReady);
@@ -1236,7 +1240,7 @@ function WeekView({
 
 function MonthView({
   date,
-  restrictArtistId: _restrictArtistId,
+  restrictArtistId,
   meReady,
   onPickDay,
 }: {
@@ -1258,9 +1262,9 @@ function MonthView({
   );
   const days = enumerateBrusselsDays(gridStart, gridEndExclusive);
 
-  // Show ALL artists in month view — calendar visibility is not restricted.
+  // Same verified artist scope in all three modes.
   const { agendas } = useStaffRangeAgenda(gridStart, gridEndExclusive - 1, {
-    artistId: null,
+    artistId: restrictArtistId,
     enabled: meReady,
   });
   const { map: statusMap } = useRangeAppointmentStatuses(
