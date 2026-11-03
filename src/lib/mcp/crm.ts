@@ -198,6 +198,7 @@ export interface CrmFinanceRow {
   pipeline: string | null;
   etapa: string | null;
   artist_name: string | null;
+  ghl_user_id: string | null;
   criado_em: string;
   atualizado_em: string | null;
 }
@@ -253,6 +254,8 @@ export async function fetchCrmFinance(
   let exhausted = false;
   const seenIds = new Set<string>();
   const seenCursors = new Set<string>();
+  let expectedTotal: number | null = null;
+  let previousNextPage = 1;
 
   for (let page = 0; page < MAX_PAGES; page++) {
     const qs = new URLSearchParams({
@@ -279,13 +282,31 @@ export async function fetchCrmFinance(
         break;
       }
       const batch = body.opportunities;
+      const meta = body.meta;
+      const total = meta?.total;
+      const nextPage = meta?.nextPage;
+      const hasNext = nextPage !== undefined && nextPage !== null;
+      if (total !== undefined && (!Number.isSafeInteger(total) || total < 0 || (expectedTotal !== null && total !== expectedTotal))) {
+        truncated = true;
+        break;
+      }
+      if (total !== undefined) expectedTotal = total;
+      if (hasNext && (!Number.isSafeInteger(nextPage) || Number(nextPage) <= previousNextPage)) {
+        truncated = true;
+        break;
+      }
       if (batch.length === 0) {
-        exhausted = true;
+        exhausted = !hasNext && (expectedTotal === null || expectedTotal === seenIds.size);
+        if (!exhausted) truncated = true;
         break;
       }
       for (const o of batch) {
+        if (!o || typeof o.id !== "string" || !o.id.trim() || o.id !== o.id.trim()) {
+          truncated = true;
+          continue;
+        }
         const createdMs = Date.parse(o.createdAt);
-        if (seenIds.has(o.id)) continue;
+        if (seenIds.has(o.id)) { truncated = true; continue; }
         seenIds.add(o.id);
         if (!Number.isFinite(createdMs)) {
           truncated = true;
@@ -294,20 +315,21 @@ export async function fetchCrmFinance(
         if (createdMs < fromMs || createdMs >= toMs) continue;
         // CRM filters are not trusted as an authorization boundary.
         if (restrictToUserId && o.assignedTo !== restrictToUserId) continue;
-        if (o.monetaryValue == null || !Number.isFinite(Number(o.monetaryValue))) {
+        if (typeof o.monetaryValue !== "number" || !Number.isFinite(o.monetaryValue)) {
           truncated = true;
           continue;
         }
         rows.push({
           crm_opportunity_id: o.id,
           nome_cliente: o.contact?.name ?? o.name ?? null,
-          valor_eur: Number(o.monetaryValue ?? 0),
+          valor_eur: o.monetaryValue,
           status: o.status ?? "unknown",
           pipeline: o.pipelineId ? (maps.pipelines.get(o.pipelineId) ?? o.pipelineId) : null,
           etapa: o.pipelineStageId
             ? (maps.stages.get(o.pipelineStageId) ?? o.pipelineStageId)
             : null,
           artist_name: o.assignedTo ? (artistsByUserId.get(o.assignedTo) ?? null) : null,
+          ghl_user_id: o.assignedTo ?? null,
           criado_em: o.createdAt,
           atualizado_em: o.updatedAt ?? null,
         });
@@ -315,21 +337,23 @@ export async function fetchCrmFinance(
 
       const nextAfter = body.meta?.startAfter;
       const nextId = body.meta?.startAfterId;
-      if (!body.meta?.nextPage) {
-        if (batch.length < 100 && (body.meta?.total == null || seenIds.size >= body.meta.total))
-          exhausted = true;
-        else if (body.meta?.total != null && seenIds.size >= body.meta.total) exhausted = true;
-        else truncated = true;
+      if (!hasNext) {
+        exhausted = expectedTotal !== null ? seenIds.size === expectedTotal : batch.length < 100;
+        if (!exhausted) truncated = true;
         break;
       }
       const cursor = `${nextAfter}:${nextId}`;
-      if (nextAfter == null || !nextId || seenCursors.has(cursor)) {
+      if (typeof nextAfter !== "number" || !Number.isFinite(nextAfter) || nextAfter < 0
+        || typeof nextId !== "string" || !nextId.trim() || nextId !== nextId.trim()
+        || !seenIds.has(nextId) || seenCursors.has(cursor)
+        || (expectedTotal !== null && seenIds.size >= expectedTotal)) {
         truncated = true;
         break;
       }
       seenCursors.add(cursor);
       startAfter = nextAfter;
       startAfterId = nextId;
+      previousNextPage = Number(nextPage);
       await sleep(200);
       if (page === MAX_PAGES - 1) truncated = true;
     } catch {
@@ -346,12 +370,13 @@ export interface CrmFinanceSummary extends Record<string, unknown> {
   fonte: "crm";
   base: "oportunidades";
   periodo: { from: string; to: string };
-  registos: number;
+  registos: number | null;
+  registos_lidos: number;
   total_ganho_eur: number | null;
   total_aberto_eur: number | null;
   total_perdido_eur: number | null;
   por_status: Array<{ status: string; registos: number; total_eur: number }>;
-  por_tatuador: Array<{ artist_name: string; registos: number; total_eur: number }>;
+  por_tatuador: Array<{ ghl_user_id: string | null; artist_name: string | null; registos: number; total_eur: number }>;
   truncado: boolean;
   nota: string;
 }
@@ -363,14 +388,15 @@ export function summarizeCrmFinance(
   truncated: boolean,
 ): CrmFinanceSummary {
   const byStatus = new Map<string, { registos: number; total: number }>();
-  const byArtist = new Map<string, { registos: number; total: number }>();
+  const byArtist = new Map<string | null, { name: string | null; registos: number; total: number }>();
+  truncated = truncated || rows.some(r => typeof r.valor_eur !== "number" || !Number.isFinite(r.valor_eur));
   for (const r of rows) {
     const s = byStatus.get(r.status) ?? { registos: 0, total: 0 };
     s.registos += 1;
     s.total += r.valor_eur;
     byStatus.set(r.status, s);
-    const key = r.artist_name ?? "(sem tatuador atribuído)";
-    const a = byArtist.get(key) ?? { registos: 0, total: 0 };
+    const key = r.ghl_user_id ?? null;
+    const a = byArtist.get(key) ?? { name: r.artist_name, registos: 0, total: 0 };
     a.registos += 1;
     a.total += r.valor_eur;
     byArtist.set(key, a);
@@ -380,7 +406,8 @@ export function summarizeCrmFinance(
     fonte: "crm",
     base: "oportunidades",
     periodo: dashboardPeriod(from, to),
-    registos: rows.length,
+    registos: truncated ? null : rows.length,
+    registos_lidos: rows.length,
     total_ganho_eur: truncated ? null : statusTotal("won"),
     total_aberto_eur: truncated ? null : statusTotal("open"),
     total_perdido_eur: truncated ? null : statusTotal("lost") + statusTotal("abandoned"),
@@ -388,7 +415,7 @@ export function summarizeCrmFinance(
       .map(([status, v]) => ({ status, registos: v.registos, total_eur: v.total }))
       .sort((a, b) => b.total_eur - a.total_eur),
     por_tatuador: (truncated ? [] : [...byArtist.entries()])
-      .map(([artist_name, v]) => ({ artist_name, registos: v.registos, total_eur: v.total }))
+      .map(([ghl_user_id, v]) => ({ ghl_user_id, artist_name: v.name, registos: v.registos, total_eur: v.total }))
       .sort((a, b) => b.total_eur - a.total_eur),
     truncado: truncated,
     nota: "Valores vindos das oportunidades do CRM. O CRM não expõe registos de pagamento (custom objects/pagamentos) ao token atual.",
