@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { DashboardScope } from "./dashboard-scope";
+import { DashboardError, type DashboardScope } from "./dashboard-scope";
 import { dashboardPeriod } from "./dashboard-period";
 import { fetchCrmAppointments, fetchCrmFinance, summarizeCrmFinance } from "./mcp/crm";
 import { fetchStudioPaymentsForClient } from "./mcp/payments";
@@ -12,6 +12,8 @@ export async function readDashboard(
   to: string,
   signal?: AbortSignal,
 ) {
+  if (scope.role !== "admin" && scope.role !== "artist") throw new DashboardError(403, "Papel não autorizado");
+  if (scope.role === "artist" && (!scope.artistId || !scope.restrictToGhlUserId || scope.artists.length !== 1 || scope.artists[0]?.id !== scope.artistId)) throw new DashboardError(403, "Vínculo não verificado");
   const period = dashboardPeriod(from, to);
   const calendars = scope.artists.flatMap((a) =>
     a.ghl_calendar_id ? [{ calendarId: a.ghl_calendar_id, artistName: a.name }] : [],
@@ -50,6 +52,7 @@ export async function readDashboard(
     fetchedAt: new Date().toISOString(),
     period,
     source: { appointments: "crm", opportunities: "crm", confirmedPayments: "app_movimentacoes" },
+    paymentMeaning: "Lançamentos registados no estúdio; não são transações bancárias verificadas nem pagamentos confirmados pelo CRM.",
     partial,
     appointments: {
       complete: !!a && !a.partial && !a.truncated,

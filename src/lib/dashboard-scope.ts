@@ -42,12 +42,13 @@ export async function resolveDashboardScope(
   if (me.role === "artist") query = query.eq("id", me.artist_id);
   const { data, error: artistError } = await query;
   if (artistError) throw new DashboardError(403, "Vínculo não verificado");
+  if ((data ?? []).length >= 1000) throw new DashboardError(503, "Catálogo de artistas incompleto");
   const artists = ((data ?? []) as DashboardArtist[]).filter(
     (a) => me.role === "admin" || a.id === me.artist_id,
   );
   if (
     me.role === "artist" &&
-    (artists.length !== 1 || !artists[0]?.ghl_calendar_id || !artists[0]?.ghl_user_id)
+    (artists.length !== 1 || !artists[0]?.active || !artists[0]?.ghl_calendar_id || !artists[0]?.ghl_user_id)
   )
     throw new DashboardError(403, "Artista sem vínculo CRM completo");
   return {
