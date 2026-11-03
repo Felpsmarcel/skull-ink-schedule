@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { runGhlSync, type SyncResult } from "@/lib/sync.functions";
+import { SYNC_QUERY_KEYS } from "@/lib/sync-core";
 
 type ButtonProps = React.ComponentProps<typeof Button>;
 
@@ -74,19 +75,16 @@ export function SyncGhlButton({
     mutationFn: (vars) => sync({ data: vars }),
     onSuccess: (r) => {
       const desc = summary(r);
-      if (r.failures > 0) {
+      if (!r.ok) {
         toast.warning("Sincronização concluída com falhas", { description: desc });
       } else {
         toast.success("Sincronização concluída", { description: desc });
       }
-      qc.invalidateQueries({ queryKey: ["finance-summary"] });
-      qc.invalidateQueries({ queryKey: ["sync-failures"] });
-      qc.invalidateQueries({ queryKey: ["agenda-status"] });
-      qc.invalidateQueries({ queryKey: ["agenda"] });
-      qc.invalidateQueries({ queryKey: ["monthly-report"] });
+      SYNC_QUERY_KEYS.forEach((key) => void qc.invalidateQueries({ queryKey: [key] }));
       onSettled?.(r, null);
     },
     onError: (e) => {
+      SYNC_QUERY_KEYS.forEach((key) => void qc.invalidateQueries({ queryKey: [key] }));
       const raw = e instanceof Error ? e.message : String(e);
       toast.error("Falha ao sincronizar", {
         description: friendlyMessage(raw),
