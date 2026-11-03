@@ -26,12 +26,17 @@ O símbolo acima descreve o contrato, não um segredo para copiar. Nenhum token 
 - `partial`: true se alguma fonte não é comprovadamente completa.
 - `appointments`: `complete`, `truncated`, `count` completo ou null, `items` (máximo 200), `itemsTruncated` separado do truncamento da fonte. Itens somente id, início/fim e status; sem nome, telefone, e-mail ou título do cliente.
 - ADMIN: `opportunities.summary` com agregado apenas quando completo; pagamentos registados do app separados, nunca usados como prova de transação bancária/recebimento no CRM.
+- Nos resumos CRM/app, `registos` é a contagem completa ou null; `registos_lidos` é somente quantidade de linhas válidas disponíveis, não total comprovado. Incompletude suprime também `por_status`/`por_tatuador` e todos os valores monetários completos. Contagens de sync do app continuam diagnósticos das linhas lidas, não agregados completos em caso de truncamento.
+- `opportunities.summary.por_tatuador`: `ghl_user_id` imutável (ou null para não atribuído), `artist_name` como rótulo separado, `registos`, `total_eur`. Linhas CRM administrativas carregam o mesmo `ghl_user_id`; nenhum agrupamento usa nome.
+- `confirmedPayments.por_tatuador`: `artist_id` imutável (ou null), `artist_name` como rótulo separado, `registos`, `total_eur`. Homônimos permanecem grupos distintos; rótulo desconhecido é null, sem inventar vínculo. Clientes devem usar o ID da fonte como chave, não comparar nomes entre fontes.
 - ARTISTA: contagens/status próprios sem valor monetário bruto, parcela do estúdio ou comissão. `financialEligibility: not_proven`, `commissionOmitted: true`. O endpoint não consulta pagamentos administrativos para esse papel.
 
 ### Precisão
 O dia 29/03/2026 tem 23 horas em Bruxelas e 25/10/2026 tem 25. Os limites são meia-noite civil local convertida para UTC e próxima meia-noite exclusiva; não se soma 24h para terminar um dia DST.
 Oportunidades são filtradas por **data de criação**, não data em que foram ganhas, pagas ou atualizadas. São valores de oportunidades, não recebimentos. Pagamentos do app usam `data_pagamento` (coluna date), sem inventar UTC para essa data civil.
 A paginação CRM percorre os cursores sem presumir ordem de criação, deduplica IDs e verifica assignedTo novamente no servidor. Limite de 25 páginas/25 segundos; ao atingir teto, cursor inconsistente, erro ou falta de prova de término, sinaliza truncamento e totais null. Não calcula totais de amostras.
+Página vazia não comprova término quando meta.total excede os IDs únicos lidos ou há nextPage. Total inválido/variável/menor que IDs, IDs ausentes/inválidos/duplicados, cursor repetido/inválido e nextPage inconsistente tornam a leitura incompleta. Uma página final curta sem total/nextPage mantém a convenção existente de término; total declarado exige igualdade exata com IDs únicos.
+Integridade monetária permanece conservadoramente ligada à completude: valor de oportunidade ausente/não numérico ou campo monetário de pagamento ausente/inválido não é zero real e invalida o resumo completo. Não foi criado um segundo contrato de contagem financeira parcialmente elegível; artista mantém omissão monetária/sem estimativa de comissão.
 Agenda CRM não fornece paginação comprovada nesta integração: sinaliza possível teto quando há 100+ eventos, nextPage ou total maior que os eventos; não declara contagem completa nesse caso.
 Pagamentos do app paginam em blocos de 500 com contagem exata, ordenação estável e teto de 25.000; mudança de contagem/erro/teto/valor inválido torna o agregado incompleto e valor null. Não resolve atomicidade entre múltiplas consultas concorrentes: contagem estável não equivale a snapshot financeiro transacional.
 Comissões contratuais existentes não foram alteradas. Não foi implementada estimativa de comissão: precisa de base elegível e vínculo financeiro comprovados antes de expor valores ao artista.
@@ -57,3 +62,9 @@ Comissões contratuais existentes não foram alteradas. Não foi implementada es
 
 ## Dependências antes de ativação
 Revisão deste diff; autorização para migração de sync e segredo privado/Vault; publicação coordenada somente depois de autorização; cliente móvel compatível com sessão/PKCE e nova entrega APK pela HighLevel; teste autenticado real antes de declarar integração concluída. Migração segura não foi aplicada nem cron novo ativado.
+
+### Pendências de segurança preservadas
+- Incorporar `docs/sql/ghl-sync-contact-identity.review.sql` na migração protegida pelo fluxo autorizado; a migração original ainda contém a definição antiga. Não aplicar isoladamente sem essa revisão.
+- Incorporar e publicar, somente com autorização, o substituto em `docs/edge-review/ghl-proxy-handler.ts`; o proxy legado não foi alterado/deployado e permanece vulnerável.
+- Backfill de contatos segue desativado até compartilhar lease/fencing/deadline. Dia/semana/mês seguem isolados ao artista e negam vínculo não comprovado.
+- Esta revisão executa exclusivamente testes fictícios; não consulta CRM real, importa dados, aplica SQL, publica ou ativa a integração móvel.

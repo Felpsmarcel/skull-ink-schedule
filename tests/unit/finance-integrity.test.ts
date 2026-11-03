@@ -32,3 +32,30 @@ it("missing money in CRM or app never becomes real zero", async () => {
   crm([{ opportunities: [opp("missing", null)], meta: { total: 1 } }]); const r = await fetchCrmFinance(day, day, new Map()); expect(summarizeCrmFinance(r.rows, day, day, r.truncated).total_ganho_eur).toBeNull();
   const p = await fetchStudioPaymentsForClient(payments([pay("missing", "A", null)]), day, day, new Map()); expect(p.total_recebido_eur).toBeNull(); expect(p.registos).toBeNull();
 });
+it("empty second page contradicting advertised total suppresses every complete aggregate", async () => {
+  crm([{ opportunities: [opp("x")], meta: { total: 3, nextPage: 2, startAfter: 1, startAfterId: "x" } }, { opportunities: [], meta: { total: 3 } }]);
+  const r = await fetchCrmFinance(day, day, new Map()); const s = summarizeCrmFinance(r.rows, day, day, r.truncated);
+  expect(s.registos_lidos).toBe(1); expect(s.registos).toBeNull(); expect(s.total_ganho_eur).toBeNull(); expect(s.por_status).toEqual([]); expect(s.por_tatuador).toEqual([]);
+});
+it("repeated cursor with new IDs is still incomplete", async () => {
+  crm([{ opportunities: [opp("x")], meta: { nextPage: 2, startAfter: 1, startAfterId: "x" } }, { opportunities: [opp("y")], meta: { nextPage: 3, startAfter: 1, startAfterId: "x" } }]);
+  expect((await fetchCrmFinance(day, day, new Map())).truncated).toBe(true);
+});
+it("total changing between pages is not a stable complete set", async () => {
+  crm([{ opportunities: [opp("x")], meta: { total: 2, nextPage: 2, startAfter: 1, startAfterId: "x" } }, { opportunities: [opp("y")], meta: { total: 3 } }]);
+  expect((await fetchCrmFinance(day, day, new Map())).truncated).toBe(true);
+});
+it("legitimate empty set with total zero remains complete", async () => {
+  crm([{ opportunities: [], meta: { total: 0 } }]); const r = await fetchCrmFinance(day, day, new Map()); const s = summarizeCrmFinance(r.rows, day, day, r.truncated);
+  expect(r.truncated).toBe(false); expect(s.registos).toBe(0); expect(s.total_ganho_eur).toBe(0);
+});
+it("blank and nonnumeric money suppress totals instead of being coerced to zero", async () => {
+  for (const money of ["", "bad", false]) { crm([{ opportunities: [opp("x", money)], meta: { total: 1 } }]); const r = await fetchCrmFinance(day, day, new Map()); expect(r.truncated).toBe(true);
+    const p = await fetchStudioPaymentsForClient(payments([pay("x", "A", money)]), day, day, new Map()); expect(p.total_recebido_eur).toBeNull(); expect(p.por_forma_eur.cartao).toBeNull(); }
+});
+it("missing payment-method money makes the full monetary summary incomplete", async () => {
+  const p = await fetchStudioPaymentsForClient(payments([{ ...pay("x", "A", 100), valor_transferencia: null }]), day, day, new Map()); expect(p.truncado).toBe(true); expect(p.total_recebido_eur).toBeNull(); expect(p.registos_lidos).toBe(1);
+});
+it("duplicate app payment IDs cannot count twice", async () => {
+  const p = await fetchStudioPaymentsForClient(payments([pay("x", "A", 100), pay("x", "A", 100)]), day, day, new Map()); expect(p.truncado).toBe(true); expect(p.registos).toBeNull(); expect(p.total_recebido_eur).toBeNull();
+});

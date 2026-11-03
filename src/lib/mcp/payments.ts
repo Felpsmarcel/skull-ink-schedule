@@ -122,11 +122,13 @@ export async function fetchStudioPaymentsForClient(
   let failed = 0;
 
   for (const r of rows) {
-    forma.cartao += Number(r.valor_cartao ?? 0);
-    forma.dinheiro += Number(r.valor_dinheiro ?? 0);
-    forma.sumup += Number(r.valor_sumup ?? 0);
-    forma.transferencia += Number(r.valor_transferencia ?? 0);
-    const rowTotal = Number(r.total ?? 0);
+    // Invalid money never enters an accumulator as a fabricated zero.
+    if (![r.total, r.valor_cartao, r.valor_dinheiro, r.valor_sumup, r.valor_transferencia].every(money)) continue;
+    forma.cartao += Number(r.valor_cartao);
+    forma.dinheiro += Number(r.valor_dinheiro);
+    forma.sumup += Number(r.valor_sumup);
+    forma.transferencia += Number(r.valor_transferencia);
+    const rowTotal = Number(r.total);
     total += rowTotal;
 
     const key = r.artist_id;
