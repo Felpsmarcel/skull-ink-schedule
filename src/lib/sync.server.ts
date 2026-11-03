@@ -348,6 +348,8 @@ async function performSync(
         });
       }
       if (contactUpserts.length > 0) {
+        // A previous local ID is not confirmation of this write's success.
+        for (const c of contactUpserts) contactIdMap.delete(c.ghl_contact_id);
         const { data: cRows, error: cErr } = await supabaseAdmin
           .rpc(
             "ghl_sync_write" as never,
@@ -359,8 +361,16 @@ async function performSync(
           progress.failures++;
           errors.push("Falha ao salvar contatos");
         } else {
-          for (const r of (cRows ?? []) as Array<{ id: string; ghl_contact_id: string }>) {
-            contactIdMap.set(r.ghl_contact_id, r.id);
+          const returned = (cRows ?? []) as Array<{ id: string; ghl_contact_id: string }>;
+          const requested = new Set(contactUpserts.map(c => c.ghl_contact_id));
+          const valid = Array.isArray(returned) && returned.length === requested.size
+            && new Set(returned.map(r => r?.ghl_contact_id)).size === requested.size
+            && returned.every(r => typeof r?.id === "string" && r.id.trim().length > 0 && requested.has(r.ghl_contact_id));
+          if (!valid) {
+            progress.failures++;
+            errors.push("Resposta de contatos incompleta ou inconsistente");
+          } else {
+            for (const r of returned) contactIdMap.set(r.ghl_contact_id, r.id);
           }
         }
       }
