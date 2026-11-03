@@ -1,6 +1,12 @@
 # Renovação premium
 
 ## Sincronização segura do CRM (prioridade atual)
+## Ponte de leitura para APK (etapa atual)
+- [ ] Validar períodos Europe/Brussels e completude de agregados CRM/app
+- [ ] Negar papéis desconhecidos/sem vínculo e isolar dados financeiros de artistas
+- [ ] Preparar API JSON de leitura com sessão verificada, sem aplicar migrações ou publicar
+- [ ] Testar 401/403, escopo A/B, DST, paginação e documentar contrato/dependências do APK
+
 - [x] Verificar estado atual, credenciais, leitura da subconta, cron e ausência de evidência de conclusão
 - [x] Proteger endpoint privado, preservar JWT admin e preparar permissões limitadas
 - [x] Preparar trava atômica, limites de tempo, resultados reais e conflitos de propriedade
