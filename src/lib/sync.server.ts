@@ -86,8 +86,13 @@ async function ghlGetEvents(
   } catch {
     raw = text;
   }
-  const events = (raw as { events?: GhlEvent[] } | null)?.events ?? [];
-  return { ok: res.ok, status: res.status, events, raw };
+  const candidate = (raw as { events?: unknown } | null)?.events;
+  const valid = Array.isArray(candidate) && candidate.every((e) =>
+    e && typeof e === "object" && typeof e.id === "string" && e.id.trim().length > 0
+    && typeof e.startTime === "string" && Number.isFinite(Date.parse(e.startTime))
+    && typeof e.endTime === "string" && Date.parse(e.endTime) > Date.parse(e.startTime),
+  );
+  return { ok: res.ok && valid, status: res.ok && !valid ? 502 : res.status, events: valid ? candidate : [], raw };
 }
 
 export interface GhlContactInfo {
@@ -136,7 +141,7 @@ async function ghlGetContact(
       };
     };
     const c = raw?.contact;
-    if (!c || c.id?.trim() !== contactId || c.locationId !== SYNC_LOCATION_ID) return null;
+    if (!c || c.id !== contactId || c.locationId !== SYNC_LOCATION_ID) return null;
     const name =
       c.contactName?.trim() ||
       c.name?.trim() ||
