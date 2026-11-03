@@ -16,3 +16,4 @@
 - Civil-date periods use timezone-library conversion to half-open UTC boundaries, and incomplete totals are null; this prevents DST boundary errors and sample-based financial claims.
 - Legacy Edge Function replacements are staged under docs/edge-review during no-production tasks because existing supabase/functions files deploy automatically; do not wire or copy them into that directory without deployment authorization.
 - Agenda modes share a fail-closed identity scope and suppress disabled cached staff/results; this prevents broad week/month queries or cached disclosure before identity resolution.
+- Finance summaries group by source-specific immutable IDs and expose names only as labels; complete counts are nullable with separate read counts, and contradictory pagination or invalid money invalidates full aggregates to prevent homonym merging and sample-based zeros.

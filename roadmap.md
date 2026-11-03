@@ -1,5 +1,10 @@
 # Renovação premium
 
+## Revisão final API móvel: completude e homônimos
+- [x] Reproduzir página vazia contraditória, IDs/cursor inválidos e fusão de homônimos
+- [x] Corrigir paginação e agregação por IDs imutáveis CRM/app sem zeros substitutos
+- [x] Atualizar contrato e validar regressões fictícias/compilação sem produção (179 testes; compilação automática OK)
+
 ## Fechamento complementar antes de clientes móveis
 - [x] Validar envelope/events e identidade exata; desativar backfill sem fencing
 - [x] Isolar dia/semana/mês e negar usuário sem vínculo
