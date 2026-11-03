@@ -21,7 +21,12 @@ export const getGhlSyncStatus = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     return data as {
       job: { jobname: string; schedule: string; active: boolean } | null;
-      runs: Array<{ start_time: string; end_time: string | null; status: string | null; return_message: string | null }>;
+      runs: Array<{
+        start_time: string;
+        end_time: string | null;
+        status: string | null;
+        return_message: string | null;
+      }>;
       vault_ok: boolean;
       last_success_at: string | null;
       latest_status: string | null;

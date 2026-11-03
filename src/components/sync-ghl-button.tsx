@@ -56,9 +56,27 @@ interface Preset {
 
 const PRESETS: Preset[] = [
   { key: "default", label: "Atualizar agora", description: "7 dias atrás · 90 dias à frente" },
-  { key: "30", label: "Backfill 30 dias", description: "30 dias atrás · 90 dias à frente", pastDays: 30, futureDays: 90 },
-  { key: "90", label: "Backfill 90 dias", description: "90 dias atrás · 90 dias à frente", pastDays: 90, futureDays: 90 },
-  { key: "365", label: "Backfill 12 meses", description: "365 dias atrás · 90 dias à frente", pastDays: 365, futureDays: 90 },
+  {
+    key: "30",
+    label: "Backfill 30 dias",
+    description: "30 dias atrás · 90 dias à frente",
+    pastDays: 30,
+    futureDays: 90,
+  },
+  {
+    key: "90",
+    label: "Backfill 90 dias",
+    description: "90 dias atrás · 90 dias à frente",
+    pastDays: 90,
+    futureDays: 90,
+  },
+  {
+    key: "365",
+    label: "Backfill 12 meses",
+    description: "365 dias atrás · 90 dias à frente",
+    pastDays: 365,
+    futureDays: 90,
+  },
 ];
 
 export function SyncGhlButton({

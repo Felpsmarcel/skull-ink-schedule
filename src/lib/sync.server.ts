@@ -110,7 +110,9 @@ async function ghlGetContact(
     let res: Response | null = null;
     for (let attempt = 0; attempt < 4; attempt++) {
       res = await fetch(`${GHL_BASE}/contacts/${contactId}`, {
-        signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(15_000)]) : AbortSignal.timeout(15_000),
+        signal: signal
+          ? AbortSignal.any([signal, AbortSignal.timeout(15_000)])
+          : AbortSignal.timeout(15_000),
         headers: {
           Authorization: `Bearer ${token}`,
           Version: "2021-07-28",
@@ -167,12 +169,17 @@ async function resolveContacts(
   }
 }
 
-async function performSync(runId: string, signal: AbortSignal, progress: SyncResult, opts?: {
-  pastDays?: number;
-  futureDays?: number;
-  locationId?: string;
-  source?: "manual" | "cron";
-}): Promise<SyncResult> {
+async function performSync(
+  runId: string,
+  signal: AbortSignal,
+  progress: SyncResult,
+  opts?: {
+    pastDays?: number;
+    futureDays?: number;
+    locationId?: string;
+    source?: "manual" | "cron";
+  },
+): Promise<SyncResult> {
   const token = process.env.GHL_TOKEN;
   if (!token) throw new Error("GHL_TOKEN ausente no servidor");
   const locationId = SYNC_LOCATION_ID;
@@ -189,29 +196,43 @@ async function performSync(runId: string, signal: AbortSignal, progress: SyncRes
   const { data: artistsData, error: artistsErr } = await supabaseAdmin
     .from("artists" as never)
     .select("id, ghl_calendar_id, active, commission_pct")
-    .eq("active", true);
+    .eq("active", true)
+    .abortSignal(signal);
   if (artistsErr) throw new Error(`artists: ${artistsErr.message}`);
-  const artists = ((artistsData ?? []) as ArtistRow[]).filter(
-    (a) => a.ghl_calendar_id,
-  );
+  const artists = ((artistsData ?? []) as ArtistRow[]).filter((a) => a.ghl_calendar_id);
 
   // Same client shows up across calendars/events — cache per run.
   const contactInfo = new Map<string, GhlContactInfo | null>();
 
   if (!artists.length) throw new Error("Nenhum calendário vinculado");
-  if (new Set(artists.map(a => a.ghl_calendar_id)).size !== artists.length) throw new Error("Calendário vinculado a vários artistas");
+  if (new Set(artists.map((a) => a.ghl_calendar_id)).size !== artists.length)
+    throw new Error("Calendário vinculado a vários artistas");
   const catalog = await fetch(`${GHL_BASE}/calendars/?locationId=${locationId}`, {
     headers: { Authorization: `Bearer ${token}`, Version: "2021-07-28" },
     signal: AbortSignal.any([signal, AbortSignal.timeout(15_000)]),
   });
   if (!catalog.ok) throw new Error("Não foi possível verificar subconta e calendários");
-  const catalogData = await catalog.json() as { calendars?: Array<{ id: string; locationId?: string }> };
-  const allowed = new Set((catalogData.calendars ?? []).filter(c => !c.locationId || c.locationId === locationId).map(c => c.id));
+  const catalogData = (await catalog.json()) as {
+    calendars?: Array<{ id: string; locationId?: string }>;
+  };
+  const allowed = new Set(
+    (catalogData.calendars ?? [])
+      .filter((c) => !c.locationId || c.locationId === locationId)
+      .map((c) => c.id),
+  );
   for (const artist of artists) {
     signal.throwIfAborted();
     const calId = artist.ghl_calendar_id;
-    if (!calId || !allowed.has(calId)) { progress.failures++; errors.push("Calendário fora da subconta"); continue; }
-    if (artist.commission_pct == null || !Number.isFinite(Number(artist.commission_pct))) { progress.failures++; errors.push("Comissão não configurada explicitamente"); continue; }
+    if (!calId || !allowed.has(calId)) {
+      progress.failures++;
+      errors.push("Calendário fora da subconta");
+      continue;
+    }
+    if (artist.commission_pct == null || !Number.isFinite(Number(artist.commission_pct))) {
+      progress.failures++;
+      errors.push("Comissão não configurada explicitamente");
+      continue;
+    }
     const artistCommissionPct = Number(artist.commission_pct);
     const calendarResult = await ghlGetEvents(calId, locationId, startMs, endMs, token, signal);
     progress.scannedCalendars++;
@@ -235,250 +256,313 @@ async function performSync(runId: string, signal: AbortSignal, progress: SyncRes
     }
     progress.fetchedEvents += res.events.length;
     for (let offset = 0; offset < calendarResult.events.length; offset += 100) {
-    const res = { ...calendarResult, events: calendarResult.events.slice(offset, offset + 100) };
-    signal.throwIfAborted();
-    const { data: ownerRows, error: ownerError } = await supabaseAdmin.from("appointments" as never)
-      .select("ghl_appointment_id, artist_id, calendar_id").in("ghl_appointment_id", res.events.map(e => e.id));
-    if (ownerError) throw new Error("Falha ao verificar propriedade");
-    const owners = new Map(((ownerRows ?? []) as Array<{ ghl_appointment_id: string; artist_id: string; calendar_id: string | null }>).map(r => [r.ghl_appointment_id, r]));
-    res.events = res.events.filter(e => {
-      if (ownershipConflict(owners.get(e.id), artist.id, calId, e.calendarId)) {
-        progress.failures++; errors.push("Conflito de propriedade de evento"); return false;
-      }
-      return true;
-    });
-    if (res.events.length === 0) continue;
-
-    // Ensure a contacts row exists for every event that carries a GHL contact.
-    // Without this, appointments.contact_id stays NULL and payments (which
-    // require contact_id NOT NULL) cannot be recorded.
-    const contactIdMap = new Map<string, string>(); // ghl_contact_id -> contacts.id
-    const contactUpserts: Array<{
-      ghl_contact_id: string;
-      name: string;
-      email: string | null;
-      phone: string | null;
-    }> = [];
-    const seenGhl = new Set<string>();
-    for (const e of res.events) {
-      const gid = e.contactId ?? e.contact?.id;
-      if (!gid || seenGhl.has(gid)) continue;
-      seenGhl.add(gid);
-    }
-    // Reuse contacts already stored with a real name — avoids re-fetching
-    // every contact from the CRM and rewriting the contacts table each run.
-    if (seenGhl.size > 0) {
-      const { data: known, error: knownError } = await supabaseAdmin
-        .from("contacts" as never)
-        .select("id, ghl_contact_id, name, phone, email")
-        .in("ghl_contact_id", [...seenGhl]);
-      if (knownError) throw new Error("Falha ao ler contatos existentes");
-      for (const r of (known ?? []) as Array<{
-        id: string;
-        ghl_contact_id: string;
-        name: string | null;
-        phone: string | null;
-        email: string | null;
-      }>) {
-        contactIdMap.set(r.ghl_contact_id, r.id);
-        if (r.name && r.name !== "Sem nome" && !contactInfo.has(r.ghl_contact_id)) {
-          contactInfo.set(r.ghl_contact_id, { name: r.name, phone: r.phone, email: r.email });
+      const res = { ...calendarResult, events: calendarResult.events.slice(offset, offset + 100) };
+      signal.throwIfAborted();
+      const { data: ownerRows, error: ownerError } = await supabaseAdmin
+        .from("appointments" as never)
+        .select("ghl_appointment_id, artist_id, calendar_id")
+        .in(
+          "ghl_appointment_id",
+          res.events.map((e) => e.id),
+        )
+        .abortSignal(signal);
+      if (ownerError) throw new Error("Falha ao verificar propriedade");
+      const owners = new Map(
+        (
+          (ownerRows ?? []) as Array<{
+            ghl_appointment_id: string;
+            artist_id: string;
+            calendar_id: string | null;
+          }>
+        ).map((r) => [r.ghl_appointment_id, r]),
+      );
+      res.events = res.events.filter((e) => {
+        if (ownershipConflict(owners.get(e.id), artist.id, calId, e.calendarId)) {
+          progress.failures++;
+          errors.push("Conflito de propriedade de evento");
+          return false;
         }
-      }
-    }
-    const needFetch = [...seenGhl].filter((g) => !contactInfo.has(g));
-    await resolveContacts(needFetch, token, contactInfo, signal);
-    signal.throwIfAborted();
-    for (const gid of needFetch) {
-      if (contactIdMap.has(gid) && !contactInfo.get(gid)?.name) continue;
-      const info = contactInfo.get(gid) ?? null;
-      if (!info?.name) { progress.failures++; errors.push("Contato não resolvido"); continue; }
-      contactUpserts.push({
-        ghl_contact_id: gid,
-        name: info?.name ?? "Sem nome",
-        email: info?.email ?? null,
-        phone: info?.phone ?? null,
+        return true;
       });
-    }
-    if (contactUpserts.length > 0) {
-      const { data: cRows, error: cErr } = await supabaseAdmin.rpc("ghl_sync_write" as never, { p_run: runId, p_kind: "contacts", p_rows: contactUpserts } as never);
-      if (cErr) {
-        progress.failures++; errors.push("Falha ao salvar contatos");
-      } else {
-        for (const r of (cRows ?? []) as Array<{ id: string; ghl_contact_id: string }>) {
-          contactIdMap.set(r.ghl_contact_id, r.id);
-        }
+      if (res.events.length === 0) continue;
+
+      // Ensure a contacts row exists for every event that carries a GHL contact.
+      // Without this, appointments.contact_id stays NULL and payments (which
+      // require contact_id NOT NULL) cannot be recorded.
+      const contactIdMap = new Map<string, string>(); // ghl_contact_id -> contacts.id
+      const contactUpserts: Array<{
+        ghl_contact_id: string;
+        name: string;
+        email: string | null;
+        phone: string | null;
+      }> = [];
+      const seenGhl = new Set<string>();
+      for (const e of res.events) {
+        const gid = e.contactId ?? e.contact?.id;
+        if (!gid || seenGhl.has(gid)) continue;
+        seenGhl.add(gid);
       }
-      // Fallback: fetch any that upsert.select didn't return.
-      const missing = contactUpserts
-        .map((c) => c.ghl_contact_id)
-        .filter((g) => !contactIdMap.has(g));
-      if (missing.length > 0) {
-        const { data: fetchRows } = await supabaseAdmin
+      // Reuse contacts already stored with a real name — avoids re-fetching
+      // every contact from the CRM and rewriting the contacts table each run.
+      if (seenGhl.size > 0) {
+        const { data: known, error: knownError } = await supabaseAdmin
           .from("contacts" as never)
-          .select("id, ghl_contact_id")
-          .in("ghl_contact_id", missing);
-        for (const r of (fetchRows ?? []) as Array<{
+          .select("id, ghl_contact_id, name, phone, email")
+          .in("ghl_contact_id", [...seenGhl])
+          .abortSignal(signal);
+        if (knownError) throw new Error("Falha ao ler contatos existentes");
+        for (const r of (known ?? []) as Array<{
           id: string;
           ghl_contact_id: string;
+          name: string | null;
+          phone: string | null;
+          email: string | null;
         }>) {
           contactIdMap.set(r.ghl_contact_id, r.id);
+          if (r.name && r.name !== "Sem nome" && !contactInfo.has(r.ghl_contact_id)) {
+            contactInfo.set(r.ghl_contact_id, { name: r.name, phone: r.phone, email: r.email });
+          }
         }
       }
-    }
-
-    // Concurrent runs (cron + manual admin click) can race the read-then-insert
-    // pattern and trip the unique index on ghl_appointment_id. Split into:
-    //   - upsert(ignoreDuplicates) for net-new rows: safe under concurrency, and
-    //     critically NEVER touches existing financial fields.
-    //   - explicit UPDATE per existing row: refreshes only non-financial fields.
-    const ids = res.events.map((e) => e.id);
-    const { data: existingRows, error: existingErr } = await supabaseAdmin
-      .from("appointments" as never)
-      .select(
-        "ghl_appointment_id, start_at, end_at, status, contact_name, contact_phone, contact_email, ghl_contact_id, contact_id, calendar_id",
-      )
-      .in("ghl_appointment_id", ids);
-    if (existingErr) {
-      errors.push(`select existing: ${existingErr.message}`);
-      progress.failures++;
-      continue;
-    }
-    type ExistingRow = {
-      ghl_appointment_id: string;
-      start_at: string | null;
-      end_at: string | null;
-      status: string | null;
-      contact_name: string | null;
-      contact_phone: string | null;
-      contact_email: string | null;
-      ghl_contact_id: string | null;
-      contact_id: string | null;
-      calendar_id: string | null;
-    };
-    const existingMap = new Map(
-      ((existingRows ?? []) as ExistingRow[]).map((r) => [r.ghl_appointment_id, r] as const),
-    );
-    const existing = new Set(existingMap.keys());
-    const sameTime = (a: string | null, b: string) =>
-      !!a && new Date(a).getTime() === new Date(b).getTime();
-
-    const toInsert = res.events.filter((e) => !existing.has(e.id));
-    // Only touch rows that actually changed — unchanged rows cost no writes.
-    const toUpdate = res.events.filter((e) => {
-      const r = existingMap.get(e.id);
-      if (!r) return false;
-      const gid = e.contactId ?? e.contact?.id ?? null;
-      const info = gid ? contactInfo.get(gid) ?? null : null;
-      const linked = gid ? contactIdMap.get(gid) ?? null : null;
-      return (
-        !sameTime(r.start_at, e.startTime) ||
-        !sameTime(r.end_at, e.endTime) ||
-        r.status !== mapStatus(e.appointmentStatus) ||
-        (info?.name != null && r.contact_name !== info.name) ||
-        (info?.phone != null && r.contact_phone !== info.phone) ||
-        (info?.email != null && r.contact_email !== info.email) ||
-        r.ghl_contact_id !== (e.contactId ?? null) ||
-        (linked != null && r.contact_id !== linked) ||
-        r.calendar_id !== calId
-      );
-    });
-
-    if (toInsert.length > 0) {
-      const rows = toInsert.map((e) => {
-        const gid = e.contactId ?? e.contact?.id ?? null;
-        const info = gid ? contactInfo.get(gid) ?? null : null;
-        return {
-        ghl_appointment_id: e.id,
-        ghl_contact_id: e.contactId ?? null,
-        contact_id:
-          (e.contactId && contactIdMap.get(e.contactId)) ??
-          (e.contact?.id && contactIdMap.get(e.contact.id)) ??
-          null,
-        artist_id: artist.id,
-        calendar_id: calId,
-        contact_name:
-          info?.name ??
-          e.contact?.name ??
-          ([e.contact?.firstName, e.contact?.lastName].filter(Boolean).join(" ") || null),
-        contact_phone: info?.phone ?? null,
-        contact_email: info?.email ?? null,
-        start_at: e.startTime,
-        end_at: e.endTime,
-        status: mapStatus(e.appointmentStatus),
-        // Resolve commission from the artist so financial rollups never see NULL
-        // for events created directly in GHL (outside the app's checkout flow).
-        commission_pct: artistCommissionPct,
-        notes: e.title ?? null,
-        };
-      });
-      // ignoreDuplicates: another concurrent run may have progress.inserted between our
-      // SELECT and INSERT. Treat that as a no-op, not a batch failure.
+      const needFetch = [...seenGhl].filter((g) => !contactInfo.has(g));
+      await resolveContacts(needFetch, token, contactInfo, signal);
       signal.throwIfAborted();
-      const { data: insertedRows, error: insErr } = await supabaseAdmin.rpc("ghl_sync_write" as never,
-        { p_run: runId, p_kind: "insert", p_rows: rows } as never);
-      if (insErr) {
-        errors.push(`upsert: ${insErr.message}`);
-        await supabaseAdmin.from("ghl_sync_failures" as never).insert({
-          ghl_event_id: null,
-          reason: `bulk upsert failed: ${insErr.message}`,
-          payload: { calendarId: calId, eventIds: toInsert.map((e) => e.id) },
-        } as never);
-        await logIncident({
-          source: "supabase",
-          kind: "sync_upsert",
-          message: insErr.message,
-          context: { calendarId: calId, count: toInsert.length },
+      for (const gid of needFetch) {
+        if (contactIdMap.has(gid) && !contactInfo.get(gid)?.name) continue;
+        const info = contactInfo.get(gid) ?? null;
+        if (!info?.name) {
+          progress.failures++;
+          errors.push("Contato não resolvido");
+          continue;
+        }
+        contactUpserts.push({
+          ghl_contact_id: gid,
+          name: info?.name ?? "Sem nome",
+          email: info?.email ?? null,
+          phone: info?.phone ?? null,
         });
-        progress.failures += toInsert.length;
-      } else {
-        progress.inserted += Array.isArray(insertedRows as unknown) ? (insertedRows as unknown as unknown[]).length : 0;
       }
-    }
+      if (contactUpserts.length > 0) {
+        const { data: cRows, error: cErr } = await supabaseAdmin
+          .rpc(
+            "ghl_sync_write" as never,
+            { p_run: runId, p_kind: "contacts", p_rows: contactUpserts } as never,
+          )
+          .abortSignal(signal);
+        if (cErr) {
+          progress.failures++;
+          errors.push("Falha ao salvar contatos");
+        } else {
+          for (const r of (cRows ?? []) as Array<{ id: string; ghl_contact_id: string }>) {
+            contactIdMap.set(r.ghl_contact_id, r.id);
+          }
+        }
+        // Fallback: fetch any that upsert.select didn't return.
+        const missing = contactUpserts
+          .map((c) => c.ghl_contact_id)
+          .filter((g) => !contactIdMap.has(g));
+        if (missing.length > 0) {
+          const { data: fetchRows, error: fetchError } = await supabaseAdmin
+            .from("contacts" as never)
+            .select("id, ghl_contact_id")
+            .in("ghl_contact_id", missing)
+            .abortSignal(signal);
+          if (fetchError) {
+            progress.failures++;
+            errors.push("Falha ao confirmar contatos");
+          }
+          for (const r of (fetchRows ?? []) as Array<{
+            id: string;
+            ghl_contact_id: string;
+          }>) {
+            contactIdMap.set(r.ghl_contact_id, r.id);
+          }
+        }
+      }
 
-    for (const e of toUpdate) {
-      // Only refresh non-sensitive fields. NEVER overwrite total_eur,
-      // commission_pct, or services — those belong to checkout.
-      const linkedContactId =
-        (e.contactId && contactIdMap.get(e.contactId)) ??
-        (e.contact?.id && contactIdMap.get(e.contact.id)) ??
-        null;
-      const gid = e.contactId ?? e.contact?.id ?? null;
-      const info = gid ? contactInfo.get(gid) ?? null : null;
-      signal.throwIfAborted();
-      const { data: changedRows, error: upErr } = await supabaseAdmin.rpc("ghl_sync_write" as never, {
-        p_run: runId, p_kind: "update", p_rows: [{ ghl_appointment_id: e.id, artist_id: artist.id,
+      // Concurrent runs (cron + manual admin click) can race the read-then-insert
+      // pattern and trip the unique index on ghl_appointment_id. Split into:
+      //   - upsert(ignoreDuplicates) for net-new rows: safe under concurrency, and
+      //     critically NEVER touches existing financial fields.
+      //   - explicit UPDATE per existing row: refreshes only non-financial fields.
+      const ids = res.events.map((e) => e.id);
+      const { data: existingRows, error: existingErr } = await supabaseAdmin
+        .from("appointments" as never)
+        .select(
+          "ghl_appointment_id, start_at, end_at, status, contact_name, contact_phone, contact_email, ghl_contact_id, contact_id, calendar_id",
+        )
+        .in("ghl_appointment_id", ids)
+        .abortSignal(signal);
+      if (existingErr) {
+        errors.push("Falha ao ler eventos existentes");
+        progress.failures++;
+        continue;
+      }
+      type ExistingRow = {
+        ghl_appointment_id: string;
+        start_at: string | null;
+        end_at: string | null;
+        status: string | null;
+        contact_name: string | null;
+        contact_phone: string | null;
+        contact_email: string | null;
+        ghl_contact_id: string | null;
+        contact_id: string | null;
+        calendar_id: string | null;
+      };
+      const existingMap = new Map(
+        ((existingRows ?? []) as ExistingRow[]).map((r) => [r.ghl_appointment_id, r] as const),
+      );
+      const existing = new Set(existingMap.keys());
+      const sameTime = (a: string | null, b: string) =>
+        !!a && new Date(a).getTime() === new Date(b).getTime();
+
+      const toInsert = res.events.filter((e) => !existing.has(e.id));
+      // Only touch rows that actually changed — unchanged rows cost no writes.
+      const toUpdate = res.events.filter((e) => {
+        const r = existingMap.get(e.id);
+        if (!r) return false;
+        const gid = e.contactId ?? e.contact?.id ?? null;
+        const info = gid ? (contactInfo.get(gid) ?? null) : null;
+        const linked = gid ? (contactIdMap.get(gid) ?? null) : null;
+        return (
+          !sameTime(r.start_at, e.startTime) ||
+          !sameTime(r.end_at, e.endTime) ||
+          r.status !== mapStatus(e.appointmentStatus) ||
+          (info?.name != null && r.contact_name !== info.name) ||
+          (info?.phone != null && r.contact_phone !== info.phone) ||
+          (info?.email != null && r.contact_email !== info.email) ||
+          r.ghl_contact_id !== (e.contactId ?? null) ||
+          (linked != null && r.contact_id !== linked) ||
+          r.calendar_id !== calId
+        );
+      });
+
+      if (toInsert.length > 0) {
+        const rows = toInsert.map((e) => {
+          const gid = e.contactId ?? e.contact?.id ?? null;
+          const info = gid ? (contactInfo.get(gid) ?? null) : null;
+          return {
+            ghl_appointment_id: e.id,
+            ghl_contact_id: e.contactId ?? null,
+            contact_id:
+              (e.contactId && contactIdMap.get(e.contactId)) ??
+              (e.contact?.id && contactIdMap.get(e.contact.id)) ??
+              null,
+            artist_id: artist.id,
+            calendar_id: calId,
+            contact_name:
+              info?.name ??
+              e.contact?.name ??
+              ([e.contact?.firstName, e.contact?.lastName].filter(Boolean).join(" ") || null),
+            contact_phone: info?.phone ?? null,
+            contact_email: info?.email ?? null,
             start_at: e.startTime,
             end_at: e.endTime,
             status: mapStatus(e.appointmentStatus),
-            ...(info?.name ? { contact_name: info.name } : {}),
-            ...(info?.phone ? { contact_phone: info.phone } : {}),
-            ...(info?.email ? { contact_email: info.email } : {}),
-            ghl_contact_id: e.contactId ?? null,
-            ...(linkedContactId ? { contact_id: linkedContactId } : {}),
-            calendar_id: calId,
-          }],
-      } as never);
-      if (upErr) {
-        errors.push(`update ${e.id}: ${upErr.message}`);
-        progress.failures++;
-      } else {
-        progress.updated += Array.isArray(changedRows as unknown) ? (changedRows as unknown as unknown[]).length : 0;
+            // Copy only the explicitly configured artist commission on NEW rows.
+            // Existing financial values are never recalculated.
+            commission_pct: artistCommissionPct,
+            notes: e.title ?? null,
+          };
+        });
+        // ignoreDuplicates: another concurrent run may have progress.inserted between our
+        // SELECT and INSERT. Treat that as a no-op, not a batch failure.
+        signal.throwIfAborted();
+        const { data: insertedRows, error: insErr } = await supabaseAdmin
+          .rpc("ghl_sync_write" as never, { p_run: runId, p_kind: "insert", p_rows: rows } as never)
+          .abortSignal(signal);
+        if (insErr) {
+          errors.push("Falha ao inserir eventos");
+          await supabaseAdmin.from("ghl_sync_failures" as never).insert({
+            ghl_event_id: null,
+            reason: "Falha ao inserir lote de eventos",
+            payload: { calendarId: calId, eventIds: toInsert.map((e) => e.id) },
+          } as never);
+          await logIncident({
+            source: "supabase",
+            kind: "sync_upsert",
+            message: "Falha ao inserir lote de eventos",
+            context: { calendarId: calId, count: toInsert.length },
+          });
+          progress.failures += toInsert.length;
+        } else {
+          progress.inserted += Array.isArray(insertedRows as unknown)
+            ? (insertedRows as unknown as unknown[]).length
+            : 0;
+        }
+      }
+
+      for (const e of toUpdate) {
+        // Only refresh non-sensitive fields. NEVER overwrite total_eur,
+        // commission_pct, or services — those belong to checkout.
+        const linkedContactId =
+          (e.contactId && contactIdMap.get(e.contactId)) ??
+          (e.contact?.id && contactIdMap.get(e.contact.id)) ??
+          null;
+        const gid = e.contactId ?? e.contact?.id ?? null;
+        const info = gid ? (contactInfo.get(gid) ?? null) : null;
+        signal.throwIfAborted();
+        const { data: changedRows, error: upErr } = await supabaseAdmin
+          .rpc(
+            "ghl_sync_write" as never,
+            {
+              p_run: runId,
+              p_kind: "update",
+              p_rows: [
+                {
+                  ghl_appointment_id: e.id,
+                  artist_id: artist.id,
+                  start_at: e.startTime,
+                  end_at: e.endTime,
+                  status: mapStatus(e.appointmentStatus),
+                  ...(info?.name ? { contact_name: info.name } : {}),
+                  ...(info?.phone ? { contact_phone: info.phone } : {}),
+                  ...(info?.email ? { contact_email: info.email } : {}),
+                  ghl_contact_id: e.contactId ?? null,
+                  ...(linkedContactId ? { contact_id: linkedContactId } : {}),
+                  calendar_id: calId,
+                },
+              ],
+            } as never,
+          )
+          .abortSignal(signal);
+        if (upErr) {
+          errors.push("Falha ao atualizar evento");
+          progress.failures++;
+        } else {
+          progress.updated += Array.isArray(changedRows as unknown)
+            ? (changedRows as unknown as unknown[]).length
+            : 0;
+        }
       }
     }
-  }
-
   }
   progress.ok = progress.failures === 0 && errors.length === 0;
   progress.errors = errors.slice(0, 20);
   return progress;
 }
-export async function syncGhlAppointments(opts?: { pastDays?: number; futureDays?: number; locationId?: string; source?: "manual" | "cron" }): Promise<SyncResult> {
+export async function syncGhlAppointments(opts?: {
+  pastDays?: number;
+  futureDays?: number;
+  locationId?: string;
+  source?: "manual" | "cron";
+}): Promise<SyncResult> {
   const runId = crypto.randomUUID();
-  const { data: acquired, error } = await supabaseAdmin.rpc("ghl_sync_begin" as never, { p_run: runId, p_source: opts?.source ?? "manual" } as never);
+  const { data: acquired, error } = await supabaseAdmin
+    .rpc("ghl_sync_begin" as never, { p_run: runId, p_source: opts?.source ?? "manual" } as never)
+    .abortSignal(AbortSignal.timeout(15_000));
   if (error || !acquired) throw new Error("Sincronização bloqueada ou preparação pendente");
   const signal = AbortSignal.timeout(SYNC_DEADLINE_MS);
-  let result: SyncResult = { ok: false, scannedCalendars: 0, fetchedEvents: 0, inserted: 0, updated: 0, failures: 0, errors: [] };
+  let result: SyncResult = {
+    ok: false,
+    scannedCalendars: 0,
+    fetchedEvents: 0,
+    inserted: 0,
+    updated: 0,
+    failures: 0,
+    errors: [],
+  };
   try {
     result = await performSync(runId, signal, result, opts);
   } catch {
@@ -486,7 +570,18 @@ export async function syncGhlAppointments(opts?: { pastDays?: number; futureDays
     result.failures++;
     result.errors.push("Execução interrompida");
   } finally {
-    const { error: finishError } = await supabaseAdmin.rpc("ghl_sync_finish" as never, { p_run: runId, p_result: { ...result, errors: result.errors.length ? ["Falha parcial ou total; revisão necessária"] : [] } } as never);
+    const { error: finishError } = await supabaseAdmin
+      .rpc(
+        "ghl_sync_finish" as never,
+        {
+          p_run: runId,
+          p_result: {
+            ...result,
+            errors: result.errors.length ? ["Falha parcial ou total; revisão necessária"] : [],
+          },
+        } as never,
+      )
+      .abortSignal(AbortSignal.timeout(15_000));
     if (finishError) throw new Error("Não foi possível registrar conclusão da sincronização");
   }
   return result;
