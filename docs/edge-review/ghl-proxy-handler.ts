@@ -86,6 +86,12 @@ export function createProxyHandler(d: ProxyDeps) {
       if (typeof calendar === "string" && !await verify(`/calendars/${calendar}`, "calendar", calendar)) return json(403, { error: "calendar_forbidden" });
       const contact = detail?.[1] ?? (isCreateAppt || isOppCreate ? body.contactId : undefined);
       if ((isContact || isCreateAppt || isOppCreate) && (typeof contact !== "string" || !contact || !await verify(`/contacts/${contact}`, "contact", contact))) return json(403, { error: "contact_forbidden" });
+      if (isOppCreate) {
+        const pipelines = await d.fetch(BASE + `/opportunities/pipelines?locationId=${GF_LOCATION}`, { headers: { Authorization: `Bearer ${token}`, Version: "2021-07-28" }, signal: AbortSignal.timeout(15_000), redirect: "error" });
+        const catalog: unknown = pipelines.ok ? await pipelines.json() : null;
+        const list = object(catalog) ? catalog.pipelines : null;
+        if (!Array.isArray(list) || !list.some(pipeline => object(pipeline) && pipeline.id === body.pipelineId && Array.isArray(pipeline.stages) && pipeline.stages.some(stage => object(stage) && stage.id === body.pipelineStageId))) return json(403, { error: "pipeline_forbidden" });
+      }
       if (method === "GET") query.locationId = GF_LOCATION;
       else body.locationId = GF_LOCATION;
       const upstreamUrl = new URL(BASE + path);

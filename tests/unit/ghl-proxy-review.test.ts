@@ -26,3 +26,23 @@ it("calendar verification requires exact GF location", async () => { upstream.mo
 it("verified own calendar works", async () => { expect((await createProxyHandler(deps)(request(events))).status).toBe(200); expect(upstream).toHaveBeenCalledTimes(2); });
 it("foreign event in response is rejected", async () => { upstream.mockImplementation(async url => String(url).endsWith('/calendars/cal-A') ? Response.json({ calendar: { id: "cal-A", locationId: GF_LOCATION } }) : Response.json({ events: [{ calendarId: "cal-B" }] })); expect((await createProxyHandler(deps)(request(events))).status).toBe(502); });
 for (const [path, method] of [["/contacts/search", "POST"], ["/contacts/", "POST"], ["/opportunities/search", "GET"], ["/opportunities/pipelines", "GET"]]) it(`admin retains ${path} fixed to GF`, async () => { role = "admin"; const r = await createProxyHandler(deps)(request({ path, method })); expect(r.status).toBe(200); const [url, options] = upstream.mock.calls[0]; if (method === "GET") expect(new URL(String(url)).searchParams.get("locationId")).toBe(GF_LOCATION); else expect(JSON.parse(String(options?.body)).locationId).toBe(GF_LOCATION); });
+it("admin appointment creation verifies calendar and contact first", async () => {
+  role = "admin";
+  upstream.mockImplementation(async url => String(url).endsWith('/calendars/cal-A') ? Response.json({ calendar: { id: "cal-A", locationId: GF_LOCATION } }) : String(url).endsWith('/contacts/contact-A') ? Response.json({ contact: { id: "contact-A", locationId: GF_LOCATION } }) : Response.json({ id: "new-event" }));
+  const r = await createProxyHandler(deps)(request({ path: "/calendars/events/appointments", method: "POST", body: { calendarId: "cal-A", contactId: "contact-A" } }));
+  expect(r.status).toBe(200); expect(upstream).toHaveBeenCalledTimes(3);
+  expect(JSON.parse(String(upstream.mock.calls[2][1]?.body)).locationId).toBe(GF_LOCATION);
+});
+it("admin foreign contact is rejected before appointment creation", async () => {
+  role = "admin"; upstream.mockImplementation(async url => String(url).endsWith('/calendars/cal-A') ? Response.json({ calendar: { id: "cal-A", locationId: GF_LOCATION } }) : Response.json({ contact: { id: "contact-A", locationId: "other" } }));
+  expect((await createProxyHandler(deps)(request({ path: "/calendars/events/appointments", method: "POST", body: { calendarId: "cal-A", contactId: "contact-A" } }))).status).toBe(403);
+  expect(upstream).toHaveBeenCalledTimes(2);
+});
+it("artist cannot change requested calendar through body or alias", async () => {
+  for (const p of [{ ...events, body: { calendarId: "cal-B" } }, { ...events, query: { ...events.query, calendar_id: "cal-B" } }]) expect((await createProxyHandler(deps)(request(p))).status).toBe(403);
+  expect(upstream).not.toHaveBeenCalled();
+});
+it("no payload, token or upstream sample is logged", async () => {
+  const log = vi.spyOn(console, "log"), error = vi.spyOn(console, "error");
+  try { await createProxyHandler(deps)(request(events)); expect(log).not.toHaveBeenCalled(); expect(error).not.toHaveBeenCalled(); } finally { log.mockRestore(); error.mockRestore(); }
+});
