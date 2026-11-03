@@ -55,6 +55,11 @@ function supabasePublishableKey(): string {
 export function supabaseForUser(ctx: ToolContext) {
   const token = ctx.getToken();
   if (!token) throw new Error("supabaseForUser requires a verified OAuth token");
+  return supabaseForBearer(token);
+}
+
+/** Caller must verify this token with Auth before reading business data. */
+export function supabaseForBearer(token: string) {
   return createClient(supabaseProjectUrl(), supabasePublishableKey(), {
     global: { headers: { Authorization: `Bearer ${token}` } },
     auth: { persistSession: false, autoRefreshToken: false },
