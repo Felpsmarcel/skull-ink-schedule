@@ -45,6 +45,7 @@ import { Route as AuthenticatedOnboardingPerfilRouteImport } from './routes/_aut
 import { Route as AuthenticatedOnboardingProntoRouteImport } from './routes/_authenticated/onboarding.pronto'
 import { Route as AuthenticatedOnboardingServicosRouteImport } from './routes/_authenticated/onboarding.servicos'
 import { Route as AuthenticatedRelatoriosMovimentacoesRouteImport } from './routes/_authenticated/relatorios.movimentacoes'
+import { Route as ApiPublicMobileDashboardRouteImport } from './routes/api/public/mobile-dashboard'
 import { Route as LovableEmailEventsRouteImport } from './routes/lovable/email/events'
 import { Route as AuthenticatedAdminAdminEquipeRouteImport } from './routes/_authenticated/_admin/admin.equipe'
 import { Route as AuthenticatedAdminAdminFilaRouteImport } from './routes/_authenticated/_admin/admin.fila'
@@ -257,6 +258,12 @@ const AuthenticatedRelatoriosMovimentacoesRoute =
     path: '/relatorios/movimentacoes',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiPublicMobileDashboardRoute =
+  ApiPublicMobileDashboardRouteImport.update({
+    id: '/api/public/mobile-dashboard',
+    path: '/api/public/mobile-dashboard',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const LovableEmailEventsRoute = LovableEmailEventsRouteImport.update({
   id: '/lovable/email/events',
   path: '/lovable/email/events',
@@ -408,6 +415,7 @@ export interface FileRoutesByFullPath {
   '/onboarding/pronto': typeof AuthenticatedOnboardingProntoRoute
   '/onboarding/servicos': typeof AuthenticatedOnboardingServicosRoute
   '/relatorios/movimentacoes': typeof AuthenticatedRelatoriosMovimentacoesRoute
+  '/api/public/mobile-dashboard': typeof ApiPublicMobileDashboardRoute
   '/lovable/email/events': typeof LovableEmailEventsRoute
   '/movimentacao/': typeof AuthenticatedMovimentacaoIndexRoute
   '/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
@@ -463,6 +471,7 @@ export interface FileRoutesByTo {
   '/onboarding/pronto': typeof AuthenticatedOnboardingProntoRoute
   '/onboarding/servicos': typeof AuthenticatedOnboardingServicosRoute
   '/relatorios/movimentacoes': typeof AuthenticatedRelatoriosMovimentacoesRoute
+  '/api/public/mobile-dashboard': typeof ApiPublicMobileDashboardRoute
   '/lovable/email/events': typeof LovableEmailEventsRoute
   '/movimentacao': typeof AuthenticatedMovimentacaoIndexRoute
   '/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
@@ -522,6 +531,7 @@ export interface FileRoutesById {
   '/_authenticated/onboarding/pronto': typeof AuthenticatedOnboardingProntoRoute
   '/_authenticated/onboarding/servicos': typeof AuthenticatedOnboardingServicosRoute
   '/_authenticated/relatorios/movimentacoes': typeof AuthenticatedRelatoriosMovimentacoesRoute
+  '/api/public/mobile-dashboard': typeof ApiPublicMobileDashboardRoute
   '/lovable/email/events': typeof LovableEmailEventsRoute
   '/_authenticated/movimentacao/': typeof AuthenticatedMovimentacaoIndexRoute
   '/_authenticated/_admin/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
@@ -580,6 +590,7 @@ export interface FileRouteTypes {
     | '/onboarding/pronto'
     | '/onboarding/servicos'
     | '/relatorios/movimentacoes'
+    | '/api/public/mobile-dashboard'
     | '/lovable/email/events'
     | '/movimentacao/'
     | '/admin/equipe'
@@ -635,6 +646,7 @@ export interface FileRouteTypes {
     | '/onboarding/pronto'
     | '/onboarding/servicos'
     | '/relatorios/movimentacoes'
+    | '/api/public/mobile-dashboard'
     | '/lovable/email/events'
     | '/movimentacao'
     | '/admin/equipe'
@@ -693,6 +705,7 @@ export interface FileRouteTypes {
     | '/_authenticated/onboarding/pronto'
     | '/_authenticated/onboarding/servicos'
     | '/_authenticated/relatorios/movimentacoes'
+    | '/api/public/mobile-dashboard'
     | '/lovable/email/events'
     | '/_authenticated/movimentacao/'
     | '/_authenticated/_admin/admin/equipe'
@@ -735,6 +748,7 @@ export interface RootRouteChildren {
   TotemIndexRoute: typeof TotemIndexRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
+  ApiPublicMobileDashboardRoute: typeof ApiPublicMobileDashboardRoute
   LovableEmailEventsRoute: typeof LovableEmailEventsRoute
   ApiPublicHooksSendRemindersRoute: typeof ApiPublicHooksSendRemindersRoute
   ApiPublicHooksSyncGhlRoute: typeof ApiPublicHooksSyncGhlRoute
@@ -996,6 +1010,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/relatorios/movimentacoes'
       preLoaderRoute: typeof AuthenticatedRelatoriosMovimentacoesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/public/mobile-dashboard': {
+      id: '/api/public/mobile-dashboard'
+      path: '/api/public/mobile-dashboard'
+      fullPath: '/api/public/mobile-dashboard'
+      preLoaderRoute: typeof ApiPublicMobileDashboardRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/lovable/email/events': {
       id: '/lovable/email/events'
@@ -1283,6 +1304,7 @@ const rootRouteChildren: RootRouteChildren = {
   TotemIndexRoute: TotemIndexRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
+  ApiPublicMobileDashboardRoute: ApiPublicMobileDashboardRoute,
   LovableEmailEventsRoute: LovableEmailEventsRoute,
   ApiPublicHooksSendRemindersRoute: ApiPublicHooksSendRemindersRoute,
   ApiPublicHooksSyncGhlRoute: ApiPublicHooksSyncGhlRoute,
