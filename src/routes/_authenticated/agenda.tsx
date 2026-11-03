@@ -54,6 +54,7 @@ import { AgendaAppointmentSheet } from "@/components/agenda-appointment-sheet";
 import type { GridSlot } from "@/lib/agenda-grid";
 import { AlertTriangle as AlertTriangleIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { GhlSyncStatus } from "@/components/ghl-sync-status";
 
 type View = "day" | "week" | "month";
 
@@ -63,6 +64,10 @@ export const Route = createFileRoute("/_authenticated/agenda")({
       { title: "Agenda — GF Tattoo Studio" },
       { name: "description", content: "Sua agenda de atendimentos no GF Tattoo Studio." },
       { name: "robots", content: "noindex,nofollow" },
+      { property: "og:title", content: "Agenda — GF Tattoo Studio" },
+      { property: "og:description", content: "Agenda de atendimentos e atualização do CRM GF Tattoo Studio." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   validateSearch: (s: Record<string, unknown>) => {
@@ -115,8 +120,7 @@ function AgendaPage() {
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const { data: me } = useCurrentUser();
-  // Tatuadores veem a agenda geral de todos os artistas; filtro é desativado.
-  const restrictArtistId = null;
+  const restrictArtistId = me?.role === "artist" ? (me.artistId ?? "unlinked") : null;
 
   const dateLabel = useMemo(() => {
     const locale = resolveIntlLocale(i18n.language);
@@ -161,6 +165,7 @@ function AgendaPage() {
 
   return (
     <div className="flex min-h-dvh flex-col bg-muted/40 pb-[calc(env(safe-area-inset-bottom)+6rem)] sm:pb-20">
+      {me?.role === "admin" && <div className="px-3 py-2 sm:px-6"><GhlSyncStatus /></div>}
       {/* Header — editorial monochrome */}
       <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur">
         <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-2 px-3 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3 sm:px-6 sm:pb-4 sm:pt-4">

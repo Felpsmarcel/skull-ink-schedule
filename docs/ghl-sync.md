@@ -1,61 +1,41 @@
-# GHL Sync — Runbook
+# GHL sync — revisão antes da ativação
 
-O sync do GHL para o Supabase roda via `pg_cron` chamando o endpoint público
-`POST /api/public/hooks/sync-ghl` a cada 10 minutos. O endpoint autentica
-pelo header `apikey` (padrão Lovable + pg_cron).
+## Estado verificado em 3 novembro 2026, 15:18–15:24 UTC
+- Lovable Cloud respondeu nas verificações de banco e autenticação.
+- Credenciais no servidor: GHL_TOKEN sim; URL e credencial privilegiada do banco sim; GHL_SYNC_SECRET não.
+- O token consegue ler calendários (13) e pipelines de oportunidades na subconta confirmada. O endpoint de detalhes da subconta respondeu 401: a identidade explícita do token não ficou comprovada por esse endpoint, embora a leitura com locationId fixo funcione.
+- Há 8 calendários vinculados a artistas ativos, todos distintos.
+- Três jobs de agenda ativos a cada 10 minutos: sync-ghl-appointments, gf-sync-ghl-appointments-10min e ghl-sync-10min. Nenhum foi alterado.
+- Nos últimos 60 minutos: 18 disparos de cron marcados como succeeded. Isso confirma somente enfileiramento HTTP, NÃO conclusão de importação.
+- Não existe tabela persistente de execuções concluídas nem registro de sync em app_settings; última sincronização realmente concluída: NÃO VERIFICADA.
+- Política efetiva appt_artist_select_all permite leitura de todos os appointments para artistas. Correção foi preparada, não aplicada.
 
-## 1. Popular a anon key no Vault (uma vez)
+## Diff funcional preparado
+- Endpoint /api/public/hooks/sync-ghl: Authorization: Bearer dedicado, comparação segura, sem chave pública ou fallback; segredo ausente retorna 403 antes de carregar o importador; falha parcial retorna 502.
+- RPCs administrativas: checagem com context.supabase e JWT do usuário, sem service-role para autorização. SQL nega auth.uid() ausente e papel NULL; não depende de has_role.
+- Nova migração supabase/migrations/20261103160000_secure_ghl_sync.sql: tabelas com grants/RLS, lease atômico de 5 minutos, writes protegidos por lease na mesma transação, estados running/succeeded/failed/expired e horário real de conclusão.
+- Tempo de execução máximo 4 minutos, GHL e consultas de banco com timeout, leituras e writes em lotes de até 100; nenhum lock depende da memória do servidor.
+- Conflitos de calendário/artista são bloqueados antes de enriquecer contatos; validação adicional sob lock antes de atualizar. Calendários precisam pertencer ao catálogo da subconta fixa; nada é inferido do nome do calendário.
+- Não há alteração de total, serviços ou comissão existentes. Novos eventos copiam apenas a comissão já configurada no artista, sem fallback de 40%. Valor recebido continua separado de oportunidade ganha.
+- Atualização manual invalida agenda, agenda-range, agenda-status e agenda-status-range, inclusive após falha.
+- Agenda do artista filtra seu vínculo; status administrativo mostra conclusão verificada e falhas, sem considerar disparo do cron um sucesso de importação.
+- Política ampla é removida; guard restritivo mantém artistas em seus próprios appointments e preserva admin/seller.
+- Definição futura de cron consolida os três jobs existentes SOMENTE quando schedule_ghl_sync for chamado explicitamente, usando Vault privado em tempo de execução. A migração NÃO chama essa função.
 
-Rode no SQL editor da Cloud (ou via psql), substituindo `<ANON_KEY>` pela
-publishable/anon key do projeto:
+## Preparação pendente (não executar nesta etapa)
 
-```sql
-SELECT vault.update_secret(
-  (SELECT id FROM vault.secrets WHERE name = 'ghl_sync_anon_key'),
-  '<ANON_KEY>'
-);
-```
+### Resultados de validação
+- Compilação automática do preview: build OK.
+- Testes locais com dados fictícios: autorização privada, isolamento RLS, expiração/fencing, preservação de 650 EUR e comissão configurada de 37%, falha parcial, ausência de calendários/comissão e persistência de conclusão.
+- Endpoint exercitado pelo navegador: chamadas sem credencial e com chave pública retornam 403; nenhuma importação foi iniciada.
+- Não foram feitas alterações de banco, Vault, jobs, CRM, publicação ou cobranças. Testes de banco usam exclusivamente uma instância local descartável.
+- Pagamentos recebidos e oportunidades mantêm fontes separadas; nenhum valor financeiro foi recalculado.
 
-A migration inicial cria a linha com valor `__set_me__` — trocar por uma
-chave válida (comprimento >= 20 caracteres) é obrigatório antes de instalar
-o cron.
+1. Revisar diff e resultados de testes.
+2. Solicitar GHL_SYNC_SECRET pelo formulário seguro do editor, com geração e destino claramente identificado; o mesmo segredo precisa ser guardado como ghl_sync_secret no Vault por procedimento seguro autorizado. Não usar chave pública, não colocar valor no SQL versionado ou chat.
+3. Aplicar a migração pelo fluxo de migrações autorizado, com conteúdo idêntico ao arquivo versionado; verificar grants/RLS e segredo privado dos dois lados.
+4. Publicar a versão segura somente após autorização; substituir os três jobs por um e verificar uma execução controlada com dados reais após autorização de importação.
 
-## 2. Instalar o cron
+Até a migração ser aplicada, a nova sincronização manual falha fechada porque as novas RPCs não existem. A versão publicada e os três jobs antigos não foram modificados neste trabalho; continuam exigindo revisão e correção coordenada.
 
-Via UI: **Menu → Equipe → Sync GHL → Instalar cron** (admin only).
-
-Via SQL:
-
-```sql
-SELECT public.schedule_ghl_sync();
-```
-
-A função:
-- valida que o chamador é admin (`has_role`);
-- garante que o Vault tem a chave;
-- remove qualquer job `ghl-sync-10min` anterior;
-- cria novo `cron.schedule('ghl-sync-10min', '*/10 * * * *', ...)`.
-
-## 3. Verificar
-
-Via UI: a mesma tela mostra `Agendado: */10 * * * · ativo` + últimas 5
-execuções.
-
-Via SQL:
-
-```sql
-SELECT public.ghl_sync_status();
-```
-
-## 4. Desligar
-
-```sql
-SELECT public.unschedule_ghl_sync();
-```
-
-## Por que apikey e não CRON_SECRET?
-
-`/api/public/*` já bypassa o auth do edge Lovable. O padrão documentado
-para pg_cron é enviar `apikey: <anon>`; o endpoint valida contra
-`SUPABASE_PUBLISHABLE_KEY`. Adicionar um segredo extra dobraria pontos de
-rotação sem ganho real de segurança para essa superfície.
+Cadência futura preservada: 10 minutos, 144 chamadas/dia em um único job (em vez de até 432 disparos/dia). É uma reconciliação periódica com atraso de até 10 minutos e custo recorrente; webhook do CRM pode reduzir chamadas futuramente, fora deste escopo.

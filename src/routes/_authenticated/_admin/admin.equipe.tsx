@@ -371,13 +371,15 @@ function CronStatusCard() {
           <p className="text-[11px] text-muted-foreground">
             {q.isLoading
               ? "Carregando…"
-              : job
+              : q.isError
+                ? "Não foi possível verificar a sincronização."
+                : job
                 ? `Agendado: ${job.schedule} · ${job.active ? "ativo" : "pausado"}`
                 : "Nenhum cron instalado."}
           </p>
           {q.data && !vaultOk && (
             <p className="mt-1 text-[11px] text-destructive">
-              Vault secret `ghl_sync_anon_key` não configurado. Veja docs/ghl-sync.md.
+              Credencial privada da sincronização não configurada.
             </p>
           )}
         </div>
@@ -385,13 +387,16 @@ function CronStatusCard() {
           <Button size="sm" variant="outline" onClick={() => q.refetch()} disabled={q.isFetching}>
             <RefreshCw className={`h-3.5 w-3.5 ${q.isFetching ? "animate-spin" : ""}`} />
           </Button>
-          <Button size="sm" onClick={() => m.mutate()} disabled={m.isPending || !vaultOk}>
+          <Button size="sm" onClick={() => m.mutate()} disabled={m.isPending || !vaultOk || q.isError}>
             {m.isPending ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : null}
             {job ? "Reagendar" : "Instalar cron"}
           </Button>
         </div>
       </div>
-      {q.data?.runs?.length ? (
+      <p className="mt-2 text-xs text-muted-foreground">
+        {q.data?.last_success_at ? `Última conclusão: ${new Date(q.data.last_success_at).toLocaleString()}` : "Última conclusão não verificada"}
+      </p>
+      {q.data?.last_success_at !== undefined && q.data?.runs?.length ? (
         <details className="mt-3 text-[11px]">
           <summary className="cursor-pointer text-muted-foreground">Últimas execuções</summary>
           <ul className="mt-2 space-y-1">
