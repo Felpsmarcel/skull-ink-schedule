@@ -10,17 +10,20 @@
 
 import type { ToolContext } from "@lovable.dev/mcp-js";
 import { supabaseForUser } from "./supabase";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { dashboardPeriod } from "@/lib/dashboard-period";
 
 export interface StudioPaymentsSummary extends Record<string, unknown> {
   fonte: "app";
   base: "movimentacoes";
   registos: number;
-  total_recebido_eur: number;
+  total_recebido_eur: number | null;
+  truncado: boolean;
   por_forma_eur: {
-    cartao: number;
-    dinheiro: number;
-    sumup: number;
-    transferencia: number;
+    cartao: number | null;
+    dinheiro: number | null;
+    sumup: number | null;
+    transferencia: number | null;
   };
   por_tatuador: Array<{ artist_name: string; registos: number; total_eur: number }>;
   sincronizados_no_crm: number;
@@ -54,23 +57,56 @@ export async function fetchStudioPayments(
   artistNamesById: Map<string, string>,
   restrictToArtistId?: string | null,
 ): Promise<StudioPaymentsSummary> {
-  const supabase = supabaseForUser(ctx);
-  let query = supabase
-    .from("movimentacoes")
-    .select(
-      "id, data_pagamento, artist_id, valor_cartao, valor_dinheiro, valor_sumup, valor_transferencia, total, ghl_sync_status",
-    )
-    .is("deleted_at", null)
-    .gte("data_pagamento", from)
-    .lte("data_pagamento", to)
-    .order("data_pagamento", { ascending: false })
-    .limit(2000);
-  if (restrictToArtistId) query = query.eq("artist_id", restrictToArtistId);
+  return fetchStudioPaymentsForClient(
+    supabaseForUser(ctx),
+    from,
+    to,
+    artistNamesById,
+    restrictToArtistId,
+  );
+}
 
-  const { data, error } = await query;
-  if (error) throw new Error(error.message);
-  const rows = (data ?? []) as unknown as MovimentacaoLite[];
-
+export async function fetchStudioPaymentsForClient(
+  supabase: SupabaseClient,
+  from: string,
+  to: string,
+  artistNamesById: Map<string, string>,
+  restrictToArtistId?: string | null,
+  signal?: AbortSignal,
+): Promise<StudioPaymentsSummary> {
+  dashboardPeriod(from, to);
+  const rows: MovimentacaoLite[] = [];
+  let complete = false;
+  let expected: number | null = null;
+  for (let page = 0; page < 50; page++) {
+    let query = supabase
+      .from("movimentacoes")
+      .select(
+        "id,data_pagamento,artist_id,valor_cartao,valor_dinheiro,valor_sumup,valor_transferencia,total,ghl_sync_status",
+        { count: "exact" },
+      )
+      .is("deleted_at", null)
+      .gte("data_pagamento", from)
+      .lte("data_pagamento", to)
+      .order("id")
+      .range(page * 500, page * 500 + 499);
+    if (restrictToArtistId) query = query.eq("artist_id", restrictToArtistId);
+    query = query.abortSignal(signal ?? AbortSignal.timeout(10_000));
+    const { data, error, count } = await query;
+    if (error) break;
+    if (expected == null) expected = count;
+    else if (count !== expected) break;
+    rows.push(
+      ...((data ?? []) as MovimentacaoLite[]).filter(
+        (r) => !restrictToArtistId || r.artist_id === restrictToArtistId,
+      ),
+    );
+    if (count != null && rows.length === count) {
+      complete = true;
+      break;
+    }
+    if ((data ?? []).length < 500) break;
+  }
   const forma = { cartao: 0, dinheiro: 0, sumup: 0, transferencia: 0 };
   const byArtist = new Map<string, { registos: number; total: number }>();
   let total = 0;
@@ -101,14 +137,15 @@ export async function fetchStudioPayments(
     fonte: "app",
     base: "movimentacoes",
     registos: rows.length,
-    total_recebido_eur: round2(total),
+    total_recebido_eur: complete ? round2(total) : null,
+    truncado: !complete,
     por_forma_eur: {
-      cartao: round2(forma.cartao),
-      dinheiro: round2(forma.dinheiro),
-      sumup: round2(forma.sumup),
-      transferencia: round2(forma.transferencia),
+      cartao: complete ? round2(forma.cartao) : null,
+      dinheiro: complete ? round2(forma.dinheiro) : null,
+      sumup: complete ? round2(forma.sumup) : null,
+      transferencia: complete ? round2(forma.transferencia) : null,
     },
-    por_tatuador: [...byArtist.entries()]
+    por_tatuador: (complete ? [...byArtist.entries()] : [])
       .map(([artist_name, v]) => ({
         artist_name,
         registos: v.registos,

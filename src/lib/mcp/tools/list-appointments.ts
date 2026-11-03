@@ -1,5 +1,6 @@
 import { defineTool } from "@lovable.dev/mcp-js";
 import { z } from "zod";
+import { dashboardPeriod, localDateSchema } from "@/lib/dashboard-period";
 import { calendarsFor, resolveScope } from "../scope";
 import { fetchCrmAppointments } from "../crm";
 
@@ -9,8 +10,8 @@ export default defineTool({
   description:
     "Lista os agendamentos diretamente dos calendários do CRM (HighLevel) num intervalo de datas, com cliente, tatuador, horário e status.",
   inputSchema: {
-    from: z.string().describe("Data inicial (YYYY-MM-DD)."),
-    to: z.string().describe("Data final inclusiva (YYYY-MM-DD)."),
+    from: localDateSchema,
+    to: localDateSchema,
     limit: z.number().int().min(1).max(200).optional().describe("Máximo de linhas (padrão 50)."),
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
@@ -29,21 +30,24 @@ export default defineTool({
           structuredContent: { fonte: "crm", count: 0, appointments: [] },
         };
       }
-      const all = await fetchCrmAppointments(calendars, from, to);
+      const result = await fetchCrmAppointments(calendars, from, to, ctx.signal);
+      const all = result.rows;
       const rows = all.slice(0, limit ?? 50);
       const payload = {
         fonte: "crm" as const,
-        periodo: { from, to },
+        periodo: dashboardPeriod(from, to),
+        truncado: result.truncated || all.length > (limit ?? 50),
+        parcial: result.partial,
         count: rows.length,
-        total_no_periodo: all.length,
+        total_no_periodo: result.partial || result.truncated ? null : all.length,
         appointments: rows,
       };
       return {
         content: [{ type: "text", text: JSON.stringify(payload) }],
         structuredContent: payload,
       };
-    } catch (e) {
-      const message = e instanceof Error ? e.message : String(e);
+    } catch {
+      const message = "Indisponível ou não autorizado";
       return {
         content: [{ type: "text", text: `Falha ao ler a agenda do CRM: ${message}` }],
         isError: true,

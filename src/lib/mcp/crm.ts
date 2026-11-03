@@ -39,7 +39,9 @@ async function crmGet<T>(path: string, version = V_DEFAULT, signal?: AbortSignal
   let last = "";
   for (let attempt = 0; attempt < 4; attempt++) {
     const res = await fetch(`${GHL_BASE}${path}`, {
-      signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(10_000)]) : AbortSignal.timeout(10_000),
+      signal: signal
+        ? AbortSignal.any([signal, AbortSignal.timeout(10_000)])
+        : AbortSignal.timeout(10_000),
       headers: {
         Authorization: `Bearer ${crmToken()}`,
         Version: version,
@@ -119,31 +121,55 @@ export async function fetchCrmAppointments(
       endTime: String(endMs),
     });
     try {
-    const body = await crmGet<{ events?: CrmEvent[]; meta?: { total?: number; nextPage?: unknown }; total?: number }>(
-      `/calendars/events?${qs.toString()}`, V_CALENDARS, signal,
-    );
-    if (!Array.isArray(body.events)) { partial = true; continue; }
-    // No documented pagination proof for this API: flag possible server caps.
-    if (body.events.length >= 100 || body.meta?.nextPage || (body.total ?? body.meta?.total ?? body.events.length) > body.events.length) truncated = true;
-    for (const e of body.events) {
-      const time = Date.parse(e.startTime);
-      if (!Number.isFinite(time)) { partial = true; continue; }
-      if (time < startMs || time > endMs) continue;
-      if (e.calendarId && e.calendarId !== cal.calendarId) { partial = true; continue; }
-      rows.push({
-        crm_event_id: e.id,
-        artist_name: cal.artistName,
-        calendar_id: cal.calendarId,
-        title: e.title ?? null,
-        contact_id: e.contactId ?? null,
-        start_at: e.startTime,
-        end_at: e.endTime,
-        status: mapCrmStatus(e.appointmentStatus),
-      });
+      const body = await crmGet<{
+        events?: CrmEvent[];
+        meta?: { total?: number; nextPage?: unknown };
+        total?: number;
+      }>(`/calendars/events?${qs.toString()}`, V_CALENDARS, signal);
+      if (!Array.isArray(body.events)) {
+        partial = true;
+        continue;
+      }
+      // No documented pagination proof for this API: flag possible server caps.
+      if (
+        body.events.length >= 100 ||
+        body.meta?.nextPage ||
+        (body.total ?? body.meta?.total ?? body.events.length) > body.events.length
+      )
+        truncated = true;
+      for (const e of body.events) {
+        const time = Date.parse(e.startTime);
+        if (!Number.isFinite(time)) {
+          partial = true;
+          continue;
+        }
+        if (time < startMs || time > endMs) continue;
+        if (e.calendarId && e.calendarId !== cal.calendarId) {
+          partial = true;
+          continue;
+        }
+        rows.push({
+          crm_event_id: e.id,
+          artist_name: cal.artistName,
+          calendar_id: cal.calendarId,
+          title: e.title ?? null,
+          contact_id: e.contactId ?? null,
+          start_at: e.startTime,
+          end_at: e.endTime,
+          status: mapCrmStatus(e.appointmentStatus),
+        });
+      }
+    } catch {
+      partial = true;
     }
-    } catch { partial = true; }
   }
-  return { rows: [...new Map(rows.map(r => [r.crm_event_id, r])).values()].sort((a, b) => a.start_at.localeCompare(b.start_at)), truncated, partial };
+  return {
+    rows: [...new Map(rows.map((r) => [r.crm_event_id, r])).values()].sort((a, b) =>
+      a.start_at.localeCompare(b.start_at),
+    ),
+    truncated,
+    partial,
+  };
 }
 
 /* -------------------------------------------------------------------------- */
@@ -186,7 +212,11 @@ async function fetchPipelineMaps(signal?: AbortSignal): Promise<PipelineMaps> {
   const stages = new Map<string, string>();
   try {
     const body = await crmGet<{
-      pipelines?: Array<{ id: string; name?: string; stages?: Array<{ id: string; name?: string }> }>;
+      pipelines?: Array<{
+        id: string;
+        name?: string;
+        stages?: Array<{ id: string; name?: string }>;
+      }>;
     }>(`/opportunities/pipelines?locationId=${CRM_LOCATION_ID}`, V_DEFAULT, signal);
     for (const p of body.pipelines ?? []) {
       if (p.name) pipelines.set(p.id, p.name);
@@ -236,51 +266,77 @@ export async function fetchCrmFinance(
       qs.set("startAfterId", startAfterId);
     }
     try {
-    const body = await crmGet<{
-      opportunities?: CrmOpportunity[];
-      meta?: { startAfter?: number; startAfterId?: string; nextPage?: number | null; total?: number };
-    }>(`/opportunities/search?${qs.toString()}`, V_DEFAULT, signal);
-    if (!Array.isArray(body.opportunities)) { truncated = true; break; }
-    const batch = body.opportunities;
-    if (batch.length === 0) { exhausted = true; break; }
-    for (const o of batch) {
-      const createdMs = Date.parse(o.createdAt);
-      if (seenIds.has(o.id)) continue;
-      seenIds.add(o.id);
-      if (!Number.isFinite(createdMs)) { truncated = true; continue; }
-      if (createdMs < fromMs || createdMs >= toMs) continue;
-      // CRM filters are not trusted as an authorization boundary.
-      if (restrictToUserId && o.assignedTo !== restrictToUserId) continue;
-      if (o.monetaryValue == null || !Number.isFinite(Number(o.monetaryValue))) { truncated = true; continue; }
-      rows.push({
-        crm_opportunity_id: o.id,
-        nome_cliente: o.contact?.name ?? o.name ?? null,
-        valor_eur: Number(o.monetaryValue ?? 0),
-        status: o.status ?? "unknown",
-        pipeline: o.pipelineId ? (maps.pipelines.get(o.pipelineId) ?? o.pipelineId) : null,
-        etapa: o.pipelineStageId ? (maps.stages.get(o.pipelineStageId) ?? o.pipelineStageId) : null,
-        artist_name: o.assignedTo ? (artistsByUserId.get(o.assignedTo) ?? null) : null,
-        criado_em: o.createdAt,
-        atualizado_em: o.updatedAt ?? null,
-      });
-    }
+      const body = await crmGet<{
+        opportunities?: CrmOpportunity[];
+        meta?: {
+          startAfter?: number;
+          startAfterId?: string;
+          nextPage?: number | null;
+          total?: number;
+        };
+      }>(`/opportunities/search?${qs.toString()}`, V_DEFAULT, signal);
+      if (!Array.isArray(body.opportunities)) {
+        truncated = true;
+        break;
+      }
+      const batch = body.opportunities;
+      if (batch.length === 0) {
+        exhausted = true;
+        break;
+      }
+      for (const o of batch) {
+        const createdMs = Date.parse(o.createdAt);
+        if (seenIds.has(o.id)) continue;
+        seenIds.add(o.id);
+        if (!Number.isFinite(createdMs)) {
+          truncated = true;
+          continue;
+        }
+        if (createdMs < fromMs || createdMs >= toMs) continue;
+        // CRM filters are not trusted as an authorization boundary.
+        if (restrictToUserId && o.assignedTo !== restrictToUserId) continue;
+        if (o.monetaryValue == null || !Number.isFinite(Number(o.monetaryValue))) {
+          truncated = true;
+          continue;
+        }
+        rows.push({
+          crm_opportunity_id: o.id,
+          nome_cliente: o.contact?.name ?? o.name ?? null,
+          valor_eur: Number(o.monetaryValue ?? 0),
+          status: o.status ?? "unknown",
+          pipeline: o.pipelineId ? (maps.pipelines.get(o.pipelineId) ?? o.pipelineId) : null,
+          etapa: o.pipelineStageId
+            ? (maps.stages.get(o.pipelineStageId) ?? o.pipelineStageId)
+            : null,
+          artist_name: o.assignedTo ? (artistsByUserId.get(o.assignedTo) ?? null) : null,
+          criado_em: o.createdAt,
+          atualizado_em: o.updatedAt ?? null,
+        });
+      }
 
-    const nextAfter = body.meta?.startAfter;
-    const nextId = body.meta?.startAfterId;
-    if (!body.meta?.nextPage) {
-      if (batch.length < 100 && (body.meta?.total == null || seenIds.size >= body.meta.total)) exhausted = true;
-      else if (body.meta?.total != null && seenIds.size >= body.meta.total) exhausted = true;
-      else truncated = true;
+      const nextAfter = body.meta?.startAfter;
+      const nextId = body.meta?.startAfterId;
+      if (!body.meta?.nextPage) {
+        if (batch.length < 100 && (body.meta?.total == null || seenIds.size >= body.meta.total))
+          exhausted = true;
+        else if (body.meta?.total != null && seenIds.size >= body.meta.total) exhausted = true;
+        else truncated = true;
+        break;
+      }
+      const cursor = `${nextAfter}:${nextId}`;
+      if (nextAfter == null || !nextId || seenCursors.has(cursor)) {
+        truncated = true;
+        break;
+      }
+      seenCursors.add(cursor);
+      startAfter = nextAfter;
+      startAfterId = nextId;
+      await sleep(200);
+      if (page === MAX_PAGES - 1) truncated = true;
+    } catch {
+      truncated = true;
       break;
     }
-    const cursor = `${nextAfter}:${nextId}`;
-    if (nextAfter == null || !nextId || seenCursors.has(cursor)) { truncated = true; break; }
-    seenCursors.add(cursor);
-    startAfter = nextAfter;
-    startAfterId = nextId;
-    await sleep(200);
-    if (page === MAX_PAGES - 1) truncated = true;
-    } catch { truncated = true; break; }
   }
 
   rows.sort((a, b) => b.criado_em.localeCompare(a.criado_em));

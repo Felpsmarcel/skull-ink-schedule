@@ -1,5 +1,6 @@
 import { defineTool } from "@lovable.dev/mcp-js";
 import { z } from "zod";
+import { dashboardPeriod, localDateSchema } from "@/lib/dashboard-period";
 import { resolveScope } from "../scope";
 import { fetchCrmFinance } from "../crm";
 
@@ -9,8 +10,8 @@ export default defineTool({
   description:
     "Lista as movimentações financeiras como o CRM (HighLevel) as registou — oportunidades com valor, status, pipeline e tatuador atribuído — num intervalo de datas.",
   inputSchema: {
-    from: z.string().describe("Data inicial (YYYY-MM-DD)."),
-    to: z.string().describe("Data final inclusiva (YYYY-MM-DD)."),
+    from: localDateSchema,
+    to: localDateSchema,
     limit: z.number().int().min(1).max(200).optional().describe("Máximo de linhas (padrão 50)."),
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
@@ -44,24 +45,35 @@ export default defineTool({
         to,
         scope.artistsByUserId,
         scope.restrictToGhlUserId,
+        ctx.signal,
       );
       const limited = rows.slice(0, limit ?? 50);
       const payload = {
         fonte: "crm" as const,
         base: "oportunidades" as const,
-        periodo: { from, to },
+        periodo: dashboardPeriod(from, to),
         count: limited.length,
-        total_no_periodo: rows.length,
-        total_eur: rows.reduce((sum, r) => sum + r.valor_eur, 0),
+        total_no_periodo: truncated ? null : rows.length,
+        ...(scope.role === "admin"
+          ? { total_eur: truncated ? null : rows.reduce((sum, r) => sum + r.valor_eur, 0) }
+          : { financialEligibility: "not_proven", commissionOmitted: true }),
         truncado: truncated,
-        movimentacoes: limited,
+        linhas_limitadas: rows.length > (limit ?? 50),
+        movimentacoes:
+          scope.role === "admin"
+            ? limited
+            : limited.map((r) => ({
+                id: r.crm_opportunity_id,
+                status: r.status,
+                criado_em: r.criado_em,
+              })),
       };
       return {
         content: [{ type: "text", text: JSON.stringify(payload) }],
         structuredContent: payload,
       };
-    } catch (e) {
-      const message = e instanceof Error ? e.message : String(e);
+    } catch {
+      const message = "Indisponível ou não autorizado";
       return {
         content: [{ type: "text", text: `Falha ao ler o financeiro do CRM: ${message}` }],
         isError: true,
