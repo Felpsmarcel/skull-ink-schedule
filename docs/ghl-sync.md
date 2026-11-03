@@ -23,6 +23,14 @@
 - Definição futura de cron consolida os três jobs existentes SOMENTE quando schedule_ghl_sync for chamado explicitamente, usando Vault privado em tempo de execução. A migração NÃO chama essa função.
 
 ## Preparação pendente (não executar nesta etapa)
+
+### Resultados de validação
+- Compilação automática do preview: build OK.
+- Testes locais com dados fictícios: autorização privada, isolamento RLS, expiração/fencing, preservação de 650 EUR e comissão configurada de 37%, falha parcial, ausência de calendários/comissão e persistência de conclusão.
+- Endpoint exercitado pelo navegador: chamadas sem credencial e com chave pública retornam 403; nenhuma importação foi iniciada.
+- Não foram feitas alterações de banco, Vault, jobs, CRM, publicação ou cobranças. Testes de banco usam exclusivamente uma instância local descartável.
+- Pagamentos recebidos e oportunidades mantêm fontes separadas; nenhum valor financeiro foi recalculado.
+
 1. Revisar diff e resultados de testes.
 2. Solicitar GHL_SYNC_SECRET pelo formulário seguro do editor, com geração e destino claramente identificado; o mesmo segredo precisa ser guardado como ghl_sync_secret no Vault por procedimento seguro autorizado. Não usar chave pública, não colocar valor no SQL versionado ou chat.
 3. Aplicar a migração pelo fluxo de migrações autorizado, com conteúdo idêntico ao arquivo versionado; verificar grants/RLS e segredo privado dos dois lados.

@@ -33,6 +33,11 @@ beforeAll(async () => {
 afterAll(async () => {
   await db.close();
 });
+it("ordinary authenticated callers cannot acquire the privileged sync lease", async () => {
+  await db.exec("SET ROLE authenticated");
+  await expect(db.query("SELECT ghl_sync_begin($1,'manual')", [run1])).rejects.toThrow("permission denied");
+  await db.exec("RESET ROLE");
+});
 it("denies admin RPCs without identity, including NULL role", async () => {
   for (const fn of ["ghl_sync_status", "schedule_ghl_sync", "unschedule_ghl_sync"])
     await expect(db.query(`SELECT public.${fn}()`)).rejects.toThrow("forbidden");
