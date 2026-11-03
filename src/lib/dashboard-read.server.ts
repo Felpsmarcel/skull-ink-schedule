@@ -12,8 +12,16 @@ export async function readDashboard(
   to: string,
   signal?: AbortSignal,
 ) {
-  if (scope.role !== "admin" && scope.role !== "artist") throw new DashboardError(403, "Papel não autorizado");
-  if (scope.role === "artist" && (!scope.artistId || !scope.restrictToGhlUserId || scope.artists.length !== 1 || scope.artists[0]?.id !== scope.artistId)) throw new DashboardError(403, "Vínculo não verificado");
+  if (scope.role !== "admin" && scope.role !== "artist")
+    throw new DashboardError(403, "Papel não autorizado");
+  if (
+    scope.role === "artist" &&
+    (!scope.artistId ||
+      !scope.restrictToGhlUserId ||
+      scope.artists.length !== 1 ||
+      scope.artists[0]?.id !== scope.artistId)
+  )
+    throw new DashboardError(403, "Vínculo não verificado");
   const period = dashboardPeriod(from, to);
   const calendars = scope.artists.flatMap((a) =>
     a.ghl_calendar_id ? [{ calendarId: a.ghl_calendar_id, artistName: a.name }] : [],
@@ -52,20 +60,19 @@ export async function readDashboard(
     fetchedAt: new Date().toISOString(),
     period,
     source: { appointments: "crm", opportunities: "crm", confirmedPayments: "app_movimentacoes" },
-    paymentMeaning: "Lançamentos registados no estúdio; não são transações bancárias verificadas nem pagamentos confirmados pelo CRM.",
+    paymentMeaning:
+      "Lançamentos registados no estúdio; não são transações bancárias verificadas nem pagamentos confirmados pelo CRM.",
     partial,
     appointments: {
       complete: !!a && !a.partial && !a.truncated,
       truncated: a?.truncated ?? true,
       count: a && !a.partial && !a.truncated ? a.rows.length : null,
-      items: (a?.rows ?? [])
-        .slice(0, 200)
-        .map((r) => ({
-          id: r.crm_event_id,
-          startAt: r.start_at,
-          endAt: r.end_at,
-          status: r.status,
-        })),
+      items: (a?.rows ?? []).slice(0, 200).map((r) => ({
+        id: r.crm_event_id,
+        startAt: r.start_at,
+        endAt: r.end_at,
+        status: r.status,
+      })),
       itemsTruncated: (a?.rows.length ?? 0) > 200,
     },
     opportunities:

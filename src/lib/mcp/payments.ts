@@ -107,6 +107,7 @@ export async function fetchStudioPaymentsForClient(
     }
     if ((data ?? []).length < 500) break;
   }
+  if (rows.some((r) => r.total == null || !Number.isFinite(Number(r.total)))) complete = false;
   const forma = { cartao: 0, dinheiro: 0, sumup: 0, transferencia: 0 };
   const byArtist = new Map<string, { registos: number; total: number }>();
   let total = 0;

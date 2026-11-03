@@ -48,7 +48,10 @@ export async function resolveDashboardScope(
   );
   if (
     me.role === "artist" &&
-    (artists.length !== 1 || !artists[0]?.active || !artists[0]?.ghl_calendar_id || !artists[0]?.ghl_user_id)
+    (artists.length !== 1 ||
+      !artists[0]?.active ||
+      !artists[0]?.ghl_calendar_id ||
+      !artists[0]?.ghl_user_id)
   )
     throw new DashboardError(403, "Artista sem vínculo CRM completo");
   return {
