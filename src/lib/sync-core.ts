@@ -2,6 +2,12 @@ import { LOCATION_ID } from "@/config/staff";
 
 export const SYNC_LOCATION_ID = LOCATION_ID;
 export const SYNC_DEADLINE_MS = 240_000;
+export function normalizeEventContact(event: { contactId?: string; contact?: { id?: string } }): string | null {
+  const outer = event.contactId?.trim() || null;
+  const nested = event.contact?.id?.trim() || null;
+  if (outer && nested && outer !== nested) return null;
+  return outer ?? nested;
+}
 export const SYNC_QUERY_KEYS = [
   "finance-summary",
   "sync-failures",

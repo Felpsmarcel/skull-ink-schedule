@@ -1,5 +1,14 @@
 # GHL sync — revisão antes da ativação
 
+## Correção do bloqueador de identidade (3 novembro 2026)
+- Reproduzida A→B com lookup falho, outra location, upsert falho e IDs divergentes: o código anterior ainda emitia UPDATE.
+- Eventos sem contato normalizado, resposta CRM com id/location verificados ou resolução local confirmada são excluídos antes de INSERT/UPDATE; a execução falha e preserva todo o evento anterior.
+- Dados locais não substituem verificação CRM; cache só reaproveita contatos verificados nesta execução. Não há fallback após falha de upsert.
+- Snapshot completo de B substitui A, inclusive telefone/email nulos. Não altera valores ou percentuais existentes.
+- **SQL pendente de incorporação:** `docs/sql/ghl-sync-contact-identity.review.sql` substitui `ghl_sync_write` com lock SHARE do contato e verificação atômica id↔ghl_contact_id e snapshot. O editor recusou alterar o arquivo protegido em `supabase/migrations`; não foi usado o fluxo que aplicaria SQL real. A migração original ainda contém o SQL antigo: NÃO aplicar sem incorporar esta correção pelo fluxo autorizado.
+- Testes usam exclusivamente mocks e banco local descartável; nenhuma consulta/importação/alteração de CRM real foi executada nesta correção.
+- Validação final: 118 testes passaram e compilação automática OK; inclui B local já existente, resposta vazia/inconsistente do upsert, ID CRM divergente, transição válida limpando dados de A e rejeição SQL sem modificar o evento. API móvel, DST e contrato financeiro mantêm seus testes passando.
+
 ## Estado verificado em 3 novembro 2026, 15:18–15:24 UTC
 - Lovable Cloud respondeu nas verificações de banco e autenticação.
 - Credenciais no servidor: GHL_TOKEN sim; URL e credencial privilegiada do banco sim; GHL_SYNC_SECRET não.

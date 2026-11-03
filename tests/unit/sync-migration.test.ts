@@ -28,7 +28,11 @@ beforeAll(async () => {
  CREATE FUNCTION net.http_post(url text,headers jsonb,body jsonb,timeout_milliseconds integer) RETURNS bigint LANGUAGE sql AS $$ SELECT 1::bigint $$;
  `);
   await db.exec(readFileSync("supabase/migrations/20261103160000_secure_ghl_sync.sql", "utf8"));
+  await db.exec(readFileSync("docs/sql/ghl-sync-contact-identity.review.sql", "utf8"));
   await db.exec(`INSERT INTO artists VALUES('${artist}',true,'calendar-a',37);`);
+  await db.exec(`INSERT INTO contacts(id,ghl_contact_id,name,phone,email) VALUES
+    ('00000000-0000-0000-0000-000000000301','A','Fictional A','old','a@example.test'),
+    ('00000000-0000-0000-0000-000000000302','B','Fictional B',NULL,NULL);`);
 }, 30_000);
 afterAll(async () => {
   await db.close();
@@ -70,6 +74,11 @@ it("preserves existing financial amounts and configured commission on updates", 
   const rows = [
     {
       ghl_appointment_id: "fake-event",
+      ghl_contact_id: "A",
+      contact_id: "00000000-0000-0000-0000-000000000301",
+      contact_name: "Fictional A",
+      contact_phone: "old",
+      contact_email: "a@example.test",
       artist_id: artist,
       calendar_id: "calendar-a",
       commission_pct: 37,
@@ -98,12 +107,32 @@ it("rejects ownership changes before writing", async () => {
     db.query(`SELECT ghl_sync_write($1,'update',$2)`, [
       run2,
       JSON.stringify([
-        { ghl_appointment_id: "fake-event", artist_id: artist, calendar_id: "other" },
+        { ghl_appointment_id: "fake-event", artist_id: artist, calendar_id: "other", ghl_contact_id: "A", contact_id: "00000000-0000-0000-0000-000000000301", contact_name: "Fictional A", contact_phone: "old", contact_email: "a@example.test" },
       ]),
     ]),
   ).rejects.toThrow("event ownership conflict");
 });
 it("partial failures never advance the successful completion time", async () => {
+  const before = (await db.query("SELECT * FROM appointments WHERE ghl_appointment_id='fake-event'")).rows;
+  for (const identity of [
+    { ghl_contact_id: "B", contact_id: null, contact_name: "Fictional B" },
+    { ghl_contact_id: "B", contact_id: "00000000-0000-0000-0000-000000000301", contact_name: "Fictional A", contact_phone: "old", contact_email: "a@example.test" },
+    { ghl_contact_id: "B", contact_id: "00000000-0000-0000-0000-000000000302", contact_name: "Fictional B", contact_email: "a@example.test" },
+  ]) {
+    for (const kind of ['insert', 'update']) {
+      await expect(db.query("SELECT ghl_sync_write($1,$2,$3)", [run2, kind, JSON.stringify([{ ghl_appointment_id: "fake-event", artist_id: artist, calendar_id: "calendar-a", ...identity }])])).rejects.toThrow("contact identity conflict");
+      expect((await db.query("SELECT * FROM appointments WHERE ghl_appointment_id='fake-event'")).rows).toEqual(before);
+    }
+  }
+  // A valid A→B transition replaces the whole snapshot, including null fields.
+  await db.query("SELECT ghl_sync_write($1,'update',$2)", [run2, JSON.stringify([{
+    ghl_appointment_id: "fake-event", artist_id: artist, calendar_id: "calendar-a",
+    ghl_contact_id: "B", contact_id: "00000000-0000-0000-0000-000000000302", contact_name: "Fictional B", contact_phone: null, contact_email: null,
+    status: "confirmed", start_at: "2026-11-03T12:00:00Z", end_at: "2026-11-03T13:00:00Z",
+  }])]);
+  expect((await db.query("SELECT ghl_contact_id,contact_id,contact_name,contact_phone,contact_email,total_eur,commission_pct FROM appointments WHERE ghl_appointment_id='fake-event'")).rows[0]).toMatchObject({
+    ghl_contact_id: "B", contact_id: "00000000-0000-0000-0000-000000000302", contact_name: "Fictional B", contact_phone: null, contact_email: null, total_eur: "650", commission_pct: "37",
+  });
   await db.query("SELECT ghl_sync_finish($1,$2)", [
     run2,
     JSON.stringify({ ok: false, failures: 1 }),

@@ -1,5 +1,11 @@
 # Renovação premium
 
+## Bloqueador de identidade de contato
+- [x] Reproduzir A→B com lookup falho, outra subconta e upsert falho
+- [x] Excluir eventos sem identidade normalizada/resolvida e validar vínculo no SQL de revisão versionado
+- [x] Confirmar preservação dos dados anteriores e regressões sem executar migrações reais (118 testes)
+- [ ] Incorporar SQL de revisão na migração protegida — editor bloqueia edição direta; fluxo disponível aplicaria SQL real, não autorizado nesta etapa
+
 ## Sincronização segura do CRM (prioridade atual)
 ## Ponte de leitura para APK (etapa atual)
 - [x] Validar períodos Europe/Brussels e completude de agregados CRM/app
