@@ -167,7 +167,7 @@ async function resolveContacts(
   }
 }
 
-async function performSync(runId: string, signal: AbortSignal, opts?: {
+async function performSync(runId: string, signal: AbortSignal, progress: SyncResult, opts?: {
   pastDays?: number;
   futureDays?: number;
   locationId?: string;
@@ -184,11 +184,7 @@ async function performSync(runId: string, signal: AbortSignal, opts?: {
   const startMs = now - pastDays * 86_400_000;
   const endMs = now + futureDays * 86_400_000;
 
-  const errors: string[] = [];
-  let fetched = 0;
-  let inserted = 0;
-  let updated = 0;
-  let failures = 0;
+  const errors = progress.errors;
 
   const { data: artistsData, error: artistsErr } = await supabaseAdmin
     .from("artists" as never)
@@ -214,10 +210,12 @@ async function performSync(runId: string, signal: AbortSignal, opts?: {
   for (const artist of artists) {
     signal.throwIfAborted();
     const calId = artist.ghl_calendar_id;
-    if (!calId || !allowed.has(calId)) { failures++; errors.push("Calendário fora da subconta"); continue; }
-    if (artist.commission_pct == null || !Number.isFinite(Number(artist.commission_pct))) { failures++; errors.push("Comissão não configurada explicitamente"); continue; }
+    if (!calId || !allowed.has(calId)) { progress.failures++; errors.push("Calendário fora da subconta"); continue; }
+    if (artist.commission_pct == null || !Number.isFinite(Number(artist.commission_pct))) { progress.failures++; errors.push("Comissão não configurada explicitamente"); continue; }
     const artistCommissionPct = Number(artist.commission_pct);
-    const res = await ghlGetEvents(calId, locationId, startMs, endMs, token, signal);
+    const calendarResult = await ghlGetEvents(calId, locationId, startMs, endMs, token, signal);
+    progress.scannedCalendars++;
+    const res = calendarResult;
     if (!res.ok) {
       const reason = `GHL events ${res.status} cal=${calId}`;
       errors.push(reason);
@@ -232,17 +230,20 @@ async function performSync(runId: string, signal: AbortSignal, opts?: {
         message: reason,
         context: { calendarId: calId },
       });
-      failures++;
+      progress.failures++;
       continue;
     }
-    fetched += res.events.length;
+    progress.fetchedEvents += res.events.length;
+    for (let offset = 0; offset < calendarResult.events.length; offset += 100) {
+    const res = { ...calendarResult, events: calendarResult.events.slice(offset, offset + 100) };
+    signal.throwIfAborted();
     const { data: ownerRows, error: ownerError } = await supabaseAdmin.from("appointments" as never)
       .select("ghl_appointment_id, artist_id, calendar_id").in("ghl_appointment_id", res.events.map(e => e.id));
     if (ownerError) throw new Error("Falha ao verificar propriedade");
     const owners = new Map(((ownerRows ?? []) as Array<{ ghl_appointment_id: string; artist_id: string; calendar_id: string | null }>).map(r => [r.ghl_appointment_id, r]));
     res.events = res.events.filter(e => {
       if (ownershipConflict(owners.get(e.id), artist.id, calId, e.calendarId)) {
-        failures++; errors.push("Conflito de propriedade de evento"); return false;
+        progress.failures++; errors.push("Conflito de propriedade de evento"); return false;
       }
       return true;
     });
@@ -291,7 +292,7 @@ async function performSync(runId: string, signal: AbortSignal, opts?: {
     for (const gid of needFetch) {
       if (contactIdMap.has(gid) && !contactInfo.get(gid)?.name) continue;
       const info = contactInfo.get(gid) ?? null;
-      if (!info?.name) { failures++; errors.push("Contato não resolvido"); continue; }
+      if (!info?.name) { progress.failures++; errors.push("Contato não resolvido"); continue; }
       contactUpserts.push({
         ghl_contact_id: gid,
         name: info?.name ?? "Sem nome",
@@ -302,7 +303,7 @@ async function performSync(runId: string, signal: AbortSignal, opts?: {
     if (contactUpserts.length > 0) {
       const { data: cRows, error: cErr } = await supabaseAdmin.rpc("ghl_sync_write" as never, { p_run: runId, p_kind: "contacts", p_rows: contactUpserts } as never);
       if (cErr) {
-        failures++; errors.push("Falha ao salvar contatos");
+        progress.failures++; errors.push("Falha ao salvar contatos");
       } else {
         for (const r of (cRows ?? []) as Array<{ id: string; ghl_contact_id: string }>) {
           contactIdMap.set(r.ghl_contact_id, r.id);
@@ -340,7 +341,7 @@ async function performSync(runId: string, signal: AbortSignal, opts?: {
       .in("ghl_appointment_id", ids);
     if (existingErr) {
       errors.push(`select existing: ${existingErr.message}`);
-      failures++;
+      progress.failures++;
       continue;
     }
     type ExistingRow = {
@@ -411,7 +412,7 @@ async function performSync(runId: string, signal: AbortSignal, opts?: {
         notes: e.title ?? null,
         };
       });
-      // ignoreDuplicates: another concurrent run may have inserted between our
+      // ignoreDuplicates: another concurrent run may have progress.inserted between our
       // SELECT and INSERT. Treat that as a no-op, not a batch failure.
       signal.throwIfAborted();
       const { data: insertedRows, error: insErr } = await supabaseAdmin.rpc("ghl_sync_write" as never,
@@ -429,9 +430,9 @@ async function performSync(runId: string, signal: AbortSignal, opts?: {
           message: insErr.message,
           context: { calendarId: calId, count: toInsert.length },
         });
-        failures += toInsert.length;
+        progress.failures += toInsert.length;
       } else {
-        inserted += Array.isArray(insertedRows as unknown) ? (insertedRows as unknown as unknown[]).length : 0;
+        progress.inserted += Array.isArray(insertedRows as unknown) ? (insertedRows as unknown as unknown[]).length : 0;
       }
     }
 
@@ -460,33 +461,30 @@ async function performSync(runId: string, signal: AbortSignal, opts?: {
       } as never);
       if (upErr) {
         errors.push(`update ${e.id}: ${upErr.message}`);
-        failures++;
+        progress.failures++;
       } else {
-        updated += Array.isArray(changedRows as unknown) ? (changedRows as unknown as unknown[]).length : 0;
+        progress.updated += Array.isArray(changedRows as unknown) ? (changedRows as unknown as unknown[]).length : 0;
       }
     }
   }
 
-  return {
-    ok: failures === 0 && errors.length === 0,
-    scannedCalendars: artists.length,
-    fetchedEvents: fetched,
-    inserted,
-    updated,
-    failures,
-    errors: errors.slice(0, 20),
-  };
+  }
+  progress.ok = progress.failures === 0 && errors.length === 0;
+  progress.errors = errors.slice(0, 20);
+  return progress;
 }
 export async function syncGhlAppointments(opts?: { pastDays?: number; futureDays?: number; locationId?: string; source?: "manual" | "cron" }): Promise<SyncResult> {
   const runId = crypto.randomUUID();
   const { data: acquired, error } = await supabaseAdmin.rpc("ghl_sync_begin" as never, { p_run: runId, p_source: opts?.source ?? "manual" } as never);
   if (error || !acquired) throw new Error("Sincronização bloqueada ou preparação pendente");
   const signal = AbortSignal.timeout(SYNC_DEADLINE_MS);
-  let result: SyncResult = { ok: false, scannedCalendars: 0, fetchedEvents: 0, inserted: 0, updated: 0, failures: 1, errors: ["Execução não concluída"] };
+  let result: SyncResult = { ok: false, scannedCalendars: 0, fetchedEvents: 0, inserted: 0, updated: 0, failures: 0, errors: [] };
   try {
-    result = await performSync(runId, signal, opts);
+    result = await performSync(runId, signal, result, opts);
   } catch {
     result.ok = false;
+    result.failures++;
+    result.errors.push("Execução interrompida");
   } finally {
     const { error: finishError } = await supabaseAdmin.rpc("ghl_sync_finish" as never, { p_run: runId, p_result: { ...result, errors: result.errors.length ? ["Falha parcial ou total; revisão necessária"] : [] } } as never);
     if (finishError) throw new Error("Não foi possível registrar conclusão da sincronização");
