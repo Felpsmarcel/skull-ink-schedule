@@ -1,3 +1,4 @@
+import { dashboardPeriod } from "@/lib/dashboard-period";
 /**
  * Leitura ao vivo do CRM (HighLevel) para as ferramentas MCP.
  *
@@ -34,10 +35,11 @@ function crmToken(): string {
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** O CRM limita o débito de pedidos; repetimos em 429 com backoff. */
-async function crmGet<T>(path: string, version = V_DEFAULT): Promise<T> {
+async function crmGet<T>(path: string, version = V_DEFAULT, signal?: AbortSignal): Promise<T> {
   let last = "";
   for (let attempt = 0; attempt < 4; attempt++) {
     const res = await fetch(`${GHL_BASE}${path}`, {
+      signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(10_000)]) : AbortSignal.timeout(10_000),
       headers: {
         Authorization: `Bearer ${crmToken()}`,
         Version: version,
@@ -46,7 +48,7 @@ async function crmGet<T>(path: string, version = V_DEFAULT): Promise<T> {
     });
     const text = await res.text();
     if (res.ok) return (text ? JSON.parse(text) : {}) as T;
-    last = `CRM ${res.status}: ${text.slice(0, 180)}`;
+    last = `CRM indisponível (${res.status})`;
     if (res.status !== 429 && res.status < 500) break;
     await sleep(700 * (attempt + 1));
   }
@@ -101,9 +103,13 @@ export async function fetchCrmAppointments(
   calendars: Array<{ calendarId: string; artistName: string }>,
   from: string,
   to: string,
-): Promise<CrmAppointmentRow[]> {
-  const startMs = Date.parse(`${from}T00:00:00Z`);
-  const endMs = Date.parse(`${to}T23:59:59Z`);
+  signal?: AbortSignal,
+): Promise<{ rows: CrmAppointmentRow[]; truncated: boolean; partial: boolean }> {
+  const period = dashboardPeriod(from, to);
+  const startMs = Date.parse(period.startUtc);
+  const endMs = Date.parse(period.endExclusiveUtc) - 1;
+  let truncated = false;
+  let partial = false;
   const rows: CrmAppointmentRow[] = [];
   for (const cal of calendars) {
     const qs = new URLSearchParams({
@@ -112,11 +118,18 @@ export async function fetchCrmAppointments(
       startTime: String(startMs),
       endTime: String(endMs),
     });
-    const body = await crmGet<{ events?: CrmEvent[] }>(
-      `/calendars/events?${qs.toString()}`,
-      V_CALENDARS,
+    try {
+    const body = await crmGet<{ events?: CrmEvent[]; meta?: { total?: number; nextPage?: unknown }; total?: number }>(
+      `/calendars/events?${qs.toString()}`, V_CALENDARS, signal,
     );
-    for (const e of body.events ?? []) {
+    if (!Array.isArray(body.events)) { partial = true; continue; }
+    // No documented pagination proof for this API: flag possible server caps.
+    if (body.events.length >= 100 || body.meta?.nextPage || (body.total ?? body.meta?.total ?? body.events.length) > body.events.length) truncated = true;
+    for (const e of body.events) {
+      const time = Date.parse(e.startTime);
+      if (!Number.isFinite(time)) { partial = true; continue; }
+      if (time < startMs || time > endMs) continue;
+      if (e.calendarId && e.calendarId !== cal.calendarId) { partial = true; continue; }
       rows.push({
         crm_event_id: e.id,
         artist_name: cal.artistName,
@@ -128,8 +141,9 @@ export async function fetchCrmAppointments(
         status: mapCrmStatus(e.appointmentStatus),
       });
     }
+    } catch { partial = true; }
   }
-  return rows.sort((a, b) => a.start_at.localeCompare(b.start_at));
+  return { rows: [...new Map(rows.map(r => [r.crm_event_id, r])).values()].sort((a, b) => a.start_at.localeCompare(b.start_at)), truncated, partial };
 }
 
 /* -------------------------------------------------------------------------- */
@@ -167,13 +181,13 @@ interface PipelineMaps {
   stages: Map<string, string>;
 }
 
-async function fetchPipelineMaps(): Promise<PipelineMaps> {
+async function fetchPipelineMaps(signal?: AbortSignal): Promise<PipelineMaps> {
   const pipelines = new Map<string, string>();
   const stages = new Map<string, string>();
   try {
     const body = await crmGet<{
       pipelines?: Array<{ id: string; name?: string; stages?: Array<{ id: string; name?: string }> }>;
-    }>(`/opportunities/pipelines?locationId=${CRM_LOCATION_ID}`);
+    }>(`/opportunities/pipelines?locationId=${CRM_LOCATION_ID}`, V_DEFAULT, signal);
     for (const p of body.pipelines ?? []) {
       if (p.name) pipelines.set(p.id, p.name);
       for (const s of p.stages ?? []) if (s.name) stages.set(s.id, s.name);
@@ -196,15 +210,20 @@ export async function fetchCrmFinance(
   to: string,
   artistsByUserId: Map<string, string>,
   restrictToUserId?: string | null,
+  signal?: AbortSignal,
 ): Promise<{ rows: CrmFinanceRow[]; truncated: boolean }> {
-  const fromMs = Date.parse(`${from}T00:00:00Z`);
-  const toMs = Date.parse(`${to}T23:59:59.999Z`);
-  const maps = await fetchPipelineMaps();
+  const period = dashboardPeriod(from, to);
+  const fromMs = Date.parse(period.startUtc);
+  const toMs = Date.parse(period.endExclusiveUtc);
+  const maps = await fetchPipelineMaps(signal);
 
   const rows: CrmFinanceRow[] = [];
   let startAfter: number | null = null;
   let startAfterId: string | null = null;
   let truncated = false;
+  let exhausted = false;
+  const seenIds = new Set<string>();
+  const seenCursors = new Set<string>();
 
   for (let page = 0; page < MAX_PAGES; page++) {
     const qs = new URLSearchParams({
@@ -216,21 +235,23 @@ export async function fetchCrmFinance(
       qs.set("startAfter", String(startAfter));
       qs.set("startAfterId", startAfterId);
     }
+    try {
     const body = await crmGet<{
       opportunities?: CrmOpportunity[];
-      meta?: { startAfter?: number; startAfterId?: string; nextPage?: number | null };
-    }>(`/opportunities/search?${qs.toString()}`);
-    const batch = body.opportunities ?? [];
-    if (batch.length === 0) break;
-
-    let reachedOlder = false;
+      meta?: { startAfter?: number; startAfterId?: string; nextPage?: number | null; total?: number };
+    }>(`/opportunities/search?${qs.toString()}`, V_DEFAULT, signal);
+    if (!Array.isArray(body.opportunities)) { truncated = true; break; }
+    const batch = body.opportunities;
+    if (batch.length === 0) { exhausted = true; break; }
     for (const o of batch) {
       const createdMs = Date.parse(o.createdAt);
-      if (Number.isFinite(createdMs) && createdMs < fromMs) {
-        reachedOlder = true;
-        continue;
-      }
-      if (Number.isFinite(createdMs) && createdMs > toMs) continue;
+      if (seenIds.has(o.id)) continue;
+      seenIds.add(o.id);
+      if (!Number.isFinite(createdMs)) { truncated = true; continue; }
+      if (createdMs < fromMs || createdMs >= toMs) continue;
+      // CRM filters are not trusted as an authorization boundary.
+      if (restrictToUserId && o.assignedTo !== restrictToUserId) continue;
+      if (o.monetaryValue == null || !Number.isFinite(Number(o.monetaryValue))) { truncated = true; continue; }
       rows.push({
         crm_opportunity_id: o.id,
         nome_cliente: o.contact?.name ?? o.name ?? null,
@@ -244,18 +265,26 @@ export async function fetchCrmFinance(
       });
     }
 
-    if (reachedOlder) break;
     const nextAfter = body.meta?.startAfter;
     const nextId = body.meta?.startAfterId;
-    if (!body.meta?.nextPage || nextAfter == null || !nextId) break;
+    if (!body.meta?.nextPage) {
+      if (batch.length < 100 && (body.meta?.total == null || seenIds.size >= body.meta.total)) exhausted = true;
+      else if (body.meta?.total != null && seenIds.size >= body.meta.total) exhausted = true;
+      else truncated = true;
+      break;
+    }
+    const cursor = `${nextAfter}:${nextId}`;
+    if (nextAfter == null || !nextId || seenCursors.has(cursor)) { truncated = true; break; }
+    seenCursors.add(cursor);
     startAfter = nextAfter;
     startAfterId = nextId;
     await sleep(200);
     if (page === MAX_PAGES - 1) truncated = true;
+    } catch { truncated = true; break; }
   }
 
   rows.sort((a, b) => b.criado_em.localeCompare(a.criado_em));
-  return { rows, truncated };
+  return { rows, truncated: truncated || !exhausted };
 }
 
 export interface CrmFinanceSummary extends Record<string, unknown> {
@@ -263,9 +292,9 @@ export interface CrmFinanceSummary extends Record<string, unknown> {
   base: "oportunidades";
   periodo: { from: string; to: string };
   registos: number;
-  total_ganho_eur: number;
-  total_aberto_eur: number;
-  total_perdido_eur: number;
+  total_ganho_eur: number | null;
+  total_aberto_eur: number | null;
+  total_perdido_eur: number | null;
   por_status: Array<{ status: string; registos: number; total_eur: number }>;
   por_tatuador: Array<{ artist_name: string; registos: number; total_eur: number }>;
   truncado: boolean;
@@ -295,15 +324,15 @@ export function summarizeCrmFinance(
   return {
     fonte: "crm",
     base: "oportunidades",
-    periodo: { from, to },
+    periodo: dashboardPeriod(from, to),
     registos: rows.length,
-    total_ganho_eur: statusTotal("won"),
-    total_aberto_eur: statusTotal("open"),
-    total_perdido_eur: statusTotal("lost") + statusTotal("abandoned"),
-    por_status: [...byStatus.entries()]
+    total_ganho_eur: truncated ? null : statusTotal("won"),
+    total_aberto_eur: truncated ? null : statusTotal("open"),
+    total_perdido_eur: truncated ? null : statusTotal("lost") + statusTotal("abandoned"),
+    por_status: (truncated ? [] : [...byStatus.entries()])
       .map(([status, v]) => ({ status, registos: v.registos, total_eur: v.total }))
       .sort((a, b) => b.total_eur - a.total_eur),
-    por_tatuador: [...byArtist.entries()]
+    por_tatuador: (truncated ? [] : [...byArtist.entries()])
       .map(([artist_name, v]) => ({ artist_name, registos: v.registos, total_eur: v.total }))
       .sort((a, b) => b.total_eur - a.total_eur),
     truncado: truncated,
