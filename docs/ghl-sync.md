@@ -7,6 +7,7 @@
 - Snapshot completo de B substitui A, inclusive telefone/email nulos. Não altera valores ou percentuais existentes.
 - **SQL pendente de incorporação:** `docs/sql/ghl-sync-contact-identity.review.sql` substitui `ghl_sync_write` com lock SHARE do contato e verificação atômica id↔ghl_contact_id e snapshot. O editor recusou alterar o arquivo protegido em `supabase/migrations`; não foi usado o fluxo que aplicaria SQL real. A migração original ainda contém o SQL antigo: NÃO aplicar sem incorporar esta correção pelo fluxo autorizado.
 - Testes usam exclusivamente mocks e banco local descartável; nenhuma consulta/importação/alteração de CRM real foi executada nesta correção.
+- Validação final: 118 testes passaram e compilação automática OK; inclui B local já existente, resposta vazia/inconsistente do upsert, ID CRM divergente, transição válida limpando dados de A e rejeição SQL sem modificar o evento. API móvel, DST e contrato financeiro mantêm seus testes passando.
 
 ## Estado verificado em 3 novembro 2026, 15:18–15:24 UTC
 - Lovable Cloud respondeu nas verificações de banco e autenticação.
