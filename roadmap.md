@@ -1,5 +1,12 @@
 # Renovação premium
 
+## Fechamento complementar antes de clientes móveis
+- [x] Validar envelope/events e identidade exata; desativar backfill sem fencing
+- [x] Isolar dia/semana/mês e negar usuário sem vínculo
+- [x] Preparar proxy fail-closed fora da pasta de deploy automático; testar config/JWT/role/location/calendários
+- [x] Validar regressões fictícias e documentar pendências sem produção (161 testes; compilação OK)
+- [ ] Incorporar substituto no proxy legado — bloqueado por autorização de deploy, proibido nesta etapa; versão atual permanece vulnerável
+
 ## Bloqueador de identidade de contato
 - [x] Reproduzir A→B com lookup falho, outra subconta e upsert falho
 - [x] Excluir eventos sem identidade normalizada/resolvida e validar vínculo no SQL de revisão versionado

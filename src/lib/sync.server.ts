@@ -86,8 +86,13 @@ async function ghlGetEvents(
   } catch {
     raw = text;
   }
-  const events = (raw as { events?: GhlEvent[] } | null)?.events ?? [];
-  return { ok: res.ok, status: res.status, events, raw };
+  const candidate = (raw as { events?: unknown } | null)?.events;
+  const valid = Array.isArray(candidate) && candidate.every((e) =>
+    e && typeof e === "object" && typeof e.id === "string" && e.id.trim().length > 0
+    && typeof e.startTime === "string" && Number.isFinite(Date.parse(e.startTime))
+    && typeof e.endTime === "string" && Date.parse(e.endTime) > Date.parse(e.startTime),
+  );
+  return { ok: res.ok && valid, status: res.ok && !valid ? 502 : res.status, events: valid ? candidate : [], raw };
 }
 
 export interface GhlContactInfo {
@@ -136,7 +141,7 @@ async function ghlGetContact(
       };
     };
     const c = raw?.contact;
-    if (!c || c.id?.trim() !== contactId || c.locationId !== SYNC_LOCATION_ID) return null;
+    if (!c || c.id !== contactId || c.locationId !== SYNC_LOCATION_ID) return null;
     const name =
       c.contactName?.trim() ||
       c.name?.trim() ||
@@ -602,79 +607,7 @@ export interface BackfillContactsResult {
   errors: string[];
 }
 
-/**
- * Fill in client name/phone/email for appointments that were mirrored from GHL
- * before contact enrichment existed (contact_name NULL, contacts.name = "Sem nome").
- */
-export async function backfillContactNames(limit = 500): Promise<BackfillContactsResult> {
-  const token = process.env.GHL_TOKEN;
-  if (!token) throw new Error("GHL_TOKEN ausente no servidor");
-
-  const errors: string[] = [];
-  const { data, error } = await supabaseAdmin
-    .from("appointments" as never)
-    .select("id, ghl_contact_id, contact_id, contact_name")
-    .not("ghl_contact_id", "is", null)
-    .is("contact_name", null)
-    .limit(limit);
-  if (error) throw new Error(error.message);
-
-  const rows = (data ?? []) as Array<{
-    id: string;
-    ghl_contact_id: string;
-    contact_id: string | null;
-    contact_name: string | null;
-  }>;
-
-  const cache = new Map<string, GhlContactInfo | null>();
-  await resolveContacts([...new Set(rows.map((r) => r.ghl_contact_id))], token, cache);
-
-  let updatedAppointments = 0;
-  let notFound = 0;
-  const contactPatched = new Set<string>();
-  let updatedContacts = 0;
-
-  for (const row of rows) {
-    const info = cache.get(row.ghl_contact_id) ?? null;
-    if (!info?.name) {
-      notFound++;
-      continue;
-    }
-    const { error: aErr } = await supabaseAdmin
-      .from("appointments" as never)
-      .update({
-        contact_name: info.name,
-        ...(info.phone ? { contact_phone: info.phone } : {}),
-        ...(info.email ? { contact_email: info.email } : {}),
-      } as never)
-      .eq("id", row.id);
-    if (aErr) {
-      errors.push(`appointment ${row.id}: ${aErr.message}`);
-      continue;
-    }
-    updatedAppointments++;
-
-    if (row.contact_id && !contactPatched.has(row.contact_id)) {
-      contactPatched.add(row.contact_id);
-      const { error: cErr } = await supabaseAdmin
-        .from("contacts" as never)
-        .update({
-          name: info.name,
-          ...(info.phone ? { phone: info.phone } : {}),
-          ...(info.email ? { email: info.email } : {}),
-          synced_at: new Date().toISOString(),
-        } as never)
-        .eq("id", row.contact_id);
-      if (cErr) errors.push(`contact ${row.contact_id}: ${cErr.message}`);
-      else updatedContacts++;
-    }
-  }
-
-  return {
-    scanned: rows.length,
-    updatedAppointments,
-    updatedContacts,
-    notFound,
-    errors: errors.slice(0, 20),
-  };
+/** Disabled until this path shares the sync lease, fencing and deadline. */
+export async function backfillContactNames(_limit = 500): Promise<BackfillContactsResult> {
+  throw new Error("Backfill de contatos desativado até compartilhar lease/fencing/deadline");
 }

@@ -1,6 +1,7 @@
 import { useQueries } from "@tanstack/react-query";
 import { LOCATION_ID, type StaffMember } from "@/config/staff";
 import { useArtists } from "@/hooks/use-artists";
+import { scopedAgendaStaff } from "@/lib/agenda-scope";
 import { getFreeSlots, getEvents, type GhlEvent } from "@/lib/ghl";
 import {
   brusselsDayStartMs,
@@ -38,9 +39,7 @@ export function useStaffDayAgenda(date: Date, options: UseStaffDayAgendaOptions 
   const enabled = options.enabled ?? true;
 
   const artistsQuery = useArtists();
-  const staffList: StaffMember[] = (artistsQuery.data ?? []).filter((staff) =>
-    options.artistId ? staff.id === options.artistId : true,
-  );
+  const staffList: StaffMember[] = scopedAgendaStaff(artistsQuery.data ?? [], options.artistId, enabled);
 
   const queries = useQueries({
     queries: staffList.map((staff) => ({
@@ -99,15 +98,15 @@ export function useStaffDayAgenda(date: Date, options: UseStaffDayAgendaOptions 
   });
 
   const result: StaffAgenda[] = staffList.map((staff, i) => {
-    const q = queries[i]!;
-    if (q.isLoading || !q.data) {
+    const q = queries[i];
+    if (!q || q.isLoading || !q.data) {
       return {
         staff,
         slots: [],
         isLoading: true,
         freeCount: 0,
         bookedCount: 0,
-        error: q.error instanceof Error ? q.error.message : undefined,
+        error: q?.error instanceof Error ? q.error.message : undefined,
       };
     }
     const debug = {

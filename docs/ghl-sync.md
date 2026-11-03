@@ -1,5 +1,16 @@
 # GHL sync — revisão antes da ativação
 
+## Fechamento complementar (somente código e testes)
+- Sync exige `contact.id` exatamente igual ao ID normalizado e `contact.locationId` obrigatório igual à GF; respostas HTTP 200 sem array events válido, IDs ou horários válidos são falha, não agenda vazia bem-sucedida.
+- `backfillContactNames` foi explicitamente desativado antes de qualquer leitura/escrita até compartilhar lease, fencing e deadline. A chamada administrativa recebe erro, nunca sucesso fictício.
+- Agenda dia/semana/mês compartilha restrição de artista. Identidade pendente, papel desconhecido, artista sem vínculo e vendedor sem escopo de calendário comprovado não montam consultas. Admin mantém calendário geral. Hooks desabilitados não devolvem resultados de cache.
+- Proxy substituto preparado em `docs/edge-review/ghl-proxy-handler.ts`, com ligação Deno em `ghl-proxy-entrypoint.review.txt`; não alterar/copiar para `supabase/functions` nesta etapa porque essa pasta dispara deploy automático. **O proxy legado permanece vulnerável até a substituição autorizada.**
+- Proxy exige configuração, sessão validada por getUser e papel admin/artist no contexto RLS do usuário; nega chaves públicas como identidade. GF é fixada no servidor e outras locations são recusadas, inclusive para admin.
+- Artista ativo precisa de calendário e usuário CRM vinculados. Só GET events/free-slots do calendário próprio; contatos, oportunidades, escritas e rotas sem prova de escopo são negados. Nunca nome/email como autorização. A resposta events também precisa declarar o calendário próprio.
+- Admin preserva busca/criação de contato, detalhe de contato, agenda/free-slots, criação de agendamento, catálogo e operações de oportunidades/pipelines. IDs de calendário/contato são consultados e verificados quanto à GF antes de operar; criação de oportunidade exige pipeline/etapa do catálogo GF. Rotas não inventariadas são negadas.
+- Nenhum log do substituto contém payload, URL com query, token, amostra de resposta ou mensagem de exceção. Nenhum serviço real foi chamado nos testes.
+- Bloqueios para ativação continuam: incorporar o SQL de revisão na migração protegida, revisar/autorizar substituição do proxy e sync, configurar segredo privado e resolver sessão/geração do APK. Não conectar novos clientes como se essas proteções já estivessem em produção.
+
 ## Correção do bloqueador de identidade (3 novembro 2026)
 - Reproduzida A→B com lookup falho, outra location, upsert falho e IDs divergentes: o código anterior ainda emitia UPDATE.
 - Eventos sem contato normalizado, resposta CRM com id/location verificados ou resolução local confirmada são excluídos antes de INSERT/UPDATE; a execução falha e preserva todo o evento anterior.

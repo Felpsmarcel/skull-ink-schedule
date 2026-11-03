@@ -1,0 +1,19 @@
+REVIEW ONLY — not imported by a deployed function.
+When deployment is separately authorized, place the reviewed handler beside
+the existing index.ts and replace the entrypoint with the following wiring:
+
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { createProxyHandler } from "./ghl-proxy-handler.ts";
+Deno.serve(createProxyHandler({
+  env: name => Deno.env.get(name),
+  fetch,
+  client: (url, key, auth) => createClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: { headers: { Authorization: auth } },
+  }),
+}));
+
+No service-role client is used to authorize. The publishable/anon key is
+transport configuration only; getUser validates the session, then role and
+artist mapping are read through that user's RLS. No logs contain payloads,
+URLs, tokens, exception messages or upstream samples.

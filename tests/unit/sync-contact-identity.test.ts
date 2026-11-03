@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, vi } from "vitest";
 
 const f = vi.hoisted(() => ({
-  mode: "lookup" as "lookup" | "foreign" | "upsert" | "divergent" | "valid" | "empty" | "mismatch" | "response-id",
+  mode: "lookup" as "lookup" | "foreign" | "upsert" | "divergent" | "valid" | "empty" | "mismatch" | "response-id" | "missing-location" | "padded-response-id",
   known: false,
   writes: [] as Array<{ kind: string; rows: unknown[] }>,
   prior: {} as Record<string, unknown>,
@@ -35,12 +35,12 @@ beforeEach(() => {
   vi.stubEnv("GHL_TOKEN", "fictional-test");
   vi.stubGlobal("fetch", vi.fn(async (input: unknown) => {
     const url = String(input);
-    if (url.includes("/contacts/")) return f.mode === "lookup" ? new Response("", { status: 503 }) : Response.json({ contact: { id: f.mode === "response-id" ? "C" : "B", locationId: f.mode === "foreign" ? "other-location" : "9iqrKUVPDddINb9S4Iwd", name: "Fictional B", email: null, phone: null } });
+    if (url.includes("/contacts/")) return f.mode === "lookup" ? new Response("", { status: 503 }) : Response.json({ contact: { id: f.mode === "response-id" ? "C" : f.mode === "padded-response-id" ? " B " : "B", locationId: f.mode === "missing-location" ? undefined : f.mode === "foreign" ? "other-location" : "9iqrKUVPDddINb9S4Iwd", name: "Fictional B", email: null, phone: null } });
     if (url.includes("/calendars/events")) return Response.json({ events: [{ id: "event", calendarId: "cal", contactId: "B", contact: { id: f.mode === "divergent" ? "C" : "B" }, startTime: "2026-11-03T12:00:00Z", endTime: "2026-11-03T13:00:00Z", appointmentStatus: "confirmed" }] });
     return Response.json({ calendars: [{ id: "cal" }] });
   }));
 });
-for (const known of [false, true]) for (const mode of ["lookup", "foreign", "upsert", "divergent", "empty", "mismatch", "response-id"] as const) {
+for (const known of [false, true]) for (const mode of ["lookup", "foreign", "upsert", "divergent", "empty", "mismatch", "response-id", "missing-location", "padded-response-id"] as const) {
   it(`A→B preserves ALL prior fields and fails on ${mode}, known B=${known}`, async () => {
     f.mode = mode; f.known = known; const before = { ...f.prior };
     const result = await syncGhlAppointments();
