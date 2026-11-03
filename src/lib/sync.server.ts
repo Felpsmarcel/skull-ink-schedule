@@ -5,7 +5,7 @@
  */
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { logIncident } from "@/lib/observability.server";
-import { ownershipConflict, SYNC_LOCATION_ID, SYNC_DEADLINE_MS } from "@/lib/sync-core";
+import { normalizeEventContact, ownershipConflict, SYNC_LOCATION_ID, SYNC_DEADLINE_MS } from "@/lib/sync-core";
 
 const GHL_BASE = "https://services.leadconnectorhq.com";
 const GHL_VERSION = "2021-04-15";
@@ -125,6 +125,8 @@ async function ghlGetContact(
     if (!res || !res.ok) return null;
     const raw = (await res.json()) as {
       contact?: {
+        id?: string;
+        locationId?: string;
         contactName?: string;
         name?: string;
         firstName?: string;
@@ -134,7 +136,7 @@ async function ghlGetContact(
       };
     };
     const c = raw?.contact;
-    if (!c) return null;
+    if (!c || c.id?.trim() !== contactId || c.locationId !== SYNC_LOCATION_ID) return null;
     const name =
       c.contactName?.trim() ||
       c.name?.trim() ||
@@ -277,6 +279,13 @@ async function performSync(
         ).map((r) => [r.ghl_appointment_id, r]),
       );
       res.events = res.events.filter((e) => {
+        const gid = normalizeEventContact(e);
+        if (!gid) {
+          progress.failures++;
+          errors.push("Identidade de contato ausente ou divergente");
+          return false;
+        }
+        e.contactId = gid;
         if (ownershipConflict(owners.get(e.id), artist.id, calId, e.calendarId)) {
           progress.failures++;
           errors.push("Conflito de propriedade de evento");
@@ -302,8 +311,8 @@ async function performSync(
         if (!gid || seenGhl.has(gid)) continue;
         seenGhl.add(gid);
       }
-      // Reuse contacts already stored with a real name — avoids re-fetching
-      // every contact from the CRM and rewriting the contacts table each run.
+      // Local rows provide IDs only, never proof of CRM identity/location.
+      // Only contactInfo fetched and verified during this run can be reused.
       if (seenGhl.size > 0) {
         const { data: known, error: knownError } = await supabaseAdmin
           .from("contacts" as never)
@@ -319,16 +328,12 @@ async function performSync(
           email: string | null;
         }>) {
           contactIdMap.set(r.ghl_contact_id, r.id);
-          if (r.name && r.name !== "Sem nome" && !contactInfo.has(r.ghl_contact_id)) {
-            contactInfo.set(r.ghl_contact_id, { name: r.name, phone: r.phone, email: r.email });
-          }
         }
       }
       const needFetch = [...seenGhl].filter((g) => !contactInfo.has(g));
       await resolveContacts(needFetch, token, contactInfo, signal);
       signal.throwIfAborted();
       for (const gid of needFetch) {
-        if (contactIdMap.has(gid) && !contactInfo.get(gid)?.name) continue;
         const info = contactInfo.get(gid) ?? null;
         if (!info?.name) {
           progress.failures++;
@@ -350,6 +355,7 @@ async function performSync(
           )
           .abortSignal(signal);
         if (cErr) {
+          for (const c of contactUpserts) contactIdMap.delete(c.ghl_contact_id);
           progress.failures++;
           errors.push("Falha ao salvar contatos");
         } else {
@@ -357,28 +363,19 @@ async function performSync(
             contactIdMap.set(r.ghl_contact_id, r.id);
           }
         }
-        // Fallback: fetch any that upsert.select didn't return.
-        const missing = contactUpserts
-          .map((c) => c.ghl_contact_id)
-          .filter((g) => !contactIdMap.has(g));
-        if (missing.length > 0) {
-          const { data: fetchRows, error: fetchError } = await supabaseAdmin
-            .from("contacts" as never)
-            .select("id, ghl_contact_id")
-            .in("ghl_contact_id", missing)
-            .abortSignal(signal);
-          if (fetchError) {
-            progress.failures++;
-            errors.push("Falha ao confirmar contatos");
-          }
-          for (const r of (fetchRows ?? []) as Array<{
-            id: string;
-            ghl_contact_id: string;
-          }>) {
-            contactIdMap.set(r.ghl_contact_id, r.id);
-          }
-        }
       }
+
+      // Fail closed before building either write set, preserving ALL previous fields.
+      res.events = res.events.filter((e) => {
+        const gid = e.contactId;
+        if (!gid || !contactInfo.get(gid)?.name || !contactIdMap.get(gid)) {
+          progress.failures++;
+          errors.push("Evento excluído: contato não validado e resolvido");
+          return false;
+        }
+        return true;
+      });
+      if (!res.events.length) continue;
 
       // Concurrent runs (cron + manual admin click) can race the read-then-insert
       // pattern and trip the unique index on ghl_appointment_id. Split into:
@@ -430,8 +427,8 @@ async function performSync(
           !sameTime(r.end_at, e.endTime) ||
           r.status !== mapStatus(e.appointmentStatus) ||
           (info?.name != null && r.contact_name !== info.name) ||
-          (info?.phone != null && r.contact_phone !== info.phone) ||
-          (info?.email != null && r.contact_email !== info.email) ||
+          r.contact_phone !== (info?.phone ?? null) ||
+          r.contact_email !== (info?.email ?? null) ||
           r.ghl_contact_id !== (e.contactId ?? null) ||
           (linked != null && r.contact_id !== linked) ||
           r.calendar_id !== calId
@@ -516,9 +513,9 @@ async function performSync(
                   start_at: e.startTime,
                   end_at: e.endTime,
                   status: mapStatus(e.appointmentStatus),
-                  ...(info?.name ? { contact_name: info.name } : {}),
-                  ...(info?.phone ? { contact_phone: info.phone } : {}),
-                  ...(info?.email ? { contact_email: info.email } : {}),
+                  contact_name: info?.name ?? null,
+                  contact_phone: info?.phone ?? null,
+                  contact_email: info?.email ?? null,
                   ghl_contact_id: e.contactId ?? null,
                   ...(linkedContactId ? { contact_id: linkedContactId } : {}),
                   calendar_id: calId,
