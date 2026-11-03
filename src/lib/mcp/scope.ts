@@ -1,5 +1,6 @@
 import type { ToolContext } from "@lovable.dev/mcp-js";
 import { supabaseForUser } from "./supabase";
+import { resolveDashboardScope } from "@/lib/dashboard-scope";
 
 export interface ArtistScopeRow {
   id: string;
@@ -26,33 +27,9 @@ export interface McpScope {
  */
 export async function resolveScope(ctx: ToolContext): Promise<McpScope> {
   const supabase = supabaseForUser(ctx);
-  const { data: me } = await supabase
-    .from("app_users")
-    .select("id, role, artist_id, seller_id")
-    .maybeSingle();
-  const role = ((me as { role?: string } | null)?.role ?? "unknown") as McpScope["role"];
-  const artistId = (me as { artist_id?: string | null } | null)?.artist_id ?? null;
-
-  const { data: artistRows, error } = await supabase
-    .from("artists")
-    .select("id, name, ghl_calendar_id, ghl_user_id, active")
-    .order("name");
-  if (error) throw new Error(error.message);
-
-  const all = (artistRows ?? []) as unknown as ArtistScopeRow[];
-  const artists = role === "artist" && artistId ? all.filter((a) => a.id === artistId) : all;
-
-  const artistsByUserId = new Map<string, string>();
-  for (const a of all) if (a.ghl_user_id) artistsByUserId.set(a.ghl_user_id, a.name);
-
-  const own = artistId ? all.find((a) => a.id === artistId) : undefined;
-  return {
-    role,
-    artistId,
-    artists,
-    artistsByUserId,
-    restrictToGhlUserId: role === "artist" ? (own?.ghl_user_id ?? null) : null,
-  };
+  const userId = ctx.getUserId();
+  if (!userId) throw new Error("Não autenticado");
+  return resolveDashboardScope(supabase, userId);
 }
 
 export function calendarsFor(scope: McpScope) {

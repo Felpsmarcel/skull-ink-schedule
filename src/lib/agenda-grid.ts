@@ -1,4 +1,5 @@
 import type { GhlEvent } from "./ghl";
+import { fromZonedTime } from "date-fns-tz";
 
 export const SLOT_MINUTES = 30;
 export const DEFAULT_START_HOUR = 8;
@@ -95,21 +96,19 @@ function brusselsOffsetMs(at: Date): number {
 /** Start of given calendar date at 00:00 Europe/Brussels → UTC ms */
 export function brusselsDayStartMs(date: Date): number {
   const key = brusselsDayKey(date); // "YYYY-MM-DD"
-  const [y, m, d] = key.split("-").map(Number);
-  const guess = Date.UTC(y, m - 1, d, 0, 0, 0);
-  const off = brusselsOffsetMs(new Date(guess));
-  return guess - off;
+  return fromZonedTime(`${key}T00:00:00`, TZ).getTime();
 }
 
 export function brusselsDayEndMs(date: Date): number {
-  return brusselsDayStartMs(date) + 24 * 3600 * 1000 - 1;
+  return brusselsAddDays(brusselsDayStartMs(date), 1) - 1;
 }
 
 /** Shift a Brussels-day-start by N whole days. */
 export function brusselsAddDays(ms: number, days: number): number {
-  // Use day key arithmetic to survive DST boundaries.
-  const d = new Date(ms + days * 24 * 3600 * 1000);
-  return brusselsDayStartMs(d);
+  const key = brusselsDayKey(new Date(ms));
+  const shifted = new Date(`${key}T12:00:00Z`);
+  shifted.setUTCDate(shifted.getUTCDate() + days);
+  return fromZonedTime(`${shifted.toISOString().slice(0, 10)}T00:00:00`, TZ).getTime();
 }
 
 /** Monday 00:00 Europe/Brussels for the week containing `date`. */

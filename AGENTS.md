@@ -11,3 +11,5 @@
 
 - GHL sync uses a fixed studio location, private cron bearer, user-context admin RPCs and database-fenced expiring runs; this prevents public writes, overlapping jobs and false completion signals.
 - Sync migrations are staged under supabase/migrations and are applied only after review; no activation or live imports are part of preparation.
+- Mobile dashboard and MCP reads share verified identity scope and bounded paginated CRM queries; this prevents unknown-role admin fallback and divergent financial visibility.
+- Civil-date periods use timezone-library conversion to half-open UTC boundaries, and incomplete totals are null; this prevents DST boundary errors and sample-based financial claims.
