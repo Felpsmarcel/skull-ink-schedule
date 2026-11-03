@@ -13,7 +13,7 @@ export interface ProxyDeps {
   client(url: string, key: string, auth: string): ProxyClient;
   fetch: typeof fetch;
 }
-const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "POST, OPTIONS", "Access-Control-Allow-Headers": "authorization, apikey, content-type" };
+const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "POST, OPTIONS", "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info" };
 function json(status: number, data: unknown) { return Response.json(data, { status, headers: { ...cors, "Cache-Control": "private, no-store" } }); }
 function object(v: unknown): v is Row { return !!v && typeof v === "object" && !Array.isArray(v); }
 function locationsValid(v: unknown): boolean {

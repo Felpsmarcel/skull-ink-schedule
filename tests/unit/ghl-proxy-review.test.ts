@@ -12,6 +12,26 @@ const deps: ProxyDeps = {
 function request(p: unknown, token: string | null = "fictional-session") { return new Request("https://example.test/proxy", { method: "POST", headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify(p) }); }
 const events = { path: "/calendars/events", query: { calendarId: "cal-A", locationId: GF_LOCATION, startTime: 1, endTime: 2 } };
 beforeEach(() => { role = "artist"; jwtOk = true; artistCalendar = "cal-A"; env = { GHL_TOKEN: "fictional-ghl", SUPABASE_URL: "https://example.test", SUPABASE_ANON_KEY: "fictional-public" }; upstream.mockReset(); upstream.mockImplementation(async (url) => String(url).endsWith("/calendars/cal-A") ? Response.json({ calendar: { id: "cal-A", locationId: GF_LOCATION } }) : Response.json({ events: [{ id: "evt-A", calendarId: "cal-A" }] })); });
+it("OPTIONS permits all invoke headers without authentication or upstream calls", async () => {
+  const client = vi.fn(deps.client);
+  const requestedHeaders = ["Authorization", "apikey", "content-type", "x-client-info"];
+  const response = await createProxyHandler({ ...deps, client })(new Request("https://example.test/proxy", {
+    method: "OPTIONS",
+    headers: {
+      Origin: "https://frontend.example.test",
+      "Access-Control-Request-Method": "POST",
+      "Access-Control-Request-Headers": requestedHeaders.join(", "),
+    },
+  }));
+  expect(response.status).toBe(204);
+  expect(await response.text()).toBe("");
+  expect(response.headers.get("Access-Control-Allow-Origin")).toBe("*");
+  expect(response.headers.get("Access-Control-Allow-Methods")?.split(",").map(v => v.trim())).toContain("POST");
+  const allowed = response.headers.get("Access-Control-Allow-Headers")?.toLowerCase().split(",").map(v => v.trim());
+  for (const header of requestedHeaders) expect(allowed).toContain(header.toLowerCase());
+  expect(client).not.toHaveBeenCalled();
+  expect(upstream).not.toHaveBeenCalled();
+});
 it("no token never reaches upstream", async () => { expect((await createProxyHandler(deps)(request(events, null))).status).toBe(401); expect(upstream).not.toHaveBeenCalled(); });
 it("public key is not identity", async () => { expect((await createProxyHandler(deps)(request(events, "fictional-public"))).status).toBe(401); expect(upstream).not.toHaveBeenCalled(); });
 it("invalid JWT is denied", async () => { jwtOk = false; expect((await createProxyHandler(deps)(request(events))).status).toBe(401); expect(upstream).not.toHaveBeenCalled(); });
