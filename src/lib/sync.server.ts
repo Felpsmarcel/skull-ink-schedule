@@ -431,7 +431,7 @@ async function performSync(runId: string, signal: AbortSignal, opts?: {
         });
         failures += toInsert.length;
       } else {
-        inserted += Array.isArray(insertedRows) ? insertedRows.length : 0;
+        inserted += Array.isArray(insertedRows as unknown) ? (insertedRows as unknown as unknown[]).length : 0;
       }
     }
 
@@ -462,7 +462,7 @@ async function performSync(runId: string, signal: AbortSignal, opts?: {
         errors.push(`update ${e.id}: ${upErr.message}`);
         failures++;
       } else {
-        updated += Array.isArray(changedRows) ? changedRows.length : 0;
+        updated += Array.isArray(changedRows as unknown) ? (changedRows as unknown as unknown[]).length : 0;
       }
     }
   }

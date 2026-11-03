@@ -120,7 +120,7 @@ function AgendaPage() {
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const { data: me } = useCurrentUser();
-  const restrictArtistId = me?.role === "artist" ? (me.artist_id ?? "unlinked") : null;
+  const restrictArtistId = me?.role === "artist" ? (me.artistId ?? "unlinked") : null;
 
   const dateLabel = useMemo(() => {
     const locale = resolveIntlLocale(i18n.language);
