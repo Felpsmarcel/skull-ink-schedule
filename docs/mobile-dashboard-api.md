@@ -64,6 +64,7 @@ Comissões contratuais existentes não foram alteradas. Não foi implementada es
 Revisão deste diff; autorização para migração de sync e segredo privado/Vault; publicação coordenada somente depois de autorização; cliente móvel compatível com sessão/PKCE e nova entrega APK pela HighLevel; teste autenticado real antes de declarar integração concluída. Migração segura não foi aplicada nem cron novo ativado.
 
 ### Pendências de segurança preservadas
+- Validação final desta revisão: 179 testes fictícios passaram; compilação automática OK. Casos incluem página vazia contraditória, IDs inválidos/duplicados, total variável, cursor repetido/inconsistente, homônimos CRM/app com 100 e 250 EUR separados e valores ausentes sem coerção para zero. Regressões da API, DST, omissão financeira do artista, sync e proxy preparado permanecem passando.
 - Incorporar `docs/sql/ghl-sync-contact-identity.review.sql` na migração protegida pelo fluxo autorizado; a migração original ainda contém a definição antiga. Não aplicar isoladamente sem essa revisão.
 - Incorporar e publicar, somente com autorização, o substituto em `docs/edge-review/ghl-proxy-handler.ts`; o proxy legado não foi alterado/deployado e permanece vulnerável.
 - Backfill de contatos segue desativado até compartilhar lease/fencing/deadline. Dia/semana/mês seguem isolados ao artista e negam vínculo não comprovado.
