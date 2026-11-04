@@ -44,6 +44,7 @@ import {
   setAppointmentPaymentStatus,
   setAppointmentSeller,
   reassignAppointmentArtist,
+  importAppointmentFromCrm,
   type AppointmentFinanceView,
 } from "@/lib/appointments.functions";
 import { listSellers } from "@/lib/sellers.functions";
@@ -317,6 +318,15 @@ function FinanceSection({
 
   const [showValueForm, setShowValueForm] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const importFn = useServerFn(importAppointmentFromCrm);
+  const importMut = useMutation({
+    mutationFn: () => importFn({ data: { ghlEventId } }),
+    onSuccess: async () => {
+      await financeQ.refetch();
+      setShowValueForm(true);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   const invalidateAll = () => {
     queryClient.invalidateQueries({ queryKey: ["appointment-finance", ghlEventId] });
@@ -339,10 +349,17 @@ function FinanceSection({
           onRetry={() => financeQ.refetch()}
         />
       ) : !financeQ.data?.appointmentId ? (
-        <p className="rounded border border-dashed border-border p-2 text-[11px] text-muted-foreground">
-          Agendamento ainda não sincronizado no banco. Os valores aparecerão após a
-          próxima sincronização.
-        </p>
+        <div className="flex flex-col gap-2 rounded border border-dashed border-border p-2 text-[11px] text-muted-foreground">
+          <p>Este agendamento ainda não está no app. Traga-o do CRM para editar os valores.</p>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={importMut.isPending}
+            onClick={() => importMut.mutate()}
+          >
+            {importMut.isPending ? "A trazer…" : "Editar valores"}
+          </Button>
+        </div>
       ) : !financeQ.data.visible ? (
         <p className="rounded border border-dashed border-border p-2 text-[11px] text-muted-foreground">
           Valores financeiros visíveis apenas para o tatuador responsável e para
