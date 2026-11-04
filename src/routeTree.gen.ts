@@ -46,6 +46,7 @@ import { Route as AuthenticatedOnboardingProntoRouteImport } from './routes/_aut
 import { Route as AuthenticatedOnboardingServicosRouteImport } from './routes/_authenticated/onboarding.servicos'
 import { Route as AuthenticatedRelatoriosMovimentacoesRouteImport } from './routes/_authenticated/relatorios.movimentacoes'
 import { Route as ApiPublicMobileDashboardRouteImport } from './routes/api/public/mobile-dashboard'
+import { Route as ApiPublicPaymentMirrorRunRouteImport } from './routes/api/public/payment-mirror-run'
 import { Route as LovableEmailEventsRouteImport } from './routes/lovable/email/events'
 import { Route as AuthenticatedAdminAdminConfiguracoesRouteImport } from './routes/_authenticated/_admin/admin.configuracoes'
 import { Route as AuthenticatedAdminAdminEquipeRouteImport } from './routes/_authenticated/_admin/admin.equipe'
@@ -265,6 +266,12 @@ const ApiPublicMobileDashboardRoute =
     path: '/api/public/mobile-dashboard',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicPaymentMirrorRunRoute =
+  ApiPublicPaymentMirrorRunRouteImport.update({
+    id: '/api/public/payment-mirror-run',
+    path: '/api/public/payment-mirror-run',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const LovableEmailEventsRoute = LovableEmailEventsRouteImport.update({
   id: '/lovable/email/events',
   path: '/lovable/email/events',
@@ -423,6 +430,7 @@ export interface FileRoutesByFullPath {
   '/onboarding/servicos': typeof AuthenticatedOnboardingServicosRoute
   '/relatorios/movimentacoes': typeof AuthenticatedRelatoriosMovimentacoesRoute
   '/api/public/mobile-dashboard': typeof ApiPublicMobileDashboardRoute
+  '/api/public/payment-mirror-run': typeof ApiPublicPaymentMirrorRunRoute
   '/lovable/email/events': typeof LovableEmailEventsRoute
   '/movimentacao/': typeof AuthenticatedMovimentacaoIndexRoute
   '/admin/configuracoes': typeof AuthenticatedAdminAdminConfiguracoesRoute
@@ -480,6 +488,7 @@ export interface FileRoutesByTo {
   '/onboarding/servicos': typeof AuthenticatedOnboardingServicosRoute
   '/relatorios/movimentacoes': typeof AuthenticatedRelatoriosMovimentacoesRoute
   '/api/public/mobile-dashboard': typeof ApiPublicMobileDashboardRoute
+  '/api/public/payment-mirror-run': typeof ApiPublicPaymentMirrorRunRoute
   '/lovable/email/events': typeof LovableEmailEventsRoute
   '/movimentacao': typeof AuthenticatedMovimentacaoIndexRoute
   '/admin/configuracoes': typeof AuthenticatedAdminAdminConfiguracoesRoute
@@ -541,6 +550,7 @@ export interface FileRoutesById {
   '/_authenticated/onboarding/servicos': typeof AuthenticatedOnboardingServicosRoute
   '/_authenticated/relatorios/movimentacoes': typeof AuthenticatedRelatoriosMovimentacoesRoute
   '/api/public/mobile-dashboard': typeof ApiPublicMobileDashboardRoute
+  '/api/public/payment-mirror-run': typeof ApiPublicPaymentMirrorRunRoute
   '/lovable/email/events': typeof LovableEmailEventsRoute
   '/_authenticated/movimentacao/': typeof AuthenticatedMovimentacaoIndexRoute
   '/_authenticated/_admin/admin/configuracoes': typeof AuthenticatedAdminAdminConfiguracoesRoute
@@ -601,6 +611,7 @@ export interface FileRouteTypes {
     | '/onboarding/servicos'
     | '/relatorios/movimentacoes'
     | '/api/public/mobile-dashboard'
+    | '/api/public/payment-mirror-run'
     | '/lovable/email/events'
     | '/movimentacao/'
     | '/admin/configuracoes'
@@ -658,6 +669,7 @@ export interface FileRouteTypes {
     | '/onboarding/servicos'
     | '/relatorios/movimentacoes'
     | '/api/public/mobile-dashboard'
+    | '/api/public/payment-mirror-run'
     | '/lovable/email/events'
     | '/movimentacao'
     | '/admin/configuracoes'
@@ -718,6 +730,7 @@ export interface FileRouteTypes {
     | '/_authenticated/onboarding/servicos'
     | '/_authenticated/relatorios/movimentacoes'
     | '/api/public/mobile-dashboard'
+    | '/api/public/payment-mirror-run'
     | '/lovable/email/events'
     | '/_authenticated/movimentacao/'
     | '/_authenticated/_admin/admin/configuracoes'
@@ -762,6 +775,7 @@ export interface RootRouteChildren {
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiPublicMobileDashboardRoute: typeof ApiPublicMobileDashboardRoute
+  ApiPublicPaymentMirrorRunRoute: typeof ApiPublicPaymentMirrorRunRoute
   LovableEmailEventsRoute: typeof LovableEmailEventsRoute
   ApiPublicHooksSendRemindersRoute: typeof ApiPublicHooksSendRemindersRoute
   ApiPublicHooksSyncGhlRoute: typeof ApiPublicHooksSyncGhlRoute
@@ -1029,6 +1043,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/mobile-dashboard'
       fullPath: '/api/public/mobile-dashboard'
       preLoaderRoute: typeof ApiPublicMobileDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/payment-mirror-run': {
+      id: '/api/public/payment-mirror-run'
+      path: '/api/public/payment-mirror-run'
+      fullPath: '/api/public/payment-mirror-run'
+      preLoaderRoute: typeof ApiPublicPaymentMirrorRunRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/lovable/email/events': {
@@ -1328,6 +1349,7 @@ const rootRouteChildren: RootRouteChildren = {
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiPublicMobileDashboardRoute: ApiPublicMobileDashboardRoute,
+  ApiPublicPaymentMirrorRunRoute: ApiPublicPaymentMirrorRunRoute,
   LovableEmailEventsRoute: LovableEmailEventsRoute,
   ApiPublicHooksSendRemindersRoute: ApiPublicHooksSendRemindersRoute,
   ApiPublicHooksSyncGhlRoute: ApiPublicHooksSyncGhlRoute,
