@@ -238,6 +238,8 @@ CREATE OR REPLACE FUNCTION public.claim_payment_mirror(p_limit integer, p_lease_
 RETURNS SETOF public.payment_mirror_outbox LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE c record; v_token uuid; v_got integer := 0; v_row public.payment_mirror_outbox;
 BEGIN
+  DELETE FROM public.payment_mirror_project_locks l USING public.payment_mirror_outbox o
+   WHERE l.outbox_id = o.id AND (o.lease_until IS NULL OR o.lease_until < now());
   UPDATE public.payment_mirror_outbox
      SET state = CASE in_flight WHEN 'create' THEN 'fatura_a_conciliar' ELSE 'pagamento_a_conciliar' END,
          reason = 'in_flight_expirado', in_flight = NULL, lease_token = NULL, lease_until = NULL, updated_at = now()
