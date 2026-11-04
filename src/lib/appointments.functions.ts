@@ -323,7 +323,7 @@ export const createAppointmentRecord = createServerFn({ method: "POST" })
             .from("appointments" as never)
             .update({ contact_id: contactId } as never)
             .eq("id", inserted.id);
-          await supabaseAdmin.from("payments" as never).insert({
+          const { data: dep } = await supabaseAdmin.from("payments" as never).insert({
             appointment_id: inserted.id,
             contact_id: contactId,
             amount_eur: depositEur,
@@ -333,7 +333,12 @@ export const createAppointmentRecord = createServerFn({ method: "POST" })
             paid_at: new Date().toISOString(),
             notes: "Sinal registrado no agendamento",
             created_by: userId,
-          } as never);
+          } as never).select("id").maybeSingle();
+          const depId = (dep as { id: string } | null)?.id;
+          if (depId) {
+            const { runReceiptHook } = await import("./payment-mirror-hook.server");
+            await runReceiptHook(supabase, [{ source: "booking_deposit", id: depId }]);
+          }
         }
       } catch (depErr) {
         console.error("[createAppointmentRecord] deposit registration failed", depErr);
@@ -838,6 +843,11 @@ export const registerAppointmentPayment = createServerFn({ method: "POST" })
       .select("id")
       .single();
     if (insErr || !ins) throw new Error(insErr?.message ?? "Falha ao registrar pagamento");
+    if (data.status === "paid") {
+      // Mirror hook: no-op while disabled; never alters this flow.
+      const { runReceiptHook } = await import("./payment-mirror-hook.server");
+      await runReceiptHook(supabase, [{ source: "payment", id: (ins as { id: string }).id }]);
+    }
     return { paymentId: (ins as { id: string }).id };
   });
 

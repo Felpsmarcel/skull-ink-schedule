@@ -77,6 +77,7 @@ function MenuPage() {
             <>
               <Row to="/admin/fila" icon={<Users className="h-4 w-4" />} label="Fila do dia" />
               <Row to="/admin/saude" icon={<Activity className="h-4 w-4" />} label="Saúde do sistema" />
+              <Row to="/admin/configuracoes" icon={<Settings className="h-4 w-4" />} label="Configurações" />
               <Row to="/admin/equipe" icon={<Users className="h-4 w-4" />} label="Equipe" />
               <Row to="/admin/vendedores" icon={<UserSquare2 className="h-4 w-4" />} label="Vendedores" />
               <Row to="/admin/movimentacao-links" icon={<Link2 className="h-4 w-4" />} label="Links de pagamento" />
