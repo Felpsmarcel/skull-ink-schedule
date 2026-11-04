@@ -78,6 +78,13 @@
       "when": 1788021316373,
       "tag": "0010_operational_events",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793785562244,
+      "tag": "0011_restrict_sellers_select",
+      "breakpoints": true
     }
   ]
 }
