@@ -8,6 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import {
+  checkPaymentMirrorConnection,
+  type PaymentMirrorConnectionResult,
+} from "@/lib/payment-mirror-connection.functions";
+import {
   confirmReceipt,
   getPaymentMirrorStatus,
   getReceiptCandidates,
@@ -206,6 +210,8 @@ function Configuracoes() {
           </>
         )}
       </section>
+
+      <VerificarConexaoGhl />
 
       {active && (
         <section className="space-y-4" aria-labelledby="receipt-queue-title">
@@ -436,5 +442,128 @@ function Configuracoes() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+const CONNECTION_CHECK_LABELS = [
+  ["calendar", "Calendário da GF"],
+  ["invoices", "Consulta de faturas"],
+  ["transactions", "Consulta de transações"],
+] as const;
+const CONNECTION_REASON_LABEL: Record<string, string> = {
+  token_ausente: "Credencial do servidor ainda não configurada.",
+  calendario_ausente: "Calendário de conferência ainda não configurado.",
+  consulta_calendario_falhou: "Não foi possível conferir o calendário.",
+  calendario_divergente: "O calendário precisa de conferência.",
+  resposta_invalida: "A resposta recebida precisa de revisão.",
+  nao_autorizado: "A credencial não foi autorizada.",
+  sem_permissao: "Permissão de leitura não concedida.",
+  limite_temporario: "Limite temporário de consultas. Tente mais tarde.",
+  http_falhou: "O GHL não concluiu a consulta.",
+  timeout: "A consulta demorou além do limite.",
+  rede_indisponivel: "Não foi possível acessar o GHL.",
+  verificacao_calendario_pendente: "A consulta aguarda a conferência do calendário.",
+};
+function connectionCheckedAt(value: string) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? "Horário indisponível"
+    : new Intl.DateTimeFormat("pt-PT", {
+        timeZone: "Europe/Brussels",
+        dateStyle: "short",
+        timeStyle: "medium",
+      }).format(date);
+}
+function VerificarConexaoGhl() {
+  const checkFn = useServerFn(checkPaymentMirrorConnection);
+  const check = useMutation<PaymentMirrorConnectionResult>({
+    mutationFn: () => checkFn(),
+    retry: false,
+  });
+  const results = check.data;
+  return (
+    <section
+      className="space-y-3 rounded-lg border border-border bg-card p-4"
+      aria-labelledby="connection-check-title"
+      aria-busy={check.isPending}
+    >
+      <h2 id="connection-check-title" className="font-medium">
+        Conexão de leitura com o GHL
+      </h2>
+      <p className="text-sm text-muted-foreground">
+        Consulta apenas; não cria faturas ou pagamentos.
+      </p>
+      <Button
+        type="button"
+        className="min-h-11 w-full sm:w-auto"
+        disabled={check.isPending}
+        onClick={() => check.mutate()}
+      >
+        {check.isPending ? "Verificando conexão..." : "Verificar conexão com o GHL"}
+      </Button>
+      <div className="space-y-3" aria-live="polite">
+        {check.isPending && (
+          <p className="text-sm text-muted-foreground">Consultando o GHL. Aguarde o resultado.</p>
+        )}
+        {check.isError && (
+          <p className="text-sm text-destructive">
+            Não foi possível verificar a conexão. Tente novamente.
+          </p>
+        )}
+        {results && !check.isPending && !check.isError && (
+          <>
+            <p className="text-sm text-muted-foreground">
+              Credencial no servidor: {results.tokenConfigured ? "configurada" : "não configurada"}.
+            </p>
+            <ul className="divide-y divide-border">
+              {CONNECTION_CHECK_LABELS.map(([key, label]) => {
+                const result = results[key];
+                return (
+                  <li key={key} className="space-y-1 py-3">
+                    <div className="flex flex-wrap items-start justify-between gap-2 text-sm">
+                      <span className="font-medium">{label}</span>
+                      <span
+                        className={
+                          result.state === "ok"
+                            ? "text-primary"
+                            : result.state === "erro"
+                              ? "text-destructive"
+                              : "text-muted-foreground"
+                        }
+                      >
+                        {result.state === "ok"
+                          ? "Leitura autorizada"
+                          : result.state === "erro"
+                            ? "Falha na consulta"
+                            : "Não testado"}
+                        {result.status !== null && ` · HTTP ${result.status}`}
+                      </span>
+                    </div>
+                    {result.reason && (
+                      <p className="text-xs text-muted-foreground">
+                        {CONNECTION_REASON_LABEL[result.reason] ??
+                          "A consulta precisa de conferência."}
+                      </p>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+            <p className="text-sm">
+              {results.readAccessVerified
+                ? "Leitura conferida. Esta verificação não ativa nem altera a sincronização."
+                : "Leitura ainda não conferida. Esta verificação não ativa nem altera a sincronização."}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Esta consulta não comprova permissão de escrita nem identifica o titular da
+              credencial.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Verificado em {connectionCheckedAt(results.checkedAt)} · Bruxelas
+            </p>
+          </>
+        )}
+      </div>
+    </section>
   );
 }
