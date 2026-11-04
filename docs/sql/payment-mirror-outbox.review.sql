@@ -119,11 +119,44 @@ CREATE POLICY admin_read ON public.project_invoice_links FOR SELECT TO authentic
 CREATE POLICY admin_read ON public.payment_mirror_outbox FOR SELECT TO authenticated USING (public.current_user_role() = 'admin');
 CREATE POLICY admin_read ON public.payment_receipt_refunds FOR SELECT TO authenticated USING (public.current_user_role() = 'admin');
 
+-- Confirmed receipts are immutable financial events. Notes/labels may change, but financial
+-- edits/deletion require an adjustment/refund event; an already queued snapshot must not silently drift.
+CREATE OR REPLACE FUNCTION public.payment_source_immutable_trg() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE v_canon text;
+BEGIN
+  v_canon := CASE TG_TABLE_NAME WHEN 'payments' THEN 'payment' ELSE 'movimentacao' END;
+  IF EXISTS (SELECT 1 FROM public.payment_receipt_sources WHERE source = v_canon AND source_id = OLD.id) THEN
+    IF TG_OP = 'DELETE' THEN RAISE EXCEPTION 'recebimento_confirmado_imutavel_use_ajuste'; END IF;
+    IF TG_TABLE_NAME = 'payments' THEN
+      IF (NEW.id, NEW.amount_eur, NEW.type, NEW.method, NEW.status, NEW.paid_at, NEW.contact_id, NEW.appointment_id)
+        IS DISTINCT FROM (OLD.id, OLD.amount_eur, OLD.type, OLD.method, OLD.status, OLD.paid_at, OLD.contact_id, OLD.appointment_id)
+        THEN RAISE EXCEPTION 'recebimento_confirmado_imutavel_use_ajuste'; END IF;
+    ELSE
+      -- total is GENERATED ALWAYS from these four components; NEW.total is not available in a BEFORE trigger.
+      IF (NEW.id, NEW.valor_cartao, NEW.valor_dinheiro, NEW.valor_sumup, NEW.valor_transferencia,
+          NEW.data_pagamento, NEW.forma_pagamento, NEW.tipo_movimento, NEW.project_id,
+          NEW.appointment_id, NEW.ghl_contact_id, NEW.deleted_at)
+        IS DISTINCT FROM (OLD.id, OLD.valor_cartao, OLD.valor_dinheiro, OLD.valor_sumup, OLD.valor_transferencia,
+          OLD.data_pagamento, OLD.forma_pagamento, OLD.tipo_movimento, OLD.project_id,
+          OLD.appointment_id, OLD.ghl_contact_id, OLD.deleted_at)
+        THEN RAISE EXCEPTION 'recebimento_confirmado_imutavel_use_ajuste'; END IF;
+    END IF;
+  END IF;
+  IF TG_OP = 'DELETE' THEN RETURN OLD; END IF;
+  RETURN NEW;
+END $$;
+CREATE TRIGGER payment_source_immutable BEFORE UPDATE OR DELETE ON public.payments
+  FOR EACH ROW EXECUTE FUNCTION public.payment_source_immutable_trg();
+CREATE TRIGGER movimentacao_source_immutable BEFORE UPDATE OR DELETE ON public.movimentacoes
+  FOR EACH ROW EXECUTE FUNCTION public.payment_source_immutable_trg();
+
 -- 6) Source loader: derives everything from the tables. Internal (no EXECUTE for clients).
 CREATE OR REPLACE FUNCTION public.payment_mirror_load_source(p_alias text, p_source_id uuid)
 RETURNS TABLE(canon text, project_id uuid, ghl_contact_id text, amount_cents integer, paid_on date, method text)
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-DECLARE v_amount numeric;
+DECLARE v_amount numeric; v_declared_contact text; v_appointment uuid;
+  v_appt_project uuid; v_appt_contact text; v_local_contact text; v_project_contact text;
 BEGIN
   IF p_alias = 'movimentacao' THEN
     SELECT 'movimentacao', m.project_id, m.ghl_contact_id,
@@ -133,8 +166,35 @@ BEGIN
       FROM public.movimentacoes m
      WHERE m.id = p_source_id AND m.deleted_at IS NULL AND m.tipo_movimento <> 'estorno'
      FOR UPDATE OF m;
+    IF NOT FOUND THEN RAISE EXCEPTION 'fonte_invalida'; END IF;
+    v_declared_contact := ghl_contact_id;
+    SELECT m.appointment_id INTO v_appointment FROM public.movimentacoes m WHERE m.id = p_source_id;
+    IF v_appointment IS NOT NULL THEN
+      SELECT a.project_id, a.ghl_contact_id INTO v_appt_project, v_appt_contact
+        FROM public.appointments a WHERE a.id = v_appointment FOR SHARE;
+      IF NOT FOUND THEN RAISE EXCEPTION 'fonte_invalida'; END IF;
+      IF project_id IS NOT NULL AND v_appt_project IS NOT NULL AND project_id <> v_appt_project
+        THEN RAISE EXCEPTION 'projeto_divergente'; END IF;
+      project_id := coalesce(project_id, v_appt_project);
+      -- The local contact FK is a separate identity witness; never match names.
+      SELECT c.ghl_contact_id INTO v_local_contact FROM public.contacts c
+        JOIN public.appointments a ON a.contact_id = c.id WHERE a.id = v_appointment FOR SHARE OF c;
+      IF v_appt_contact IS NOT NULL AND v_local_contact IS NOT NULL AND v_appt_contact <> v_local_contact
+        THEN RAISE EXCEPTION 'contato_divergente'; END IF;
+    END IF;
+    IF project_id IS NULL THEN RAISE EXCEPTION 'projeto_ausente'; END IF;
+    SELECT p.ghl_contact_id INTO v_project_contact FROM public.tattoo_projects p
+      WHERE p.id = project_id FOR SHARE;
+    IF NOT FOUND THEN RAISE EXCEPTION 'projeto_ausente'; END IF;
+    IF v_project_contact IS NULL THEN RAISE EXCEPTION 'contato_ausente'; END IF;
+    IF (v_declared_contact IS NOT NULL AND v_declared_contact <> v_project_contact)
+      OR (v_appt_contact IS NOT NULL AND v_appt_contact <> v_project_contact)
+      OR (v_local_contact IS NOT NULL AND v_local_contact <> v_project_contact)
+      THEN RAISE EXCEPTION 'contato_divergente'; END IF;
+    ghl_contact_id := v_project_contact;
   ELSIF p_alias IN ('payment','booking_deposit') THEN
-    SELECT 'payment', a.project_id, c.ghl_contact_id, p.amount_eur, p.paid_at::date, p.method::text
+    SELECT 'payment', a.project_id, c.ghl_contact_id, p.amount_eur,
+           (p.paid_at AT TIME ZONE 'Europe/Brussels')::date, p.method::text
       INTO canon, project_id, ghl_contact_id, v_amount, paid_on, method
       FROM public.payments p
       JOIN public.contacts c ON c.id = p.contact_id
@@ -161,7 +221,8 @@ CREATE OR REPLACE FUNCTION public.confirm_receipt(
   p_source text, p_source_id uuid, p_expected_project_id uuid DEFAULT NULL,
   p_same_event_source text DEFAULT NULL, p_same_event_source_id uuid DEFAULT NULL
 ) RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-DECLARE s record; o record; v_ocanon text; v_proj_contact text; v_key text; v_hash text; v_receipt uuid; v_existing record; v_mapped uuid;
+DECLARE s record; o record; v_ocanon text; v_proj_contact text; v_key text; v_hash text;
+  v_receipt uuid; v_existing record; v_mapped uuid; v_method text; v_other_method text;
 BEGIN
   IF auth.uid() IS NULL OR public.current_user_role() IS DISTINCT FROM 'admin' THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
@@ -170,6 +231,8 @@ BEGIN
   IF p_expected_project_id IS NOT NULL AND p_expected_project_id <> s.project_id THEN RAISE EXCEPTION 'projeto_divergente'; END IF;
   SELECT ghl_contact_id INTO v_proj_contact FROM public.tattoo_projects WHERE id = s.project_id FOR SHARE;
   IF NOT FOUND OR v_proj_contact IS DISTINCT FROM s.ghl_contact_id THEN RAISE EXCEPTION 'contato_divergente'; END IF;
+  v_method := CASE s.method WHEN 'dinheiro' THEN 'cash' WHEN 'cartao' THEN 'card'
+    WHEN 'transferencia' THEN 'transfer' ELSE s.method END;
 
   IF p_same_event_source IS NOT NULL THEN
     SELECT * INTO o FROM public.payment_mirror_load_source(p_same_event_source, p_same_event_source_id);
@@ -177,11 +240,22 @@ BEGIN
     IF o.canon = s.canon AND p_same_event_source_id = p_source_id THEN RAISE EXCEPTION 'mesma_fonte'; END IF;
     IF (o.project_id, o.ghl_contact_id, o.amount_cents, o.paid_on) IS DISTINCT FROM (s.project_id, s.ghl_contact_id, s.amount_cents, s.paid_on)
       THEN RAISE EXCEPTION 'evento_divergente'; END IF;
+    -- Normalize only equivalent labels. SumUp/Payconiq/unknown remain distinct methods.
+    v_other_method := CASE o.method WHEN 'dinheiro' THEN 'cash' WHEN 'cartao' THEN 'card'
+      WHEN 'transferencia' THEN 'transfer' ELSE o.method END;
+    IF v_method IS DISTINCT FROM v_other_method THEN RAISE EXCEPTION 'evento_divergente'; END IF;
   END IF;
+
+  v_key := s.canon || ':' || p_source_id::text;
+  v_hash := md5(concat_ws('|', s.project_id, s.ghl_contact_id, s.amount_cents, s.paid_on, v_method));
 
   -- Already mapped? (covers payment vs booking_deposit alias of the same row)
   SELECT receipt_id INTO v_mapped FROM public.payment_receipt_sources WHERE source = s.canon AND source_id = p_source_id;
   IF FOUND THEN
+    SELECT payload_hash INTO v_existing FROM public.payment_receipts WHERE id = v_mapped FOR UPDATE;
+    IF NOT FOUND OR v_existing.payload_hash IS DISTINCT FROM v_hash THEN
+      RAISE EXCEPTION 'conflito_idempotencia';
+    END IF;
     IF p_same_event_source IS NOT NULL AND NOT EXISTS (
       SELECT 1 FROM public.payment_receipt_sources WHERE receipt_id = v_mapped AND source = v_ocanon AND source_id = p_same_event_source_id)
       THEN RAISE EXCEPTION 'conflito_mapeamento'; END IF;
@@ -191,8 +265,6 @@ BEGIN
     SELECT 1 FROM public.payment_receipt_sources WHERE source = v_ocanon AND source_id = p_same_event_source_id)
     THEN RAISE EXCEPTION 'conflito_mapeamento'; END IF;
 
-  v_key := s.canon || ':' || p_source_id::text;
-  v_hash := md5(concat_ws('|', s.project_id, s.ghl_contact_id, s.amount_cents, s.paid_on, s.method));
   SELECT id, payload_hash INTO v_existing FROM public.payment_receipts WHERE idempotency_key = v_key FOR UPDATE;
   IF FOUND THEN RAISE EXCEPTION 'conflito_idempotencia'; END IF; -- key without mapping is inconsistent
 
@@ -231,6 +303,29 @@ BEGIN
 END $$;
 REVOKE ALL ON FUNCTION public.request_receipt_refund(uuid, integer, date) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.request_receipt_refund(uuid, integer, date) TO authenticated;
+
+-- A source may also drift through an appointment/project linkage or legacy privileged import.
+-- Revalidate every mapped source under the worker lease, and again immediately before a POST.
+CREATE OR REPLACE FUNCTION public.payment_mirror_receipt_valid(p_receipt uuid)
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE r record; m record; s record; v_method text; v_hash text; v_count integer := 0; v_project_contact text;
+BEGIN
+  SELECT * INTO r FROM public.payment_receipts WHERE id = p_receipt;
+  IF NOT FOUND THEN RETURN false; END IF;
+  SELECT ghl_contact_id INTO v_project_contact FROM public.tattoo_projects WHERE id = r.project_id FOR SHARE;
+  IF NOT FOUND OR v_project_contact IS DISTINCT FROM r.ghl_contact_id THEN RETURN false; END IF;
+  FOR m IN SELECT source_id, alias FROM public.payment_receipt_sources WHERE receipt_id = p_receipt LOOP
+    SELECT * INTO s FROM public.payment_mirror_load_source(m.alias, m.source_id);
+    v_method := CASE s.method WHEN 'dinheiro' THEN 'cash' WHEN 'cartao' THEN 'card'
+      WHEN 'transferencia' THEN 'transfer' ELSE s.method END;
+    v_hash := md5(concat_ws('|', s.project_id, s.ghl_contact_id, s.amount_cents, s.paid_on, v_method));
+    IF r.payload_hash IS DISTINCT FROM v_hash THEN RETURN false; END IF;
+    v_count := v_count + 1;
+  END LOOP;
+  RETURN v_count > 0;
+EXCEPTION WHEN OTHERS THEN RETURN false; -- invalid/missing source is never permission to send
+END $$;
+REVOKE ALL ON FUNCTION public.payment_mirror_receipt_valid(uuid) FROM PUBLIC, anon, authenticated;
 
 -- 9) Worker claim (service_role only): recovers expired in-flight as a_conciliar, then leases at most
 --    ONE job per project via the project lock table (blocks concurrent claimers on the same project).
@@ -272,7 +367,15 @@ END $$;
 -- Fenced helpers: every write requires the current lease token and an unexpired lease.
 CREATE OR REPLACE FUNCTION public.mirror_mark_in_flight(p_id uuid, p_token uuid, p_phase text)
 RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE v_receipt uuid;
 BEGIN
+  SELECT receipt_id INTO v_receipt FROM public.payment_mirror_outbox
+   WHERE id = p_id AND lease_token = p_token AND lease_until > now() AND in_flight IS NULL FOR UPDATE;
+  IF NOT FOUND THEN RETURN false; END IF;
+  IF NOT public.payment_mirror_receipt_valid(v_receipt) THEN
+    PERFORM public.mirror_set_state(p_id, p_token, 'revisao', 'fonte_alterada', NULL, NULL);
+    RETURN false;
+  END IF;
   UPDATE public.payment_mirror_outbox SET in_flight = p_phase, updated_at = now()
    WHERE id = p_id AND lease_token = p_token AND lease_until > now() AND in_flight IS NULL;
   RETURN FOUND;
@@ -294,24 +397,40 @@ END $$;
 
 CREATE OR REPLACE FUNCTION public.mirror_save_link(p_id uuid, p_token uuid, p_invoice text)
 RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-DECLARE v_proj uuid; v_existing text;
+DECLARE v_proj uuid; v_existing text; v_matches boolean;
 BEGIN
   SELECT r.project_id INTO v_proj FROM public.payment_mirror_outbox o JOIN public.payment_receipts r ON r.id = o.receipt_id
-   WHERE o.id = p_id AND o.lease_token = p_token AND o.lease_until > now();
+   WHERE o.id = p_id AND o.lease_token = p_token AND o.lease_until > now() FOR UPDATE OF o;
   IF NOT FOUND THEN RETURN false; END IF;
   INSERT INTO public.project_invoice_links(location_id, project_id, ghl_invoice_id)
   VALUES ('9iqrKUVPDddINb9S4Iwd', v_proj, p_invoice) ON CONFLICT DO NOTHING;
-  IF FOUND THEN RETURN true; END IF;
-  SELECT ghl_invoice_id INTO v_existing FROM public.project_invoice_links WHERE location_id='9iqrKUVPDddINb9S4Iwd' AND project_id=v_proj;
-  RETURN v_existing = p_invoice;
+  IF FOUND THEN v_matches := true;
+  ELSE
+    SELECT ghl_invoice_id INTO v_existing FROM public.project_invoice_links WHERE location_id='9iqrKUVPDddINb9S4Iwd' AND project_id=v_proj;
+    v_matches := coalesce(v_existing = p_invoice, false);
+  END IF;
+  IF v_matches THEN
+    -- The invoice ID is durably linked. A following record-payment may enter its own phase
+    -- under the SAME lease; a crash before saving the link still retains create/in-flight.
+    UPDATE public.payment_mirror_outbox SET in_flight = NULL, updated_at = now()
+     WHERE id = p_id AND lease_token = p_token AND lease_until > now() AND in_flight = 'create';
+  END IF;
+  RETURN v_matches;
 END $$;
 
 -- Context reload under lease (project, contact, link, studio). Studio data comes from app_settings
 -- key 'studio_business' ({name,address}); missing => worker keeps the receipt pending.
 CREATE OR REPLACE FUNCTION public.mirror_load_context(p_id uuid, p_token uuid)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-DECLARE v jsonb;
+DECLARE v jsonb; v_receipt uuid;
 BEGIN
+  SELECT receipt_id INTO v_receipt FROM public.payment_mirror_outbox
+   WHERE id = p_id AND lease_token = p_token AND lease_until > now() FOR UPDATE;
+  IF NOT FOUND THEN RETURN NULL; END IF;
+  IF NOT public.payment_mirror_receipt_valid(v_receipt) THEN
+    PERFORM public.mirror_set_state(p_id, p_token, 'revisao', 'fonte_alterada', NULL, NULL);
+    RETURN NULL;
+  END IF;
   SELECT jsonb_build_object(
     'receipt', jsonb_build_object('id', r.id, 'project_id', r.project_id, 'ghl_contact_id', r.ghl_contact_id,
        'amount_cents', r.amount_cents, 'paid_on', r.paid_on, 'method', r.method,

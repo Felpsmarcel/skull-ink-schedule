@@ -321,6 +321,8 @@ async function insertMovimentacaoRows(
     project_id?: string | null;
     appointment_id?: string | null;
     ghl_appointment_id?: string | null;
+    ghl_contact_id?: string | null;
+    ghl_opportunity_id?: string | null;
     sem_vinculo_justificativa?: string | null;
   },
 ): Promise<CreateResult> {
@@ -381,6 +383,8 @@ async function insertMovimentacaoRows(
       project_id: params.project_id ?? null,
       appointment_id: params.appointment_id ?? null,
       ghl_appointment_id: params.ghl_appointment_id ?? null,
+      ghl_contact_id: params.ghl_contact_id ?? null,
+      ghl_opportunity_id: params.ghl_opportunity_id ?? null,
       sem_vinculo_justificativa: params.sem_vinculo_justificativa?.trim() || null,
       ghl_sync_status: "pending" as const,
     };
@@ -458,25 +462,70 @@ async function resolveMovimentacaoLink(input: {
   project_id: string | null;
   appointment_id: string | null;
   ghl_appointment_id: string | null;
+  ghl_contact_id: string | null;
+  ghl_opportunity_id: string | null;
 }> {
   const out = {
     project_id: input.project_id ?? null,
     appointment_id: input.appointment_id ?? null,
     ghl_appointment_id: null as string | null,
+    ghl_contact_id: null as string | null,
+    ghl_opportunity_id: null as string | null,
   };
-  if (!out.appointment_id) return out;
+  if (!out.appointment_id && !out.project_id) return out;
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data: appt } = await supabaseAdmin
-    .from("appointments" as never)
-    .select("id, project_id, ghl_appointment_id")
-    .eq("id", out.appointment_id)
-    .maybeSingle();
-  const row = appt as
-    | { id: string; project_id: string | null; ghl_appointment_id: string | null }
-    | null;
-  if (!row) throw new Error("Agendamento indicado não existe.");
-  out.project_id = out.project_id ?? row.project_id;
-  out.ghl_appointment_id = row.ghl_appointment_id;
+  let appointmentContactId: string | null = null;
+  if (out.appointment_id) {
+    const { data: appt, error } = await supabaseAdmin
+      .from("appointments" as never)
+      .select("id, project_id, contact_id, ghl_appointment_id, ghl_contact_id, ghl_opportunity_id")
+      .eq("id", out.appointment_id)
+      .maybeSingle();
+    if (error) throw new Error("Falha ao conferir o agendamento indicado.");
+    const row = appt as {
+      id: string; project_id: string | null; contact_id: string | null;
+      ghl_appointment_id: string | null; ghl_contact_id: string | null; ghl_opportunity_id: string | null;
+    } | null;
+    if (!row) throw new Error("Agendamento indicado não existe.");
+    if (out.project_id && row.project_id && out.project_id !== row.project_id) {
+      throw new Error("Projeto indicado diverge do agendamento.");
+    }
+    out.project_id = out.project_id ?? row.project_id;
+    out.ghl_appointment_id = row.ghl_appointment_id;
+    out.ghl_contact_id = row.ghl_contact_id;
+    out.ghl_opportunity_id = row.ghl_opportunity_id;
+    appointmentContactId = row.contact_id;
+  }
+  if (out.project_id) {
+    const { data: project, error } = await supabaseAdmin
+      .from("tattoo_projects" as never)
+      .select("id, contact_id, ghl_contact_id, ghl_opportunity_id")
+      .eq("id", out.project_id)
+      .maybeSingle();
+    if (error) throw new Error("Falha ao conferir o projeto indicado.");
+    const row = project as { id: string; contact_id: string | null; ghl_contact_id: string | null; ghl_opportunity_id: string | null } | null;
+    if (!row) throw new Error("Projeto indicado não existe.");
+    if ((out.ghl_contact_id && row.ghl_contact_id && out.ghl_contact_id !== row.ghl_contact_id)
+      || (appointmentContactId && row.contact_id && appointmentContactId !== row.contact_id)) {
+      throw new Error("Contato do projeto diverge do agendamento.");
+    }
+    if (out.ghl_opportunity_id && row.ghl_opportunity_id && out.ghl_opportunity_id !== row.ghl_opportunity_id) {
+      throw new Error("Oportunidade do projeto diverge do agendamento.");
+    }
+    out.ghl_contact_id = row.ghl_contact_id ?? out.ghl_contact_id;
+    out.ghl_opportunity_id = row.ghl_opportunity_id ?? out.ghl_opportunity_id;
+    appointmentContactId = row.contact_id ?? appointmentContactId;
+  }
+  if (appointmentContactId) {
+    const { data: contact, error } = await supabaseAdmin
+      .from("contacts" as never).select("id, ghl_contact_id").eq("id", appointmentContactId).maybeSingle();
+    if (error) throw new Error("Falha ao conferir a identidade do contato.");
+    const row = contact as { id: string; ghl_contact_id: string } | null;
+    if (!row || (out.ghl_contact_id && row.ghl_contact_id !== out.ghl_contact_id)) {
+      throw new Error("Identidade do contato diverge do vínculo indicado.");
+    }
+    out.ghl_contact_id = row.ghl_contact_id;
+  }
   return out;
 }
 
@@ -533,6 +582,8 @@ export const createMovimentacao = createServerFn({ method: "POST" })
       project_id: link.project_id,
       appointment_id: link.appointment_id,
       ghl_appointment_id: link.ghl_appointment_id,
+      ghl_contact_id: link.ghl_contact_id,
+      ghl_opportunity_id: link.ghl_opportunity_id,
       sem_vinculo_justificativa: data.sem_vinculo_justificativa ?? null,
     });
   });
@@ -638,6 +689,8 @@ export const createMovimentacaoManual = createServerFn({ method: "POST" })
       project_id: link.project_id,
       appointment_id: link.appointment_id,
       ghl_appointment_id: link.ghl_appointment_id,
+      ghl_contact_id: link.ghl_contact_id,
+      ghl_opportunity_id: link.ghl_opportunity_id,
       sem_vinculo_justificativa: data.sem_vinculo_justificativa ?? null,
     });
     // Mirror hook: no-op while disabled; only an admin actor confirms (SQL re-checks).

@@ -35,13 +35,16 @@ beforeAll(async () => {
   CREATE TABLE public.contacts(id uuid PRIMARY KEY DEFAULT gen_random_uuid(), ghl_contact_id text NOT NULL UNIQUE, name text NOT NULL, email text, phone text);
   CREATE TABLE public.tattoo_projects(id uuid PRIMARY KEY DEFAULT gen_random_uuid(), ghl_contact_id text, ghl_opportunity_id text, contact_id uuid,
     title text NOT NULL, quoted_total_eur numeric NOT NULL DEFAULT 0, deposit_eur numeric NOT NULL DEFAULT 0);
-  CREATE TABLE public.appointments(id uuid PRIMARY KEY DEFAULT gen_random_uuid(), project_id uuid REFERENCES public.tattoo_projects(id), ghl_contact_id text);
+  CREATE TABLE public.appointments(id uuid PRIMARY KEY DEFAULT gen_random_uuid(), project_id uuid REFERENCES public.tattoo_projects(id),
+    contact_id uuid NOT NULL REFERENCES public.contacts(id), ghl_contact_id text);
   CREATE TABLE public.payments(id uuid PRIMARY KEY DEFAULT gen_random_uuid(), appointment_id uuid REFERENCES public.appointments(id),
     contact_id uuid NOT NULL REFERENCES public.contacts(id), amount_eur numeric NOT NULL, type public.payment_type NOT NULL,
     method public.payment_method NOT NULL, status public.payment_status NOT NULL, paid_at timestamptz);
-  CREATE TABLE public.movimentacoes(id uuid PRIMARY KEY DEFAULT gen_random_uuid(), project_id uuid, ghl_contact_id text, data_pagamento date NOT NULL,
+  CREATE TABLE public.movimentacoes(id uuid PRIMARY KEY DEFAULT gen_random_uuid(), project_id uuid,
+    appointment_id uuid REFERENCES public.appointments(id), ghl_contact_id text, data_pagamento date NOT NULL,
     tipo_movimento public.movimentacao_tipo NOT NULL, valor_cartao numeric NOT NULL DEFAULT 0, valor_dinheiro numeric NOT NULL DEFAULT 0,
-    valor_sumup numeric NOT NULL DEFAULT 0, valor_transferencia numeric NOT NULL DEFAULT 0, total numeric,
+    valor_sumup numeric NOT NULL DEFAULT 0, valor_transferencia numeric NOT NULL DEFAULT 0,
+    total numeric GENERATED ALWAYS AS (valor_cartao + valor_dinheiro + valor_sumup + valor_transferencia) STORED,
     forma_pagamento public.forma_pagamento_enum, deleted_at timestamptz);
   `);
   await db.exec(readFileSync("docs/sql/payment-mirror-outbox.review.sql", "utf8"));
@@ -55,15 +58,16 @@ beforeEach(async () => {
      public.movimentacoes, public.appointments, public.tattoo_projects, public.contacts CASCADE;
    INSERT INTO public.contacts(id, ghl_contact_id, name) VALUES ('${CA}','gA','Fict A'),('${CB}','gB','Fict B');
    INSERT INTO public.tattoo_projects(id, ghl_contact_id, title, quoted_total_eur) VALUES ('${PA}','gA','Braço',600),('${PA2}','gA','Perna',300),('${PB}','gB','Costas',900);
-   INSERT INTO public.appointments(id, project_id) VALUES ('${APA}','${PA}'),('${APB}','${PB}'),('${APA2}','${PA2}');
+   INSERT INTO public.appointments(id, project_id, contact_id, ghl_contact_id) VALUES
+     ('${APA}','${PA}','${CA}','gA'),('${APB}','${PB}','${CB}','gB'),('${APA2}','${PA2}','${CA}','gA');
    INSERT INTO public.payments(id, appointment_id, contact_id, amount_eur, type, method, status, paid_at) VALUES
      ('${PAY1}','${APA}','${CA}',150,'deposit','cash','paid','2026-10-05T10:00:00Z'),
      ('${PAYB}','${APA}','${CB}',100,'final','card','paid','2026-10-06T10:00:00Z'),
      ('${PAY3}','${APA}','${CA}',200,'final','card','paid','2026-10-07T10:00:00Z'),
      ('${PAY4}','${APA2}','${CA}',50,'final','card','paid','2026-10-07T10:00:00Z');
-   INSERT INTO public.movimentacoes(id, project_id, ghl_contact_id, data_pagamento, tipo_movimento, valor_dinheiro, total, forma_pagamento) VALUES
-     ('${MOV1}','${PA}','gA','2026-10-05','sinal',150,150,'dinheiro'),
-     ('${MOVX}','${PA}','gA','2026-10-09','sessao',999,999,'dinheiro');`);
+   INSERT INTO public.movimentacoes(id, project_id, appointment_id, ghl_contact_id, data_pagamento, tipo_movimento, valor_dinheiro, forma_pagamento) VALUES
+     ('${MOV1}','${PA}','${APA}','gA','2026-10-05','sinal',150,'dinheiro'),
+     ('${MOVX}','${PA}','${APA}','gA','2026-10-09','sessao',999,'dinheiro');`);
 });
 
 const confirm = (src: string, id: string, extra: unknown[] = [null, null, null]) =>
