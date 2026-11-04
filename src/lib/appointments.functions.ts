@@ -1002,3 +1002,62 @@ export const reassignAppointmentArtist = createServerFn({ method: "POST" })
 
     return { appointmentId: appt.id, artistId: artist.id };
   });
+/**
+ * Copia UM agendamento do CRM para o app sob demanda, para permitir editar valores.
+ * Falha fechada: subconta GF, calendário vinculado a um único tatuador, contato verificado.
+ */
+export const importAppointmentFromCrm = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => z.object({ ghlEventId: z.string().min(3).max(100) }).parse(data))
+  .handler(async ({ data, context }): Promise<{ appointmentId: string }> => {
+    const { buildImportRow } = await import("@/lib/appointment-import-core");
+    const me = await authorizeArtistOrAdmin(context.supabase, context.userId);
+
+    const { data: existing } = await context.supabase
+      .from("appointments" as never)
+      .select("id")
+      .eq("ghl_appointment_id", data.ghlEventId)
+      .maybeSingle();
+    if (existing) return { appointmentId: (existing as { id: string }).id };
+
+    const token = process.env.GHL_TOKEN;
+    if (!token) throw new Error("Integração com o CRM indisponível.");
+
+    const evRes = await ghlFetch(`/calendars/events/appointments/${encodeURIComponent(data.ghlEventId)}`, { method: "GET", token });
+    if (!evRes.ok) throw new Error("Agendamento não encontrado no CRM.");
+    const body = evRes.data as { appointment?: unknown; event?: unknown } | null;
+    const event = (body?.appointment ?? body?.event ?? null) as Parameters<typeof buildImportRow>[1];
+
+    const { normalizeEventContact } = await import("@/lib/sync-core");
+    const declared = event ? normalizeEventContact(event) : null;
+    let contact: Parameters<typeof buildImportRow>[2] = null;
+    if (declared) {
+      const cRes = await fetch(`${GHL_BASE}/contacts/${encodeURIComponent(declared)}`, {
+        headers: { Authorization: `Bearer ${token}`, Version: "2021-07-28", Accept: "application/json" },
+        signal: AbortSignal.timeout(15_000),
+      });
+      if (cRes.ok) contact = ((await cRes.json()) as { contact?: typeof contact })?.contact ?? null;
+    }
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: artists, error: aErr } = await supabaseAdmin
+      .from("artists" as never)
+      .select("id, ghl_calendar_id, active, commission_pct");
+    if (aErr) throw new Error("Falha ao carregar tatuadores.");
+
+    const built = buildImportRow(data.ghlEventId, event, contact, (artists ?? []) as never, me);
+    if (!built.ok) throw new Error(built.error);
+
+    const { data: ins, error: insErr } = await supabaseAdmin
+      .from("appointments" as never)
+      .upsert(built.row as never, { onConflict: "ghl_appointment_id", ignoreDuplicates: true })
+      .select("id")
+      .maybeSingle();
+    if (insErr) throw new Error("Falha ao gravar o agendamento.");
+    if (ins) return { appointmentId: (ins as { id: string }).id };
+    const { data: again } = await supabaseAdmin
+      .from("appointments" as never).select("id, artist_id").eq("ghl_appointment_id", data.ghlEventId).maybeSingle();
+    const row = again as { id: string; artist_id: string } | null;
+    if (!row || (me.role !== "admin" && row.artist_id !== me.artistId)) throw new Error("Falha ao gravar o agendamento.");
+    return { appointmentId: row.id };
+  });
