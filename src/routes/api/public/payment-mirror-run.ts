@@ -19,7 +19,8 @@ export const Route = createFileRoute("/api/public/payment-mirror-run")({
           makeTransport: async () => {
             const token = process.env["GHL_TOKEN"];
             if (!token) throw new Error("not_configured");
-            const { createHttpMirrorTransport } = await import("@/lib/payment-mirror-transport.server");
+            const { createHttpMirrorTransport } =
+              await import("@/lib/payment-mirror-transport.server");
             return createHttpMirrorTransport({ token });
           },
         });
