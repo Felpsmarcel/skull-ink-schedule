@@ -161,7 +161,7 @@ CREATE OR REPLACE FUNCTION public.confirm_receipt(
   p_source text, p_source_id uuid, p_expected_project_id uuid DEFAULT NULL,
   p_same_event_source text DEFAULT NULL, p_same_event_source_id uuid DEFAULT NULL
 ) RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-DECLARE s record; o record; v_proj_contact text; v_key text; v_hash text; v_receipt uuid; v_existing record; v_mapped uuid;
+DECLARE s record; o record; v_ocanon text; v_proj_contact text; v_key text; v_hash text; v_receipt uuid; v_existing record; v_mapped uuid;
 BEGIN
   IF auth.uid() IS NULL OR public.current_user_role() IS DISTINCT FROM 'admin' THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
@@ -173,6 +173,7 @@ BEGIN
 
   IF p_same_event_source IS NOT NULL THEN
     SELECT * INTO o FROM public.payment_mirror_load_source(p_same_event_source, p_same_event_source_id);
+    v_ocanon := o.canon;
     IF o.canon = s.canon AND p_same_event_source_id = p_source_id THEN RAISE EXCEPTION 'mesma_fonte'; END IF;
     IF (o.project_id, o.ghl_contact_id, o.amount_cents, o.paid_on) IS DISTINCT FROM (s.project_id, s.ghl_contact_id, s.amount_cents, s.paid_on)
       THEN RAISE EXCEPTION 'evento_divergente'; END IF;
@@ -182,12 +183,12 @@ BEGIN
   SELECT receipt_id INTO v_mapped FROM public.payment_receipt_sources WHERE source = s.canon AND source_id = p_source_id;
   IF FOUND THEN
     IF p_same_event_source IS NOT NULL AND NOT EXISTS (
-      SELECT 1 FROM public.payment_receipt_sources WHERE receipt_id = v_mapped AND source = o.canon AND source_id = p_same_event_source_id)
+      SELECT 1 FROM public.payment_receipt_sources WHERE receipt_id = v_mapped AND source = v_ocanon AND source_id = p_same_event_source_id)
       THEN RAISE EXCEPTION 'conflito_mapeamento'; END IF;
     RETURN v_mapped; -- repeated confirmation: same receipt, nothing new enqueued
   END IF;
   IF p_same_event_source IS NOT NULL AND EXISTS (
-    SELECT 1 FROM public.payment_receipt_sources WHERE source = o.canon AND source_id = p_same_event_source_id)
+    SELECT 1 FROM public.payment_receipt_sources WHERE source = v_ocanon AND source_id = p_same_event_source_id)
     THEN RAISE EXCEPTION 'conflito_mapeamento'; END IF;
 
   v_key := s.canon || ':' || p_source_id::text;
@@ -201,7 +202,7 @@ BEGIN
   RETURNING id INTO v_receipt;
   INSERT INTO public.payment_receipt_sources VALUES (v_receipt, s.canon, p_source_id, p_source);
   IF p_same_event_source IS NOT NULL THEN
-    INSERT INTO public.payment_receipt_sources VALUES (v_receipt, o.canon, p_same_event_source_id, p_same_event_source);
+    INSERT INTO public.payment_receipt_sources VALUES (v_receipt, v_ocanon, p_same_event_source_id, p_same_event_source);
   END IF;
 
   -- Mark confirmation only after the receipt is mapped (never touches payments.status)
