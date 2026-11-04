@@ -47,6 +47,7 @@ import { Route as AuthenticatedOnboardingServicosRouteImport } from './routes/_a
 import { Route as AuthenticatedRelatoriosMovimentacoesRouteImport } from './routes/_authenticated/relatorios.movimentacoes'
 import { Route as ApiPublicMobileDashboardRouteImport } from './routes/api/public/mobile-dashboard'
 import { Route as LovableEmailEventsRouteImport } from './routes/lovable/email/events'
+import { Route as AuthenticatedAdminAdminConfiguracoesRouteImport } from './routes/_authenticated/_admin/admin.configuracoes'
 import { Route as AuthenticatedAdminAdminEquipeRouteImport } from './routes/_authenticated/_admin/admin.equipe'
 import { Route as AuthenticatedAdminAdminFilaRouteImport } from './routes/_authenticated/_admin/admin.fila'
 import { Route as AuthenticatedAdminAdminMovimentacaoLinksRouteImport } from './routes/_authenticated/_admin/admin.movimentacao-links'
@@ -269,6 +270,12 @@ const LovableEmailEventsRoute = LovableEmailEventsRouteImport.update({
   path: '/lovable/email/events',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAdminAdminConfiguracoesRoute =
+  AuthenticatedAdminAdminConfiguracoesRouteImport.update({
+    id: '/admin/configuracoes',
+    path: '/admin/configuracoes',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
 const AuthenticatedAdminAdminEquipeRoute =
   AuthenticatedAdminAdminEquipeRouteImport.update({
     id: '/admin/equipe',
@@ -418,6 +425,7 @@ export interface FileRoutesByFullPath {
   '/api/public/mobile-dashboard': typeof ApiPublicMobileDashboardRoute
   '/lovable/email/events': typeof LovableEmailEventsRoute
   '/movimentacao/': typeof AuthenticatedMovimentacaoIndexRoute
+  '/admin/configuracoes': typeof AuthenticatedAdminAdminConfiguracoesRoute
   '/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
   '/admin/fila': typeof AuthenticatedAdminAdminFilaRoute
   '/admin/movimentacao-links': typeof AuthenticatedAdminAdminMovimentacaoLinksRoute
@@ -474,6 +482,7 @@ export interface FileRoutesByTo {
   '/api/public/mobile-dashboard': typeof ApiPublicMobileDashboardRoute
   '/lovable/email/events': typeof LovableEmailEventsRoute
   '/movimentacao': typeof AuthenticatedMovimentacaoIndexRoute
+  '/admin/configuracoes': typeof AuthenticatedAdminAdminConfiguracoesRoute
   '/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
   '/admin/fila': typeof AuthenticatedAdminAdminFilaRoute
   '/admin/movimentacao-links': typeof AuthenticatedAdminAdminMovimentacaoLinksRoute
@@ -534,6 +543,7 @@ export interface FileRoutesById {
   '/api/public/mobile-dashboard': typeof ApiPublicMobileDashboardRoute
   '/lovable/email/events': typeof LovableEmailEventsRoute
   '/_authenticated/movimentacao/': typeof AuthenticatedMovimentacaoIndexRoute
+  '/_authenticated/_admin/admin/configuracoes': typeof AuthenticatedAdminAdminConfiguracoesRoute
   '/_authenticated/_admin/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
   '/_authenticated/_admin/admin/fila': typeof AuthenticatedAdminAdminFilaRoute
   '/_authenticated/_admin/admin/movimentacao-links': typeof AuthenticatedAdminAdminMovimentacaoLinksRoute
@@ -593,6 +603,7 @@ export interface FileRouteTypes {
     | '/api/public/mobile-dashboard'
     | '/lovable/email/events'
     | '/movimentacao/'
+    | '/admin/configuracoes'
     | '/admin/equipe'
     | '/admin/fila'
     | '/admin/movimentacao-links'
@@ -649,6 +660,7 @@ export interface FileRouteTypes {
     | '/api/public/mobile-dashboard'
     | '/lovable/email/events'
     | '/movimentacao'
+    | '/admin/configuracoes'
     | '/admin/equipe'
     | '/admin/fila'
     | '/admin/movimentacao-links'
@@ -708,6 +720,7 @@ export interface FileRouteTypes {
     | '/api/public/mobile-dashboard'
     | '/lovable/email/events'
     | '/_authenticated/movimentacao/'
+    | '/_authenticated/_admin/admin/configuracoes'
     | '/_authenticated/_admin/admin/equipe'
     | '/_authenticated/_admin/admin/fila'
     | '/_authenticated/_admin/admin/movimentacao-links'
@@ -1025,6 +1038,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LovableEmailEventsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/_admin/admin/configuracoes': {
+      id: '/_authenticated/_admin/admin/configuracoes'
+      path: '/admin/configuracoes'
+      fullPath: '/admin/configuracoes'
+      preLoaderRoute: typeof AuthenticatedAdminAdminConfiguracoesRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
     '/_authenticated/_admin/admin/equipe': {
       id: '/_authenticated/_admin/admin/equipe'
       path: '/admin/equipe'
@@ -1164,6 +1184,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedAdminRouteRouteChildren {
   AuthenticatedAdminGhlTestRoute: typeof AuthenticatedAdminGhlTestRoute
   AuthenticatedAdminReconciliarRoute: typeof AuthenticatedAdminReconciliarRoute
+  AuthenticatedAdminAdminConfiguracoesRoute: typeof AuthenticatedAdminAdminConfiguracoesRoute
   AuthenticatedAdminAdminEquipeRoute: typeof AuthenticatedAdminAdminEquipeRoute
   AuthenticatedAdminAdminFilaRoute: typeof AuthenticatedAdminAdminFilaRoute
   AuthenticatedAdminAdminMovimentacaoLinksRoute: typeof AuthenticatedAdminAdminMovimentacaoLinksRoute
@@ -1177,6 +1198,8 @@ const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren
   {
     AuthenticatedAdminGhlTestRoute: AuthenticatedAdminGhlTestRoute,
     AuthenticatedAdminReconciliarRoute: AuthenticatedAdminReconciliarRoute,
+    AuthenticatedAdminAdminConfiguracoesRoute:
+      AuthenticatedAdminAdminConfiguracoesRoute,
     AuthenticatedAdminAdminEquipeRoute: AuthenticatedAdminAdminEquipeRoute,
     AuthenticatedAdminAdminFilaRoute: AuthenticatedAdminAdminFilaRoute,
     AuthenticatedAdminAdminMovimentacaoLinksRoute:
