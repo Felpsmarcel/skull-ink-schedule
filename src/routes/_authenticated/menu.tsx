@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { ChevronRight, LogOut, Wallet, RefreshCw, Bell, Languages, FileText, Users, UserSquare2, Banknote, Link2, BarChart3, QrCode, Bot, Activity } from "lucide-react";
+import { ChevronRight, LogOut, Wallet, RefreshCw, Bell, Languages, FileText, Users, UserSquare2, Banknote, Link2, BarChart3, QrCode, Bot, Activity, Settings } from "lucide-react";
 import { toast } from "sonner";
 import "@/i18n";
 import { useCurrentUser } from "@/hooks/use-current-user";
