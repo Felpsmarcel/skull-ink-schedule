@@ -501,7 +501,7 @@ export const finalizeBooking = createServerFn({ method: "POST" })
     // Sinal pago no ato → registra pagamento parcial.
     if (depositEur > 0 && localContactId) {
       try {
-        await supabaseAdmin.from("payments").insert({
+        const { data: dep } = await supabaseAdmin.from("payments").insert({
           appointment_id: ins!.id,
           contact_id: localContactId,
           amount_eur: depositEur,
@@ -511,7 +511,12 @@ export const finalizeBooking = createServerFn({ method: "POST" })
           paid_at: new Date().toISOString(),
           notes: "Sinal registrado no agendamento",
           created_by: userId,
-        });
+        }).select("id").maybeSingle();
+        if (dep?.id) {
+          // Mirror hook: no-op while disabled.
+          const { runReceiptHook } = await import("./payment-mirror-hook.server");
+          await runReceiptHook(supabase, [{ source: "booking_deposit", id: dep.id }]);
+        }
       } catch (e) {
         console.error("[finalizeBooking] deposit registration failed", e);
         warnings.push("Sinal não foi registrado automaticamente.");

@@ -612,7 +612,7 @@ export const createMovimentacaoManual = createServerFn({ method: "POST" })
       STAFF_RECEBEDORES.find((s) => s.appUserId === context.userId) ?? null;
     const trace = await captureRequestTrace();
 
-    return insertMovimentacaoRows({
+    const created = await insertMovimentacaoRows({
       nome_cliente: data.nome_cliente,
       data_pagamento: data.data_pagamento,
       artist_id: data.artist_id,
@@ -640,6 +640,10 @@ export const createMovimentacaoManual = createServerFn({ method: "POST" })
       ghl_appointment_id: link.ghl_appointment_id,
       sem_vinculo_justificativa: data.sem_vinculo_justificativa ?? null,
     });
+    // Mirror hook: no-op while disabled; only an admin actor confirms (SQL re-checks).
+    const { runReceiptHook } = await import("./payment-mirror-hook.server");
+    await runReceiptHook(context.supabase, created.ids.map((id) => ({ source: "movimentacao" as const, id })));
+    return created;
   });
 
 // ---------------- listMovimentacoes -------------------------------------
