@@ -4,7 +4,8 @@
 
 export const GF_LOCATION_ID = "9iqrKUVPDddINb9S4Iwd";
 // Explicit version for the NEW adapter only; legacy bridges keep their own header.
-export const GHL_INVOICES_API_VERSION = "2021-07-28";
+// Reviewer reports v3 as the current primary contract for Invoices; homologation gate stays closed until verified.
+export const GHL_INVOICES_API_VERSION = "v3";
 
 export type MirrorSource = "movimentacao" | "payment" | "booking_deposit";
 export type LocalMethod =
@@ -53,6 +54,7 @@ export interface RemoteInvoice {
   totalCents: number;
   amountDueCents: number;
   marker: string | null; // text found in name/termsNotes
+  liveMode: boolean;
 }
 
 export type Pending =
@@ -60,9 +62,17 @@ export type Pending =
   | "location_estrangeira" | "contato_ausente" | "projeto_ausente" | "projeto_divergente"
   | "contato_divergente" | "valor_projeto_ausente" | "dados_contato_ausentes" | "dados_estudio_ausentes"
   | "fatura_location_estrangeira" | "fatura_contato_divergente" | "fatura_moeda_divergente"
-  | "fatura_status_invalido" | "saldo_insuficiente" | "fatura_existente_sem_vinculo";
+  | "fatura_status_invalido" | "saldo_insuficiente" | "fatura_existente_sem_vinculo"
+  | "valor_projeto_divergente" | "modo_divergente";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+/** Calendar-valid YYYY-MM-DD (rejects 2026-99-99, 2026-02-30). */
+export function isCalendarDate(s: string): boolean {
+  if (!DATE_RE.test(s)) return false;
+  const [y, m, d] = s.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d;
+}
 
 export const projectMarker = (projectId: string) => `gf-project:${projectId}`;
 export const receiptMarker = (receiptId: string) => `gf-receipt:${receiptId}`;
@@ -92,7 +102,7 @@ export function validateReceipt(r: Receipt, project: Project | null): Pending | 
   if (!r.receiptId || r.sources.length === 0) return "id_ausente";
   if (!Number.isInteger(r.amountCents) || r.amountCents <= 0) return "valor_invalido";
   if (r.currency !== "EUR") return "moeda_invalida";
-  if (!DATE_RE.test(r.paidOn)) return "data_invalida";
+  if (!isCalendarDate(r.paidOn)) return "data_invalida";
   if (r.locationId !== GF_LOCATION_ID) return "location_estrangeira";
   if (!r.ghlContactId) return "contato_ausente";
   if (!r.projectId || !project) return "projeto_ausente";
@@ -114,7 +124,11 @@ export interface CreateInvoiceBody {
   items: Array<{ name: string; amount: number; qty: 1; currency: "EUR" }>;
   issueDate: string;
   termsNotes: string;
-  sentTo?: never; // never send
+  // Required by the published Create Invoice schema. Zero discount = none applied (not invented).
+  discount: { value: 0; type: "percentage" };
+  liveMode: boolean;
+  // Required field; empty recipients = hypothesis to homologate. Creation is separate from /send, never called.
+  sentTo: { email: string[]; phoneNo: string[] };
 }
 
 export type InvoicePlan =
@@ -128,7 +142,7 @@ export type InvoicePlan =
  */
 export function planInvoice(args: {
   receipt: Receipt; project: Project | null; link: InvoiceLink | null;
-  contact: Contact | null; studio: StudioDetails | null; contactInvoicesWithoutLink?: number;
+  contact: Contact | null; studio: StudioDetails | null; contactInvoicesWithoutLink?: number; liveMode?: boolean;
 }): InvoicePlan {
   const { receipt: r, project: p, link, contact, studio } = args;
   const bad = validateReceipt(r, p);
@@ -160,6 +174,9 @@ export function planInvoice(args: {
       items: [{ name: project.title, amount: centsToApiAmount(project.approvedTotalCents), qty: 1, currency: "EUR" }],
       issueDate: r.paidOn,
       termsNotes: marker,
+      discount: { value: 0, type: "percentage" },
+      liveMode: args.liveMode ?? false,
+      sentTo: { email: [], phoneNo: [] },
     },
   };
 }
@@ -177,11 +194,15 @@ export interface RecordPaymentBody {
 export type PaymentPlan = { kind: "send"; body: RecordPaymentBody } | { kind: "pending"; reason: Pending };
 
 /** Verify the GET-ed invoice before POST and build the installment-only body. */
-export function planPayment(r: Receipt, inv: RemoteInvoice, projectId: string): PaymentPlan {
+export function planPayment(r: Receipt, inv: RemoteInvoice, project: Project, opts: { liveMode: boolean; allowDraft: boolean }): PaymentPlan {
+  const projectId = project.id;
   if (inv.altId !== GF_LOCATION_ID) return { kind: "pending", reason: "fatura_location_estrangeira" };
   if (inv.contactId !== r.ghlContactId) return { kind: "pending", reason: "fatura_contato_divergente" };
   if (inv.currency !== "EUR") return { kind: "pending", reason: "fatura_moeda_divergente" };
-  if (["void", "draft", "paid"].includes(inv.status)) return { kind: "pending", reason: "fatura_status_invalido" };
+  if (inv.liveMode !== opts.liveMode) return { kind: "pending", reason: "modo_divergente" };
+  // Draft = created without /send. Paying it is allowed only once the draft flow is homologated.
+  if (["void", "paid"].includes(inv.status) || (inv.status === "draft" && !opts.allowDraft)) return { kind: "pending", reason: "fatura_status_invalido" };
+  if (project.approvedTotalCents == null || inv.totalCents !== project.approvedTotalCents) return { kind: "pending", reason: "valor_projeto_divergente" };
   if (inv.marker !== projectMarker(projectId)) return { kind: "pending", reason: "projeto_divergente" };
   if (inv.amountDueCents < r.amountCents) return { kind: "pending", reason: "saldo_insuficiente" };
   return {
@@ -210,15 +231,18 @@ export function reconcileInvoice(cands: RemoteInvoice[], project: Project, conta
   return { kind: "found", value: c };
 }
 
-export interface RemoteTransaction { id: string; invoiceId: string | null; altId: string; contactId: string | null; currency: string; amountCents: number; marker: string | null }
+/** marker = meta.externalId on both the record-payment body and the readback. */
+export interface RemoteTransaction { id: string; invoiceId: string | null; altId: string; contactId: string | null; currency: string; amountCents: number; marker: string | null; status: string; liveMode: boolean; mode: GhlMode | string }
+const TX_OK = new Set(["succeeded", "paid", "success"]);
 
-export function reconcilePayment(txs: RemoteTransaction[], r: Receipt, invoiceId: string): Reconcile<RemoteTransaction> {
+export function reconcilePayment(txs: RemoteTransaction[], r: Receipt, invoiceId: string, liveMode = false): Reconcile<RemoteTransaction> {
   const m = receiptMarker(r.receiptId);
   const exact = txs.filter((t) => t.marker === m);
   if (exact.length === 0) return { kind: "pending", reason: "sem_marcador" };
   if (exact.length > 1) return { kind: "pending", reason: "marcador_duplicado" };
   const t = exact[0];
-  if (t.invoiceId !== invoiceId || t.altId !== GF_LOCATION_ID || t.contactId !== r.ghlContactId || t.currency !== "EUR" || t.amountCents !== r.amountCents)
+  if (t.invoiceId !== invoiceId || t.altId !== GF_LOCATION_ID || t.contactId !== r.ghlContactId || t.currency !== "EUR" || t.amountCents !== r.amountCents
+    || !TX_OK.has(t.status) || t.liveMode !== liveMode || t.mode !== mapMethod(r.method))
     return { kind: "pending", reason: "divergente" };
   return { kind: "found", value: t };
 }
@@ -268,5 +292,5 @@ export function planRefund(original: { receiptId: string; amountCents: number; r
   return { kind: "review", amountCents: refund.amountCents };
 }
 
-export interface ActivationGates { flag: boolean; scopesVerified: boolean; contractVerified: boolean; workflowsReviewed: boolean }
-export const gatesOpen = (g: ActivationGates) => g.flag && g.scopesVerified && g.contractVerified && g.workflowsReviewed;
+export interface ActivationGates { flag: boolean; scopesVerified: boolean; contractVerified: boolean; workflowsReviewed: boolean; draftHomologated: boolean }
+export const gatesOpen = (g: ActivationGates) => g.flag && g.scopesVerified && g.contractVerified && g.workflowsReviewed && g.draftHomologated;
