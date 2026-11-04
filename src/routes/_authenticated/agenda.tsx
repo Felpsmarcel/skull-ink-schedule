@@ -56,6 +56,7 @@ import { AlertTriangle as AlertTriangleIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { GhlSyncStatus } from "@/components/ghl-sync-status";
 import { agendaScope } from "@/lib/agenda-scope";
+import { useArtists } from "@/hooks/use-artists";
 
 type View = "day" | "week" | "month";
 
@@ -122,7 +123,18 @@ function AgendaPage() {
 
   const { data: me, isPending: mePending } = useCurrentUser();
   const scope = agendaScope(me);
-  const restrictArtistId = scope.artistId;
+  const { data: allArtists = [] } = useArtists();
+  const [pickedArtistId, setPickedArtistId] = useState<string>("");
+  // Admin may narrow to one artist; artist scope is never widened.
+  const restrictArtistId = scope.artistId ?? (pickedArtistId || null);
+
+  function goPrevMonth() {
+    const d = new Date(date);
+    d.setDate(1);
+    d.setMonth(d.getMonth() - 1);
+    setDate(d);
+    setView("month");
+  }
 
   const dateLabel = useMemo(() => {
     const locale = resolveIntlLocale(i18n.language);
@@ -228,6 +240,30 @@ function AgendaPage() {
             >
               {t("agenda.today")}
             </button>
+
+            <button
+              type="button"
+              onClick={goPrevMonth}
+              className="ml-1 inline-flex shrink-0 rounded-full border border-border bg-card px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:border-foreground hover:text-foreground sm:px-3"
+            >
+              Mês anterior
+            </button>
+
+            {scope.artistId === null ? (
+              <select
+                aria-label="Selecionar tatuador"
+                value={pickedArtistId}
+                onChange={(e) => setPickedArtistId(e.target.value)}
+                className="ml-1 h-7 max-w-[9rem] shrink-0 rounded-full border border-border bg-card px-2 text-[10px] font-bold uppercase tracking-widest text-foreground"
+              >
+                <option value="">Todos</option>
+                {allArtists.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
+                ))}
+              </select>
+            ) : null}
 
             {/* Mobile-only compact view switch */}
             <Popover>
