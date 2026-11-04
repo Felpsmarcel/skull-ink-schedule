@@ -142,15 +142,45 @@ describe("worker SQL", () => {
     expect(rows).toHaveLength(2); // project A once + project A2
     expect((await db.query("SELECT * FROM claim_payment_mirror(10,60)")).rows).toHaveLength(0);
   });
+  it("rotates pending jobs so twenty older projects cannot starve the twenty-first", async () => {
+    await as(ADMIN, "admin");
+    const receipts: string[] = [];
+    for (let i = 1; i <= 21; i++) {
+      const uuid = (n: number) => `00000000-0000-0000-1000-${n.toString(16).padStart(12, "0")}`;
+      const project = uuid(1000 + i), appointment = uuid(2000 + i), payment = uuid(3000 + i);
+      await db.query("INSERT INTO tattoo_projects(id,ghl_contact_id,title,quoted_total_eur) VALUES ($1,'gA','Queue fixture',600)", [project]);
+      await db.query("INSERT INTO appointments(id,project_id,contact_id,ghl_contact_id) VALUES ($1,$2,$3,'gA')", [appointment, project, CA]);
+      await db.query("INSERT INTO payments(id,appointment_id,contact_id,amount_eur,type,method,status,paid_at) VALUES ($1,$2,$3,10,'final','cash','paid','2026-10-05T10:00:00Z')", [payment, appointment, CA]);
+      const receipt = (await confirm("payment", payment)).rows[0].r;
+      receipts.push(receipt);
+      // Explicit past timestamps make priority deterministic without sleeping or mocking the DB clock.
+      await db.query("UPDATE payment_mirror_outbox SET created_at='2000-01-01T00:00:00Z'::timestamptz + $2::int * interval '1 day', updated_at='2000-01-01T00:00:00Z'::timestamptz + $2::int * interval '1 day' WHERE receipt_id=$1", [receipt, i]);
+    }
+    await as(null, null);
+    type Job = { id: string; receipt_id: string; lease_token: string };
+    const first = (await db.query<Job>("SELECT * FROM claim_payment_mirror(20,60)")).rows;
+    expect(first).toHaveLength(20);
+    expect(first.some((r) => r.receipt_id === receipts[20])).toBe(false);
+    for (const job of first) {
+      expect((await one<{ ok: boolean }>("SELECT mirror_set_state($1,$2,'pending','aguarda_conferencia') ok", [job.id, job.lease_token])).ok).toBe(true);
+    }
+    const second = (await db.query<Job>("SELECT * FROM claim_payment_mirror(20,60)")).rows;
+    expect(second).toHaveLength(20);
+    expect(second.some((r) => r.receipt_id === receipts[20])).toBe(true);
+    expect((await one<{ n: number }>("SELECT count(*)::int n FROM payment_receipts")).n).toBe(21);
+    expect((await one<{ n: number }>("SELECT count(*)::int n FROM payment_mirror_outbox WHERE state='pending' AND in_flight IS NULL")).n).toBe(21);
+  });
   it("case 7: expired in-flight record is recovered as pagamento_a_conciliar, never as pending", async () => {
     await seedTwoSameProject();
     const [job] = (await db.query<{ id: string; lease_token: string }>("SELECT * FROM claim_payment_mirror(1,60)")).rows;
     expect((await one<{ ok: boolean }>("SELECT mirror_mark_in_flight($1,$2,'record') ok", [job.id, job.lease_token])).ok).toBe(true);
     await db.exec(`UPDATE payment_mirror_outbox SET lease_until = now() - interval '1 second' WHERE id='${job.id}'`);
     const again = (await db.query<{ id: string; state: string; in_flight: string | null }>("SELECT * FROM claim_payment_mirror(10,60)")).rows;
-    const same = again.find((r) => r.id === job.id);
-    expect(same?.state).toBe("pagamento_a_conciliar");
-    expect(same?.in_flight).toBeNull();
+    // Recovery persists regardless of which same-project job wins the fair next lease.
+    const same = await one<{ state: string; in_flight: string | null }>("SELECT state,in_flight FROM payment_mirror_outbox WHERE id=$1", [job.id]);
+    expect(same.state).toBe("pagamento_a_conciliar");
+    expect(same.in_flight).toBeNull();
+    expect(again.filter((r) => r.id === job.id).every((r) => r.state === "pagamento_a_conciliar" && r.in_flight === null)).toBe(true);
     // old worker is fenced
     expect((await one<{ ok: boolean }>("SELECT mirror_set_state($1,$2,'concluido',NULL,'tx') ok", [job.id, job.lease_token])).ok).toBe(false);
   });

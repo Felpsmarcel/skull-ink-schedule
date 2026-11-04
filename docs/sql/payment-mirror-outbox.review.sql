@@ -347,7 +347,8 @@ BEGIN
      WHERE o.state IN ('pending','fatura_a_conciliar','pagamento_a_conciliar')
        AND o.in_flight IS NULL AND o.next_attempt_at <= now()
        AND (o.lease_until IS NULL OR o.lease_until < now())
-     ORDER BY o.created_at
+     -- Least recently processed first: pending projects rotate instead of starving newer jobs.
+     ORDER BY o.updated_at, o.created_at, o.id
      FOR UPDATE OF o SKIP LOCKED
   LOOP
     EXIT WHEN v_got >= p_limit;

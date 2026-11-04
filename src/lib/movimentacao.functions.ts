@@ -644,6 +644,9 @@ export const createMovimentacaoManual = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => CreateManualInput.parse(data))
   .handler(async ({ data, context }): Promise<CreateResult> => {
+    const me = await getAppUserRow(context.supabase, context.userId);
+    if (me.role !== "admin") throw new Error("Forbidden");
+
     const recebedor = getStaffRecebedor(data.recebido_por_id);
     const link = await resolveMovimentacaoLink(data);
 
