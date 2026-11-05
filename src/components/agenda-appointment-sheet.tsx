@@ -477,11 +477,11 @@ function FinanceBody({
               cls += " text-destructive";
             } else if (bal < -0.005) {
               label = "Crédito do cliente";
-              cls += " text-amber-600";
+              cls += " text-warning";
               icon = <AlertTriangle className="inline h-3 w-3 mr-1" />;
             } else {
               label = "Quitado";
-              cls += " text-emerald-600";
+              cls += " text-success";
             }
           }
           return (
@@ -927,7 +927,7 @@ function PaymentForm({
         </div>
       </div>
       {overpay ? (
-        <div className="rounded border border-amber-500/50 bg-amber-500/10 p-2 text-[11px] text-amber-800 dark:text-amber-300">
+        <div className="rounded border border-warning/50 bg-warning/10 p-2 text-[11px] text-warning">
           <div className="flex items-start gap-2">
             <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             <div className="space-y-1">
@@ -1176,7 +1176,7 @@ function ArtistPicker({
         {mut.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
       </div>
       {pendingId && !mut.isPending ? (
-        <div className="mt-2 flex items-center justify-between gap-2 rounded border border-amber-500/50 bg-amber-500/10 p-2 text-[11px]">
+        <div className="mt-2 flex items-center justify-between gap-2 rounded border border-warning/50 bg-warning/10 p-2 text-[11px]">
           <span>
             Reatribuir para{" "}
             <strong>{artists.find((a) => a.id === pendingId)?.name}</strong>?
