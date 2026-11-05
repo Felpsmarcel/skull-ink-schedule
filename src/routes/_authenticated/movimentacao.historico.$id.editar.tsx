@@ -152,16 +152,16 @@ function EditarPage() {
   if (rowQ.isLoading) {
     return (
       <div className="flex min-h-svh items-center justify-center">
-        <Loader2 className="size-6 animate-spin text-slate-400" />
+        <Loader2 className="size-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
   if (rowQ.isError || !rowQ.data) {
     return (
       <div className="mx-auto max-w-lg p-6 text-center">
-        <p className="text-sm text-slate-700">Não foi possível carregar o registo.</p>
+        <p className="text-sm text-foreground">Não foi possível carregar o registo.</p>
         <button
-          className="mt-3 rounded-lg bg-slate-900 px-4 py-2 text-sm text-white"
+          className="mt-3 rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground"
           onClick={() => router.invalidate()}
         >
           Tentar novamente
@@ -172,9 +172,9 @@ function EditarPage() {
   if (!rowQ.data.canEdit) {
     return (
       <div className="mx-auto max-w-lg p-6 text-center">
-        <p className="text-sm text-slate-700">Sem permissão para editar este registo.</p>
+        <p className="text-sm text-foreground">Sem permissão para editar este registo.</p>
         <button
-          className="mt-3 rounded-lg border border-slate-300 px-4 py-2 text-sm"
+          className="mt-3 rounded-lg border border-input px-4 py-2 text-sm"
           onClick={backToList}
         >
           Voltar ao histórico
@@ -208,13 +208,13 @@ function EditarPage() {
   const busy = updateMut.isPending || deleteMut.isPending || resyncMut.isPending;
 
   return (
-    <div className="mx-auto flex min-h-svh max-w-2xl flex-col bg-white pb-[calc(env(safe-area-inset-bottom)+7rem)] text-slate-900">
-      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur">
+    <div className="mx-auto flex min-h-svh max-w-2xl flex-col bg-card pb-[calc(env(safe-area-inset-bottom)+7rem)] text-foreground">
+      <header className="sticky top-0 z-30 border-b border-border bg-background/95 px-4 py-3 backdrop-blur">
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={backToList}
-            className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-sm text-slate-600 hover:bg-slate-100"
+            className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-sm text-muted-foreground hover:bg-muted"
           >
             <ArrowLeft className="size-4" /> Voltar
           </button>
@@ -230,7 +230,7 @@ function EditarPage() {
             maxLength={120}
             value={form.nome_cliente}
             onChange={(e) => setForm({ ...form, nome_cliente: e.target.value })}
-            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-900"
+            className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm outline-none focus:border-ring"
           />
         </Field>
 
@@ -239,7 +239,7 @@ function EditarPage() {
             required
             value={form.artist_id}
             onChange={(e) => setForm({ ...form, artist_id: e.target.value })}
-            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-900"
+            className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm outline-none focus:border-ring"
           >
             {(artistsQ.data ?? []).map((a) => (
               <option key={a.id} value={a.id}>
@@ -255,7 +255,7 @@ function EditarPage() {
             onChange={(e) =>
               setForm({ ...form, tipo_movimento: e.target.value as MovimentacaoTipo })
             }
-            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-900"
+            className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm outline-none focus:border-ring"
           >
             {TIPO_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
@@ -273,7 +273,7 @@ function EditarPage() {
                 maxLength={500}
                 value={form.descricao_projeto}
                 onChange={(e) => setForm({ ...form, descricao_projeto: e.target.value })}
-                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-900"
+                className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm outline-none focus:border-ring"
               />
             </Field>
             <Field label="Data da tatuagem">
@@ -281,7 +281,7 @@ function EditarPage() {
                 type="date"
                 value={form.data_tatuagem}
                 onChange={(e) => setForm({ ...form, data_tatuagem: e.target.value })}
-                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-900"
+                className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm outline-none focus:border-ring"
               />
             </Field>
           </div>
@@ -307,10 +307,10 @@ function EditarPage() {
           />
         </div>
 
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+        <div className="rounded-xl border border-border bg-muted p-3">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-slate-600">Total</span>
-            <span className="text-lg font-bold text-slate-900">
+            <span className="text-sm text-muted-foreground">Total</span>
+            <span className="text-lg font-bold text-foreground">
               {currencyFmt.format(totalPreview)}
             </span>
           </div>
@@ -321,7 +321,7 @@ function EditarPage() {
             type="button"
             disabled={busy}
             onClick={() => resyncMut.mutate()}
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-input bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-muted disabled:opacity-50"
           >
             <RefreshCw className="size-4" /> Ressincronizar GHL
           </button>
@@ -333,7 +333,7 @@ function EditarPage() {
                 deleteMut.mutate();
               }
             }}
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-destructive/40 bg-card px-4 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 disabled:opacity-50"
           >
             <Trash2 className="size-4" /> Apagar registo
           </button>
@@ -341,11 +341,11 @@ function EditarPage() {
       </form>
 
       <section className="px-4 pb-6">
-        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Histórico de alterações
         </h2>
         {rowQ.data?.registrado_por_nome && (
-          <p className="mb-2 text-xs text-slate-500">
+          <p className="mb-2 text-xs text-muted-foreground">
             Registado por {rowQ.data.registrado_por_nome}
             {rowQ.data.registrado_em
               ? ` em ${new Date(rowQ.data.registrado_em).toLocaleString("pt-PT")}`
@@ -353,15 +353,15 @@ function EditarPage() {
           </p>
         )}
         {auditQ.isLoading ? (
-          <p className="text-xs text-slate-400">A carregar…</p>
+          <p className="text-xs text-muted-foreground">A carregar…</p>
         ) : (auditQ.data?.length ?? 0) === 0 ? (
-          <p className="text-xs text-slate-400">Sem alterações registadas.</p>
+          <p className="text-xs text-muted-foreground">Sem alterações registadas.</p>
         ) : (
           <ul className="space-y-2">
             {auditQ.data!.map((entry) => (
-              <li key={entry.id} className="rounded-lg border border-slate-200 bg-white p-3">
+              <li key={entry.id} className="rounded-lg border border-border bg-card p-3">
                 <div className="flex items-baseline justify-between gap-2">
-                  <span className="text-sm font-medium text-slate-800">
+                  <span className="text-sm font-medium text-foreground">
                     {entry.acao === "insert"
                       ? "Criado"
                       : entry.acao === "delete"
@@ -369,12 +369,12 @@ function EditarPage() {
                         : "Editado"}
                     {entry.actor ? ` · ${entry.actor}` : ""}
                   </span>
-                  <span className="text-[11px] text-slate-400">
+                  <span className="text-[11px] text-muted-foreground">
                     {new Date(entry.created_at).toLocaleString("pt-PT")}
                   </span>
                 </div>
                 {entry.changes.length > 0 && (
-                  <ul className="mt-1.5 space-y-0.5 text-xs text-slate-600">
+                  <ul className="mt-1.5 space-y-0.5 text-xs text-muted-foreground">
                     {entry.changes.map((c, i) => (
                       <li key={`${entry.id}-${i}`}>
                         <span className="font-medium">{c.campo}:</span>{" "}
@@ -390,12 +390,12 @@ function EditarPage() {
         )}
       </section>
 
-      <footer className="sticky bottom-0 z-30 border-t border-slate-200 bg-white/95 px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] backdrop-blur">
+      <footer className="sticky bottom-0 z-30 border-t border-border bg-background/95 px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] backdrop-blur">
         <button
           type="button"
           disabled={busy}
           onClick={submit}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
         >
           {updateMut.isPending && <Loader2 className="size-4 animate-spin" />}
           Guardar alterações
@@ -408,7 +408,7 @@ function EditarPage() {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="flex flex-col gap-1.5">
-      <span className="text-xs font-medium text-slate-600">{label}</span>
+      <span className="text-xs font-medium text-muted-foreground">{label}</span>
       {children}
     </label>
   );
@@ -425,9 +425,9 @@ function MoneyField({
 }) {
   return (
     <label className="flex flex-col gap-1.5">
-      <span className="text-xs font-medium text-slate-600">{label}</span>
+      <span className="text-xs font-medium text-muted-foreground">{label}</span>
       <div className="relative">
-        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">
+        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
           €
         </span>
         <input
@@ -437,7 +437,7 @@ function MoneyField({
           min="0"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 pl-7 text-sm outline-none focus:border-slate-900"
+          className="w-full rounded-lg border border-input bg-card px-3 py-2 pl-7 text-sm outline-none focus:border-ring"
         />
       </div>
     </label>
