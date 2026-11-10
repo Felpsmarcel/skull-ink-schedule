@@ -236,7 +236,7 @@ export function AgendaAppointmentSheet({
                   decision: "new",
                   description: slot?.serviceName ?? "",
                 });
-                onOpenChange?.(false);
+                onOpenChange(false);
                 navigate({ to: "/appointments/new/agenda" });
               }}
             >
