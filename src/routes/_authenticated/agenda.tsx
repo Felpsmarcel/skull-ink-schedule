@@ -203,7 +203,7 @@ function AgendaPage() {
                 >
                   <CalendarIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
                   <span
-                    className="truncate text-base uppercase tracking-tight text-foreground sm:text-lg"
+                    className="truncate text-base tracking-tight text-foreground first-letter:uppercase sm:text-lg"
                     style={{ fontFamily: "var(--font-display)" }}
                   >
                     {dateLabel}
@@ -221,6 +221,18 @@ function AgendaPage() {
                     }
                   }}
                 />
+                <div className="border-t border-border p-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      goPrevMonth();
+                      setPickerOpen(false);
+                    }}
+                    className="w-full rounded-md px-2 py-1.5 text-left text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+                  >
+                    Ir para o mês anterior
+                  </button>
+                </div>
               </PopoverContent>
             </Popover>
 
@@ -236,28 +248,21 @@ function AgendaPage() {
             <button
               type="button"
               onClick={() => setDate(new Date())}
-              className="ml-1 inline-flex shrink-0 rounded-full border border-border bg-card px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:border-foreground hover:text-foreground sm:px-3"
+              className="ml-1 inline-flex h-8 shrink-0 items-center rounded-md border border-border bg-card px-3 text-xs font-medium text-muted-foreground hover:border-foreground/50 hover:text-foreground"
             >
               {t("agenda.today")}
             </button>
 
-            <button
-              type="button"
-              onClick={goPrevMonth}
-              className="ml-1 inline-flex shrink-0 rounded-full border border-border bg-card px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:border-foreground hover:text-foreground sm:px-3"
-            >
-              Mês anterior
-            </button>
 
             {scope.artistId === null ? (
               <select
                 aria-label="Selecionar tatuador"
                 value={pickedArtistId}
                 onChange={(e) => setPickedArtistId(e.target.value)}
-                className="ml-1 h-7 max-w-[9rem] shrink-0 rounded-full border border-border bg-card px-2 text-[10px] font-bold uppercase tracking-widest text-foreground"
+                className="ml-1 h-8 max-w-[10rem] shrink-0 rounded-md border border-border bg-card px-2 text-xs font-medium text-foreground"
               >
                 <option value="">Todos</option>
-                {allArtists.map((a) => (
+                {allArtists.filter((a) => !/augusto/i.test(a.name)).map((a) => (
                   <option key={a.id} value={a.id}>
                     {a.name}
                   </option>
@@ -271,7 +276,7 @@ function AgendaPage() {
                 <button
                   type="button"
                   aria-label={t("agenda.view.week") + " / " + t("agenda.view.month")}
-                  className="ml-1 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border bg-card text-muted-foreground hover:border-foreground hover:text-foreground sm:hidden"
+                  className="ml-1 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-card text-muted-foreground hover:border-foreground hover:text-foreground sm:hidden"
                 >
                   <MoreHorizontal className="h-4 w-4" />
                 </button>
@@ -281,7 +286,7 @@ function AgendaPage() {
                   <button
                     type="button"
                     onClick={() => setView("day")}
-                    className="flex w-full items-center justify-start rounded-sm px-2 py-1.5 text-xs font-semibold uppercase tracking-wider hover:bg-muted"
+                    className="flex w-full items-center justify-start rounded-sm px-2 py-1.5 text-sm hover:bg-muted"
                   >
                     {t("agenda.view.day")}
                   </button>
@@ -290,7 +295,7 @@ function AgendaPage() {
                   type="button"
                   onClick={() => setView("week")}
                   className={cn(
-                    "flex w-full items-center justify-start rounded-sm px-2 py-1.5 text-xs font-semibold uppercase tracking-wider hover:bg-muted",
+                    "flex w-full items-center justify-start rounded-sm px-2 py-1.5 text-sm hover:bg-muted",
                     view === "week" && "bg-muted",
                   )}
                 >
@@ -300,7 +305,7 @@ function AgendaPage() {
                   type="button"
                   onClick={() => setView("month")}
                   className={cn(
-                    "flex w-full items-center justify-start rounded-sm px-2 py-1.5 text-xs font-semibold uppercase tracking-wider hover:bg-muted",
+                    "flex w-full items-center justify-start rounded-sm px-2 py-1.5 text-sm hover:bg-muted",
                     view === "month" && "bg-muted",
                   )}
                 >
@@ -318,19 +323,19 @@ function AgendaPage() {
             <TabsList className="h-9 rounded-lg bg-muted p-1">
               <TabsTrigger
                 value="day"
-                className="rounded-md px-3 text-[11px] font-bold uppercase tracking-widest data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+                className="rounded-md px-3 text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
               >
                 {t("agenda.view.day")}
               </TabsTrigger>
               <TabsTrigger
                 value="week"
-                className="rounded-md px-3 text-[11px] font-bold uppercase tracking-widest data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+                className="rounded-md px-3 text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
               >
                 {t("agenda.view.week")}
               </TabsTrigger>
               <TabsTrigger
                 value="month"
-                className="rounded-md px-3 text-[11px] font-bold uppercase tracking-widest data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+                className="rounded-md px-3 text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
               >
                 {t("agenda.view.month")}
               </TabsTrigger>
@@ -399,6 +404,8 @@ function DayView({
     rowCount > 0
       ? (agendas.find((a) => a.slots.length === rowCount)?.slots ?? []).map((s) => s.label)
       : defaultTimeLabels();
+
+  const chipAgendas = agendas.filter((a) => !/augusto/i.test(a.staff.shortName));
 
   const totals = useMemo(() => {
     let booked = 0;
@@ -516,18 +523,15 @@ function DayView({
         </div>
       ) : null}
 
-      {/* KPI ribbon */}
+      {/* Day summary */}
       <div className="border-b border-border bg-background">
-        <div className="mx-auto flex w-full max-w-[1400px] flex-wrap items-center gap-x-4 gap-y-2 px-3 py-2 text-[10px] font-bold uppercase tracking-widest sm:gap-x-6 sm:px-6 sm:py-3 sm:text-[11px]">
-          <div className="flex items-center gap-2 text-foreground">
-            <span className="h-2 w-2 rounded-full bg-foreground" aria-hidden />
-            <span>{t("agenda.kpi.sessions", { n: totals.booked })}</span>
-          </div>
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <span className="h-2 w-2 rounded-full border border-border" aria-hidden />
-            <span>{t("agenda.kpi.free", { n: totals.free })}</span>
-          </div>
-          <div className="ml-auto hidden items-center gap-4 text-[10px] font-medium normal-case text-muted-foreground sm:flex">
+        <div className="mx-auto flex w-full max-w-[1400px] items-center gap-4 px-3 py-1.5 text-xs text-muted-foreground sm:px-6 sm:py-2">
+          <p className="tabular-nums">
+            <span className="font-medium text-foreground">{t("agenda.kpi.sessions", { n: totals.booked })}</span>
+            <span aria-hidden> · </span>
+            {totals.free === 0 ? "Nenhum horário vago" : t("agenda.kpi.free", { n: totals.free })}
+          </p>
+          <div className="ml-auto hidden items-center gap-4 text-[11px] text-muted-foreground sm:flex">
             <span className="flex items-center gap-1.5">
               <span className="h-2.5 w-2.5 rounded-sm border border-border bg-muted" />
               {t("agenda.kpi.legendReceive")}
@@ -541,10 +545,10 @@ function DayView({
       </div>
 
       {/* Mobile-only artist chip selector */}
-      {agendas.length > 1 ? (
+      {chipAgendas.length > 1 ? (
         <div className="border-b border-border bg-background sm:hidden">
           <div className="flex gap-2 overflow-x-auto px-3 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {agendas.map((a) => {
+            {chipAgendas.map((a) => {
               const active = a.staff.id === effectiveActiveId;
               return (
                 <button
@@ -552,7 +556,7 @@ function DayView({
                   type="button"
                   onClick={() => setActiveStaffId(a.staff.id)}
                   className={cn(
-                    "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-bold uppercase tracking-widest transition-colors",
+                    "flex shrink-0 items-center gap-2 rounded-md border px-3 py-1.5 text-sm transition-colors",
                     active
                       ? "border-foreground bg-foreground text-background"
                       : "border-border bg-card text-muted-foreground hover:border-foreground/40 hover:text-foreground",
@@ -561,11 +565,12 @@ function DayView({
                   <span className="truncate max-w-[140px]">{a.staff.shortName}</span>
                   <span
                     className={cn(
-                      "rounded-sm px-1 text-[9px] tabular-nums",
-                      active ? "bg-background/20" : "bg-muted",
+                      "text-xs tabular-nums",
+                      active ? "opacity-80" : a.bookedCount === 0 ? "opacity-40" : "",
                     )}
+                    aria-label={`${a.bookedCount} sessões`}
                   >
-                    {a.bookedCount}·{a.freeCount}
+                    {a.bookedCount}
                   </span>
                 </button>
               );
