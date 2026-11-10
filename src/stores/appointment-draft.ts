@@ -36,6 +36,10 @@ export interface AppointmentDraft {
   project: DraftProject;
   /** Chave de idempotência do rascunho (impede duplicação em reenvios). */
   idempotencyKey: string;
+  /** Número de sessões do projeto (1 = sessão única). */
+  sessionCount: number;
+  /** Datas das sessões 2..N (ISO), mesma duração/valor da sessão 1. */
+  extraStarts: (string | null)[];
 }
 
 interface State extends AppointmentDraft {
@@ -50,6 +54,8 @@ interface State extends AppointmentDraft {
   setSeller: (id: string | null) => void;
   setDeposit: (eur: number) => void;
   setProject: (patch: Partial<DraftProject>) => void;
+  setSessionCount: (n: number) => void;
+  setExtraStart: (index: number, iso: string | null) => void;
   reset: () => void;
 }
 
@@ -78,6 +84,8 @@ const initial: AppointmentDraft = {
   depositEur: 0,
   project: initialProject,
   idempotencyKey: newKey(),
+  sessionCount: 1,
+  extraStarts: [],
 };
 
 
@@ -132,12 +140,22 @@ export const useAppointmentDraft = create<State>()(
       setSeller: (sellerId) => set({ sellerId }),
       setDeposit: (eur) =>
         set({ depositEur: Number.isFinite(eur) ? Math.max(0, eur) : 0 }),
+      setSessionCount: (n) =>
+        set((st) => {
+          const count = Math.max(1, Math.min(10, Math.round(n) || 1));
+          const extra = Array.from({ length: count - 1 }, (_, i) => st.extraStarts[i] ?? null);
+          return { sessionCount: count, extraStarts: extra };
+        }),
+      setExtraStart: (index, iso) =>
+        set((st) => ({
+          extraStarts: st.extraStarts.map((v, i) => (i === index ? iso : v)),
+        })),
       setProject: (patch) => set((st) => ({ project: { ...st.project, ...patch } })),
       reset: () => set({ ...initial, project: { ...initialProject }, idempotencyKey: newKey() }),
     }),
     {
       name: "gf-appointment-draft",
-      version: 5,
+      version: 6,
 
       storage: createJSONStorage(() =>
         typeof window !== "undefined" ? sessionStorage : (undefined as unknown as Storage),
@@ -186,4 +204,13 @@ export function draftValuesComplete(draft: AppointmentDraft): boolean {
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
+}
+/** Valor total do projeto = valor por sessão × número de sessões (centavos inteiros). */
+export function projectTotalEur(draft: AppointmentDraft): number {
+  const cents = Math.round(totalFinalEur(draft) * 100) * Math.max(1, draft.sessionCount || 1);
+  return cents / 100;
+}
+
+export function allSessionsScheduled(draft: AppointmentDraft): boolean {
+  return (draft.sessionCount || 1) <= 1 || draft.extraStarts.every((v) => Boolean(v));
 }
