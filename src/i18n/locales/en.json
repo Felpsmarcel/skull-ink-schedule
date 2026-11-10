@@ -35,7 +35,7 @@
         "legendPaid": "Paid"
       },
       "staff": {
-        "summary": "{{booked}} booked · {{free}} free"
+        "summary": "{{booked}} booked, {{free}} free"
       },
       "addSlot": "New appointment",
       "details": {

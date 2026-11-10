@@ -35,7 +35,7 @@
         "legendPaid": "Pago"
       },
       "staff": {
-        "summary": "{{booked}} reservas · {{free}} livres"
+        "summary": "{{booked}} reservas, {{free}} livres"
       },
       "addSlot": "Novo agendamento",
       "details": {

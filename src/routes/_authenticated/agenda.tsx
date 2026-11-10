@@ -405,7 +405,7 @@ function DayView({
       ? (agendas.find((a) => a.slots.length === rowCount)?.slots ?? []).map((s) => s.label)
       : defaultTimeLabels();
 
-  const chipAgendas = agendas.filter((a) => !/augusto/i.test(a.staff.shortName));
+  const chipAgendas = agendas.filter((a) => !/augusto/i.test(a.staff.shortName) && !/^gf( tattoo)?$/i.test(a.staff.shortName.trim()));
 
   const totals = useMemo(() => {
     let booked = 0;
@@ -702,7 +702,7 @@ function StaffColumn({
             {t("agenda.errorLoading")}
           </StatusBadge>
         ) : (
-          <span className="text-[9px] font-medium tracking-normal text-muted-foreground">
+          <span className="text-[11px] text-muted-foreground">
             {t("agenda.staff.summary", {
               booked: agenda.bookedCount,
               free: agenda.freeCount,
