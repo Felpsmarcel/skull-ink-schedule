@@ -35,7 +35,7 @@ function NavLink({ to, icon, label }: { to: string; icon: React.ReactNode; label
       to={to}
       activeOptions={{ exact: false }}
       onClick={() => haptic("tap")}
-      className="flex min-w-0 flex-col items-center gap-1 py-1 text-[10px] font-semibold uppercase text-muted-foreground transition-[color,transform] duration-150 hover:text-foreground active:scale-95 data-[status=active]:text-primary focus-visible:outline-none focus-visible:text-primary"
+      className="flex min-w-0 flex-col items-center gap-1 py-1 text-[10px] font-semibold text-muted-foreground transition-[color,transform] duration-150 hover:text-foreground active:scale-95 data-[status=active]:text-primary focus-visible:outline-none focus-visible:text-primary"
     >
       {icon}
       {label}

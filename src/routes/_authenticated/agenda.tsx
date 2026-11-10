@@ -687,7 +687,7 @@ function StaffColumn({
       {/* Column header — editorial */}
       <div className="sticky top-0 z-10 flex h-16 flex-col items-center justify-center gap-0.5 border-b border-border bg-muted/40 px-2 py-2 text-center">
         <span
-          className="truncate text-[13px] uppercase leading-none tracking-tight text-foreground"
+          className="truncate text-[13px] leading-none tracking-tight text-foreground"
           style={{ fontFamily: "var(--font-display)" }}
         >
           {staff.shortName}
@@ -702,7 +702,7 @@ function StaffColumn({
             {t("agenda.errorLoading")}
           </StatusBadge>
         ) : (
-          <span className="text-[9px] font-medium uppercase tracking-wider text-muted-foreground">
+          <span className="text-[9px] font-medium tracking-normal text-muted-foreground">
             {t("agenda.staff.summary", {
               booked: agenda.bookedCount,
               free: agenda.freeCount,
@@ -824,13 +824,13 @@ function SlotCell({
         style={{ height: cardHeight }}
       >
         {isNext ? (
-          <span className="pointer-events-none absolute right-1 top-1 rounded-sm bg-foreground px-1 py-[1px] text-[8px] font-black uppercase tracking-widest text-background">
+          <span className="pointer-events-none absolute right-1 top-1 rounded-sm bg-foreground px-1 py-[1px] text-[8px] font-semibold tracking-normal text-background">
             {t("agenda.next", { defaultValue: "Próximo" })}
           </span>
         ) : null}
         <div className="flex items-center gap-1">
           <span
-            className="truncate text-[11px] uppercase leading-tight tracking-tight sm:text-[12px]"
+            className="truncate text-[11px] leading-tight tracking-tight sm:text-[12px]"
             style={{ fontFamily: "var(--font-display)" }}
           >
             {slot.contactName ?? t("agenda.booked")}
@@ -1001,7 +1001,7 @@ function WeekView({
               >
                 <span
                   className={cn(
-                    "text-[9px] uppercase tracking-wide text-muted-foreground",
+                    "text-[9px] tracking-wide text-muted-foreground",
                     isToday && "text-foreground",
                   )}
                 >
@@ -1045,7 +1045,7 @@ function WeekView({
                       {a.staff.initials}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="line-clamp-2 text-center text-[9px] font-semibold uppercase tracking-tight leading-tight text-foreground">
+                  <span className="line-clamp-2 text-center text-[9px] font-semibold tracking-tight leading-tight text-foreground">
                     {a.staff.shortName}
                   </span>
                 </div>
@@ -1121,7 +1121,7 @@ function WeekView({
                 type="button"
                 onClick={() => onPickDay(d)}
                 className={cn(
-                  "flex flex-col items-center gap-0.5 border-r border-border px-1 py-2 text-xs uppercase tracking-wide hover:bg-muted",
+                  "flex flex-col items-center gap-0.5 border-r border-border px-1 py-2 text-xs tracking-wide hover:bg-muted",
                   key === todayKey && "bg-muted",
                 )}
               >
@@ -1238,7 +1238,7 @@ function WeekView({
                                   {ev.title}
                                 </div>
                               ) : null}
-                              <div className="mt-1 text-[9px] uppercase tracking-wide opacity-70">
+                              <div className="mt-1 text-[9px] tracking-wide opacity-70">
                                 {a.staff.shortName}
                               </div>
                             </div>
@@ -1363,7 +1363,7 @@ function MonthView({
 
   return (
     <div className="flex-1 overflow-auto p-1 sm:p-2">
-      <div className="grid grid-cols-7 border-b border-border text-[9px] uppercase tracking-wide text-muted-foreground sm:text-[10px]">
+      <div className="grid grid-cols-7 border-b border-border text-[9px] tracking-wide text-muted-foreground sm:text-[10px]">
         {headerDays.map((d) => (
           <div key={d} className="px-1 py-1 text-center sm:px-2">
             <span className="sm:hidden">{wdNarrowFmt.format(new Date(d))}</span>
