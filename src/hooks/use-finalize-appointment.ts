@@ -11,6 +11,7 @@ import {
   useAppointmentDraft,
   totalDurationMin,
   totalFinalEur,
+  projectTotalEur,
 } from "@/stores/appointment-draft";
 import { finalizeBooking } from "@/lib/booking.functions";
 import {
@@ -43,7 +44,19 @@ export function useFinalizeAppointment() {
       const startMs = new Date(startISO).getTime();
       const durationMin = Math.max(15, totalDurationMin(draft) || 60);
       const endISO = new Date(startMs + durationMin * 60_000).toISOString();
-      const title = services.map((l) => l.service.name).join(" + ");
+      const baseTitle = services.map((l) => l.service.name).join(" + ");
+      const sessionCount = Math.max(1, draft.sessionCount || 1);
+      if (sessionCount > 1 && draft.extraStarts.some((v) => !v)) {
+        toast.error("Escolha a data de todas as sessões do projeto.");
+        navigate({ to: "/appointments/new/agenda" });
+        return;
+      }
+      const title = sessionCount > 1 ? `${baseTitle} (Sessão 1/${sessionCount})` : baseTitle;
+      const serviceLines = services.map((l) => ({
+        id: l.service.id,
+        discountPct: l.discountPct,
+        overridePriceEur: l.overridePriceEur ?? null,
+      }));
 
       // Uma única chamada server-side orquestra contato → projeto → evento →
       // persistência, com chave de idempotência estável.
@@ -57,13 +70,10 @@ export function useFinalizeAppointment() {
           title,
           notes: notes || null,
           status: "confirmed",
-          services: services.map((l) => ({
-            id: l.service.id,
-            discountPct: l.discountPct,
-            overridePriceEur: l.overridePriceEur ?? null,
-          })),
+          services: serviceLines,
           sellerId: draft.sellerId ?? null,
           depositEur: draft.depositEur ?? 0,
+          projectTotalEur: sessionCount > 1 ? projectTotalEur(draft) : null,
           contact: {
             ghlContactId: contact.id,
             name:
@@ -89,6 +99,59 @@ export function useFinalizeAppointment() {
         toast.error(res.reason);
         navigate({ to: "/appointments/new/cliente" });
         return;
+      }
+
+      // Sessões 2..N: mesmo projeto/oportunidade, sem sinal, chave própria por sessão.
+      if (sessionCount > 1) {
+        if (!res.projectId) {
+          toast.error("Sessão 1 criada, mas o projeto não foi vinculado. Crie as demais sessões pela agenda.");
+        } else {
+          for (let i = 0; i < draft.extraStarts.length; i++) {
+            const sIso = draft.extraStarts[i]!;
+            const sMs = new Date(sIso).getTime();
+            try {
+              await book({
+                data: {
+                  artistId: staff.id,
+                  calendarId: staff.calendarId,
+                  locationId: LOCATION_ID,
+                  startISO: sIso,
+                  endISO: new Date(sMs + durationMin * 60_000).toISOString(),
+                  title: `${baseTitle} (Sessão ${i + 2}/${sessionCount})`,
+                  notes: notes || null,
+                  status: "confirmed",
+                  services: serviceLines,
+                  sellerId: draft.sellerId ?? null,
+                  depositEur: 0,
+                  projectTotalEur: null,
+                  contact: {
+                    ghlContactId: res.ghlContactId ?? contact.id,
+                    name:
+                      contact.contactName ??
+                      ([contact.firstName, contact.lastName].filter(Boolean).join(" ") || null),
+                    phone: contact.phone ?? null,
+                    email: contact.email ?? null,
+                  },
+                  project: {
+                    decision: "reuse",
+                    reuseProjectId: res.projectId,
+                    reuseOpportunityId: res.ghlOpportunityId,
+                    projectType: draft.project.projectType,
+                    description: draft.project.description.trim() || null,
+                    bodyPart: draft.project.bodyPart.trim() || null,
+                    confirmNew: false,
+                  },
+                  idempotencyKey: `appt-${draft.idempotencyKey}-s${i + 2}`,
+                },
+              });
+            } catch (e) {
+              const msg = e instanceof Error ? e.message : String(e);
+              toast.error(`Sessão ${i + 2}/${sessionCount} não foi criada: ${msg}`);
+              navigate({ to: "/appointments/new/agenda" });
+              return;
+            }
+          }
+        }
       }
 
       await queryClient.invalidateQueries({ queryKey: ["agenda"] });

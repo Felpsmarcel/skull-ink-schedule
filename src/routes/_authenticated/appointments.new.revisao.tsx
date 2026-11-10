@@ -26,6 +26,8 @@ import {
   linePriceEur,
   totalFinalEur,
   totalOriginalEur,
+  projectTotalEur,
+  allSessionsScheduled,
 } from "@/stores/appointment-draft";
 import { useFinalizeAppointment } from "@/hooks/use-finalize-appointment";
 import { useServerFn } from "@tanstack/react-start";
@@ -81,7 +83,8 @@ function RevisaoStep() {
       draft.startISO &&
       draft.services.length > 0 &&
       valuesComplete &&
-      (draft.depositEur || 0) <= final,
+      (draft.depositEur || 0) <= final &&
+      allSessionsScheduled(draft),
   );
 
   return (
@@ -336,9 +339,45 @@ function RevisaoStep() {
             />
           </div>
 
+          {draft.sessionCount > 1 ? (
+            <div className="space-y-1 border-t border-border pt-2">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold">
+                  Projeto · {draft.sessionCount} sessões
+                </span>
+                <span className="text-lg font-bold">{formatPrice(projectTotalEur(draft))}</span>
+              </div>
+              {Array.from({ length: draft.sessionCount }, (_, i) => {
+                const iso = i === 0 ? draft.startISO : draft.extraStarts[i - 1];
+                return (
+                  <div key={i} className="flex justify-between text-xs text-muted-foreground">
+                    <span>
+                      Sessão {i + 1}/{draft.sessionCount} ·{" "}
+                      {iso
+                        ? new Intl.DateTimeFormat("pt-PT", {
+                            timeZone: "Europe/Brussels",
+                            day: "2-digit",
+                            month: "short",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          }).format(new Date(iso))
+                        : "sem data"}
+                    </span>
+                    <span>
+                      {formatPrice(final)}
+                      {i === 0 && deposit > 0 ? ` (sinal ${formatPrice(deposit)})` : ""}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
+
           {deposit > 0 ? (
             <div className="flex items-center justify-between border-t border-border pt-2">
-              <span className="font-semibold">Saldo restante</span>
+              <span className="font-semibold">
+                {draft.sessionCount > 1 ? "Saldo da sessão 1" : "Saldo restante"}
+              </span>
               <span className="text-lg font-bold">{formatPrice(balance)}</span>
             </div>
           ) : null}

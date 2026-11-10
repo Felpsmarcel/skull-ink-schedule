@@ -39,6 +39,8 @@ const BookingSchema = z.object({
   services: z.array(ServiceLineSchema).min(1),
   sellerId: z.string().uuid().nullish(),
   depositEur: z.number().min(0).max(1_000_000).default(0),
+  /** Projeto multi-sessões: valor integral do projeto (todas as sessões). */
+  projectTotalEur: z.number().min(0).max(10_000_000).nullish(),
   contact: z.object({
     ghlContactId: z.string().min(3).nullish(),
     name: z.string().max(200).nullish(),
@@ -342,7 +344,7 @@ export const finalizeBooking = createServerFn({ method: "POST" })
           const created = await createOpportunity({
             contactId: ghlContactId!,
             name: data.title,
-            monetaryValue: priced.totalEur,
+            monetaryValue: Math.max(priced.totalEur, data.projectTotalEur ?? 0),
           });
           if (!created.id) fail(created.error ?? "falha ao criar a oportunidade no CRM");
           ghlOpportunityId = created.id;
@@ -362,7 +364,7 @@ export const finalizeBooking = createServerFn({ method: "POST" })
             project_type: data.project.projectType,
             body_part: data.project.bodyPart ?? null,
             artist_id: data.artistId,
-            quoted_total_eur: priced.totalEur,
+            quoted_total_eur: Math.max(priced.totalEur, data.projectTotalEur ?? 0),
             deposit_eur: depositEur,
             status: "scheduled",
             created_by: userId,

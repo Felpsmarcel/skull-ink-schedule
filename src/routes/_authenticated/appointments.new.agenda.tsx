@@ -96,7 +96,25 @@ function AgendaStep() {
     [dateObj],
   );
 
-  const canContinue = Boolean(draft.calendarId && draft.startISO);
+  const [activeSession, setActiveSession] = useState(0);
+  const sessionStart = (i: number) => (i === 0 ? draft.startISO : draft.extraStarts[i - 1] ?? null);
+  const pickSlot = (iso: string) => {
+    if (activeSession === 0) draft.setStart(iso);
+    else draft.setExtraStart(activeSession - 1, iso);
+  };
+  const fmtSession = (iso: string | null) =>
+    iso
+      ? new Intl.DateTimeFormat("pt-PT", {
+          timeZone: "Europe/Brussels",
+          day: "2-digit",
+          month: "short",
+          hour: "2-digit",
+          minute: "2-digit",
+        }).format(new Date(iso))
+      : "Escolher data";
+  const canContinue = Boolean(
+    draft.calendarId && draft.startISO && draft.extraStarts.every((v) => Boolean(v)),
+  );
   const primary = !draft.calendarId
     ? t("appt.cta.selectStaff")
     : !draft.startISO
@@ -132,7 +150,62 @@ function AgendaStep() {
 
         <section className="rounded-lg border border-border bg-card p-3">
           <Label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Sessões do projeto
+          </Label>
+          <div className="flex flex-wrap gap-2">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <button
+                type="button"
+                key={n}
+                onClick={() => {
+                  draft.setSessionCount(n);
+                  if (activeSession >= n) setActiveSession(0);
+                }}
+                className={cn(
+                  "h-9 min-w-9 rounded border px-3 text-sm font-medium",
+                  draft.sessionCount === n
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-background hover:border-primary/60",
+                )}
+              >
+                {n === 1 ? "Sessão única" : n}
+              </button>
+            ))}
+          </div>
+          {draft.sessionCount > 1 ? (
+            <div className="mt-3 space-y-2">
+              <p className="text-xs text-muted-foreground">
+                Escolha a data de cada sessão. Todas usam os mesmos serviços e valor; o projeto
+                entra uma única vez no financeiro pelo valor total.
+              </p>
+              {Array.from({ length: draft.sessionCount }, (_, i) => (
+                <button
+                  type="button"
+                  key={i}
+                  onClick={() => setActiveSession(i)}
+                  className={cn(
+                    "flex h-11 w-full items-center justify-between rounded border px-3 text-sm",
+                    activeSession === i
+                      ? "border-primary bg-primary/10"
+                      : "border-border bg-background",
+                  )}
+                >
+                  <span className="font-medium">
+                    Sessão {i + 1}/{draft.sessionCount}
+                  </span>
+                  <span className={sessionStart(i) ? "" : "text-muted-foreground"}>
+                    {fmtSession(sessionStart(i))}
+                  </span>
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </section>
+
+        <section className="rounded-lg border border-border bg-card p-3">
+          <Label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             {t("appt.dateTime")}
+            {draft.sessionCount > 1 ? ` · Sessão ${activeSession + 1}` : ""}
           </Label>
           <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
             <PopoverTrigger asChild>
@@ -148,7 +221,6 @@ function AgendaStep() {
                 onSelect={(d) => {
                   if (d) {
                     setDateObj(d);
-                    draft.setStart(null);
                     setDatePickerOpen(false);
                   }
                 }}
@@ -174,12 +246,16 @@ function AgendaStep() {
               <div className="grid grid-cols-4 gap-2">
                 {(slotsQuery.data ?? []).map((ms) => {
                   const iso = new Date(ms).toISOString();
-                  const active = draft.startISO === iso;
+                  const active = sessionStart(activeSession) === iso;
+                  const usedElsewhere = Array.from({ length: draft.sessionCount }, (_, i) =>
+                    sessionStart(i),
+                  ).some((v, i) => i !== activeSession && v === iso);
                   return (
                     <button
                       type="button"
                       key={ms}
-                      onClick={() => draft.setStart(iso)}
+                      disabled={usedElsewhere}
+                      onClick={() => pickSlot(iso)}
                       className={cn(
                         "h-11 rounded border px-2 text-sm font-medium",
                         active
