@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { CalendarPlus } from "lucide-react";
 import { useAppointmentDraft } from "@/stores/appointment-draft";
 import { useTranslation } from "react-i18next";
@@ -303,6 +303,9 @@ function LinkAuditSection({ ghlEventId }: { ghlEventId: string }) {
           </Badge>
           <div className="mt-1.5 space-y-0.5 font-mono text-[10px] text-muted-foreground">
             <div>project: {info.projectId ?? "—"}</div>
+            {info.projectId ? (
+              <Link to="/projetos/$projectId" params={{ projectId: info.projectId }} search={{ status: "active" }} className="inline-block py-1 font-sans text-xs text-primary underline">Ver projeto</Link>
+            ) : null}
             <div>opportunity: {info.ghlOpportunityId ?? "—"}</div>
             <div>appointment: {info.ghlAppointmentId ?? "—"}</div>
             <div>contact: {info.ghlContactId ?? "—"}</div>

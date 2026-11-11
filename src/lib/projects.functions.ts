@@ -1,6 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import {
+  artistShareCents as _share,
+  balanceCents as _balance,
+  receivedCents as _received,
+  sessionProgress as _progress,
+  toCents as _toCents,
+} from "@/lib/project-progress-core";
 import { appointmentLinkStatus, GF_PIPELINE_ID, type LinkStatus } from "@/lib/linking";
 
 /* ------------------------------- Tipos ------------------------------- */
@@ -454,13 +461,6 @@ export const getAppointmentLinkInfo = createServerFn({ method: "POST" })
 
 /* --------------------- 6. Projetos do Tatuador --------------------- */
 
-import {
-  artistShareCents as _share,
-  balanceCents as _balance,
-  receivedCents as _received,
-  sessionProgress as _progress,
-  toCents as _toCents,
-} from "@/lib/project-progress-core";
 
 type ProjScope = { role: "admin" } | { role: "artist"; artistId: string };
 
