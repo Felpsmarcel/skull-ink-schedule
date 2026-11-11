@@ -101,6 +101,7 @@ export const linkProjectOpportunity = createServerFn({ method: "POST" })
     if (!res.complete) return { state: "rejected", reason: "ghl_incomplete" };
     const opp = res.items.find((o) => o.id === data.opportunityId);
     if (!opp) return { state: "rejected", reason: "opportunity_not_found" };
+    if (opp.contactId !== p.ghl_contact_id) return { state: "rejected", reason: "contact_mismatch" };
     const contractCents = Math.round(Number(p.quoted_total_eur) * 100);
     const ev = evaluateOpportunityLink({
       status: opp.status,
