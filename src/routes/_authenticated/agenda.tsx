@@ -702,10 +702,11 @@ function StaffColumn({
             {t("agenda.errorLoading")}
           </StatusBadge>
         ) : (
-          <span className="text-[11px] text-muted-foreground">
+          <span className="text-xs text-muted-foreground">
             {t("agenda.staff.summary", {
               booked: agenda.bookedCount,
               free: agenda.freeCount,
+              count: agenda.bookedCount,
             })}
           </span>
         )}
