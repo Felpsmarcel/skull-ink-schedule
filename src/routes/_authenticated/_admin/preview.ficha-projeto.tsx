@@ -3,7 +3,7 @@ import { useState } from "react";
 import { ProjectFicha } from "@/components/project-ficha/project-ficha";
 import { SYNTHETIC_PROJECT, SYNTHETIC_OPPS } from "@/lib/project-ficha-fixture";
 
-export const Route = createFileRoute("/preview/ficha-projeto")({
+export const Route = createFileRoute("/_authenticated/_admin/preview/ficha-projeto")({
   head: () => ({
     meta: [
       { title: "Prévia da ficha de projeto (dados fictícios) · GF Tattoo" },
