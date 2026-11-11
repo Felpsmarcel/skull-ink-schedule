@@ -1,9 +1,8 @@
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { Link, useNavigate } from "@tanstack/react-router";
-import { CalendarPlus } from "lucide-react";
-import { useAppointmentDraft } from "@/stores/appointment-draft";
+import { Link } from "@tanstack/react-router";
+import { AppointmentProjectJourney } from "@/components/appointment-project-journey";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -87,7 +86,6 @@ export function AgendaAppointmentSheet({
   const locale = resolveIntlLocale(i18n.language);
   const isMobile = useIsMobile();
 
-  const navigate = useNavigate();
   const contactId = slot?.contactId ?? null;
 
   const contactQ = useQuery({
@@ -188,6 +186,8 @@ export function AgendaAppointmentSheet({
             <Row label={t("agenda.details.status")} value={slot.appointmentStatus} />
           ) : null}
 
+          <AppointmentProjectJourney ghlEventId={slot?.ghlEventId ?? null} />
+
           <div>
             <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               {t("agenda.details.contact")}
@@ -223,27 +223,6 @@ export function AgendaAppointmentSheet({
               </div>
             )}
           </div>
-
-          {contact ? (
-            <Button
-              type="button"
-              className="w-full"
-              onClick={() => {
-                const d = useAppointmentDraft.getState();
-                d.reset();
-                d.setContact(contact);
-                d.setProject({
-                  decision: "new",
-                  description: slot?.serviceName ?? "",
-                });
-                onOpenChange(false);
-                navigate({ to: "/appointments/new/agenda" });
-              }}
-            >
-              <CalendarPlus className="mr-2 h-4 w-4" />
-              Agendar sessões do projeto
-            </Button>
-          ) : null}
 
           {slot?.ghlEventId ? (
             <FinanceSection ghlEventId={slot.ghlEventId} locale={locale} />

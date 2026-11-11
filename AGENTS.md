@@ -23,3 +23,4 @@
 - Booking date edits invalidate only the active session's time when its Brussels civil day differs; selecting another scheduled session restores its own calendar date to prevent stale-day bookings.
 - Projetos do Tatuador read through server-scoped functions (admin all, artist own) that omit gross values for artists and compute cents with null for unconfirmed amounts; prevents cross-artist disclosure and fabricated zeros.
 - My Day uses an independent admin-only, paginated local read projection and immutable appointment-ID correlation; unknown arrivals stay unverified and conflicts never create links or trigger CRM writes.
+- Appointment journey reuses existing admin-only link discovery and scoped project detail, verifies membership by immutable appointment ID, and never infers appointment nature or commercial status; artists retain their scoped Projects navigation without broadening link access.
