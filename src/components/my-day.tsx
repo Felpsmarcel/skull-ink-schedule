@@ -23,7 +23,9 @@ const filters: { id: "all" | DayState; label: string }[] = [
   { id: "in_progress", label: "Em atendimento" },
   { id: "finished", label: "Concluídos" },
   { id: "unverified", label: "Não verificados" },
+  { id: "conflict", label: "A conferir" },
 ];
+const agendaLabels: Record<string, string> = { pending: "Pendente", confirmed: "Confirmado", completed: "Concluído · registrado", cancelled: "Cancelado · registrado", no_show: "Não compareceu · registrado" };
 const time = (iso: string | null) => (iso ? formatInTimeZone(iso, MY_DAY_TZ, "HH:mm") : "—");
 export function MyDay() {
   const read = useServerFn(getMyDay);
@@ -41,11 +43,12 @@ export function MyDay() {
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 id="my-day-heading" className="text-xl font-semibold">
-            Meu Dia
+            Meu Dia — Central Operacional
           </h2>
           <p className="mt-1 text-xs text-muted-foreground">
             {data?.source ?? "Agenda e chegadas"}
             {data ? ` · ${time(data.updatedAt)}` : ""}
+            {data ? ` · ${data.day.split("-").reverse().join("/")} · Bruxelas` : ""}
           </p>
         </div>
         <Button
@@ -73,6 +76,10 @@ export function MyDay() {
       ) : null}
       {data ? (
         <>
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-3 border-y border-border py-4 sm:grid-cols-5">
+            {[["Previstos", data.summary.expected], ["Chegaram", data.summary.arrived], ["Em atendimento", data.summary.inProgress], ["Concluídos", data.summary.finished], ["Não verificados", data.summary.unverified]].map(([label, value]) => <div key={String(label)}><dt className="text-xs text-muted-foreground">{label}</dt><dd className="mt-1 text-xl font-semibold tabular-nums">{value ?? "Indisponível"}</dd></div>)}
+          </dl>
+          {!data.coverage.appointments || !data.coverage.checkins ? <p role="alert" className="text-sm text-destructive">{!data.coverage.appointments ? "Agenda local indisponível. " : ""}{!data.coverage.checkins ? "Chegadas indisponíveis; não é possível verificar comparecimento." : ""}</p> : null}
           <div className="flex flex-wrap gap-2" aria-label="Filtrar Meu Dia">
             {filters.map((f) => (
               <Button
@@ -87,12 +94,11 @@ export function MyDay() {
             ))}
           </div>
           <p className="text-xs text-muted-foreground">
-            {data.rows.length} previstos no espelho local · {data.unresolved.length} chegadas com
-            vínculo a conferir
+            {data.coverage.appointments ? `${data.rows.length} agendamentos no espelho local` : "Cobertura de agenda indisponível"}
           </p>
           <ul className="divide-y divide-border border-y border-border">
             {data.rows
-              .filter((r) => filter === "all" || r.state === filter)
+              .filter((r) => filter === "all" || r.state === filter || r.state === "conflict" || r.state === "absent" || r.state === "cancelled" || r.appointment.status === "cancelled" || r.appointment.status === "no_show")
               .map((r) => (
                 <li key={r.appointment.id} className="py-4">
                   <div className="flex items-start justify-between gap-3">
@@ -117,7 +123,8 @@ export function MyDay() {
                       </Link>
                     </Button>
                   </div>
-                  <p className="mt-2 text-sm">{labels[r.state]}</p>
+                  <p className="mt-2 text-xs text-muted-foreground">Agenda: {agendaLabels[r.appointment.status] ?? "Situação a conferir"}</p>
+                  <p className="mt-2 text-sm">Check-in: {data.coverage.checkins ? labels[r.state] : "Indisponível"}</p>
                   <dl className="mt-3 grid grid-cols-3 gap-2 text-xs sm:max-w-lg">
                     {[
                       ["Chegada", r.checkin?.arrived],
@@ -146,7 +153,7 @@ export function MyDay() {
           ) : null}
           {data.unresolved.length ? (
             <div>
-              <h3 className="text-base font-semibold">Chegadas com vínculo a conferir</h3>
+              <h3 className="text-base font-semibold">Chegada sem vínculo confirmado</h3>
               <ul className="mt-2 divide-y divide-border">
                 {data.unresolved.map((c) => (
                   <li key={c.id} className="py-3">
