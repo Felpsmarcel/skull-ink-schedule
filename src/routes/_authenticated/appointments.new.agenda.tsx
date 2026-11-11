@@ -32,11 +32,17 @@ import {
 import { getFreeSlots } from "@/lib/ghl";
 import { useAppointmentDraft } from "@/stores/appointment-draft";
 import { WizardFooter } from "@/components/appointment-wizard/wizard-footer";
+import { sessionStartForDay } from "@/lib/appointment-session-date";
 
 export const Route = createFileRoute("/_authenticated/appointments/new/agenda")({
   head: () => ({
     meta: [
       { title: "Agenda — Novo agendamento" },
+      { name: "description", content: "Selecione o tatuador, as datas e os horários das sessões no GF Tattoo Studio." },
+      { property: "og:title", content: "Novo agendamento — Agenda GF Tattoo" },
+      { property: "og:description", content: "Seleção de datas e horários das sessões no GF Tattoo Studio." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { name: "robots", content: "noindex,nofollow" },
     ],
   }),
@@ -58,7 +64,8 @@ function AgendaStep() {
 
   useEffect(() => {
     if (me?.role === "artist" && artists.length === 1) {
-      const cal = artists[0]!.calendarId;
+      const cal = artists[0]?.calendarId;
+      if (!cal) return;
       if (draft.calendarId !== cal) draft.setCalendar(cal);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -77,7 +84,8 @@ function AgendaStep() {
     enabled: Boolean(draft.calendarId),
     queryKey: ["appt-free-slots", draft.calendarId, dayKey],
     queryFn: async () => {
-      const res = await getFreeSlots(draft.calendarId!, dayStartMs, dayEndMs);
+      if (!draft.calendarId) return [];
+      const res = await getFreeSlots(draft.calendarId, dayStartMs, dayEndMs);
       if (!res.ok) throw new Error(`free-slots ${res.status}: ${JSON.stringify(res.data)}`);
       return extractFreeSlotStarts(res.data).sort((a, b) => a - b);
     },
@@ -98,7 +106,7 @@ function AgendaStep() {
 
   const [activeSession, setActiveSession] = useState(0);
   const sessionStart = (i: number) => (i === 0 ? draft.startISO : draft.extraStarts[i - 1] ?? null);
-  const pickSlot = (iso: string) => {
+  const pickSlot = (iso: string | null) => {
     if (activeSession === 0) draft.setStart(iso);
     else draft.setExtraStart(activeSession - 1, iso);
   };
@@ -182,7 +190,11 @@ function AgendaStep() {
                 <button
                   type="button"
                   key={i}
-                  onClick={() => setActiveSession(i)}
+                  onClick={() => {
+                    setActiveSession(i);
+                    const start = sessionStart(i);
+                    if (start) setDateObj(new Date(start));
+                  }}
                   className={cn(
                     "flex h-11 w-full items-center justify-between rounded border px-3 text-sm",
                     activeSession === i
@@ -220,6 +232,7 @@ function AgendaStep() {
                 selected={dateObj}
                 onSelect={(d) => {
                   if (d) {
+                    pickSlot(sessionStartForDay(sessionStart(activeSession), d));
                     setDateObj(d);
                     setDatePickerOpen(false);
                   }

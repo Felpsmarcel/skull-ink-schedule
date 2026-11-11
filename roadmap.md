@@ -1,5 +1,9 @@
 # Renovação premium
 
+## Correção da data no novo agendamento
+- [x] Invalidar somente o horário da sessão cuja data mudou e alinhar o calendário ao trocar de sessão
+- [x] Verificar sessão única/múltipla sem confirmar agendamento nem alterar CRM (reprodução autenticada antes/depois, 282 testes, compilação OK, lint dos novos arquivos OK)
+
 ## Agenda — etapa 4 autorizada
 - [x] Ajustar menu inferior com espaço adicional à área segura e alvos legíveis (48px; área segura de 34px simulada)
 - [x] Deslizar na grade diária sem conflitar com rolagem, fichas ou gestos do sistema (toques reais em Chromium; esquerda/direita, vertical e bordas)
