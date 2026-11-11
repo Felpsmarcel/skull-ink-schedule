@@ -1,3 +1,4 @@
+import { OpportunityLink } from "./opportunity-link";
 import type { ReactNode } from "react";
 import type { ProjectDetail, ProjectOpportunitiesResult } from "@/lib/projects.functions";
 import { formatEurCents } from "@/lib/project-progress-core";
@@ -81,6 +82,15 @@ export function ProjectFicha({
             onSelect={onSelectOpp}
             contractCents={p.finance.quotedCents}
           />
+          {opps?.kind === "ready" && opps.data.complete && opps.data.pipelineConfigured ? (
+            <OpportunityLink
+              key={p.id}
+              projectId={p.id}
+              opportunity={opps.data.items.find((o) => o.id === selectedOpp)}
+              contractCents={p.finance.quotedCents}
+              fixture={allocationAdapter?.environment === "fixture"}
+            />
+          ) : null}
         </section>
       ) : null}
 

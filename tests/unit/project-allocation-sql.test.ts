@@ -16,7 +16,9 @@ const SX = "00000000-0000-0000-0000-000000000059"; // sessão de outro projeto
 const SC = "00000000-0000-0000-0000-00000000005c"; // cancelada
 const key = (n: string) => `idem-${n}-0123456789abcdef`;
 
+let currentActor: string | null = ADMIN;
 async function as(uid: string | null, role: string | null) {
+  currentActor = uid;
   await db.exec(`RESET ROLE; SET test.uid='${uid ?? ""}'; SET test.role='${role ?? ""}';`);
 }
 async function save(
@@ -41,8 +43,8 @@ async function link(
   project = P1,
 ) {
   const r = await db.query<{ r: { kind: string; replayed: boolean } }>(
-    "SELECT public.link_project_opportunity($1,$2,$3,$4,$5,$6,$7) AS r",
-    [project, opp, contact, status, cents, decision, k],
+    "SELECT public.link_project_opportunity($1,$2,$3,$4,$5,$6,$7,$8) AS r",
+    [project, opp, contact, status, cents, decision, k, currentActor],
   );
   return r.rows[0].r;
 }
@@ -62,6 +64,8 @@ beforeAll(async () => {
   CREATE TYPE public.appt_status AS ENUM ('pending','confirmed','completed','cancelled','no_show');
   CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql AS $$ SELECT nullif(current_setting('test.uid',true),'')::uuid $$;
   CREATE FUNCTION public.current_user_role() RETURNS public.user_role LANGUAGE sql AS $$ SELECT nullif(current_setting('test.role',true),'')::public.user_role $$;
+  CREATE TABLE public.app_users(id uuid PRIMARY KEY, role public.user_role);
+  INSERT INTO public.app_users VALUES ('${ADMIN}','admin'),('${ARTIST}','artist');
   CREATE TABLE public.tattoo_projects(id uuid PRIMARY KEY, ghl_contact_id text, ghl_opportunity_id text,
     title text NOT NULL, quoted_total_eur numeric NOT NULL DEFAULT 0);
   CREATE TABLE public.appointments(id uuid PRIMARY KEY, project_id uuid REFERENCES public.tattoo_projects(id),
@@ -264,5 +268,23 @@ describe("vínculo de oportunidade (PGlite isolado)", () => {
   it("artista não vincula", async () => {
     await as(ARTIST, "artist");
     await expect(link("o1", "gA", "open", 270000, null, key("ar"))).rejects.toThrow(/forbidden/);
+  });
+});
+
+describe("fronteira de confiança do vínculo", () => {
+  it("admin authenticated não pode falsificar snapshot GHL pela RPC", async () => {
+    await db.exec("SET ROLE authenticated");
+    await expect(link("fake", "gA", "won", 270000, null, key("fake"))).rejects.toThrow(
+      /permission denied/,
+    );
+  });
+  it("service_role vincula com ator admin verificado e registra autoria", async () => {
+    await db.exec("SET ROLE service_role");
+    expect((await link("trusted", "gA", "won", 270000, null, key("trusted"))).kind).toBe("active");
+    await db.exec("RESET ROLE");
+    const r = await db.query<{ created_by: string }>(
+      "SELECT created_by FROM project_opportunity_links",
+    );
+    expect(r.rows[0].created_by).toBe(ADMIN);
   });
 });

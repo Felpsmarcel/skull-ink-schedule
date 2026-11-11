@@ -7,7 +7,7 @@ import { ProjectFicha } from "@/components/project-ficha/project-ficha";
 import { SYNTHETIC_PROJECT, SYNTHETIC_OPPS } from "@/lib/project-ficha-fixture";
 
 /** Altere a cada revisão da prévia para confirmar que a aba mostra a versão mais recente. */
-const FIXTURE_REVISION = "r3 · 2026-11-11 · persistência de rascunho";
+const FIXTURE_REVISION = "r4 local · 2026-11-11 · vínculo de oportunidade";
 
 export const Route = createFileRoute("/_authenticated/_admin/preview/ficha-projeto")({
   head: () => ({
