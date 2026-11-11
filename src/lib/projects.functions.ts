@@ -1,6 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import {
+  artistShareCents as _share,
+  balanceCents as _balance,
+  receivedCents as _received,
+  sessionProgress as _progress,
+  toCents as _toCents,
+} from "@/lib/project-progress-core";
 import { appointmentLinkStatus, GF_PIPELINE_ID, type LinkStatus } from "@/lib/linking";
 
 /* ------------------------------- Tipos ------------------------------- */
@@ -449,5 +456,210 @@ export const getAppointmentLinkInfo = createServerFn({ method: "POST" })
         ghlAppointmentId: appt.ghl_appointment_id,
         hasPayment,
       }),
+    };
+  });
+
+/* --------------------- 6. Projetos do Tatuador --------------------- */
+
+
+type ProjScope = { role: "admin" } | { role: "artist"; artistId: string };
+
+async function resolveProjectScope(
+  supabase: { from: (t: "app_users") => any },
+  userId: string,
+): Promise<ProjScope> {
+  const { data: me, error } = await supabase
+    .from("app_users")
+    .select("role, artist_id")
+    .eq("id", userId)
+    .maybeSingle();
+  if (error) throw new Error("Não foi possível verificar o acesso");
+  if (me?.role === "admin") return { role: "admin" };
+  if (me?.role === "artist" && me.artist_id) return { role: "artist", artistId: me.artist_id };
+  throw new Error("Acesso negado");
+}
+
+export interface ProjectListItem {
+  id: string;
+  title: string;
+  status: string;
+  clientName: string | null;
+  artistId: string | null;
+  artistName: string | null;
+  sessionsTotal: number;
+  sessionsDone: number;
+  nextStartAt: string | null;
+  /** Admin: saldo do projeto. Artista: sempre null (não vê bruto). */
+  balanceCents: number | null;
+  /** Artista: 35% do recebido. Admin: também calculado para referência. */
+  artistShareCents: number | null;
+}
+
+const ListSchema = z.object({
+  artistId: z.string().uuid().nullish(),
+  status: z.enum(["active", "completed", "cancelled"]).default("active"),
+  q: z.string().max(100).nullish(),
+  page: z.number().int().min(0).max(1000).default(0),
+});
+
+const STATUS_GROUPS: Record<string, string[]> = {
+  active: ["lead", "quoted", "scheduled", "in_progress"],
+  completed: ["completed"],
+  cancelled: ["cancelled"],
+};
+const PAGE = 30;
+
+export const listArtistProjects = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => ListSchema.parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const scope = await resolveProjectScope(supabase as never, userId);
+    let q = supabase
+      .from("tattoo_projects")
+      .select(
+        "id, title, status, artist_id, quoted_total_eur, contact_id, contacts(name), artists(name, active)",
+        { count: "exact" },
+      )
+      .in("status", STATUS_GROUPS[data.status] as never)
+      .order("updated_at", { ascending: false })
+      .order("id", { ascending: true })
+      .range(data.page * PAGE, data.page * PAGE + PAGE - 1);
+    if (scope.role === "artist") q = q.eq("artist_id", scope.artistId);
+    else if (data.artistId) q = q.eq("artist_id", data.artistId);
+    const { data: rows, error, count } = await q;
+    if (error) throw new Error("Não foi possível carregar os projetos");
+
+    const ids = (rows ?? []).map((r) => r.id);
+    const [appts, movs] = ids.length
+      ? await Promise.all([
+          supabase.from("appointments").select("id, project_id, start_at, status").in("project_id", ids),
+          supabase
+            .from("movimentacoes")
+            .select("project_id, total, tipo_movimento")
+            .in("project_id", ids)
+            .is("deleted_at", null),
+        ])
+      : [{ data: [], error: null }, { data: [], error: null }];
+    if (appts.error || movs.error) throw new Error("Não foi possível carregar as sessões");
+
+    const now = Date.now();
+    const needle = data.q?.trim().toLowerCase() ?? "";
+    const items: ProjectListItem[] = (rows ?? [])
+      .map((r) => {
+        const rel = r as unknown as { contacts: { name: string | null } | null; artists: { name: string } | null };
+        const sess = (appts.data ?? [])
+          .filter((a) => a.project_id === r.id)
+          .map((a) => ({ id: a.id, startAt: a.start_at, status: a.status }));
+        const p = _progress(sess, now);
+        const rec = _received(
+          (movs.data ?? []).filter((m) => m.project_id === r.id).map((m) => ({ total: m.total, tipo: m.tipo_movimento })),
+        );
+        return {
+          id: r.id,
+          title: r.title,
+          status: r.status,
+          clientName: rel.contacts?.name ?? null,
+          artistId: r.artist_id,
+          artistName: rel.artists?.name ?? null,
+          sessionsTotal: p.total,
+          sessionsDone: p.done,
+          nextStartAt: p.nextStartAt,
+          balanceCents: scope.role === "admin" ? _balance(_toCents(r.quoted_total_eur), rec) : null,
+          artistShareCents: _share(rec),
+        };
+      })
+      .filter((i) => !needle || `${i.clientName ?? ""} ${i.title}`.toLowerCase().includes(needle));
+
+    return {
+      role: scope.role,
+      items,
+      totalCount: count ?? null,
+      hasMore: count !== null ? (data.page + 1) * PAGE < count : false,
+    };
+  });
+
+export interface ProjectDetail {
+  role: "admin" | "artist";
+  id: string;
+  title: string;
+  description: string | null;
+  status: string;
+  bodyPart: string | null;
+  artistId: string | null;
+  artistName: string | null;
+  client: { name: string | null; phone: string | null; email: string | null; ghlContactId: string | null };
+  sessions: { id: string; startAt: string; status: string; index: number; total: number }[];
+  progress: { total: number; done: number; nextStartAt: string | null };
+  finance: {
+    quotedCents: number | null;
+    depositCents: number | null;
+    receivedCents: number | null;
+    balanceCents: number | null;
+    artistShareCents: number | null;
+  };
+}
+
+export const getProjectDetail = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ projectId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }): Promise<ProjectDetail | null> => {
+    const { supabase, userId } = context;
+    const scope = await resolveProjectScope(supabase as never, userId);
+    let q = supabase
+      .from("tattoo_projects")
+      .select(
+        "id, title, description, status, body_part, artist_id, quoted_total_eur, deposit_eur, ghl_contact_id, contacts(name, phone, email), artists(name)",
+      )
+      .eq("id", data.projectId);
+    if (scope.role === "artist") q = q.eq("artist_id", scope.artistId);
+    const { data: r, error } = await q.maybeSingle();
+    if (error) throw new Error("Não foi possível carregar o projeto");
+    if (!r) return null;
+    const [appts, movs] = await Promise.all([
+      supabase
+        .from("appointments")
+        .select("id, start_at, status")
+        .eq("project_id", r.id)
+        .order("start_at", { ascending: true }),
+      supabase.from("movimentacoes").select("total, tipo_movimento").eq("project_id", r.id).is("deleted_at", null),
+    ]);
+    if (appts.error || movs.error) throw new Error("Não foi possível carregar as sessões");
+    const rel = r as unknown as {
+      contacts: { name: string | null; phone: string | null; email: string | null } | null;
+      artists: { name: string } | null;
+    };
+    const all = (appts.data ?? []).map((a) => ({ id: a.id, startAt: a.start_at, status: a.status }));
+    const activeIds = all.filter((s) => s.status !== "cancelled").map((s) => s.id);
+    const rec = _received((movs.data ?? []).map((m) => ({ total: m.total, tipo: m.tipo_movimento })));
+    const admin = scope.role === "admin";
+    return {
+      role: scope.role,
+      id: r.id,
+      title: r.title,
+      description: r.description,
+      status: r.status,
+      bodyPart: r.body_part,
+      artistId: r.artist_id,
+      artistName: rel.artists?.name ?? null,
+      client: {
+        name: rel.contacts?.name ?? null,
+        phone: rel.contacts?.phone ?? null,
+        email: rel.contacts?.email ?? null,
+        ghlContactId: r.ghl_contact_id,
+      },
+      sessions: all.map((s) => ({
+        ...s,
+        index: activeIds.indexOf(s.id) + 1,
+        total: activeIds.length,
+      })),
+      progress: _progress(all, Date.now()),
+      finance: {
+        quotedCents: admin ? _toCents(r.quoted_total_eur) : null,
+        depositCents: admin ? _toCents(r.deposit_eur) : null,
+        receivedCents: admin ? rec : null,
+        balanceCents: admin ? _balance(_toCents(r.quoted_total_eur), rec) : null,
+        artistShareCents: _share(rec),
+      },
     };
   });

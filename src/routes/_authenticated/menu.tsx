@@ -68,6 +68,7 @@ function MenuPage() {
         <PaymentLinkCard />
 
         <Section title="Conta">
+          <Row to="/projetos" icon={<FileText className="h-4 w-4" />} label="Projetos do tatuador" />
           <Row to="/financeiro" icon={<Wallet className="h-4 w-4" />} label="Meu financeiro" />
           <Row to="/movimentacao" icon={<Banknote className="h-4 w-4" />} label="Registrar pagamento" />
           <Row to="/relatorios/movimentacoes" icon={<BarChart3 className="h-4 w-4" />} label="Relatório de pagamentos" />

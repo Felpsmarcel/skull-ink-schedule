@@ -44,6 +44,8 @@ import { Route as AuthenticatedOnboardingDisponibilidadeRouteImport } from './ro
 import { Route as AuthenticatedOnboardingPerfilRouteImport } from './routes/_authenticated/onboarding.perfil'
 import { Route as AuthenticatedOnboardingProntoRouteImport } from './routes/_authenticated/onboarding.pronto'
 import { Route as AuthenticatedOnboardingServicosRouteImport } from './routes/_authenticated/onboarding.servicos'
+import { Route as AuthenticatedProjetosIndexRouteImport } from './routes/_authenticated/projetos.index'
+import { Route as AuthenticatedProjetosProjectIdRouteImport } from './routes/_authenticated/projetos.$projectId'
 import { Route as AuthenticatedRelatoriosMovimentacoesRouteImport } from './routes/_authenticated/relatorios.movimentacoes'
 import { Route as ApiPublicMobileDashboardRouteImport } from './routes/api/public/mobile-dashboard'
 import { Route as ApiPublicPaymentMirrorRunRouteImport } from './routes/api/public/payment-mirror-run'
@@ -254,6 +256,18 @@ const AuthenticatedOnboardingServicosRoute =
     path: '/servicos',
     getParentRoute: () => AuthenticatedOnboardingRoute,
   } as any)
+const AuthenticatedProjetosIndexRoute =
+  AuthenticatedProjetosIndexRouteImport.update({
+    id: '/projetos/',
+    path: '/projetos/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedProjetosProjectIdRoute =
+  AuthenticatedProjetosProjectIdRouteImport.update({
+    id: '/projetos/$projectId',
+    path: '/projetos/$projectId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedRelatoriosMovimentacoesRoute =
   AuthenticatedRelatoriosMovimentacoesRouteImport.update({
     id: '/relatorios/movimentacoes',
@@ -428,11 +442,13 @@ export interface FileRoutesByFullPath {
   '/onboarding/perfil': typeof AuthenticatedOnboardingPerfilRoute
   '/onboarding/pronto': typeof AuthenticatedOnboardingProntoRoute
   '/onboarding/servicos': typeof AuthenticatedOnboardingServicosRoute
+  '/projetos/$projectId': typeof AuthenticatedProjetosProjectIdRoute
   '/relatorios/movimentacoes': typeof AuthenticatedRelatoriosMovimentacoesRoute
   '/api/public/mobile-dashboard': typeof ApiPublicMobileDashboardRoute
   '/api/public/payment-mirror-run': typeof ApiPublicPaymentMirrorRunRoute
   '/lovable/email/events': typeof LovableEmailEventsRoute
   '/movimentacao/': typeof AuthenticatedMovimentacaoIndexRoute
+  '/projetos/': typeof AuthenticatedProjetosIndexRoute
   '/admin/configuracoes': typeof AuthenticatedAdminAdminConfiguracoesRoute
   '/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
   '/admin/fila': typeof AuthenticatedAdminAdminFilaRoute
@@ -486,11 +502,13 @@ export interface FileRoutesByTo {
   '/onboarding/perfil': typeof AuthenticatedOnboardingPerfilRoute
   '/onboarding/pronto': typeof AuthenticatedOnboardingProntoRoute
   '/onboarding/servicos': typeof AuthenticatedOnboardingServicosRoute
+  '/projetos/$projectId': typeof AuthenticatedProjetosProjectIdRoute
   '/relatorios/movimentacoes': typeof AuthenticatedRelatoriosMovimentacoesRoute
   '/api/public/mobile-dashboard': typeof ApiPublicMobileDashboardRoute
   '/api/public/payment-mirror-run': typeof ApiPublicPaymentMirrorRunRoute
   '/lovable/email/events': typeof LovableEmailEventsRoute
   '/movimentacao': typeof AuthenticatedMovimentacaoIndexRoute
+  '/projetos': typeof AuthenticatedProjetosIndexRoute
   '/admin/configuracoes': typeof AuthenticatedAdminAdminConfiguracoesRoute
   '/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
   '/admin/fila': typeof AuthenticatedAdminAdminFilaRoute
@@ -548,11 +566,13 @@ export interface FileRoutesById {
   '/_authenticated/onboarding/perfil': typeof AuthenticatedOnboardingPerfilRoute
   '/_authenticated/onboarding/pronto': typeof AuthenticatedOnboardingProntoRoute
   '/_authenticated/onboarding/servicos': typeof AuthenticatedOnboardingServicosRoute
+  '/_authenticated/projetos/$projectId': typeof AuthenticatedProjetosProjectIdRoute
   '/_authenticated/relatorios/movimentacoes': typeof AuthenticatedRelatoriosMovimentacoesRoute
   '/api/public/mobile-dashboard': typeof ApiPublicMobileDashboardRoute
   '/api/public/payment-mirror-run': typeof ApiPublicPaymentMirrorRunRoute
   '/lovable/email/events': typeof LovableEmailEventsRoute
   '/_authenticated/movimentacao/': typeof AuthenticatedMovimentacaoIndexRoute
+  '/_authenticated/projetos/': typeof AuthenticatedProjetosIndexRoute
   '/_authenticated/_admin/admin/configuracoes': typeof AuthenticatedAdminAdminConfiguracoesRoute
   '/_authenticated/_admin/admin/equipe': typeof AuthenticatedAdminAdminEquipeRoute
   '/_authenticated/_admin/admin/fila': typeof AuthenticatedAdminAdminFilaRoute
@@ -609,11 +629,13 @@ export interface FileRouteTypes {
     | '/onboarding/perfil'
     | '/onboarding/pronto'
     | '/onboarding/servicos'
+    | '/projetos/$projectId'
     | '/relatorios/movimentacoes'
     | '/api/public/mobile-dashboard'
     | '/api/public/payment-mirror-run'
     | '/lovable/email/events'
     | '/movimentacao/'
+    | '/projetos/'
     | '/admin/configuracoes'
     | '/admin/equipe'
     | '/admin/fila'
@@ -667,11 +689,13 @@ export interface FileRouteTypes {
     | '/onboarding/perfil'
     | '/onboarding/pronto'
     | '/onboarding/servicos'
+    | '/projetos/$projectId'
     | '/relatorios/movimentacoes'
     | '/api/public/mobile-dashboard'
     | '/api/public/payment-mirror-run'
     | '/lovable/email/events'
     | '/movimentacao'
+    | '/projetos'
     | '/admin/configuracoes'
     | '/admin/equipe'
     | '/admin/fila'
@@ -728,11 +752,13 @@ export interface FileRouteTypes {
     | '/_authenticated/onboarding/perfil'
     | '/_authenticated/onboarding/pronto'
     | '/_authenticated/onboarding/servicos'
+    | '/_authenticated/projetos/$projectId'
     | '/_authenticated/relatorios/movimentacoes'
     | '/api/public/mobile-dashboard'
     | '/api/public/payment-mirror-run'
     | '/lovable/email/events'
     | '/_authenticated/movimentacao/'
+    | '/_authenticated/projetos/'
     | '/_authenticated/_admin/admin/configuracoes'
     | '/_authenticated/_admin/admin/equipe'
     | '/_authenticated/_admin/admin/fila'
@@ -1031,6 +1057,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedOnboardingServicosRouteImport
       parentRoute: typeof AuthenticatedOnboardingRoute
     }
+    '/_authenticated/projetos/': {
+      id: '/_authenticated/projetos/'
+      path: '/projetos'
+      fullPath: '/projetos/'
+      preLoaderRoute: typeof AuthenticatedProjetosIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/projetos/$projectId': {
+      id: '/_authenticated/projetos/$projectId'
+      path: '/projetos/$projectId'
+      fullPath: '/projetos/$projectId'
+      preLoaderRoute: typeof AuthenticatedProjetosProjectIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/relatorios/movimentacoes': {
       id: '/_authenticated/relatorios/movimentacoes'
       path: '/relatorios/movimentacoes'
@@ -1302,8 +1342,10 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedReviewsRoute: typeof AuthenticatedReviewsRoute
   AuthenticatedServicesRoute: typeof AuthenticatedServicesRoute
   AuthenticatedAppointmentsNewRoute: typeof AuthenticatedAppointmentsNewRouteWithChildren
+  AuthenticatedProjetosProjectIdRoute: typeof AuthenticatedProjetosProjectIdRoute
   AuthenticatedRelatoriosMovimentacoesRoute: typeof AuthenticatedRelatoriosMovimentacoesRoute
   AuthenticatedMovimentacaoIndexRoute: typeof AuthenticatedMovimentacaoIndexRoute
+  AuthenticatedProjetosIndexRoute: typeof AuthenticatedProjetosIndexRoute
   AuthenticatedMovimentacaoHistoricoIdEditarRoute: typeof AuthenticatedMovimentacaoHistoricoIdEditarRoute
 }
 
@@ -1318,9 +1360,11 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedServicesRoute: AuthenticatedServicesRoute,
   AuthenticatedAppointmentsNewRoute:
     AuthenticatedAppointmentsNewRouteWithChildren,
+  AuthenticatedProjetosProjectIdRoute: AuthenticatedProjetosProjectIdRoute,
   AuthenticatedRelatoriosMovimentacoesRoute:
     AuthenticatedRelatoriosMovimentacoesRoute,
   AuthenticatedMovimentacaoIndexRoute: AuthenticatedMovimentacaoIndexRoute,
+  AuthenticatedProjetosIndexRoute: AuthenticatedProjetosIndexRoute,
   AuthenticatedMovimentacaoHistoricoIdEditarRoute:
     AuthenticatedMovimentacaoHistoricoIdEditarRoute,
 }
