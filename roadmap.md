@@ -4,7 +4,8 @@
 - [x] Fase A complementar: resumo administrativo, status independentes, fontes com falhas separadas, 403 no servidor e casos de atenção preservados nos filtros; 310 testes passam, lint novo OK e prévia em 393/1280px. Nenhuma escrita de dados ou publicação.
 - [x] Fase A: Meu Dia administrativo, leitura paginada do espelho local agenda × check-ins, sem novas escritas
 - [x] Verificar correlação, fuso e acesso em 11 testes; 44 regressões passam, lint dos novos arquivos OK; sessão administrativa em 393/1280px, filtros e abertura da Agenda sem ações reais. Isolamento real entre artistas não homologado.
-- [ ] Fase B autorizada: jornada na ficha e continuidade em Projetos, somente leituras existentes, CTA seguro e testes sintéticos/mobile/desktop; sem alterar Fase A ou GHL.
+- [x] Fase B: jornada administrativa por leituras existentes e correlação appointment/projeto; artistas mantêm link aos próprios Projetos sem ampliar descoberta de vínculos; atalho NEW removido, continuidade e histórico com tipo/status comercial não verificados. 326 testes passam, lint dos novos trechos OK, compilação automática OK e ficha administrativa em 393/1280px. Fase A/GHL/dados preservados, sem publicação.
+- [ ] Homologar Fase B com projeto real vinculado e duas sessões reais de artistas — não há projeto nos filtros verificados; testes isolados de autorização passam, acesso real cruzado não homologado. Ficha tem 33 erros antigos de formatação; não houve reformat geral fora do escopo.
 - [ ] Fase C: painel privado — depende de aprovação separada e homologação de acesso.
 - [ ] Segurança RPC/RLS/proxy e novas escritas — dependem de autorização separada
 
