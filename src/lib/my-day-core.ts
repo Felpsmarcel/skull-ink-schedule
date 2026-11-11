@@ -46,6 +46,18 @@ export interface DayRow {
   checkin: DayCheckin | null;
   state: DayState;
 }
+export function myDaySummary(rows: DayRow[] | null, checkins: DayCheckin[] | null) {
+  return {
+    expected: rows?.length ?? null,
+    arrived: checkins
+      ? checkins.filter((c) => ["aguardando", "em_atendimento", "concluido"].includes(c.status))
+          .length
+      : null,
+    inProgress: checkins ? checkins.filter((c) => c.status === "em_atendimento").length : null,
+    finished: checkins ? checkins.filter((c) => c.status === "concluido").length : null,
+    unverified: rows && checkins ? rows.filter((r) => r.state === "unverified").length : null,
+  };
+}
 export function checkinState(status: string): DayState {
   switch (status) {
     case "aguardando":
@@ -66,6 +78,11 @@ export function checkinState(status: string): DayState {
 /** Only immutable appointment IDs prove correlation. Conflicts remain separate. */
 export function correlateMyDay(appointments: DayAppointment[], checkins: DayCheckin[]) {
   const local = new Map(appointments.map((a) => [a.id, a]));
+  const repeated = new Set(
+    appointments
+      .filter((a, i) => appointments.findIndex((b) => b.id === a.id) !== i)
+      .map((a) => a.id),
+  );
   const linked = new Map<string, DayCheckin[]>();
   const conflict = new Set<string>();
   const unresolved = new Set<string>();
@@ -73,6 +90,7 @@ export function correlateMyDay(appointments: DayAppointment[], checkins: DayChec
     const byLocal = c.appointmentId ? local.get(c.appointmentId) : undefined;
     const byGhl = c.ghlId ? appointments.filter((a) => a.ghlId === c.ghlId) : [];
     if (
+      (byLocal && repeated.has(byLocal.id)) ||
       byGhl.length > 1 ||
       (byLocal && c.ghlId && byLocal.ghlId && c.ghlId !== byLocal.ghlId) ||
       (c.appointmentId && !byLocal && byGhl.length > 0)
