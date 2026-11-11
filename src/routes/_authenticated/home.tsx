@@ -20,6 +20,8 @@ import gfMark from "@/assets/gf-mark.png";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { SectionLabel } from "@/components/ui/section-label";
+import { MyDay } from "@/components/my-day";
+import { useCurrentUser } from "@/hooks/use-current-user";
 
 export const Route = createFileRoute("/_authenticated/home")({
   head: () => ({
@@ -30,12 +32,17 @@ export const Route = createFileRoute("/_authenticated/home")({
         content: "Próximo cliente, fila do dia e ações rápidas do GF Tattoo Studio.",
       },
       { name: "robots", content: "noindex,nofollow" },
+      { property: "og:title", content: "Meu Dia — GF Tattoo Studio" },
+      { property: "og:description", content: "Agenda e acompanhamento dos atendimentos do GF Tattoo." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: HomePage,
 });
 
 function HomePage() {
+  const { data: me } = useCurrentUser();
   const { data, isLoading, isFetching, error, dataUpdatedAt } = useHomeDashboard();
   const actions = data?.actions;
   const gestao = data?.gestao;
@@ -56,6 +63,7 @@ function HomePage() {
       />
 
       <div className="mx-auto max-w-md space-y-5 px-4 py-4 sm:max-w-3xl">
+        {me?.role === "admin" ? <MyDay /> : null}
         {error ? (
           <p className="rounded-lg border border-border bg-card p-3 text-xs text-muted-foreground">
             Não foi possível atualizar agora. Os dados podem estar desatualizados.

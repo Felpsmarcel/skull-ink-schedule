@@ -1,5 +1,11 @@
 # Renovação premium
 
+## Operação interna — plano aprovado
+- [x] Fase A: Meu Dia administrativo, leitura paginada do espelho local agenda × check-ins, sem novas escritas
+- [x] Verificar correlação, fuso e acesso em 11 testes; 44 regressões passam, lint dos novos arquivos OK; sessão administrativa em 393/1280px, filtros e abertura da Agenda sem ações reais. Isolamento real entre artistas não homologado.
+- [ ] Fases B/C: ficha e painel privado — dependem de homologação de acesso e direção visual
+- [ ] Segurança RPC/RLS/proxy e novas escritas — dependem de autorização separada
+
 ## Correção da data no novo agendamento
 - [x] Invalidar somente o horário da sessão cuja data mudou e alinhar o calendário ao trocar de sessão
 - [x] Verificar sessão única/múltipla sem confirmar agendamento nem alterar CRM (reprodução autenticada antes/depois, 282 testes, compilação OK, lint dos novos arquivos OK)
