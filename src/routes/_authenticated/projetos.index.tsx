@@ -59,7 +59,7 @@ function ProjectsPage() {
   const { data } = useSuspenseQuery(listQuery(search));
   const { data: artists } = useArtists();
   const isAdmin = data.role === "admin";
-  const list = (artists ?? []).filter((a) => !/augusto|miguel|^gf( tattoo)?$/i.test(a.name ?? ""));
+  const list = (artists ?? []).filter((a) => !/augusto|miguel|^gf\b/i.test(a.name ?? ""));
   const unassigned = isAdmin ? data.items.filter((i) => !i.artistId) : [];
   const assigned = data.items.filter((i) => i.artistId || !isAdmin);
 
