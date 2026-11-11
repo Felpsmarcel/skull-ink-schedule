@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { zodValidator } from "@tanstack/zod-adapter";
@@ -60,7 +60,7 @@ export const Route = createFileRoute("/_authenticated/painel-tatuador")({
 
 function ArtistPanelPage() {
   const search = Route.useSearch();
-  const navigate = useNavigate({ from: "/_authenticated/painel-tatuador" });
+  const navigate = Route.useNavigate();
   const { data } = useSuspenseQuery(panelQuery(search.artist, search.days));
   const projects = data.projects;
   const attention = projects?.filter((p) => p.continuity.future === 0) ?? null;
