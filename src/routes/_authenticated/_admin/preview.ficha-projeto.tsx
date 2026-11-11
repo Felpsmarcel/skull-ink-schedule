@@ -30,7 +30,12 @@ function PreviewPage() {
   const [mount, setMount] = useState(0);
   const p = SYNTHETIC_PROJECT;
   const adapter = useMemo(
-    () => fixtureAdapter(p.id, p.finance.quotedCents, p.sessions.map((s) => s.id)),
+    () =>
+      fixtureAdapter(
+        p.id,
+        p.finance.quotedCents,
+        p.sessions.map((s) => s.id),
+      ),
     [p],
   );
   return (

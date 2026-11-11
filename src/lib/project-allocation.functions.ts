@@ -36,11 +36,22 @@ export const getAllocationDraft = createServerFn({ method: "POST" })
     if (!enabled()) return { state: "disabled", environment: "production" };
     const sb = context.supabase as unknown as { from: (t: string) => any };
     const [d, l] = await Promise.all([
-      sb.from("project_allocation_drafts").select("version, updated_at, updated_by").eq("project_id", data.projectId).maybeSingle(),
-      sb.from("project_allocation_lines").select("appointment_id, amount_cents, frozen_at").eq("project_id", data.projectId),
+      sb
+        .from("project_allocation_drafts")
+        .select("version, updated_at, updated_by")
+        .eq("project_id", data.projectId)
+        .maybeSingle(),
+      sb
+        .from("project_allocation_lines")
+        .select("appointment_id, amount_cents, frozen_at")
+        .eq("project_id", data.projectId),
     ]);
     if (d.error || l.error) throw new Error("Não foi possível carregar o rascunho salvo");
-    const rows = (l.data ?? []) as { appointment_id: string; amount_cents: number | string; frozen_at: string | null }[];
+    const rows = (l.data ?? []) as {
+      appointment_id: string;
+      amount_cents: number | string;
+      frozen_at: string | null;
+    }[];
     return {
       state: "ready",
       environment: "production",
@@ -58,15 +69,17 @@ export const saveAllocationDraft = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<SaveOutcome> => {
     await requireAdmin(context.supabase, context.userId);
     if (!enabled()) return { state: "disabled" };
-    const { data: r, error } = await (context.supabase as unknown as { rpc: (n: string, a: unknown) => any }).rpc(
-      "save_project_allocation_draft",
-      {
-        p_project_id: data.projectId,
-        p_expected_version: data.expectedVersion,
-        p_idempotency_key: data.idempotencyKey,
-        p_lines: data.lines.map((x) => ({ appointment_id: x.appointmentId, amount_cents: x.amountCents })),
-      },
-    );
+    const { data: r, error } = await (
+      context.supabase as unknown as { rpc: (n: string, a: unknown) => any }
+    ).rpc("save_project_allocation_draft", {
+      p_project_id: data.projectId,
+      p_expected_version: data.expectedVersion,
+      p_idempotency_key: data.idempotencyKey,
+      p_lines: data.lines.map((x) => ({
+        appointment_id: x.appointmentId,
+        amount_cents: x.amountCents,
+      })),
+    });
     if (error) {
       const code = mapRpcError(error.message);
       if (code === "version_conflict") return { state: "conflict" };
@@ -101,7 +114,8 @@ export const linkProjectOpportunity = createServerFn({ method: "POST" })
     if (!res.complete) return { state: "rejected", reason: "ghl_incomplete" };
     const opp = res.items.find((o) => o.id === data.opportunityId);
     if (!opp) return { state: "rejected", reason: "opportunity_not_found" };
-    if (opp.contactId !== p.ghl_contact_id) return { state: "rejected", reason: "contact_mismatch" };
+    if (opp.contactId !== p.ghl_contact_id)
+      return { state: "rejected", reason: "contact_mismatch" };
     const contractCents = Math.round(Number(p.quoted_total_eur) * 100);
     const ev = evaluateOpportunityLink({
       status: opp.status,
@@ -110,18 +124,17 @@ export const linkProjectOpportunity = createServerFn({ method: "POST" })
       keepContract: data.keepContract,
     });
     if (ev.needsDecision) return { state: "rejected", reason: "decision_required" };
-    const { data: r, error: e2 } = await (context.supabase as unknown as { rpc: (n: string, a: unknown) => any }).rpc(
-      "link_project_opportunity",
-      {
-        p_project_id: p.id,
-        p_opportunity_id: opp.id,
-        p_contact_id: p.ghl_contact_id,
-        p_status: opp.status ?? "unknown",
-        p_value_cents: opp.monetaryValueCents,
-        p_contract_decision: data.keepContract ? "keep_contract" : null,
-        p_idempotency_key: data.idempotencyKey,
-      },
-    );
+    const { data: r, error: e2 } = await (
+      context.supabase as unknown as { rpc: (n: string, a: unknown) => any }
+    ).rpc("link_project_opportunity", {
+      p_project_id: p.id,
+      p_opportunity_id: opp.id,
+      p_contact_id: p.ghl_contact_id,
+      p_status: opp.status ?? "unknown",
+      p_value_cents: opp.monetaryValueCents,
+      p_contract_decision: data.keepContract ? "keep_contract" : null,
+      p_idempotency_key: data.idempotencyKey,
+    });
     if (e2) {
       const c = mapRpcError(e2.message);
       return { state: "rejected", reason: c === "version_conflict" ? "unknown" : c };

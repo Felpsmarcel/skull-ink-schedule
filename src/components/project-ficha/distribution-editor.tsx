@@ -128,7 +128,11 @@ function DistributionEditorInner({
       .filter((e): e is [string, number] => typeof e[1] === "number")
       .map(([appointmentId, amountCents]) => ({ appointmentId, amountCents }));
     try {
-      const r = await adapter.save({ expectedVersion: version, idempotencyKey: keyRef.current, lines });
+      const r = await adapter.save({
+        expectedVersion: version,
+        idempotencyKey: keyRef.current,
+        lines,
+      });
       if (r.state === "saved") {
         setVersion(r.version);
         setSave({ kind: "saved", at: new Date().toISOString() });
@@ -312,8 +316,11 @@ function DistributionEditorInner({
             onClick={persist}
             aria-busy={save.kind === "saving"}
             disabled={
-              save.kind === "saving" || save.kind === "loading" || save.kind === "conflict" ||
-              anyBad || !summary.valid
+              save.kind === "saving" ||
+              save.kind === "loading" ||
+              save.kind === "conflict" ||
+              anyBad ||
+              !summary.valid
             }
           >
             {save.kind === "saving" ? "Salvando…" : "Salvar rascunho"}
@@ -339,12 +346,22 @@ function SaveBadge({ state, env }: { state: SaveState; env: "production" | "fixt
   const bad = `${base} border-destructive/40 bg-destructive/10 text-destructive`;
   const envTag = env === "fixture" ? "Fixture (memória desta aba) · " : "";
   const fmt = (iso: string) =>
-    new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Brussels" });
+    new Date(iso).toLocaleTimeString("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "Europe/Brussels",
+    });
   const map: Record<SaveState["kind"], [string, string]> = {
     loading: [warn, "Carregando rascunho salvo…"],
-    disabled: [warn, "Salvamento com ativação pendente — rascunho só nesta tela, descartado ao sair"],
+    disabled: [
+      warn,
+      "Salvamento com ativação pendente — rascunho só nesta tela, descartado ao sair",
+    ],
     load_failed: [bad, "Falha ao carregar o rascunho salvo — nada exibido como salvo"],
-    clean: [ok, state.kind === "clean" && state.at ? `Salvo · ${fmt(state.at)}` : "Nenhum rascunho salvo"],
+    clean: [
+      ok,
+      state.kind === "clean" && state.at ? `Salvo · ${fmt(state.at)}` : "Nenhum rascunho salvo",
+    ],
     dirty: [warn, "Alterações não salvas"],
     saving: [warn, "Salvando…"],
     saved: [ok, state.kind === "saved" ? `Salvo · ${fmt(state.at)}` : "Salvo"],

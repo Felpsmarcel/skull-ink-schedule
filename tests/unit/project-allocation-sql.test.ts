@@ -19,14 +19,27 @@ const key = (n: string) => `idem-${n}-0123456789abcdef`;
 async function as(uid: string | null, role: string | null) {
   await db.exec(`RESET ROLE; SET test.uid='${uid ?? ""}'; SET test.role='${role ?? ""}';`);
 }
-async function save(version: number, k: string, lines: { appointment_id: string; amount_cents: number }[], project = P1) {
+async function save(
+  version: number,
+  k: string,
+  lines: { appointment_id: string; amount_cents: number }[],
+  project = P1,
+) {
   const r = await db.query<{ r: { version: number; replayed: boolean } }>(
     "SELECT public.save_project_allocation_draft($1,$2,$3,$4::jsonb) AS r",
     [project, version, k, JSON.stringify(lines)],
   );
   return r.rows[0].r;
 }
-async function link(opp: string, contact: string, status: string, cents: number | null, decision: string | null, k: string, project = P1) {
+async function link(
+  opp: string,
+  contact: string,
+  status: string,
+  cents: number | null,
+  decision: string | null,
+  k: string,
+  project = P1,
+) {
   const r = await db.query<{ r: { kind: string; replayed: boolean } }>(
     "SELECT public.link_project_opportunity($1,$2,$3,$4,$5,$6,$7) AS r",
     [project, opp, contact, status, cents, decision, k],
@@ -34,9 +47,12 @@ async function link(opp: string, contact: string, status: string, cents: number 
   return r.rows[0].r;
 }
 const lines = async () =>
-  (await db.query<{ appointment_id: string; amount_cents: string }>(
-    "SELECT appointment_id, amount_cents::text FROM public.project_allocation_lines WHERE project_id=$1 ORDER BY appointment_id", [P1],
-  )).rows.map((r) => [r.appointment_id, Number(r.amount_cents)]);
+  (
+    await db.query<{ appointment_id: string; amount_cents: string }>(
+      "SELECT appointment_id, amount_cents::text FROM public.project_allocation_lines WHERE project_id=$1 ORDER BY appointment_id",
+      [P1],
+    )
+  ).rows.map((r) => [r.appointment_id, Number(r.amount_cents)]);
 
 beforeAll(async () => {
   await db.exec(`
@@ -53,7 +69,9 @@ beforeAll(async () => {
   `);
   await db.exec(readFileSync("docs/sql/project-session-allocation.review.sql", "utf8"));
 }, 30_000);
-afterAll(async () => { await db.close(); });
+afterAll(async () => {
+  await db.close();
+});
 
 beforeEach(async () => {
   await db.exec(`RESET ROLE;
@@ -67,13 +85,28 @@ beforeEach(async () => {
 
 describe("rascunho de distribuição (PGlite isolado)", () => {
   it("salva e recarrega 3 sessões de 900,00 € em centavos, com autor e versão", async () => {
-    const r = await save(0, key("a"), [S1, S2, S3].map((id) => ({ appointment_id: id, amount_cents: 90000 })));
+    const r = await save(
+      0,
+      key("a"),
+      [S1, S2, S3].map((id) => ({ appointment_id: id, amount_cents: 90000 })),
+    );
     expect(r).toEqual({ version: 1, replayed: false });
-    expect(await lines()).toEqual([[S1, 90000], [S2, 90000], [S3, 90000]]);
-    const d = (await db.query<{ updated_by: string; contract_cents_snapshot: string }>(
-      "SELECT updated_by, contract_cents_snapshot::text FROM public.project_allocation_drafts")).rows[0];
+    expect(await lines()).toEqual([
+      [S1, 90000],
+      [S2, 90000],
+      [S3, 90000],
+    ]);
+    const d = (
+      await db.query<{ updated_by: string; contract_cents_snapshot: string }>(
+        "SELECT updated_by, contract_cents_snapshot::text FROM public.project_allocation_drafts",
+      )
+    ).rows[0];
     expect(d).toEqual({ updated_by: ADMIN, contract_cents_snapshot: "270000" });
-    const a = (await db.query<{ actor: string; version: number }>("SELECT actor, version FROM public.project_allocation_audit")).rows;
+    const a = (
+      await db.query<{ actor: string; version: number }>(
+        "SELECT actor, version FROM public.project_allocation_audit",
+      )
+    ).rows;
     expect(a).toEqual([{ actor: ADMIN, version: 1 }]);
   });
 
@@ -81,45 +114,93 @@ describe("rascunho de distribuição (PGlite isolado)", () => {
     const l = [{ appointment_id: S1, amount_cents: 100 }];
     await save(0, key("dup"), l);
     expect(await save(0, key("dup"), l)).toEqual({ version: 1, replayed: true });
-    expect(Number((await db.query<{ c: number }>("SELECT count(*)::int c FROM public.project_allocation_audit")).rows[0].c)).toBe(1);
+    expect(
+      Number(
+        (
+          await db.query<{ c: number }>(
+            "SELECT count(*)::int c FROM public.project_allocation_audit",
+          )
+        ).rows[0].c,
+      ),
+    ).toBe(1);
   });
 
   it("duas abas: a segunda com versão antiga recebe conflito e nada muda", async () => {
     await save(0, key("t1"), [{ appointment_id: S1, amount_cents: 1000 }]);
-    await expect(save(0, key("t2"), [{ appointment_id: S1, amount_cents: 5 }])).rejects.toThrow(/version_conflict/);
+    await expect(save(0, key("t2"), [{ appointment_id: S1, amount_cents: 5 }])).rejects.toThrow(
+      /version_conflict/,
+    );
     expect(await lines()).toEqual([[S1, 1000]]);
   });
 
   it("rollback: uma linha inválida no meio desfaz tudo", async () => {
     await save(0, key("ok"), [{ appointment_id: S1, amount_cents: 1000 }]);
-    await expect(save(1, key("bad"), [
-      { appointment_id: S1, amount_cents: 2000 },
-      { appointment_id: SX, amount_cents: 1 },
-    ])).rejects.toThrow(/foreign_session/);
+    await expect(
+      save(1, key("bad"), [
+        { appointment_id: S1, amount_cents: 2000 },
+        { appointment_id: SX, amount_cents: 1 },
+      ]),
+    ).rejects.toThrow(/foreign_session/);
     expect(await lines()).toEqual([[S1, 1000]]);
-    const v = (await db.query<{ version: number }>("SELECT version FROM public.project_allocation_drafts")).rows[0];
+    const v = (
+      await db.query<{ version: number }>("SELECT version FROM public.project_allocation_drafts")
+    ).rows[0];
     expect(v.version).toBe(1);
   });
 
   it("rejeita excesso sobre o contrato, centavos fracionários, negativos e sessão cancelada", async () => {
-    await expect(save(0, key("ex"), [S1, S2, S3].map((id) => ({ appointment_id: id, amount_cents: 90001 })))).rejects.toThrow(/exceeds_contract/);
-    await expect(save(0, key("fr"), [{ appointment_id: S1, amount_cents: 10.5 }])).rejects.toThrow(/invalid_line/);
-    await expect(save(0, key("ng"), [{ appointment_id: S1, amount_cents: -1 }])).rejects.toThrow(/invalid_line/);
-    await expect(save(0, key("cc"), [{ appointment_id: SC, amount_cents: 1 }])).rejects.toThrow(/cancelled_session/);
-    await expect(save(0, key("du"), [{ appointment_id: S1, amount_cents: 1 }, { appointment_id: S1, amount_cents: 2 }])).rejects.toThrow(/invalid_line/);
+    await expect(
+      save(
+        0,
+        key("ex"),
+        [S1, S2, S3].map((id) => ({ appointment_id: id, amount_cents: 90001 })),
+      ),
+    ).rejects.toThrow(/exceeds_contract/);
+    await expect(save(0, key("fr"), [{ appointment_id: S1, amount_cents: 10.5 }])).rejects.toThrow(
+      /invalid_line/,
+    );
+    await expect(save(0, key("ng"), [{ appointment_id: S1, amount_cents: -1 }])).rejects.toThrow(
+      /invalid_line/,
+    );
+    await expect(save(0, key("cc"), [{ appointment_id: SC, amount_cents: 1 }])).rejects.toThrow(
+      /cancelled_session/,
+    );
+    await expect(
+      save(0, key("du"), [
+        { appointment_id: S1, amount_cents: 1 },
+        { appointment_id: S1, amount_cents: 2 },
+      ]),
+    ).rejects.toThrow(/invalid_line/);
   });
 
   it("linha congelada não muda nem some", async () => {
     await save(0, key("f0"), [{ appointment_id: S1, amount_cents: 90000 }]);
-    await db.exec(`UPDATE public.project_allocation_lines SET frozen_at=now() WHERE appointment_id='${S1}'`);
-    await expect(save(1, key("f1"), [{ appointment_id: S1, amount_cents: 1 }])).rejects.toThrow(/frozen_line/);
-    await expect(save(1, key("f2"), [{ appointment_id: S2, amount_cents: 1 }])).rejects.toThrow(/frozen_line/);
-    await save(1, key("f3"), [{ appointment_id: S1, amount_cents: 90000 }, { appointment_id: S2, amount_cents: 5 }]);
-    expect(await lines()).toEqual([[S1, 90000], [S2, 5]]);
+    await db.exec(
+      `UPDATE public.project_allocation_lines SET frozen_at=now() WHERE appointment_id='${S1}'`,
+    );
+    await expect(save(1, key("f1"), [{ appointment_id: S1, amount_cents: 1 }])).rejects.toThrow(
+      /frozen_line/,
+    );
+    await expect(save(1, key("f2"), [{ appointment_id: S2, amount_cents: 1 }])).rejects.toThrow(
+      /frozen_line/,
+    );
+    await save(1, key("f3"), [
+      { appointment_id: S1, amount_cents: 90000 },
+      { appointment_id: S2, amount_cents: 5 },
+    ]);
+    expect(await lines()).toEqual([
+      [S1, 90000],
+      [S2, 5],
+    ]);
   });
 
   it("artista, papel desconhecido e sem sessão são negados", async () => {
-    for (const [u, r] of [[ARTIST, "artist"], [ADMIN, null], [null, "admin"], [ADMIN, "seller"]] as const) {
+    for (const [u, r] of [
+      [ARTIST, "artist"],
+      [ADMIN, null],
+      [null, "admin"],
+      [ADMIN, "seller"],
+    ] as const) {
       await as(u, r);
       await expect(save(0, key(`x${r}${u ? 1 : 0}`), [])).rejects.toThrow(/forbidden/);
     }
@@ -127,21 +208,37 @@ describe("rascunho de distribuição (PGlite isolado)", () => {
 
   it("escrita direta na tabela é bloqueada para authenticated", async () => {
     await db.exec("SET ROLE authenticated");
-    await expect(db.query(`INSERT INTO public.project_allocation_lines VALUES ('${P1}','${S1}',1,NULL,'${ADMIN}',now())`)).rejects.toThrow();
+    await expect(
+      db.query(
+        `INSERT INTO public.project_allocation_lines VALUES ('${P1}','${S1}',1,NULL,'${ADMIN}',now())`,
+      ),
+    ).rejects.toThrow();
   });
 });
 
 describe("vínculo de oportunidade (PGlite isolado)", () => {
   it("contrato 2700 x oportunidade 900 exige decisão explícita e nunca altera o contrato", async () => {
-    await expect(link("o1", "gA", "open", 90000, null, key("o1"))).rejects.toThrow(/decision_required/);
-    expect(await link("o1", "gA", "open", 90000, "keep_contract", key("o1"))).toEqual({ id: expect.any(String), replayed: false, kind: "active" });
-    const q = (await db.query<{ q: string }>(`SELECT quoted_total_eur::text q FROM public.tattoo_projects WHERE id='${P1}'`)).rows[0];
+    await expect(link("o1", "gA", "open", 90000, null, key("o1"))).rejects.toThrow(
+      /decision_required/,
+    );
+    expect(await link("o1", "gA", "open", 90000, "keep_contract", key("o1"))).toEqual({
+      id: expect.any(String),
+      replayed: false,
+      kind: "active",
+    });
+    const q = (
+      await db.query<{ q: string }>(
+        `SELECT quoted_total_eur::text q FROM public.tattoo_projects WHERE id='${P1}'`,
+      )
+    ).rows[0];
     expect(q.q).toBe("2700");
   });
 
   it("várias oportunidades relacionadas no mesmo projeto, sem soma imposta", async () => {
     for (const o of ["o1", "o2", "o3"]) await link(o, "gA", "open", 90000, "keep_contract", key(o));
-    const c = (await db.query<{ c: number }>("SELECT count(*)::int c FROM public.project_opportunity_links")).rows[0];
+    const c = (
+      await db.query<{ c: number }>("SELECT count(*)::int c FROM public.project_opportunity_links")
+    ).rows[0];
     expect(c.c).toBe(3);
   });
 
@@ -151,11 +248,17 @@ describe("vínculo de oportunidade (PGlite isolado)", () => {
   });
 
   it("outro contato e oportunidade de outro projeto são recusados; repetição é idempotente", async () => {
-    await expect(link("o9", "gB", "open", 270000, null, key("o9"))).rejects.toThrow(/contact_mismatch/);
-    await expect(link("oppTaken", "gA", "open", 270000, null, key("ot"))).rejects.toThrow(/linked_elsewhere/);
+    await expect(link("o9", "gB", "open", 270000, null, key("o9"))).rejects.toThrow(
+      /contact_mismatch/,
+    );
+    await expect(link("oppTaken", "gA", "open", 270000, null, key("ot"))).rejects.toThrow(
+      /linked_elsewhere/,
+    );
     await link("oE", "gA", "won", 270000, null, key("oE"));
     expect((await link("oE", "gA", "won", 270000, null, key("oE2"))).replayed).toBe(true);
-    await expect(link("oE", "gB", "won", 90000, null, key("oE3"), P2)).rejects.toThrow(/contact_mismatch|linked_elsewhere/);
+    await expect(link("oE", "gB", "won", 90000, null, key("oE3"), P2)).rejects.toThrow(
+      /contact_mismatch|linked_elsewhere/,
+    );
   });
 
   it("artista não vincula", async () => {

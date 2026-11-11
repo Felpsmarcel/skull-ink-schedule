@@ -36,7 +36,15 @@ export const LinkOppSchema = z.object({
 
 export type DraftLoad =
   | { state: "disabled"; environment: "production" }
-  | { state: "ready"; environment: "production" | "fixture"; version: number; lines: Record<string, number>; frozen: string[]; updatedAt: string | null; updatedByMe: boolean | null };
+  | {
+      state: "ready";
+      environment: "production" | "fixture";
+      version: number;
+      lines: Record<string, number>;
+      frozen: string[];
+      updatedAt: string | null;
+      updatedByMe: boolean | null;
+    };
 
 export type SaveOutcome =
   | { state: "disabled" }
@@ -61,13 +69,23 @@ export type AllocationError =
   | "unknown";
 
 const KNOWN: AllocationError[] = [
-  "forbidden", "project_not_found", "invalid_line", "foreign_session", "cancelled_session",
-  "frozen_line", "exceeds_contract", "contract_unknown", "contact_mismatch", "linked_elsewhere",
+  "forbidden",
+  "project_not_found",
+  "invalid_line",
+  "foreign_session",
+  "cancelled_session",
+  "frozen_line",
+  "exceeds_contract",
+  "contract_unknown",
+  "contact_mismatch",
+  "linked_elsewhere",
   "decision_required",
 ];
 
 /** Converte a mensagem da RPC em código; conflito de versão é tratado à parte. */
-export function mapRpcError(message: string | null | undefined): AllocationError | "version_conflict" {
+export function mapRpcError(
+  message: string | null | undefined,
+): AllocationError | "version_conflict" {
   const m = message ?? "";
   if (m.includes("version_conflict")) return "version_conflict";
   return KNOWN.find((k) => m.includes(k)) ?? "unknown";
@@ -100,7 +118,9 @@ export function evaluateOpportunityLink(input: {
   const s = (input.status ?? "").toLowerCase();
   const kind = s === "lost" || s === "abandoned" ? "historical" : "active";
   const equal =
-    input.valueCents !== null && input.contractCents !== null && input.valueCents === input.contractCents;
+    input.valueCents !== null &&
+    input.contractCents !== null &&
+    input.valueCents === input.contractCents;
   return { kind, needsDecision: kind === "active" && !equal && !input.keepContract };
 }
 
