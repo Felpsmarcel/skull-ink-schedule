@@ -1,6 +1,7 @@
 # Renovação premium
 
 ## Operação interna — plano aprovado
+- [x] Fase A complementar: resumo administrativo, status independentes, fontes com falhas separadas, 403 no servidor e casos de atenção preservados nos filtros; 310 testes passam, lint novo OK e prévia em 393/1280px. Nenhuma escrita de dados ou publicação.
 - [x] Fase A: Meu Dia administrativo, leitura paginada do espelho local agenda × check-ins, sem novas escritas
 - [x] Verificar correlação, fuso e acesso em 11 testes; 44 regressões passam, lint dos novos arquivos OK; sessão administrativa em 393/1280px, filtros e abertura da Agenda sem ações reais. Isolamento real entre artistas não homologado.
 - [ ] Fases B/C: ficha e painel privado — dependem de homologação de acesso e direção visual

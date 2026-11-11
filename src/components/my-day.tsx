@@ -189,7 +189,7 @@ export function MyDay() {
                 </li>
               ))}
           </ul>
-          {!data.rows.some((r) => filter === "all" || r.state === filter) ? (
+          {data.coverage.appointments && !data.rows.some((r) => filter === "all" || r.state === filter || r.state === "conflict" || r.state === "absent" || r.state === "cancelled" || r.appointment.status === "cancelled" || r.appointment.status === "no_show") ? (
             <p className="py-4 text-sm text-muted-foreground">Nenhum agendamento nesta seleção.</p>
           ) : null}
           {data.unresolved.length ? (
