@@ -171,7 +171,6 @@ export function ProjectFicha({
             projectId={p.id}
             adapter={allocationAdapter}
             contractCents={p.finance.quotedCents}
-            adapter={allocationAdapter}
             sessions={active.map((s) => ({
               id: s.id,
               index: s.index,
