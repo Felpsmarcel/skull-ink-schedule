@@ -23,6 +23,8 @@ export const SYNTHETIC_PROJECT: ProjectDetail = {
       artistId: ANDRE_PAREYN_ARTIST_ID,
       artistName: "Tatuador Exemplo A",
       snapshotPct: 40,
+      realizedAt: null,
+      realizedAt: "2026-11-30T17:00:00Z",
     },
     {
       id: "s2",
@@ -33,6 +35,7 @@ export const SYNTHETIC_PROJECT: ProjectDetail = {
       artistId: ANDRE_PAREYN_ARTIST_ID,
       artistName: "Tatuador Exemplo A",
       snapshotPct: 40,
+      realizedAt: null,
     },
     {
       id: "s3",
@@ -43,6 +46,7 @@ export const SYNTHETIC_PROJECT: ProjectDetail = {
       artistId: "00000000-0000-4000-8000-0000000000b2",
       artistName: "Tatuador Exemplo B",
       snapshotPct: 50,
+      realizedAt: null,
     },
   ],
   opportunityId: null,
