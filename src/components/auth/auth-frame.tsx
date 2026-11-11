@@ -20,11 +20,16 @@ export function AuthFrame({
             alt="GF Tattoo Studio"
             className="gf-logo-ink mx-auto h-14 w-auto object-contain sm:h-16"
           />
-          <div aria-hidden className="mx-auto mt-4 h-px w-10 bg-[var(--brand-gold,var(--primary))]" />
+          <div
+            aria-hidden
+            className="mx-auto mt-4 h-px w-10 bg-[var(--brand-gold,var(--primary))]"
+          />
           <h1 className="mt-4 font-editorial text-[1.75rem] font-semibold leading-tight text-foreground">
             {title}
           </h1>
-          <p className="mx-auto mt-1.5 max-w-xs text-sm leading-6 text-muted-foreground">{description}</p>
+          <p className="mx-auto mt-1.5 max-w-xs text-sm leading-6 text-muted-foreground">
+            {description}
+          </p>
         </div>
         <div className="px-6 pb-6 pt-4 sm:px-8 sm:pb-8">{children}</div>
       </section>
