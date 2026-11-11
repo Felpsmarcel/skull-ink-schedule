@@ -1293,7 +1293,7 @@ function MonthView({
             else if (b === "pendente") buckets.error++;
             else buckets.pending++;
           }
-          const visibleArtists = artistsHere.slice(0, 3);
+          const visibleArtists = artistsHere.slice(0, 2);
           const extraArtists = artistsHere.length - visibleArtists.length;
           const dominant: "paid" | "pending" | "error" | null =
             evs.length === 0
@@ -1361,11 +1361,11 @@ function MonthView({
               </div>
               {artistsHere.length > 0 ? (
                 <div className="hidden items-center gap-1 sm:flex">
-                  <div className="flex -space-x-1.5">
+                  <div className="flex gap-0.5">
                     {visibleArtists.map((entry) => (
                       <Avatar
                         key={entry.staff.id}
-                        className="h-5 w-5 border border-background"
+                        className="h-6 w-6 border border-background"
                         title={`${entry.staff.name} — ${entry.count}`}
                       >
                         {entry.staff.avatarUrl ? (

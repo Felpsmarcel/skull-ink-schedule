@@ -2,7 +2,18 @@
  * Server-only HighLevel helpers for projetos/oportunidades.
  * Nunca importar deste ficheiro no cliente — usa GHL_TOKEN.
  */
-import { GF_LOCATION_ID, GF_PIPELINE_ID, normalizeEmail, normalizePhone, samePhone } from "@/lib/linking";
+import {
+  OPP_PAGE_SIZE,
+  readAllOpportunities,
+  type OpportunityReadResult,
+} from "@/lib/ghl-opportunities-core";
+import {
+  GF_LOCATION_ID,
+  GF_PIPELINE_ID,
+  normalizeEmail,
+  normalizePhone,
+  samePhone,
+} from "@/lib/linking";
 
 const GHL_BASE = "https://services.leadconnectorhq.com";
 
@@ -92,29 +103,49 @@ export interface GhlOpportunityLite {
   monetaryValue: number | null;
 }
 
-/** Oportunidades abertas do contato no pipeline oficial. */
-export async function findOpenOpportunities(contactId: string): Promise<GhlOpportunityLite[]> {
-  const qs = new URLSearchParams({
-    location_id: GF_LOCATION_ID,
-    contact_id: contactId,
-    pipeline_id: GF_PIPELINE_ID,
-    status: "open",
-    limit: "20",
-  });
-  const res = await ghl<{ opportunities?: Array<Record<string, unknown>> }>(
-    `/opportunities/search?${qs.toString()}`,
-    { method: "GET" },
+/** Todas as oportunidades do contato (todos os status), paginadas e fail-closed. */
+export async function listContactOpportunities(contactId: string): Promise<OpportunityReadResult> {
+  return readAllOpportunities(
+    async (page) => {
+      const qs = new URLSearchParams({
+        location_id: GF_LOCATION_ID,
+        contact_id: contactId,
+        limit: String(OPP_PAGE_SIZE),
+        page: String(page),
+      });
+      const res = await ghl<{
+        opportunities?: Array<Record<string, unknown>>;
+        meta?: { total?: number };
+      }>(`/opportunities/search?${qs.toString()}`, { method: "GET" });
+      if (!res.ok) return { ok: false, status: res.status };
+      const total = res.data?.meta?.total;
+      return {
+        ok: true,
+        rows: res.data?.opportunities ?? [],
+        total: typeof total === "number" ? total : null,
+      };
+    },
+    { expectedContactId: contactId },
   );
-  if (!res.ok) return [];
-  return (res.data?.opportunities ?? []).map((o) => ({
-    id: String(o["id"] ?? ""),
-    name: (o["name"] as string | undefined) ?? null,
-    status: (o["status"] as string | undefined) ?? null,
-    pipelineId: (o["pipelineId"] as string | undefined) ?? null,
-    pipelineStageId: (o["pipelineStageId"] as string | undefined) ?? null,
-    monetaryValue:
-      o["monetaryValue"] == null ? null : Number(o["monetaryValue"] as number | string),
-  }));
+}
+
+/**
+ * Oportunidades abertas do contato no pipeline oficial. Lê todas as páginas;
+ * leitura incompleta lança erro em vez de devolver lista parcial.
+ */
+export async function findOpenOpportunities(contactId: string): Promise<GhlOpportunityLite[]> {
+  const r = await listContactOpportunities(contactId);
+  if (!r.complete) throw new Error("Leitura de oportunidades do CRM incompleta — ação bloqueada");
+  return r.items
+    .filter((o) => o.status === "open" && o.pipelineId === GF_PIPELINE_ID)
+    .map((o) => ({
+      id: o.id,
+      name: o.name,
+      status: o.status,
+      pipelineId: o.pipelineId,
+      pipelineStageId: o.pipelineStageId,
+      monetaryValue: o.monetaryValueCents === null ? null : o.monetaryValueCents / 100,
+    }));
 }
 
 let cachedStageId: { at: number; id: string | null } | null = null;

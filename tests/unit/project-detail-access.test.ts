@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { getProjectDetail } from "@/lib/projects.functions";
+import { getProjectDetail, getProjectOpportunities } from "@/lib/projects.functions";
 
 const fake = vi.hoisted(() => ({
   middleware: {},
@@ -64,7 +64,16 @@ const from = (table: string) => {
       };
     if (table === "appointments")
       return {
-        data: [{ id: "appt-1", start_at: "2026-12-05T09:00:00Z", status: "confirmed" }],
+        data: [
+          {
+            id: "appt-1",
+            start_at: "2026-12-05T09:00:00Z",
+            status: "confirmed",
+            artist_id: "artist-1",
+            commission_pct: 40,
+            artists: { name: "Artista sintético" },
+          },
+        ],
         error: null,
       };
     return { data: [{ total: 450, tipo_movimento: "sinal" }], error: null };
@@ -78,6 +87,8 @@ const from = (table: string) => {
     },
     is: () => q,
     order: () => q,
+    limit: () => q,
+    in: () => q,
     maybeSingle: async () => result(),
     then: (resolve: (value: unknown) => unknown) => Promise.resolve(result()).then(resolve),
   };
@@ -134,4 +145,34 @@ describe("contrato existente de detalhe — sem ampliar acesso", () => {
     fake.error = true;
     await expect(run()).rejects.toThrow("Não foi possível carregar o projeto");
   });
+});
+
+describe("ficha integrada — escopo por tatuador", () => {
+  it("artista: sessões filtradas pelo próprio artist_id do servidor, sem consultas, oportunidade ou percentual gravado", async () => {
+    fake.role = "artist";
+    const r = (await run()) as {
+      consultations: unknown[];
+      opportunityId: unknown;
+      sessions: { snapshotPct: unknown }[];
+    };
+    expect(fake.filters).toContainEqual(["appointments", "artist_id", "artist-1"]);
+    expect(r.consultations).toEqual([]);
+    expect(r.opportunityId).toBeNull();
+    expect(r.sessions[0]!.snapshotPct).toBeNull();
+  });
+  it("admin vê percentual gravado e nomes dos tatuadores das sessões", async () => {
+    const r = (await run()) as { sessions: { snapshotPct: unknown; artistName: unknown }[] };
+    expect(r.sessions[0]).toMatchObject({ snapshotPct: 40, artistName: "Artista sintético" });
+  });
+  it.each(["artist", "seller", null])(
+    "oportunidades: nega %s antes de ler projeto ou GHL",
+    async (role) => {
+      fake.role = role;
+      const call = (
+        getProjectOpportunities as unknown as { run: (c: unknown, d: unknown) => Promise<unknown> }
+      ).run({ userId: "authenticated-id", supabase: { from } }, { projectId: "project-1" });
+      await expect(call).rejects.toThrow("Acesso negado");
+      expect(fake.queries).toEqual(["app_users"]);
+    },
+  );
 });

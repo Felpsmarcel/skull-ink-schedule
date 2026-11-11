@@ -355,3 +355,42 @@ html.gf-ops-light .gf-logo-ink {
   filter: none;
   opacity: 1;
 }
+
+/* Ficha de projeto — papel de orçamento + trilha de sessões. Tokens only. */
+.ficha-panel {
+  border: 1px solid var(--border);
+  background: var(--card);
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+@media (min-width: 640px) {
+  .ficha-panel { padding: 1.5rem; }
+}
+.ficha-next {
+  border-left: 3px solid var(--primary);
+  padding: 0.5rem 0 0.5rem 0.75rem;
+}
+.ficha-trail {
+  position: relative;
+  margin-left: 0.5rem;
+  border-left: 1px dashed var(--input);
+}
+.ficha-step {
+  position: relative;
+  padding: 0.5rem 0 0.75rem 1.25rem;
+}
+.ficha-step::before {
+  content: "";
+  position: absolute;
+  left: -0.4rem;
+  top: 0.85rem;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 9999px;
+  border: 2px solid var(--primary);
+  background: var(--card);
+}
+.ficha-step--done::before { background: var(--primary); }
+.ficha-step--rdv::before { border-color: var(--muted-foreground); border-style: dashed; }
+.ficha-step--off { opacity: 0.6; }
+.ficha-step--off::before { border-color: var(--border); }

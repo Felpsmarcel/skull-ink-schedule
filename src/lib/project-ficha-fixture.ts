@@ -1,0 +1,94 @@
+/** Fixture FICTÍCIA para a rota de prévia. Nunca usada como fallback de dados reais. */
+import type { ProjectDetail, ProjectOpportunitiesResult } from "@/lib/projects.functions";
+import { ANDRE_PAREYN_ARTIST_ID } from "@/lib/artist-commission-policy";
+
+export const SYNTHETIC_PROJECT: ProjectDetail = {
+  role: "admin",
+  id: "00000000-0000-4000-8000-0000000000f1",
+  title: "Fechamento de braço (exemplo)",
+  description: null,
+  status: "scheduled",
+  bodyPart: "Antebraço",
+  artistId: ANDRE_PAREYN_ARTIST_ID,
+  artistName: "Tatuador Exemplo A",
+  client: { name: "Cliente Fictício", phone: null, email: null, ghlContactId: "contato-ficticio" },
+  consultations: [{ id: "rdv-1", startAt: "2026-11-01T10:30:00Z", status: "confirmed" }],
+  sessions: [
+    {
+      id: "s1",
+      startAt: "2026-11-30T09:00:00Z",
+      status: "completed",
+      index: 1,
+      total: 3,
+      artistId: ANDRE_PAREYN_ARTIST_ID,
+      artistName: "Tatuador Exemplo A",
+      snapshotPct: 40,
+    },
+    {
+      id: "s2",
+      startAt: "2026-12-05T09:00:00Z",
+      status: "confirmed",
+      index: 2,
+      total: 3,
+      artistId: ANDRE_PAREYN_ARTIST_ID,
+      artistName: "Tatuador Exemplo A",
+      snapshotPct: 40,
+    },
+    {
+      id: "s3",
+      startAt: "2026-12-05T09:00:00Z",
+      status: "confirmed",
+      index: 3,
+      total: 3,
+      artistId: "00000000-0000-4000-8000-0000000000b2",
+      artistName: "Tatuador Exemplo B",
+      snapshotPct: 50,
+    },
+  ],
+  opportunityId: null,
+  progress: { total: 3, done: 1, nextStartAt: "2026-12-05T09:00:00Z" },
+  finance: {
+    quotedCents: 300000,
+    depositCents: 45000,
+    receivedCents: 45000,
+    balanceCents: 255000,
+    artistShareCents: 15750,
+  },
+};
+
+export const SYNTHETIC_OPPS: ProjectOpportunitiesResult = {
+  complete: true,
+  reason: null,
+  pipelineId: "pipeline-ficticio",
+  pipelineConfigured: true,
+  linkedOpportunityId: null,
+  items: [
+    {
+      id: "o1",
+      name: "Projeto braço (fictício)",
+      status: "won",
+      inArtistPipeline: true,
+      monetaryValueCents: 300000,
+      linkedHere: false,
+      linkedElsewhereProjectId: null,
+    },
+    {
+      id: "o2",
+      name: "Outro projeto do cliente (fictício)",
+      status: "open",
+      inArtistPipeline: true,
+      monetaryValueCents: 90000,
+      linkedHere: false,
+      linkedElsewhereProjectId: "outro",
+    },
+    {
+      id: "o3",
+      name: "Lead antigo (fictício)",
+      status: "lost",
+      inArtistPipeline: false,
+      monetaryValueCents: null,
+      linkedHere: false,
+      linkedElsewhereProjectId: null,
+    },
+  ],
+};
