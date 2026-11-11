@@ -613,7 +613,21 @@ export interface ProjectDetail {
     email: string | null;
     ghlContactId: string | null;
   };
-  sessions: { id: string; startAt: string; status: string; index: number; total: number }[];
+  sessions: {
+    id: string;
+    startAt: string;
+    status: string;
+    index: number;
+    total: number;
+    artistId: string | null;
+    artistName: string | null;
+    /** Admin: percentual gravado no agendamento. Artista: null. */
+    snapshotPct: number | null;
+  }[];
+  /** Admin: consultas Randevu do mesmo contato (não são sessões). Artista: []. */
+  consultations: { id: string; startAt: string; status: string }[];
+  /** Admin: oportunidade vinculada ao projeto. Artista: null. */
+  opportunityId: string | null;
   progress: { total: number; done: number; nextStartAt: string | null };
   finance: {
     quotedCents: number | null;
@@ -633,19 +647,21 @@ export const getProjectDetail = createServerFn({ method: "POST" })
     let q = supabase
       .from("tattoo_projects")
       .select(
-        "id, title, description, status, body_part, artist_id, quoted_total_eur, deposit_eur, ghl_contact_id, contacts(name, phone, email), artists(name)",
+        "id, title, description, status, body_part, artist_id, quoted_total_eur, deposit_eur, ghl_contact_id, ghl_opportunity_id, contacts(name, phone, email), artists(name)",
       )
       .eq("id", data.projectId);
     if (scope.role === "artist") q = q.eq("artist_id", scope.artistId);
     const { data: r, error } = await q.maybeSingle();
     if (error) throw new Error("Não foi possível carregar o projeto");
     if (!r) return null;
+    let apptQ = supabase
+      .from("appointments")
+      .select("id, start_at, status, artist_id, commission_pct, artists(name)")
+      .eq("project_id", r.id);
+    // Artista: somente as próprias sessões, mesmo em projeto com vários tatuadores.
+    if (scope.role === "artist") apptQ = apptQ.eq("artist_id", scope.artistId);
     const [appts, movs] = await Promise.all([
-      supabase
-        .from("appointments")
-        .select("id, start_at, status")
-        .eq("project_id", r.id)
-        .order("start_at", { ascending: true }),
+      apptQ.order("start_at", { ascending: true }),
       supabase
         .from("movimentacoes")
         .select("total, tipo_movimento")
@@ -657,11 +673,37 @@ export const getProjectDetail = createServerFn({ method: "POST" })
       contacts: { name: string | null; phone: string | null; email: string | null } | null;
       artists: { name: string } | null;
     };
-    const all = (appts.data ?? []).map((a) => ({
+    const adminView = scope.role === "admin";
+    const all = (
+      (appts.data ?? []) as unknown as Array<{
+        id: string;
+        start_at: string;
+        status: string;
+        artist_id: string | null;
+        commission_pct: number | string | null;
+        artists: { name: string } | null;
+      }>
+    ).map((a) => ({
       id: a.id,
       startAt: a.start_at,
       status: a.status,
+      artistId: a.artist_id,
+      artistName: a.artists?.name ?? null,
+      snapshotPct: adminView && a.commission_pct != null ? Number(a.commission_pct) : null,
     }));
+    let consultations: { id: string; startAt: string; status: string }[] = [];
+    if (adminView && r.ghl_contact_id) {
+      const { RANDEVU_CALENDAR_ID } = await import("@/lib/artist-commission-policy");
+      const { data: cons } = await supabase
+        .from("appointments")
+        .select("id, start_at, status")
+        .eq("ghl_contact_id", r.ghl_contact_id)
+        .eq("calendar_id", RANDEVU_CALENDAR_ID)
+        .is("project_id", null)
+        .order("start_at", { ascending: true })
+        .limit(20);
+      consultations = (cons ?? []).map((c) => ({ id: c.id, startAt: c.start_at, status: c.status }));
+    }
     const activeIds = all.filter((s) => s.status !== "cancelled").map((s) => s.id);
     const rec = _received(
       (movs.data ?? []).map((m) => ({ total: m.total, tipo: m.tipo_movimento })),
@@ -687,6 +729,8 @@ export const getProjectDetail = createServerFn({ method: "POST" })
         index: activeIds.indexOf(s.id) + 1,
         total: activeIds.length,
       })),
+      consultations,
+      opportunityId: adminView ? ((r as { ghl_opportunity_id?: string | null }).ghl_opportunity_id ?? null) : null,
       progress: _progress(all, Date.now()),
       finance: {
         quotedCents: admin ? _toCents(r.quoted_total_eur) : null,
@@ -695,5 +739,73 @@ export const getProjectDetail = createServerFn({ method: "POST" })
         balanceCents: admin ? _balance(_toCents(r.quoted_total_eur), rec) : null,
         artistShareCents: _share(rec),
       },
+    };
+  });
+
+/* -------------------- Oportunidades do contato (admin) -------------------- */
+
+export interface ProjectOpportunitiesResult {
+  complete: boolean;
+  reason: string | null;
+  pipelineId: string | null;
+  pipelineConfigured: boolean;
+  linkedOpportunityId: string | null;
+  items: {
+    id: string;
+    name: string | null;
+    status: string | null;
+    inArtistPipeline: boolean;
+    monetaryValueCents: number | null;
+    linkedHere: boolean;
+    linkedElsewhereProjectId: string | null;
+  }[];
+}
+
+/** Somente leitura. Admin-only; contato vem do projeto no servidor, nunca do cliente. */
+export const getProjectOpportunities = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ projectId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }): Promise<ProjectOpportunitiesResult> => {
+    const { supabase, userId } = context;
+    const scope = await resolveProjectScope(supabase as never, userId);
+    if (scope.role !== "admin") throw new Error("Acesso negado");
+    const { data: r, error } = await supabase
+      .from("tattoo_projects")
+      .select("id, artist_id, ghl_contact_id, ghl_opportunity_id")
+      .eq("id", data.projectId)
+      .maybeSingle();
+    if (error) throw new Error("Não foi possível carregar o projeto");
+    if (!r) throw new Error("Projeto não encontrado");
+    const { artistPipelineId } = await import("@/lib/ghl-opportunities-core");
+    const pipelineId = artistPipelineId(r.artist_id);
+    const base = {
+      pipelineId,
+      pipelineConfigured: pipelineId !== null,
+      linkedOpportunityId: r.ghl_opportunity_id,
+    };
+    if (!r.ghl_contact_id) return { ...base, complete: false, reason: "no_contact", items: [] };
+    const { listContactOpportunities } = await import("@/lib/projects.server");
+    const res = await listContactOpportunities(r.ghl_contact_id);
+    const ids = res.items.map((o) => o.id);
+    const { data: links } = ids.length
+      ? await supabase.from("tattoo_projects").select("id, ghl_opportunity_id").in("ghl_opportunity_id", ids)
+      : { data: [] as { id: string; ghl_opportunity_id: string | null }[] };
+    const linkMap = new Map((links ?? []).map((l) => [l.ghl_opportunity_id, l.id]));
+    return {
+      ...base,
+      complete: res.complete,
+      reason: res.reason,
+      items: res.items.map((o) => {
+        const other = linkMap.get(o.id) ?? null;
+        return {
+          id: o.id,
+          name: o.name,
+          status: o.status,
+          inArtistPipeline: pipelineId !== null && o.pipelineId === pipelineId,
+          monetaryValueCents: o.monetaryValueCents,
+          linkedHere: other === r.id,
+          linkedElsewhereProjectId: other && other !== r.id ? other : null,
+        };
+      }),
     };
   });
