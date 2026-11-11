@@ -1293,7 +1293,7 @@ function MonthView({
             else if (b === "pendente") buckets.error++;
             else buckets.pending++;
           }
-          const visibleArtists = artistsHere.slice(0, 3);
+          const visibleArtists = artistsHere.slice(0, 2);
           const extraArtists = artistsHere.length - visibleArtists.length;
           const dominant: "paid" | "pending" | "error" | null =
             evs.length === 0
