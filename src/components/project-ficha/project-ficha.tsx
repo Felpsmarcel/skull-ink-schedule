@@ -4,6 +4,7 @@ import { formatEurCents } from "@/lib/project-progress-core";
 import { formatProjectDate, PROJECT_APPOINTMENT_STATUS } from "@/lib/project-journey-core";
 import { OPP_STATUS_LABEL } from "@/lib/ghl-opportunities-core";
 import { DistributionEditor } from "./distribution-editor";
+import type { AllocationAdapter } from "@/lib/project-allocation-adapter";
 import { opportunityContractDivergence } from "@/lib/project-distribution-core";
 
 type OppState =
@@ -21,7 +22,9 @@ export function ProjectFicha({
   selectedOpp,
   onSelectOpp,
   actions,
+  allocationAdapter,
 }: {
+  allocationAdapter?: AllocationAdapter;
   p: ProjectDetail;
   opps?: OppState;
   selectedOpp?: string | null;
@@ -77,6 +80,7 @@ export function ProjectFicha({
             selected={selectedOpp ?? null}
             onSelect={onSelectOpp}
             contractCents={p.finance.quotedCents}
+            adapter={allocationAdapter}
           />
         </section>
       ) : null}
@@ -167,6 +171,7 @@ export function ProjectFicha({
             key={p.id}
             projectId={p.id}
             contractCents={p.finance.quotedCents}
+            adapter={allocationAdapter}
             sessions={active.map((s) => ({
               id: s.id,
               index: s.index,
