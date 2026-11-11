@@ -7,6 +7,8 @@ import { getProjectDetail } from "@/lib/projects.functions";
 import { formatEurCents } from "@/lib/project-progress-core";
 import { useAppointmentDraft } from "@/stores/appointment-draft";
 import { Button } from "@/components/ui/button";
+import { ProjectContinuity } from "@/components/project-continuity";
+import { formatProjectDate, PROJECT_APPOINTMENT_STATUS } from "@/lib/project-journey-core";
 
 const searchSchema = z.object({
   status: z.enum(["active", "completed", "cancelled"]).default("active"),
@@ -39,11 +41,6 @@ export const Route = createFileRoute("/_authenticated/projetos/$projectId")({
   notFoundComponent: () => <p className="p-6 text-sm">Projeto não encontrado ou sem acesso.</p>,
 });
 
-const STATUS_PT: Record<string, string> = {
-  pending: "Agendada", confirmed: "Confirmada", completed: "Realizada", no_show: "Faltou", cancelled: "Cancelada",
-};
-const dateFmt = new Intl.DateTimeFormat("pt-PT", { timeZone: "Europe/Brussels", weekday: "short", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
-
 function ProjectPage() {
   const { projectId } = Route.useParams();
   const search = Route.useSearch();
@@ -69,7 +66,7 @@ function ProjectPage() {
         <ArrowLeft className="h-4 w-4" /> Projetos
       </Link>
 
-      <section className="space-y-1 rounded-md border border-border bg-card p-4">
+      <section className="space-y-2 border-b border-border pb-4">
         <h1 className="font-editorial text-2xl">{p.client.name ?? "Cliente sem nome"}</h1>
         <p className="text-sm">{p.title}{p.bodyPart ? ` · ${p.bodyPart}` : ""}</p>
         <p className="text-xs text-muted-foreground">Tatuador: {p.artistName ?? "Sem tatuador"}</p>
@@ -81,33 +78,36 @@ function ProjectPage() {
           <div className="h-2 overflow-hidden rounded-full bg-muted" aria-hidden="true">
             <div className="h-full bg-primary" style={{ width: `${pct}%` }} />
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">{p.progress.done} de {p.progress.total} sessões realizadas</p>
+          <p className="mt-1 text-xs text-muted-foreground">{p.progress.total} agendamentos vinculados não cancelados · {p.progress.done} conclusões registradas</p>
         </div>
+        <ProjectContinuity nextStartAt={p.progress.nextStartAt} />
+        <p className="text-xs text-muted-foreground">Tipo de atendimento não verificado. Consulta de orçamento não é automaticamente sessão de tatuagem.</p>
+        <p className="text-xs text-muted-foreground">Status comercial não verificado aqui. Datas do espelho local, em Europe/Brussels.</p>
         <Button className="mt-3 min-h-11 w-full" onClick={scheduleNext} disabled={!p.client.ghlContactId}>
           <CalendarPlus className="mr-2 h-4 w-4" /> Agendar próxima sessão
         </Button>
       </section>
 
-      <section className="rounded-md border border-border bg-card p-4">
-        <h2 className="mb-2 text-sm font-semibold">Sessões</h2>
+      <section className="border-b border-border pb-4">
+        <h2 className="mb-2 text-base font-semibold">Histórico de agendamentos</h2>
         {p.sessions.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhuma sessão vinculada ainda.</p>
+          <p className="text-sm text-muted-foreground">Nenhum agendamento vinculado disponível. Continuidade a verificar.</p>
         ) : (
           <ol className="space-y-2">
             {p.sessions.map((s) => (
-              <li key={s.id} className={`flex items-center justify-between gap-3 border-l-2 pl-3 ${s.status === "completed" ? "border-success" : s.status === "cancelled" ? "border-border opacity-60" : "border-primary"}`}>
+              <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 border-l-2 border-border py-2 pl-3">
                 <div className="min-w-0">
-                  <p className="text-sm font-medium">{s.status === "cancelled" ? "Sessão cancelada" : `Sessão ${s.index} de ${s.total}`}</p>
-                  <p className="text-xs tabular-nums text-muted-foreground">{dateFmt.format(new Date(s.startAt))}</p>
+                  <p className="text-sm font-medium">Agendamento vinculado</p>
+                  <p className="text-xs tabular-nums text-muted-foreground">{formatProjectDate(s.startAt)}</p>
                 </div>
-                <span className="shrink-0 rounded-md bg-primary/15 px-2 py-1 text-xs text-primary">{STATUS_PT[s.status] ?? s.status}</span>
+                <span className="text-xs text-muted-foreground">{PROJECT_APPOINTMENT_STATUS[s.status] ?? "Status não verificado"}</span>
               </li>
             ))}
           </ol>
         )}
       </section>
 
-      <section className="rounded-md border border-border bg-card p-4">
+      <section className="pb-4">
         <h2 className="mb-2 text-sm font-semibold">Financeiro</h2>
         <dl className="grid grid-cols-2 gap-3 text-sm">
           {admin ? (
@@ -135,11 +135,11 @@ function Money({ label, v, strong }: { label: string; v: number | null; strong?:
   );
 }
 
-function ProjectError({ error }: { error: unknown }) {
+function ProjectError() {
   const router = useRouter();
   return (
     <div role="alert" className="space-y-3 p-6 text-sm">
-      <p>{error instanceof Error ? error.message : String(error)}</p>
+      <p>Projeto indisponível ou sem acesso.</p>
       <Button variant="outline" onClick={() => router.invalidate()}>Tentar de novo</Button>
     </div>
   );

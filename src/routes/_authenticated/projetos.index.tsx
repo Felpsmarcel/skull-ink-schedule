@@ -7,6 +7,7 @@ import { formatEurCents } from "@/lib/project-progress-core";
 import { useArtists } from "@/hooks/use-artists";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { ProjectContinuity } from "@/components/project-continuity";
 
 const searchSchema = z.object({
   status: z.enum(["active", "completed", "cancelled"]).default("active"),
@@ -40,18 +41,17 @@ export const Route = createFileRoute("/_authenticated/projetos/")({
   notFoundComponent: () => <p className="p-6 text-sm">Nenhum projeto encontrado.</p>,
 });
 
-function ProjectsError({ error }: { error: unknown }) {
+function ProjectsError() {
   const router = useRouter();
   return (
     <div role="alert" className="space-y-3 p-6 text-sm">
-      <p>{error instanceof Error ? error.message : String(error)}</p>
+      <p>Projetos indisponíveis ou sem acesso.</p>
       <Button variant="outline" onClick={() => router.invalidate()}>Tentar de novo</Button>
     </div>
   );
 }
 
 const STATUS_LABEL = { active: "Em andamento", completed: "Concluídos", cancelled: "Cancelados" } as const;
-const dateFmt = new Intl.DateTimeFormat("pt-PT", { timeZone: "Europe/Brussels", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
 
 function ProjectsPage() {
   const search = Route.useSearch();
@@ -109,7 +109,7 @@ function ProjectsPage() {
       </div>
 
       {unassigned.length ? (
-        <section className="space-y-2 rounded-md border border-warning/50 bg-warning/10 p-3">
+        <section className="space-y-2 border-y border-border py-3">
           <h2 className="text-sm font-semibold text-warning">Sem tatuador — resolver</h2>
           {unassigned.map((p) => <ProjectCard key={p.id} p={p} admin search={search} />)}
         </section>
@@ -117,7 +117,7 @@ function ProjectsPage() {
 
       {assigned.length === 0 && unassigned.length === 0 ? (
         <p className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-          Nenhum projeto aqui ainda. Projetos aparecem quando uma marcação com várias sessões é criada.
+          Nenhum projeto disponível para estes filtros.
         </p>
       ) : (
         <ul className="space-y-2">
@@ -140,12 +140,12 @@ function ProjectCard({ p, admin, search }: { p: Item; admin: boolean; search: z.
       to="/projetos/$projectId"
       params={{ projectId: p.id }}
       search={search}
-      className="block rounded-md border border-border bg-card p-3 transition-colors hover:border-primary/60"
+      className="block min-h-11 rounded-md border border-border bg-card p-3 transition-colors hover:border-primary/60"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate font-semibold">{p.clientName ?? "Cliente sem nome"}</p>
-          <p className="truncate text-sm text-muted-foreground">{p.title}</p>
+          <p className="break-words font-semibold">{p.clientName ?? "Cliente sem nome"}</p>
+          <p className="break-words text-sm text-muted-foreground">{p.title}</p>
           {admin ? <p className="text-xs text-muted-foreground">{p.artistName ?? "Sem tatuador"}</p> : null}
         </div>
         <div className="shrink-0 text-right">
@@ -158,9 +158,9 @@ function ProjectCard({ p, admin, search }: { p: Item; admin: boolean; search: z.
       <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted" aria-hidden="true">
         <div className="h-full bg-primary" style={{ width: `${pct}%` }} />
       </div>
-      <div className="mt-1 flex justify-between text-xs text-muted-foreground">
-        <span>{p.sessionsDone} de {p.sessionsTotal} sessões realizadas</span>
-        <span>{p.nextStartAt ? `Próxima: ${dateFmt.format(new Date(p.nextStartAt))}` : "Sem próxima data"}</span>
+      <div className="mt-2 space-y-2 text-xs text-muted-foreground">
+        <p>{p.sessionsTotal} agendamentos vinculados · {p.sessionsDone} conclusões registradas</p>
+        <ProjectContinuity nextStartAt={p.nextStartAt} />
       </div>
     </Link>
   );
