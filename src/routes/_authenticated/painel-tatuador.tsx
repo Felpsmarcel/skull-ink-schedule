@@ -60,7 +60,7 @@ export const Route = createFileRoute("/_authenticated/painel-tatuador")({
 
 function ArtistPanelPage() {
   const search = Route.useSearch();
-  const navigate = useNavigate();
+  const navigate = useNavigate({ from: "/_authenticated/painel-tatuador" });
   const { data } = useSuspenseQuery(panelQuery(search.artist, search.days));
   const projects = data.projects;
   const attention = projects?.filter((p) => p.continuity.future === 0) ?? null;
