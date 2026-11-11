@@ -1,5 +1,11 @@
 # Renovação premium
 
+## Painel do tatuador — incremento autorizado
+- [ ] Separar apresentação comercial e caixa no detalhe administrativo, sem novos recebimentos
+- [ ] Criar painel administrativo de André com leituras por artist_id e horizontes 30/60/90
+- [ ] Testar autorização, datas, falhas parciais e verificar prévia autenticada móvel/desktop
+- [ ] Liberar painel para artistas — bloqueado por políticas amplas existentes e homologação entre duas identidades; sem autorização para alterar RLS
+
 ## Operação interna — plano aprovado
 - [x] Fase A complementar: resumo administrativo, status independentes, fontes com falhas separadas, 403 no servidor e casos de atenção preservados nos filtros; 310 testes passam, lint novo OK e prévia em 393/1280px. Nenhuma escrita de dados ou publicação.
 - [x] Fase A: Meu Dia administrativo, leitura paginada do espelho local agenda × check-ins, sem novas escritas
