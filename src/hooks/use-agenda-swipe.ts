@@ -80,14 +80,15 @@ export function useAgendaSwipe(onShiftDay: (delta: number) => void) {
     };
     surface.addEventListener("touchstart", begin, { passive: true });
     surface.addEventListener("touchmove", move, { passive: false });
-    surface.addEventListener("touchend", end);
-    surface.addEventListener("touchcancel", cancel);
+    // A loading row may be replaced mid-gesture; completion must survive its removal.
+    window.addEventListener("touchend", end, true);
+    window.addEventListener("touchcancel", cancel, true);
     surface.addEventListener("click", click, true);
     return () => {
       surface.removeEventListener("touchstart", begin);
       surface.removeEventListener("touchmove", move);
-      surface.removeEventListener("touchend", end);
-      surface.removeEventListener("touchcancel", cancel);
+      window.removeEventListener("touchend", end, true);
+      window.removeEventListener("touchcancel", cancel, true);
       surface.removeEventListener("click", click, true);
     };
   }, []);
