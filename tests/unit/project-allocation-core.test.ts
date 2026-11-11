@@ -7,7 +7,7 @@ import {
 } from "@/lib/project-allocation-core";
 import { fixtureAdapter, fixtureBumpVersion } from "@/lib/project-allocation-adapter";
 
-const U = (n: number) => `00000000-0000-0000-0000-${String(n).padStart(12, "0")}`;
+const U = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 const K = "alloc-0123456789abcdef";
 
 describe("contrato de persistência", () => {

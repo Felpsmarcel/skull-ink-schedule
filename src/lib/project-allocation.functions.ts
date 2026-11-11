@@ -13,11 +13,14 @@ import {
   type SaveOutcome,
 } from "@/lib/project-allocation-core";
 
+/* eslint-disable-next-line @typescript-eslint/no-explicit-any -- tabelas/RPCs ainda não estão nos tipos gerados (SQL em revisão). */
+type Loose = any;
+
 /* Adaptador de produção DESATIVADO por padrão: só liga com a flag de servidor
    PROJECT_ALLOCATION_PERSISTENCE=enabled, após o SQL de revisão ser aplicado e validado. */
 
 async function requireAdmin(supabase: unknown, userId: string) {
-  const { data, error } = await (supabase as { from: (t: string) => any })
+  const { data, error } = await (supabase as { from: (t: string) => Loose })
     .from("app_users")
     .select("role")
     .eq("id", userId)
@@ -34,7 +37,7 @@ export const getAllocationDraft = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<DraftLoad> => {
     await requireAdmin(context.supabase, context.userId);
     if (!enabled()) return { state: "disabled", environment: "production" };
-    const sb = context.supabase as unknown as { from: (t: string) => any };
+    const sb = context.supabase as unknown as { from: (t: string) => Loose };
     const [d, l] = await Promise.all([
       sb
         .from("project_allocation_drafts")
@@ -70,7 +73,7 @@ export const saveAllocationDraft = createServerFn({ method: "POST" })
     await requireAdmin(context.supabase, context.userId);
     if (!enabled()) return { state: "disabled" };
     const { data: r, error } = await (
-      context.supabase as unknown as { rpc: (n: string, a: unknown) => any }
+      context.supabase as unknown as { rpc: (n: string, a: unknown) => Loose }
     ).rpc("save_project_allocation_draft", {
       p_project_id: data.projectId,
       p_expected_version: data.expectedVersion,
@@ -125,7 +128,7 @@ export const linkProjectOpportunity = createServerFn({ method: "POST" })
     });
     if (ev.needsDecision) return { state: "rejected", reason: "decision_required" };
     const { data: r, error: e2 } = await (
-      context.supabase as unknown as { rpc: (n: string, a: unknown) => any }
+      context.supabase as unknown as { rpc: (n: string, a: unknown) => Loose }
     ).rpc("link_project_opportunity", {
       p_project_id: p.id,
       p_opportunity_id: opp.id,
