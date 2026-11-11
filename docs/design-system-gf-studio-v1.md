@@ -277,7 +277,7 @@ Se houver outras movimentações ou ponte desconhecida, o saldo comercial fica *
 
 **Mês:** sete colunas com dias clicáveis ≥44px; contagem tem rótulo acessível “agendamentos”, não “sessões de tatuagem” sem prova. Abrir dia para ler lista completa; contagem/pontos financeiros existentes precisam legenda distinta, não podem significar check-in. Não prometer conclusão financeira ou cobertura integral sem fonte.
 
-**Legenda textual acessível:** “Confirmado · agenda”, “Novo · agenda”, “Cancelado · agenda”, “Situação a verificar”; disponibilidade: “Horário livre”/“Fora da disponibilidade”; “Sobreposição” com ícone e texto. Estado financeiro, quando exibido, tem legenda própria “Pagamento”. Chegada/check-in e comercial só aparecem quando a fonte autorizada realmente os entrega; otherwise “Não verificado nesta ficha”. Não criar consulta de check-in/GHL para completar um cartão visual.
+**Legenda textual acessível:** “Confirmado · agenda”, “Novo · agenda”, “Cancelado · agenda”, “Situação a verificar”; disponibilidade: “Horário livre”/“Fora da disponibilidade”; “Sobreposição” com ícone e texto. Estado financeiro, quando exibido, tem legenda própria “Pagamento”. Chegada/check-in e comercial só aparecem quando a fonte autorizada realmente os entrega; caso contrário, “Não verificado nesta ficha”. Não criar consulta de check-in/GHL para completar um cartão visual.
 
 **Harden:** loading por coluna preserva geometria; falha de disponibilidade não apaga eventos válidos; falha de eventos não comprova agenda vazia; parcial identifica fonte e calendário afetado; resumo incompleto não vira zero ou número completo. Semana/mês têm erro e loading próprios, não apenas células vazias. Onde faltam contratos para isso, registrar dependência fora do escopo visual.
 
