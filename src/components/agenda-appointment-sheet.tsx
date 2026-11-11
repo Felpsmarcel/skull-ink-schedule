@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
@@ -104,9 +105,7 @@ export function AgendaAppointmentSheet({
   const durationMin =
     startMs != null && endMs != null ? Math.max(0, Math.round((endMs - startMs) / 60000)) : 0;
 
-  const whenLine = startMs
-    ? formatWhen(locale, startMs, endMs ?? startMs)
-    : "";
+  const whenLine = startMs ? formatWhen(locale, startMs, endMs ?? startMs) : "";
   const durationLine = durationMin > 0 ? formatDuration(durationMin) : "";
 
   const copy = async (value: string) => {
@@ -131,16 +130,21 @@ export function AgendaAppointmentSheet({
         side={isMobile ? "bottom" : "right"}
         className={
           isMobile
-            ? "flex h-[92dvh] w-full flex-col rounded-t-2xl p-0 pt-3 pb-[env(safe-area-inset-bottom)]"
-            : "w-full pt-[max(1rem,env(safe-area-inset-top))] pb-[env(safe-area-inset-bottom)] sm:max-w-md sm:pt-6"
+            ? "agenda-scope agenda-sheet flex h-[92dvh] w-full flex-col rounded-t-xl p-0 pt-3 pb-[env(safe-area-inset-bottom)]"
+            : "agenda-scope agenda-sheet flex w-full flex-col pt-[max(1rem,env(safe-area-inset-top))] pb-[env(safe-area-inset-bottom)] sm:max-w-md sm:pt-6"
         }
       >
         {isMobile ? (
           <div className="mx-auto mb-2 h-1 w-10 shrink-0 rounded-full bg-border" aria-hidden />
         ) : null}
-        <SheetHeader className={isMobile ? "shrink-0 px-4 text-left" : "text-left"}>
-          <div className="flex items-start justify-between gap-3">
-            <SheetTitle className="truncate font-display text-lg uppercase tracking-wide">
+        <SheetHeader
+          className={cn(
+            "shrink-0 border-b border-border pb-4 text-left",
+            isMobile ? "px-4" : "pr-12",
+          )}
+        >
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 pr-10">
+            <SheetTitle className="min-w-0 truncate font-editorial text-2xl font-semibold leading-tight">
               {displayName}
             </SheetTitle>
             {bucket ? (
@@ -149,21 +153,38 @@ export function AgendaAppointmentSheet({
               </StatusBadge>
             ) : null}
           </div>
-          <SheetDescription className="text-xs">
+          <SheetDescription className="text-sm tabular-nums text-foreground/80">
             {whenLine}
-            {durationLine ? ` · ${durationLine}` : ""}
+            {durationLine ? (
+              <span className="text-muted-foreground">{` · ${durationLine}`}</span>
+            ) : null}
           </SheetDescription>
+          <p className="text-sm text-muted-foreground">
+            {staffName}
+            {slot?.appointmentStatus ? (
+              <>
+                <span aria-hidden="true"> · </span>
+                <span>
+                  Status da agenda:{" "}
+                  <span className="font-medium text-foreground">{slot.appointmentStatus}</span>
+                </span>
+              </>
+            ) : null}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Status da agenda não comprova presença; presença depende do check-in.
+          </p>
         </SheetHeader>
 
         <div
           className={
             isMobile
-              ? "mt-4 flex-1 space-y-5 overflow-y-auto px-4 pb-6 text-sm"
-              : "mt-6 space-y-5 overflow-y-auto pb-6 text-sm"
+              ? "flex-1 space-y-6 overflow-y-auto px-4 pb-6 pt-4 text-sm"
+              : "flex-1 space-y-6 overflow-y-auto pb-6 pt-5 text-sm"
           }
         >
           {slot?.hasOverlap ? (
-            <div className="flex items-start gap-2 rounded border border-border bg-muted p-2 text-[12px] text-foreground">
+            <div className="flex items-start gap-2 rounded border border-border bg-muted p-2 text-xs text-foreground">
               <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
               <span>{t("agenda.details.overlap")}</span>
             </div>
@@ -182,14 +203,11 @@ export function AgendaAppointmentSheet({
             label={t("agenda.details.service")}
             value={slot?.serviceName || t("agenda.booked")}
           />
-          {slot?.appointmentStatus ? (
-            <Row label={t("agenda.details.status")} value={slot.appointmentStatus} />
-          ) : null}
 
           <AppointmentProjectJourney ghlEventId={slot?.ghlEventId ?? null} />
 
           <div>
-            <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <div className="mb-2 text-xs font-semibold text-muted-foreground">
               {t("agenda.details.contact")}
             </div>
             {!contactId ? (
@@ -231,7 +249,7 @@ export function AgendaAppointmentSheet({
           {slot?.ghlEventId ? <LinkAuditSection ghlEventId={slot.ghlEventId} /> : null}
 
           {debug ? (
-            <details className="rounded border border-border/60 bg-muted/40 p-2 text-[10px]">
+            <details className="rounded border border-border/60 bg-muted/40 p-2 text-xs">
               <summary className="cursor-pointer font-semibold">debug</summary>
               <div className="mt-1 space-y-0.5 font-mono">
                 <div>event: {slot?.ghlEventId ?? "—"}</div>
@@ -246,7 +264,6 @@ export function AgendaAppointmentSheet({
     </Sheet>
   );
 }
-
 
 /* ====================== Rastreabilidade (admin) ====================== */
 
@@ -265,25 +282,32 @@ function LinkAuditSection({ ghlEventId }: { ghlEventId: string }) {
 
   return (
     <div className="rounded border border-border/60 bg-muted/30 p-2">
-      <div className="mb-1.5 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+      <div className="mb-1.5 flex items-center gap-2 text-xs font-semibold text-muted-foreground">
         <LinkIcon className="h-3 w-3" /> Rastreabilidade
       </div>
       {q.isLoading ? (
         <LoadingState inline size="sm" />
       ) : !info ? (
-        <p className="text-[11px] text-muted-foreground">Sem dados de vínculo.</p>
+        <p className="text-xs text-muted-foreground">Sem dados de vínculo.</p>
       ) : (
         <>
           <Badge
             variant={info.status === "vinculado" ? "default" : "secondary"}
-            className="text-[10px]"
+            className="text-xs"
           >
             {LINK_STATUS_LABELS[info.status]}
           </Badge>
-          <div className="mt-1.5 space-y-0.5 font-mono text-[10px] text-muted-foreground">
+          <div className="mt-1.5 space-y-0.5 font-mono text-xs text-muted-foreground">
             <div>project: {info.projectId ?? "—"}</div>
             {info.projectId ? (
-              <Link to="/projetos/$projectId" params={{ projectId: info.projectId }} search={{ status: "active" }} className="inline-block py-1 font-sans text-xs text-primary underline">Ver projeto</Link>
+              <Link
+                to="/projetos/$projectId"
+                params={{ projectId: info.projectId }}
+                search={{ status: "active" }}
+                className="inline-block py-1 font-sans text-xs text-primary underline"
+              >
+                Ver projeto
+              </Link>
             ) : null}
             <div>opportunity: {info.ghlOpportunityId ?? "—"}</div>
             <div>appointment: {info.ghlAppointmentId ?? "—"}</div>
@@ -307,13 +331,7 @@ function currency(locale: string, n: number | null | undefined): string {
   }).format(Number(n));
 }
 
-function FinanceSection({
-  ghlEventId,
-  locale,
-}: {
-  ghlEventId: string;
-  locale: string;
-}) {
+function FinanceSection({ ghlEventId, locale }: { ghlEventId: string; locale: string }) {
   const queryClient = useQueryClient();
   const fetchFinance = useServerFn(getAppointmentFinanceByGhlId);
 
@@ -343,7 +361,7 @@ function FinanceSection({
 
   return (
     <div>
-      <div className="mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+      <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-muted-foreground">
         <Euro className="h-3 w-3" /> Financeiro
       </div>
 
@@ -356,7 +374,7 @@ function FinanceSection({
           onRetry={() => financeQ.refetch()}
         />
       ) : !financeQ.data?.appointmentId ? (
-        <div className="flex flex-col gap-2 rounded border border-dashed border-border p-2 text-[11px] text-muted-foreground">
+        <div className="flex flex-col gap-2 rounded border border-dashed border-border p-2 text-xs text-muted-foreground">
           <p>Este agendamento ainda não está no app. Traga-o do CRM para editar os valores.</p>
           <Button
             size="sm"
@@ -368,9 +386,8 @@ function FinanceSection({
           </Button>
         </div>
       ) : !financeQ.data.visible ? (
-        <p className="rounded border border-dashed border-border p-2 text-[11px] text-muted-foreground">
-          Valores financeiros visíveis apenas para o tatuador responsável e para
-          admin.
+        <p className="rounded border border-dashed border-border p-2 text-xs text-muted-foreground">
+          Valores financeiros visíveis apenas para o tatuador responsável e para admin.
         </p>
       ) : (
         <FinanceBody
@@ -448,27 +465,21 @@ function FinanceBody({
 
       <div className="grid grid-cols-2 gap-2 rounded border border-border bg-muted/30 p-2 text-xs">
         <div>
-          <div className="text-[9px] uppercase tracking-wider text-muted-foreground">
-            Total
-          </div>
+          <div className="text-xs text-muted-foreground">Total</div>
           <div className="text-sm font-semibold tabular-nums">
             {currency(locale, data.totalEur)}
           </div>
         </div>
         {data.depositEur > 0 ? (
           <div>
-            <div className="text-[9px] uppercase tracking-wider text-muted-foreground">
-              Sinal
-            </div>
+            <div className="text-xs text-muted-foreground">Sinal</div>
             <div className="text-sm font-semibold tabular-nums">
               {currency(locale, data.depositEur)}
             </div>
           </div>
         ) : null}
         <div>
-          <div className="text-[9px] uppercase tracking-wider text-muted-foreground">
-            Recebido
-          </div>
+          <div className="text-xs text-muted-foreground">Recebido</div>
           <div className="text-sm font-semibold tabular-nums">
             {currency(locale, data.paidTotalEur)}
           </div>
@@ -493,9 +504,7 @@ function FinanceBody({
           }
           return (
             <div>
-              <div className="text-[9px] uppercase tracking-wider text-muted-foreground">
-                {label}
-              </div>
+              <div className="text-xs text-muted-foreground">{label}</div>
               <div className={cls}>
                 {icon}
                 {currency(locale, bal)}
@@ -504,7 +513,7 @@ function FinanceBody({
           );
         })()}
         <div>
-          <div className="text-[9px] uppercase tracking-wider text-muted-foreground">
+          <div className="text-xs text-muted-foreground">
             Comissão ({data.commissionPct ?? "—"}%)
           </div>
           <div className="text-sm font-semibold tabular-nums">
@@ -513,7 +522,7 @@ function FinanceBody({
         </div>
         {data.seller ? (
           <div className="col-span-2">
-            <div className="text-[9px] uppercase tracking-wider text-muted-foreground">
+            <div className="text-xs text-muted-foreground">
               Comissão vendedor · {data.seller.name} ({data.seller.commissionPct}%)
             </div>
             <div className="text-sm font-semibold tabular-nums">
@@ -525,14 +534,9 @@ function FinanceBody({
 
       {data.services.length > 0 ? (
         <div className="space-y-1">
-          <div className="text-[9px] uppercase tracking-wider text-muted-foreground">
-            Serviços
-          </div>
+          <div className="text-xs text-muted-foreground">Serviços</div>
           {data.services.map((s) => (
-            <div
-              key={s.service_id}
-              className="flex items-center justify-between text-[11px]"
-            >
+            <div key={s.service_id} className="flex items-center justify-between text-xs">
               <span className="min-w-0 flex-1 truncate">
                 {s.quantity > 1 ? `${s.quantity}× ` : ""}
                 {s.name}
@@ -547,24 +551,13 @@ function FinanceBody({
 
       {data.payments.length > 0 ? (
         <div className="space-y-1">
-          <div className="text-[9px] uppercase tracking-wider text-muted-foreground">
-            Pagamentos
-          </div>
+          <div className="text-xs text-muted-foreground">Pagamentos</div>
           {data.payments.map((p) => (
-            <div
-              key={p.id}
-              className="flex items-center justify-between text-[11px]"
-            >
+            <div key={p.id} className="flex items-center justify-between text-xs">
               <span className="min-w-0 flex-1 truncate">
-                {p.type === "deposit"
-                  ? "Sinal"
-                  : p.type === "final"
-                    ? "Final"
-                    : "Reembolso"}{" "}
-                · {p.method}
-                {p.paid_at
-                  ? ` · ${new Date(p.paid_at).toLocaleDateString(locale)}`
-                  : ""}
+                {p.type === "deposit" ? "Sinal" : p.type === "final" ? "Final" : "Reembolso"} ·{" "}
+                {p.method}
+                {p.paid_at ? ` · ${new Date(p.paid_at).toLocaleDateString(locale)}` : ""}
               </span>
               <span className="shrink-0 tabular-nums text-muted-foreground">
                 {p.type === "refund" ? "-" : ""}
@@ -576,13 +569,7 @@ function FinanceBody({
       ) : null}
 
       <div className="flex flex-wrap gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="h-8 text-[11px]"
-          onClick={onEdit}
-        >
+        <Button type="button" variant="outline" size="sm" className="h-11 text-sm" onClick={onEdit}>
           <Euro className="mr-1 h-3 w-3" />
           {data.totalEur == null ? "Registrar valor" : editing ? "Fechar" : "Editar valor"}
         </Button>
@@ -590,7 +577,7 @@ function FinanceBody({
           type="button"
           variant="outline"
           size="sm"
-          className="h-8 text-[11px]"
+          className="h-11 text-sm"
           onClick={onPay}
           disabled={data.totalEur == null && !paying}
         >
@@ -625,9 +612,7 @@ function ValueForm({
     initial.totalEur != null ? String(initial.totalEur) : "",
   );
   const [discountStr, setDiscountStr] = useState(
-    initial.discountEur != null && initial.discountEur > 0
-      ? String(initial.discountEur)
-      : "",
+    initial.discountEur != null && initial.discountEur > 0 ? String(initial.discountEur) : "",
   );
   const [pctStr, setPctStr] = useState(
     initial.commissionPct != null ? String(initial.commissionPct) : "",
@@ -652,8 +637,7 @@ function ValueForm({
   });
 
   const addLine = () => setLines((ls) => [...ls, { serviceId: "", quantity: 1 }]);
-  const removeLine = (i: number) =>
-    setLines((ls) => ls.filter((_, idx) => idx !== i));
+  const removeLine = (i: number) => setLines((ls) => ls.filter((_, idx) => idx !== i));
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -677,13 +661,10 @@ function ValueForm({
   const services = svcQ.data ?? [];
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="mt-3 space-y-3 rounded border border-border p-2"
-    >
+    <form onSubmit={handleSubmit} className="mt-3 space-y-3 rounded border border-border p-2">
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <Label className="text-[10px]">Total (€)</Label>
+          <Label className="text-xs">Total (€)</Label>
           <Input
             type="number"
             step="0.01"
@@ -695,7 +676,7 @@ function ValueForm({
           />
         </div>
         <div>
-          <Label className="text-[10px]">Desconto (€)</Label>
+          <Label className="text-xs">Desconto (€)</Label>
           <Input
             type="number"
             step="0.01"
@@ -706,7 +687,7 @@ function ValueForm({
           />
         </div>
         <div className="col-span-2">
-          <Label className="text-[10px]">Comissão (%)</Label>
+          <Label className="text-xs">Comissão (%)</Label>
           <Input
             type="number"
             step="1"
@@ -722,12 +703,12 @@ function ValueForm({
 
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <Label className="text-[10px]">Serviços (opcional)</Label>
+          <Label className="text-xs">Serviços (opcional)</Label>
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            className="h-7 px-2 text-[11px]"
+            className="h-11 px-3 text-xs"
             onClick={addLine}
           >
             <Plus className="mr-1 h-3 w-3" /> Adicionar
@@ -738,19 +719,17 @@ function ValueForm({
             <Select
               value={l.serviceId}
               onValueChange={(v) =>
-                setLines((ls) =>
-                  ls.map((x, idx) => (idx === i ? { ...x, serviceId: v } : x)),
-                )
+                setLines((ls) => ls.map((x, idx) => (idx === i ? { ...x, serviceId: v } : x)))
               }
             >
-              <SelectTrigger className="h-8 flex-1 text-[11px]">
+              <SelectTrigger className="h-11 flex-1 text-sm">
                 <SelectValue placeholder="Selecione…" />
               </SelectTrigger>
               <SelectContent>
                 {services
                   .filter((s) => s.active)
                   .map((s) => (
-                    <SelectItem key={s.id} value={s.id} className="text-[11px]">
+                    <SelectItem key={s.id} value={s.id} className="text-xs">
                       {s.name} · €{Number(s.price_eur)}
                     </SelectItem>
                   ))}
@@ -764,19 +743,17 @@ function ValueForm({
               onChange={(e) =>
                 setLines((ls) =>
                   ls.map((x, idx) =>
-                    idx === i
-                      ? { ...x, quantity: Math.max(1, Number(e.target.value) || 1) }
-                      : x,
+                    idx === i ? { ...x, quantity: Math.max(1, Number(e.target.value) || 1) } : x,
                   ),
                 )
               }
-              className="h-8 w-14 text-[11px]"
+              className="h-11 w-16 text-sm"
             />
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              className="h-8 px-2 text-[11px]"
+              className="h-11 px-3 text-xs"
               onClick={() => removeLine(i)}
             >
               ×
@@ -786,24 +763,11 @@ function ValueForm({
       </div>
 
       <div className="flex justify-end gap-2">
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="h-8 text-[11px]"
-          onClick={onCancel}
-        >
+        <Button type="button" variant="ghost" size="sm" className="h-11 text-sm" onClick={onCancel}>
           Cancelar
         </Button>
-        <Button
-          type="submit"
-          size="sm"
-          className="h-8 text-[11px]"
-          disabled={mutation.isPending}
-        >
-          {mutation.isPending ? (
-            <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-          ) : null}
+        <Button type="submit" size="sm" className="h-11 text-sm" disabled={mutation.isPending}>
+          {mutation.isPending ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : null}
           Salvar
         </Button>
       </div>
@@ -827,15 +791,12 @@ function PaymentForm({
   const register = useServerFn(registerAppointmentPayment);
   const [amountStr, setAmountStr] = useState("");
   const [type, setType] = useState<"deposit" | "final" | "refund">("final");
-  const [method, setMethod] = useState<
-    "cash" | "card" | "transfer" | "payconiq" | "other"
-  >("cash");
+  const [method, setMethod] = useState<"cash" | "card" | "transfer" | "payconiq" | "other">("cash");
   const [notes, setNotes] = useState("");
   const [confirmOver, setConfirmOver] = useState(false);
 
   const amount = Number(amountStr) || 0;
-  const projectedPaid =
-    type === "refund" ? paidTotalEur - amount : paidTotalEur + amount;
+  const projectedPaid = type === "refund" ? paidTotalEur - amount : paidTotalEur + amount;
   const excess = totalEur > 0 ? projectedPaid - totalEur : 0;
   const overpay = type !== "refund" && amount > 0 && totalEur > 0 && excess > 0.005;
 
@@ -879,13 +840,10 @@ function PaymentForm({
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="mt-3 space-y-3 rounded border border-border p-2"
-    >
+    <form onSubmit={handleSubmit} className="mt-3 space-y-3 rounded border border-border p-2">
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <Label className="text-[10px]">Valor (€)</Label>
+          <Label className="text-xs">Valor (€)</Label>
           <Input
             type="number"
             step="0.01"
@@ -897,9 +855,9 @@ function PaymentForm({
           />
         </div>
         <div>
-          <Label className="text-[10px]">Tipo</Label>
+          <Label className="text-xs">Tipo</Label>
           <Select value={type} onValueChange={(v) => setType(v as typeof type)}>
-            <SelectTrigger className="h-9 text-[11px]">
+            <SelectTrigger className="h-11 text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -910,9 +868,9 @@ function PaymentForm({
           </Select>
         </div>
         <div className="col-span-2">
-          <Label className="text-[10px]">Método</Label>
+          <Label className="text-xs">Método</Label>
           <Select value={method} onValueChange={(v) => setMethod(v as typeof method)}>
-            <SelectTrigger className="h-9 text-[11px]">
+            <SelectTrigger className="h-11 text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -925,22 +883,17 @@ function PaymentForm({
           </Select>
         </div>
         <div className="col-span-2">
-          <Label className="text-[10px]">Notas (opcional)</Label>
-          <Input
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            maxLength={500}
-          />
+          <Label className="text-xs">Notas (opcional)</Label>
+          <Input value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={500} />
         </div>
       </div>
       {overpay ? (
-        <div className="rounded border border-warning/50 bg-warning/10 p-2 text-[11px] text-warning">
+        <div className="rounded border border-warning/50 bg-warning/10 p-2 text-xs text-warning">
           <div className="flex items-start gap-2">
             <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             <div className="space-y-1">
               <div>
-                Este pagamento excede o total em{" "}
-                <strong>€{excess.toFixed(2)}</strong>.
+                Este pagamento excede o total em <strong>€{excess.toFixed(2)}</strong>.
               </div>
               <label className="flex items-center gap-1.5">
                 <input
@@ -955,24 +908,16 @@ function PaymentForm({
         </div>
       ) : null}
       <div className="flex justify-end gap-2">
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="h-8 text-[11px]"
-          onClick={onCancel}
-        >
+        <Button type="button" variant="ghost" size="sm" className="h-11 text-sm" onClick={onCancel}>
           Cancelar
         </Button>
         <Button
           type="submit"
           size="sm"
-          className="h-8 text-[11px]"
+          className="h-11 text-sm"
           disabled={mutation.isPending || (overpay && !confirmOver)}
         >
-          {mutation.isPending ? (
-            <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-          ) : null}
+          {mutation.isPending ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : null}
           Registrar
         </Button>
       </div>
@@ -983,9 +928,7 @@ function PaymentForm({
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-        {label}
-      </div>
+      <div className="text-xs font-semibold text-muted-foreground">{label}</div>
       <div className="text-sm">{value}</div>
     </div>
   );
@@ -1023,7 +966,7 @@ function ContactLine({
         type="button"
         variant="outline"
         size="sm"
-        className="h-7 px-2 text-[11px]"
+        className="h-11 px-3 text-xs"
         onClick={() => onCopy(value)}
       >
         <Copy className="mr-1 h-3 w-3" />
@@ -1032,7 +975,7 @@ function ContactLine({
       {href ? (
         <a
           href={href}
-          className="inline-flex h-7 items-center gap-1 rounded-md border border-border px-2 text-[11px] hover:bg-muted"
+          className="inline-flex h-11 items-center gap-1 rounded-md border border-border px-2 text-xs hover:bg-muted"
         >
           <ExternalLink className="h-3 w-3" />
           {actionLabel}
@@ -1090,9 +1033,7 @@ function PaymentStatusPicker({
   const value = current ?? "auto";
   return (
     <div className="flex items-center gap-2 rounded border border-border bg-muted/20 p-2">
-      <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
-        Status
-      </Label>
+      <Label className="text-xs text-muted-foreground">Status</Label>
       <Select
         value={value}
         onValueChange={(v) => {
@@ -1136,8 +1077,7 @@ function ArtistPicker({
   const [pendingId, setPendingId] = useState<string | null>(null);
 
   const mut = useMutation({
-    mutationFn: async (newArtistId: string) =>
-      reassign({ data: { ghlEventId, newArtistId } }),
+    mutationFn: async (newArtistId: string) => reassign({ data: { ghlEventId, newArtistId } }),
     onSuccess: () => {
       haptic("success");
       toast.success("Tatuador atualizado");
@@ -1157,9 +1097,7 @@ function ArtistPicker({
 
   return (
     <div>
-      <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-        Tatuador
-      </div>
+      <div className="mb-1 text-xs font-semibold text-muted-foreground">Tatuador</div>
       <div className="flex items-center gap-2">
         <Select
           value={currentArtist?.id ?? ""}
@@ -1183,17 +1121,16 @@ function ArtistPicker({
         {mut.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
       </div>
       {pendingId && !mut.isPending ? (
-        <div className="mt-2 flex items-center justify-between gap-2 rounded border border-warning/50 bg-warning/10 p-2 text-[11px]">
+        <div className="mt-2 flex items-center justify-between gap-2 rounded border border-warning/50 bg-warning/10 p-2 text-xs">
           <span>
-            Reatribuir para{" "}
-            <strong>{artists.find((a) => a.id === pendingId)?.name}</strong>?
+            Reatribuir para <strong>{artists.find((a) => a.id === pendingId)?.name}</strong>?
           </span>
           <div className="flex gap-1">
             <Button
               type="button"
               size="sm"
               variant="ghost"
-              className="h-7 px-2 text-[11px]"
+              className="h-11 px-3 text-xs"
               onClick={() => setPendingId(null)}
             >
               Cancelar
@@ -1201,7 +1138,7 @@ function ArtistPicker({
             <Button
               type="button"
               size="sm"
-              className="h-7 px-2 text-[11px]"
+              className="h-11 px-3 text-xs"
               onClick={() => mut.mutate(pendingId)}
             >
               Confirmar
@@ -1230,8 +1167,7 @@ function SellerPicker({
     staleTime: 5 * 60_000,
   });
   const mut = useMutation({
-    mutationFn: async (sellerId: string | null) =>
-      setSeller({ data: { ghlEventId, sellerId } }),
+    mutationFn: async (sellerId: string | null) => setSeller({ data: { ghlEventId, sellerId } }),
     onSuccess: () => {
       toast.success("Vendedor atualizado");
       onChanged();
@@ -1245,9 +1181,7 @@ function SellerPicker({
 
   return (
     <div className="flex items-center gap-2 rounded border border-border bg-muted/20 p-2">
-      <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
-        Vendedor
-      </Label>
+      <Label className="text-xs text-muted-foreground">Vendedor</Label>
       <Select
         value={value}
         onValueChange={(v) => {
