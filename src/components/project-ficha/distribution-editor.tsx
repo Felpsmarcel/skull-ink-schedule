@@ -222,6 +222,7 @@ function DistributionEditorInner({
                     €
                   </span>
                   <input
+                    readOnly={frozen.includes(s.id)}
                     id={id}
                     inputMode="decimal"
                     autoComplete="off"
@@ -298,7 +299,7 @@ function DistributionEditorInner({
           variant="outline"
           className="min-h-11"
           onClick={splitEven}
-          disabled={!contractCents || active.length === 0}
+          disabled={!contractCents || active.length === 0 || frozen.length > 0}
         >
           Dividir igualmente
         </Button>
