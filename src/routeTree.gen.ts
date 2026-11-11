@@ -30,7 +30,6 @@ import { Route as AuthRecoverRouteImport } from './routes/auth_.recover'
 import { Route as AuthUpdatePasswordRouteImport } from './routes/auth_.update-password'
 import { Route as MovimentacaoSlugRouteImport } from './routes/movimentacao.$slug'
 import { Route as MovimentacaoHistoricoRouteImport } from './routes/movimentacao.historico'
-import { Route as PreviewFichaProjetoRouteImport } from './routes/preview/ficha-projeto'
 import { Route as TotemIndexRouteImport } from './routes/totem.index'
 import { Route as TotemBuscarRouteImport } from './routes/totem.buscar'
 import { Route as TotemConfirmarRouteImport } from './routes/totem.confirmar'
@@ -58,6 +57,7 @@ import { Route as AuthenticatedAdminAdminFilaRouteImport } from './routes/_authe
 import { Route as AuthenticatedAdminAdminMovimentacaoLinksRouteImport } from './routes/_authenticated/_admin/admin.movimentacao-links'
 import { Route as AuthenticatedAdminAdminSaudeRouteImport } from './routes/_authenticated/_admin/admin.saude'
 import { Route as AuthenticatedAdminAdminVendedoresRouteImport } from './routes/_authenticated/_admin/admin.vendedores'
+import { Route as AuthenticatedAdminPreviewFichaProjetoRouteImport } from './routes/_authenticated/_admin/preview.ficha-projeto'
 import { Route as AuthenticatedAdminRelatoriosAgendamentosRouteImport } from './routes/_authenticated/_admin/relatorios.agendamentos'
 import { Route as AuthenticatedAppointmentsNewIndexRouteImport } from './routes/_authenticated/appointments.new.index'
 import { Route as AuthenticatedAppointmentsNewAgendaRouteImport } from './routes/_authenticated/appointments.new.agenda'
@@ -177,11 +177,6 @@ const MovimentacaoSlugRoute = MovimentacaoSlugRouteImport.update({
 const MovimentacaoHistoricoRoute = MovimentacaoHistoricoRouteImport.update({
   id: '/movimentacao/historico',
   path: '/movimentacao/historico',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PreviewFichaProjetoRoute = PreviewFichaProjetoRouteImport.update({
-  id: '/preview/ficha-projeto',
-  path: '/preview/ficha-projeto',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TotemIndexRoute = TotemIndexRouteImport.update({
@@ -340,6 +335,12 @@ const AuthenticatedAdminAdminVendedoresRoute =
     path: '/admin/vendedores',
     getParentRoute: () => AuthenticatedAdminRouteRoute,
   } as any)
+const AuthenticatedAdminPreviewFichaProjetoRoute =
+  AuthenticatedAdminPreviewFichaProjetoRouteImport.update({
+    id: '/preview/ficha-projeto',
+    path: '/preview/ficha-projeto',
+    getParentRoute: () => AuthenticatedAdminRouteRoute,
+  } as any)
 const AuthenticatedAdminRelatoriosAgendamentosRoute =
   AuthenticatedAdminRelatoriosAgendamentosRouteImport.update({
     id: '/relatorios/agendamentos',
@@ -442,7 +443,6 @@ export interface FileRoutesByFullPath {
   '/auth/update-password': typeof AuthUpdatePasswordRoute
   '/movimentacao/$slug': typeof MovimentacaoSlugRoute
   '/movimentacao/historico': typeof MovimentacaoHistoricoRoute
-  '/preview/ficha-projeto': typeof PreviewFichaProjetoRoute
   '/totem/buscar': typeof TotemBuscarRoute
   '/totem/confirmar': typeof TotemConfirmarRoute
   '/totem/pronto': typeof TotemProntoRoute
@@ -470,6 +470,7 @@ export interface FileRoutesByFullPath {
   '/admin/movimentacao-links': typeof AuthenticatedAdminAdminMovimentacaoLinksRoute
   '/admin/saude': typeof AuthenticatedAdminAdminSaudeRoute
   '/admin/vendedores': typeof AuthenticatedAdminAdminVendedoresRoute
+  '/preview/ficha-projeto': typeof AuthenticatedAdminPreviewFichaProjetoRoute
   '/relatorios/agendamentos': typeof AuthenticatedAdminRelatoriosAgendamentosRoute
   '/appointments/new/agenda': typeof AuthenticatedAppointmentsNewAgendaRoute
   '/appointments/new/cliente': typeof AuthenticatedAppointmentsNewClienteRoute
@@ -505,7 +506,6 @@ export interface FileRoutesByTo {
   '/auth/update-password': typeof AuthUpdatePasswordRoute
   '/movimentacao/$slug': typeof MovimentacaoSlugRoute
   '/movimentacao/historico': typeof MovimentacaoHistoricoRoute
-  '/preview/ficha-projeto': typeof PreviewFichaProjetoRoute
   '/totem/buscar': typeof TotemBuscarRoute
   '/totem/confirmar': typeof TotemConfirmarRoute
   '/totem/pronto': typeof TotemProntoRoute
@@ -532,6 +532,7 @@ export interface FileRoutesByTo {
   '/admin/movimentacao-links': typeof AuthenticatedAdminAdminMovimentacaoLinksRoute
   '/admin/saude': typeof AuthenticatedAdminAdminSaudeRoute
   '/admin/vendedores': typeof AuthenticatedAdminAdminVendedoresRoute
+  '/preview/ficha-projeto': typeof AuthenticatedAdminPreviewFichaProjetoRoute
   '/relatorios/agendamentos': typeof AuthenticatedAdminRelatoriosAgendamentosRoute
   '/appointments/new/agenda': typeof AuthenticatedAppointmentsNewAgendaRoute
   '/appointments/new/cliente': typeof AuthenticatedAppointmentsNewClienteRoute
@@ -570,7 +571,6 @@ export interface FileRoutesById {
   '/auth_/update-password': typeof AuthUpdatePasswordRoute
   '/movimentacao/$slug': typeof MovimentacaoSlugRoute
   '/movimentacao/historico': typeof MovimentacaoHistoricoRoute
-  '/preview/ficha-projeto': typeof PreviewFichaProjetoRoute
   '/totem/buscar': typeof TotemBuscarRoute
   '/totem/confirmar': typeof TotemConfirmarRoute
   '/totem/pronto': typeof TotemProntoRoute
@@ -598,6 +598,7 @@ export interface FileRoutesById {
   '/_authenticated/_admin/admin/movimentacao-links': typeof AuthenticatedAdminAdminMovimentacaoLinksRoute
   '/_authenticated/_admin/admin/saude': typeof AuthenticatedAdminAdminSaudeRoute
   '/_authenticated/_admin/admin/vendedores': typeof AuthenticatedAdminAdminVendedoresRoute
+  '/_authenticated/_admin/preview/ficha-projeto': typeof AuthenticatedAdminPreviewFichaProjetoRoute
   '/_authenticated/_admin/relatorios/agendamentos': typeof AuthenticatedAdminRelatoriosAgendamentosRoute
   '/_authenticated/appointments/new/agenda': typeof AuthenticatedAppointmentsNewAgendaRoute
   '/_authenticated/appointments/new/cliente': typeof AuthenticatedAppointmentsNewClienteRoute
@@ -635,7 +636,6 @@ export interface FileRouteTypes {
     | '/auth/update-password'
     | '/movimentacao/$slug'
     | '/movimentacao/historico'
-    | '/preview/ficha-projeto'
     | '/totem/buscar'
     | '/totem/confirmar'
     | '/totem/pronto'
@@ -663,6 +663,7 @@ export interface FileRouteTypes {
     | '/admin/movimentacao-links'
     | '/admin/saude'
     | '/admin/vendedores'
+    | '/preview/ficha-projeto'
     | '/relatorios/agendamentos'
     | '/appointments/new/agenda'
     | '/appointments/new/cliente'
@@ -698,7 +699,6 @@ export interface FileRouteTypes {
     | '/auth/update-password'
     | '/movimentacao/$slug'
     | '/movimentacao/historico'
-    | '/preview/ficha-projeto'
     | '/totem/buscar'
     | '/totem/confirmar'
     | '/totem/pronto'
@@ -725,6 +725,7 @@ export interface FileRouteTypes {
     | '/admin/movimentacao-links'
     | '/admin/saude'
     | '/admin/vendedores'
+    | '/preview/ficha-projeto'
     | '/relatorios/agendamentos'
     | '/appointments/new/agenda'
     | '/appointments/new/cliente'
@@ -762,7 +763,6 @@ export interface FileRouteTypes {
     | '/auth_/update-password'
     | '/movimentacao/$slug'
     | '/movimentacao/historico'
-    | '/preview/ficha-projeto'
     | '/totem/buscar'
     | '/totem/confirmar'
     | '/totem/pronto'
@@ -790,6 +790,7 @@ export interface FileRouteTypes {
     | '/_authenticated/_admin/admin/movimentacao-links'
     | '/_authenticated/_admin/admin/saude'
     | '/_authenticated/_admin/admin/vendedores'
+    | '/_authenticated/_admin/preview/ficha-projeto'
     | '/_authenticated/_admin/relatorios/agendamentos'
     | '/_authenticated/appointments/new/agenda'
     | '/_authenticated/appointments/new/cliente'
@@ -819,7 +820,6 @@ export interface RootRouteChildren {
   AuthUpdatePasswordRoute: typeof AuthUpdatePasswordRoute
   MovimentacaoSlugRoute: typeof MovimentacaoSlugRoute
   MovimentacaoHistoricoRoute: typeof MovimentacaoHistoricoRoute
-  PreviewFichaProjetoRoute: typeof PreviewFichaProjetoRoute
   TotemBuscarRoute: typeof TotemBuscarRoute
   TotemConfirmarRoute: typeof TotemConfirmarRoute
   TotemProntoRoute: typeof TotemProntoRoute
@@ -983,13 +983,6 @@ declare module '@tanstack/react-router' {
       path: '/movimentacao/historico'
       fullPath: '/movimentacao/historico'
       preLoaderRoute: typeof MovimentacaoHistoricoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/preview/ficha-projeto': {
-      id: '/preview/ficha-projeto'
-      path: '/preview/ficha-projeto'
-      fullPath: '/preview/ficha-projeto'
-      preLoaderRoute: typeof PreviewFichaProjetoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/totem/': {
@@ -1181,6 +1174,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminAdminVendedoresRouteImport
       parentRoute: typeof AuthenticatedAdminRouteRoute
     }
+    '/_authenticated/_admin/preview/ficha-projeto': {
+      id: '/_authenticated/_admin/preview/ficha-projeto'
+      path: '/preview/ficha-projeto'
+      fullPath: '/preview/ficha-projeto'
+      preLoaderRoute: typeof AuthenticatedAdminPreviewFichaProjetoRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
+    }
     '/_authenticated/_admin/relatorios/agendamentos': {
       id: '/_authenticated/_admin/relatorios/agendamentos'
       path: '/relatorios/agendamentos'
@@ -1291,6 +1291,7 @@ interface AuthenticatedAdminRouteRouteChildren {
   AuthenticatedAdminAdminMovimentacaoLinksRoute: typeof AuthenticatedAdminAdminMovimentacaoLinksRoute
   AuthenticatedAdminAdminSaudeRoute: typeof AuthenticatedAdminAdminSaudeRoute
   AuthenticatedAdminAdminVendedoresRoute: typeof AuthenticatedAdminAdminVendedoresRoute
+  AuthenticatedAdminPreviewFichaProjetoRoute: typeof AuthenticatedAdminPreviewFichaProjetoRoute
   AuthenticatedAdminRelatoriosAgendamentosRoute: typeof AuthenticatedAdminRelatoriosAgendamentosRoute
   AuthenticatedAdminAdminMovimentacaoNovoRoute: typeof AuthenticatedAdminAdminMovimentacaoNovoRoute
 }
@@ -1308,6 +1309,8 @@ const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren
     AuthenticatedAdminAdminSaudeRoute: AuthenticatedAdminAdminSaudeRoute,
     AuthenticatedAdminAdminVendedoresRoute:
       AuthenticatedAdminAdminVendedoresRoute,
+    AuthenticatedAdminPreviewFichaProjetoRoute:
+      AuthenticatedAdminPreviewFichaProjetoRoute,
     AuthenticatedAdminRelatoriosAgendamentosRoute:
       AuthenticatedAdminRelatoriosAgendamentosRoute,
     AuthenticatedAdminAdminMovimentacaoNovoRoute:
@@ -1428,7 +1431,6 @@ const rootRouteChildren: RootRouteChildren = {
   AuthUpdatePasswordRoute: AuthUpdatePasswordRoute,
   MovimentacaoSlugRoute: MovimentacaoSlugRoute,
   MovimentacaoHistoricoRoute: MovimentacaoHistoricoRoute,
-  PreviewFichaProjetoRoute: PreviewFichaProjetoRoute,
   TotemBuscarRoute: TotemBuscarRoute,
   TotemConfirmarRoute: TotemConfirmarRoute,
   TotemProntoRoute: TotemProntoRoute,

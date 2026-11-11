@@ -623,8 +623,10 @@ export interface ProjectDetail {
     artistName: string | null;
     /** Admin: percentual gravado no agendamento. Artista: null. */
     snapshotPct: number | null;
+    /** Fim do check-in concluído ligado por appointment_id; null = sem evidência. */
+    realizedAt: string | null;
   }[];
-  /** Admin: consultas Randevu do mesmo contato (não são sessões). Artista: []. */
+  /** Admin: consultas Randevu CANDIDATAS do mesmo contato, não vinculadas. Artista: []. */
   consultations: { id: string; startAt: string; status: string }[];
   /** Admin: oportunidade vinculada ao projeto. Artista: null. */
   opportunityId: string | null;
@@ -691,6 +693,25 @@ export const getProjectDetail = createServerFn({ method: "POST" })
       artistName: a.artists?.name ?? null,
       snapshotPct: adminView && a.commission_pct != null ? Number(a.commission_pct) : null,
     }));
+    const realizedMap = new Map<string, string>();
+    if (adminView && all.length > 0) {
+      const { data: cks } = await supabase
+        .from("checkins")
+        .select("appointment_id, finished_at, status")
+        .in(
+          "appointment_id",
+          all.map((x) => x.id),
+        )
+        .eq("status", "concluido");
+      const seen = new Map<string, number>();
+      for (const c of cks ?? []) {
+        if (!c.appointment_id || !c.finished_at) continue;
+        seen.set(c.appointment_id, (seen.get(c.appointment_id) ?? 0) + 1);
+        realizedMap.set(c.appointment_id, c.finished_at);
+      }
+      // Mais de um check-in concluído para a mesma sessão = ambíguo, sem evidência.
+      for (const [k, n] of seen) if (n > 1) realizedMap.delete(k);
+    }
     let consultations: { id: string; startAt: string; status: string }[] = [];
     if (adminView && r.ghl_contact_id) {
       const { RANDEVU_CALENDAR_ID } = await import("@/lib/artist-commission-policy");
@@ -730,6 +751,7 @@ export const getProjectDetail = createServerFn({ method: "POST" })
       },
       sessions: all.map((s) => ({
         ...s,
+        realizedAt: realizedMap.get(s.id) ?? null,
         index: activeIds.indexOf(s.id) + 1,
         total: activeIds.length,
       })),

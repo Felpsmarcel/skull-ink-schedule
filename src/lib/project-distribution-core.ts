@@ -12,6 +12,7 @@ export interface DistributionSession {
   status: string;
   snapshotPct: number | string | null;
   frozen?: boolean;
+  realizedAt?: string | null;
 }
 
 export type Allocation = Record<string, number | null>;
@@ -90,6 +91,7 @@ export interface SessionForecast {
   effectiveDate: string | null;
   /** Percentual gravado difere da política (só sinalizado, nunca retificado). */
   divergentSnapshot: boolean;
+  completedWithoutEvidence: boolean;
 }
 
 export function forecastCommission(sessions: DistributionSession[], alloc: Allocation) {
@@ -100,6 +102,7 @@ export function forecastCommission(sessions: DistributionSession[], alloc: Alloc
       status: s.status,
       snapshotPct: s.snapshotPct,
       frozen: s.frozen,
+      realizedAt: s.realizedAt ?? null,
     });
     const snap = s.snapshotPct === null ? null : Number(s.snapshotPct);
     return {
@@ -110,6 +113,7 @@ export function forecastCommission(sessions: DistributionSession[], alloc: Alloc
       source: c.source,
       effectiveDate: c.effectiveDate,
       divergentSnapshot: c.source === "policy" && snap !== null && snap !== c.pct,
+      completedWithoutEvidence: c.completedWithoutEvidence,
     };
   });
   const sumOrNull = (xs: SessionForecast[]) =>
@@ -139,34 +143,11 @@ export function commercialTotals(input: {
   };
 }
 
-const KEY = (projectId: string) => `gf.project-distribution-draft.v1.${projectId}`;
-
-export function loadDraft(projectId: string): Allocation {
-  try {
-    const raw = window.localStorage.getItem(KEY(projectId));
-    if (!raw) return {};
-    const parsed = JSON.parse(raw) as unknown;
-    if (!parsed || typeof parsed !== "object") return {};
-    const out: Allocation = {};
-    for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
-      if (v === null || (typeof v === "number" && Number.isInteger(v))) out[k] = v as number | null;
-    }
-    return out;
-  } catch {
-    return {};
-  }
-}
-export function saveDraft(projectId: string, a: Allocation) {
-  try {
-    window.localStorage.setItem(KEY(projectId), JSON.stringify(a));
-  } catch {
-    /* ignora */
-  }
-}
-export function clearDraft(projectId: string) {
-  try {
-    window.localStorage.removeItem(KEY(projectId));
-  } catch {
-    /* ignora */
-  }
+/** Valor da oportunidade vs contrato: nunca equivalentes por suposição. */
+export function opportunityContractDivergence(
+  oppCents: number | null,
+  contractCents: number | null,
+): "equal" | "different" | "unknown" {
+  if (oppCents === null || contractCents === null || contractCents <= 0) return "unknown";
+  return oppCents === contractCents ? "equal" : "different";
 }

@@ -1,6 +1,7 @@
 import { createFileRoute, Link, notFound, useNavigate, useRouter } from "@tanstack/react-router";
 import { queryOptions, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { usePortugueseWhileMounted } from "@/hooks/use-portuguese-while-mounted";
 import { z } from "zod";
 import { zodValidator } from "@tanstack/zod-adapter";
 import { ArrowLeft, CalendarPlus } from "lucide-react";
@@ -48,6 +49,7 @@ function ProjectPage() {
   const { projectId } = Route.useParams();
   const search = Route.useSearch();
   const navigate = useNavigate();
+  usePortugueseWhileMounted();
   const { data: p } = useSuspenseQuery(detailQuery(projectId));
   const admin = p?.role === "admin";
   const oppsQ = useQuery({

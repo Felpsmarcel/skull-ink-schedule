@@ -10,6 +10,7 @@ import {
 
 const OTHER = "00000000-0000-4000-8000-000000000002";
 const base = { artistId: ANDRE, status: "completed", snapshotPct: 40 };
+const ev = (iso: string) => ({ startAt: iso, realizedAt: iso });
 
 describe("comissão André por data de realização (Bruxelas)", () => {
   it("30/11 23:59 Bruxelas = 35%", () => {
@@ -44,7 +45,7 @@ describe("comissão André por data de realização (Bruxelas)", () => {
       pct: 40,
       recognized: false,
     });
-    expect(r({ ...base, startAt: "2026-12-05T09:00:00Z" }).recognized).toBe(true);
+    expect(r({ ...base, ...ev("2026-12-05T09:00:00Z") }).recognized).toBe(true);
   });
   it("repasse pago/congelado mantém o gravado", () => {
     expect(
@@ -104,5 +105,30 @@ describe("Randevu compartilhado", () => {
     expect(out).toEqual([
       { id: "a", startAt: "s", endAt: "e", status: "confirmed", contactName: "X" },
     ]);
+  });
+});
+
+describe("realização exige evidência", () => {
+  it("concluída sem data de realização: estimativa pela agenda, não reconhecida", () => {
+    expect(r({ ...base, startAt: "2026-11-20T10:00:00Z" })).toMatchObject({
+      pct: 35,
+      recognized: false,
+      dateSource: "scheduled",
+      completedWithoutEvidence: true,
+    });
+  });
+  it("data comprovada prevalece sobre a agendada na fronteira", () => {
+    const x = r({ ...base, startAt: "2026-11-30T10:00:00Z", realizedAt: "2026-11-30T23:30:00Z" });
+    expect(x).toMatchObject({
+      pct: 40,
+      recognized: true,
+      dateSource: "realized",
+      effectiveDate: "2026-12-01",
+    });
+  });
+  it("evidência sem status concluído não reconhece", () => {
+    expect(r({ ...base, status: "confirmed", ...ev("2026-12-05T09:00:00Z") }).recognized).toBe(
+      false,
+    );
   });
 });

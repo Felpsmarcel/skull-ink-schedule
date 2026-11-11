@@ -4,6 +4,7 @@ import { formatEurCents } from "@/lib/project-progress-core";
 import { formatProjectDate, PROJECT_APPOINTMENT_STATUS } from "@/lib/project-journey-core";
 import { OPP_STATUS_LABEL } from "@/lib/ghl-opportunities-core";
 import { DistributionEditor } from "./distribution-editor";
+import { opportunityContractDivergence } from "@/lib/project-distribution-core";
 
 type OppState =
   | { kind: "loading" }
@@ -20,25 +21,19 @@ export function ProjectFicha({
   selectedOpp,
   onSelectOpp,
   actions,
-  persistDraft = true,
 }: {
   p: ProjectDetail;
   opps?: OppState;
   selectedOpp?: string | null;
   onSelectOpp?: (id: string | null) => void;
   actions?: ReactNode;
-  persistDraft?: boolean;
 }) {
   const admin = p.role === "admin";
   const next = p.progress.nextStartAt;
   const active = p.sessions.filter((s) => s.status !== "cancelled");
+  // Consultas Randevu do mesmo contato são candidatas: ficam fora da trilha até vínculo explícito.
   const trail = [
-    ...p.consultations.map((c) => ({
-      kind: "rdv" as const,
-      id: c.id,
-      startAt: c.startAt,
-      status: c.status,
-    })),
+    ...([] as { kind: "rdv"; id: string; startAt: string; status: string }[]),
     ...p.sessions.map((s) => ({ kind: "session" as const, ...s })),
   ].sort((a, b) => a.startAt.localeCompare(b.startAt));
 
@@ -77,7 +72,33 @@ export function ProjectFicha({
               {p.opportunityId ? "sim" : "nenhuma oportunidade vinculada"}
             </span>
           </p>
-          <OpportunityList opps={opps} selected={selectedOpp ?? null} onSelect={onSelectOpp} />
+          <OpportunityList
+            opps={opps}
+            selected={selectedOpp ?? null}
+            onSelect={onSelectOpp}
+            contractCents={p.finance.quotedCents}
+          />
+        </section>
+      ) : null}
+
+      {admin && p.consultations.length > 0 ? (
+        <section aria-labelledby="cand-title" className="ficha-panel space-y-2">
+          <h2 id="cand-title" className="font-editorial text-lg">
+            Consultas Randevu do mesmo contato
+          </h2>
+          <p className="text-xs text-muted-foreground">
+            Candidatas, não vinculadas a este projeto. Consulta não é sessão e não gera comissão.
+          </p>
+          <ul className="space-y-1">
+            {p.consultations.map((c) => (
+              <li key={c.id} className="text-sm tabular-nums">
+                {formatProjectDate(c.startAt)} ·{" "}
+                <span className="text-muted-foreground">
+                  {PROJECT_APPOINTMENT_STATUS[c.status] ?? "Status não verificado"}
+                </span>
+              </li>
+            ))}
+          </ul>
         </section>
       ) : null}
 
@@ -143,9 +164,9 @@ export function ProjectFicha({
             "A apurar" não é zero.
           </p>
           <DistributionEditor
+            key={p.id}
             projectId={p.id}
             contractCents={p.finance.quotedCents}
-            persist={persistDraft}
             sessions={active.map((s) => ({
               id: s.id,
               index: s.index,
@@ -154,6 +175,7 @@ export function ProjectFicha({
               startAt: s.startAt,
               status: s.status,
               snapshotPct: s.snapshotPct,
+              realizedAt: s.realizedAt,
             }))}
           />
         </section>
@@ -178,8 +200,10 @@ function OpportunityList({
   opps,
   selected,
   onSelect,
+  contractCents,
 }: {
   opps?: OppState;
+  contractCents: number | null;
   selected: string | null;
   onSelect?: (id: string | null) => void;
 }) {
@@ -237,6 +261,13 @@ function OpportunityList({
                     {o.linkedElsewhereProjectId ? " · já vinculada a outro projeto" : ""}
                     {!o.inArtistPipeline ? " · fora do funil do tatuador" : ""}
                   </span>
+                  {opportunityContractDivergence(o.monetaryValueCents, contractCents) ===
+                  "different" ? (
+                    <span className="block text-xs font-medium text-warning">
+                      Valor difere do contrato ({formatEurCents(contractCents)}) — divergência, nada
+                      sobrescrito
+                    </span>
+                  ) : null}
                 </span>
               </label>
             );

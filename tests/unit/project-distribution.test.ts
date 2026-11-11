@@ -4,12 +4,20 @@ import {
   forecastCommission as fc,
   parseEuroToCents as eur,
   commercialTotals,
+  opportunityContractDivergence as div,
 } from "@/lib/project-distribution-core";
 import { ANDRE_PAREYN_ARTIST_ID as A } from "@/lib/artist-commission-policy";
 
 const B = "00000000-0000-4000-8000-0000000000b2";
 const S = [
-  { id: "s1", artistId: A, startAt: "2026-11-30T22:59:00Z", status: "completed", snapshotPct: 40 },
+  {
+    id: "s1",
+    artistId: A,
+    startAt: "2026-11-30T22:59:00Z",
+    status: "completed",
+    snapshotPct: 40,
+    realizedAt: "2026-11-30T17:00:00Z",
+  },
   { id: "s2", artistId: A, startAt: "2026-12-05T09:00:00Z", status: "confirmed", snapshotPct: 40 },
   { id: "s3", artistId: B, startAt: "2026-12-05T09:00:00Z", status: "confirmed", snapshotPct: 50 },
 ];
@@ -107,5 +115,30 @@ describe("sinal e recebimento sem dupla contagem", () => {
       commercialTotals({ contractCents: 270000, receivedMovCents: null, depositNoteCents: 45000 })
         .balanceByMovCents,
     ).toBeNull();
+  });
+});
+
+describe("oportunidade vs contrato", () => {
+  it("900 vs 2700 é divergência explícita", () => {
+    expect(div(90000, 270000)).toBe("different");
+    expect(div(270000, 270000)).toBe("equal");
+    expect(div(null, 270000)).toBe("unknown");
+    expect(div(90000, null)).toBe("unknown");
+  });
+  it("concluída sem evidência não entra no realizado", () => {
+    const f = fc(
+      [
+        {
+          id: "z",
+          artistId: A,
+          startAt: "2026-11-20T10:00:00Z",
+          status: "completed",
+          snapshotPct: 35,
+        },
+      ],
+      { z: 100000 },
+    );
+    expect(f.rows[0]).toMatchObject({ recognized: false, completedWithoutEvidence: true });
+    expect(f.estimatedCents).toBe(35000);
   });
 });
