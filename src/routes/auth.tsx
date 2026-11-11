@@ -106,9 +106,9 @@ function AuthPage() {
 
   return (
     <AuthFrame title="Acesso ao estúdio" description="Entre para acompanhar a agenda e a operação do dia.">
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <div className="space-y-2">
-          <Label htmlFor="email" className="text-xs uppercase text-muted-foreground">Email</Label>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="email" className="text-sm font-medium text-foreground">Email</Label>
           <Input
             id="email"
             type="email"
@@ -119,12 +119,12 @@ function AuthPage() {
             placeholder="nome@email.com"
           />
         </div>
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <div className="flex items-center justify-between gap-3">
-            <Label htmlFor="password" className="text-xs uppercase text-muted-foreground">Senha</Label>
+            <Label htmlFor="password" className="text-sm font-medium text-foreground">Senha</Label>
             <Link
               to="/auth/recover"
-              className="text-xs font-medium text-primary underline-offset-4 hover:underline"
+              className="inline-flex min-h-11 items-center text-sm font-medium text-primary underline-offset-4 hover:underline"
             >
               Esqueci a senha
             </Link>
@@ -139,22 +139,22 @@ function AuthPage() {
           />
         </div>
         {error ? <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{error}</p> : null}
-        <Button type="submit" className="w-full" disabled={loading}>
+        <Button type="submit" className="h-12 w-full text-base font-semibold" disabled={loading}>
           {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
           Entrar
         </Button>
       </form>
 
-      <div className="my-6 flex items-center gap-3">
+      <div className="my-5 flex items-center gap-3">
         <div className="h-px flex-1 bg-border" />
-        <span className="text-xs font-medium uppercase text-muted-foreground">ou</span>
+        <span className="text-xs font-medium text-muted-foreground">ou</span>
         <div className="h-px flex-1 bg-border" />
       </div>
 
       <Button
         type="button"
         variant="outline"
-        className="w-full"
+        className="h-12 w-full bg-card text-base"
         onClick={handleGoogle}
         disabled={googleLoading}
       >
