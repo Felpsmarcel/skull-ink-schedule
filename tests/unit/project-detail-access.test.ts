@@ -62,6 +62,13 @@ const from = (table: string) => {
               },
         error: null,
       };
+    if (table === "checkins")
+      return {
+        data: [
+          { appointment_id: "appt-1", finished_at: "2026-12-05T17:00:00Z", status: "concluido" },
+        ],
+        error: null,
+      };
     if (table === "appointments")
       return {
         data: [
@@ -175,4 +182,16 @@ describe("ficha integrada — escopo por tatuador", () => {
       expect(fake.queries).toEqual(["app_users"]);
     },
   );
+});
+
+describe("evidência de realização", () => {
+  it("admin recebe realizedAt do check-in concluído; artista não consulta check-ins", async () => {
+    const r = (await run()) as { sessions: { realizedAt: unknown }[] };
+    expect(r.sessions[0]!.realizedAt).toBe("2026-12-05T17:00:00Z");
+    fake.role = "artist";
+    fake.queries = [];
+    const a = (await run()) as { sessions: { realizedAt: unknown }[] };
+    expect(a.sessions[0]!.realizedAt).toBeNull();
+    expect(fake.queries).not.toContain("checkins");
+  });
 });

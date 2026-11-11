@@ -79,7 +79,11 @@ export function resolveSessionCommission(s: SessionCommissionInput): SessionComm
   const realized = s.realizedAt ? brusselsCivilDate(s.realizedAt) : null;
   const effectiveDate = realized ?? brusselsCivilDate(s.startAt);
   const dateSource: "realized" | "scheduled" = realized ? "realized" : "scheduled";
-  const base = { effectiveDate, dateSource, completedWithoutEvidence: s.status === "completed" && !realized };
+  const base = {
+    effectiveDate,
+    dateSource,
+    completedWithoutEvidence: s.status === "completed" && !realized,
+  };
   if (s.isConsultation || (s.calendarId != null && s.calendarId === RANDEVU_CALENDAR_ID)) {
     return { pct: null, source: "not_session", recognized: false, ...base };
   }

@@ -28,7 +28,8 @@ function PreviewPage() {
         role="note"
         className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning"
       >
-        Dados fictícios de demonstração, visível só para administradores. Nada aqui lê ou grava dados reais.
+        Dados fictícios de demonstração, visível só para administradores. Nada aqui lê ou grava
+        dados reais.
       </p>
       <ProjectFicha
         p={SYNTHETIC_PROJECT}
