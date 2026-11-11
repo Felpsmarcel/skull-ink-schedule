@@ -11,7 +11,8 @@ import {
 } from "lucide-react";
 import "@/i18n";
 
-import { useStaffDayAgenda } from "@/hooks/use-agenda";
+import { useStaffDayAgenda, type StaffAgenda } from "@/hooks/use-agenda";
+import { Button } from "@/components/ui/button";
 import { useStaffRangeAgenda } from "@/hooks/use-agenda-range";
 import {
   useDayAppointmentStatuses,
@@ -127,6 +128,14 @@ function AgendaPage() {
   const [pickedArtistId, setPickedArtistId] = useState<string>("");
   // Admin may narrow to one artist; artist scope is never widened.
   const restrictArtistId = scope.artistId ?? (pickedArtistId || null);
+  const { agendas } = useStaffDayAgenda(date, {
+    artistId: restrictArtistId,
+    enabled: scope.allowed && Boolean(me) && view === "day",
+  });
+  const totals = useMemo(() => agendas.reduce(
+    (sum, a) => ({ booked: sum.booked + a.bookedCount, free: sum.free + a.freeCount }),
+    { booked: 0, free: 0 },
+  ), [agendas]);
 
   function goPrevMonth() {
     const d = new Date(date);
@@ -181,34 +190,33 @@ function AgendaPage() {
 
   return (
     <div className="flex min-h-dvh flex-col bg-muted/40 pb-[calc(env(safe-area-inset-bottom)+6rem)] sm:pb-20">
-      {me?.role === "admin" && <div className="px-3 py-2 sm:px-6"><GhlSyncStatus /></div>}
       {/* Header — editorial monochrome */}
       <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-2 px-3 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3 sm:px-6 sm:pb-4 sm:pt-4">
-          <div className="flex min-w-0 flex-1 items-center gap-1 sm:flex-none sm:gap-2">
-            <button
-              type="button"
-              onClick={() => shift(-1)}
-              className="grid h-11 w-11 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-              aria-label={t("agenda.prev")}
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-
+        <div className="mx-auto grid w-full max-w-[1400px] gap-1 px-3 pb-2 pt-[calc(env(safe-area-inset-top)+0.25rem)] sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-x-6 sm:px-6 sm:py-3">
+          <div className="flex min-w-0 items-center gap-2">
             <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
               <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  className="flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-muted"
+                <Button
+                  variant="ghost"
+                  aria-label={`Escolher data: ${dateLabel}`}
+                  className="min-w-0 flex-1 justify-start gap-2 px-0 text-left sm:flex-none sm:px-2"
                 >
-                  <CalendarIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <CalendarIcon aria-hidden="true" className="shrink-0 text-muted-foreground" />
+                  <span className="min-w-0">
                   <span
-                    className="truncate text-base tracking-tight text-foreground first-letter:uppercase sm:text-lg"
-                    style={{ fontFamily: "var(--font-display)" }}
+                    className="block text-base font-normal text-foreground first-letter:uppercase sm:text-lg"
                   >
                     {dateLabel}
                   </span>
-                </button>
+                  {view === "day" ? (
+                    <span className="block text-xs font-normal tabular-nums text-muted-foreground">
+                      {t("agenda.kpi.sessions", { n: totals.booked })}
+                      <span aria-hidden="true"> · </span>
+                      {totals.free === 0 ? "Nenhum horário vago" : t("agenda.kpi.free", { n: totals.free })}
+                    </span>
+                  ) : null}
+                  </span>
+                </Button>
               </PopoverTrigger>
               <PopoverContent align="center" className="w-auto p-0">
                 <Calendar
@@ -222,44 +230,56 @@ function AgendaPage() {
                   }}
                 />
                 <div className="border-t border-border p-2">
-                  <button
-                    type="button"
+                  <Button
+                    variant="ghost"
                     onClick={() => {
                       goPrevMonth();
                       setPickerOpen(false);
                     }}
-                    className="w-full rounded-md px-2 py-1.5 text-left text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+                    className="w-full justify-start px-2 text-sm text-muted-foreground"
                   >
                     Ir para o mês anterior
-                  </button>
+                  </Button>
                 </div>
               </PopoverContent>
             </Popover>
+            {me?.role === "admin" ? <GhlSyncStatus /> : null}
+          </div>
 
-            <button
-              type="button"
-              onClick={() => shift(1)}
-              className="grid h-11 w-11 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-              aria-label={t("agenda.next")}
+          <div className="flex min-w-0 items-center gap-2">
+            <div className="flex shrink-0 items-center">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => shift(-1)}
+              className="shrink-0 text-muted-foreground"
+              aria-label={t("agenda.prev")}
             >
-              <ChevronRight className="h-5 w-5" />
-            </button>
-
-            <button
-              type="button"
+              <ChevronLeft aria-hidden="true" />
+            </Button>
+            <Button
+              variant="ghost"
               onClick={() => setDate(new Date())}
-              className="ml-1 inline-flex h-11 shrink-0 items-center rounded-md border border-border bg-card px-3 text-xs font-medium text-muted-foreground hover:border-foreground/50 hover:text-foreground"
+              className="shrink-0 px-2 text-sm font-medium"
             >
               {t("agenda.today")}
-            </button>
-
-
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => shift(1)}
+              className="shrink-0 text-muted-foreground"
+              aria-label={t("agenda.next")}
+            >
+              <ChevronRight aria-hidden="true" />
+            </Button>
+            </div>
             {scope.artistId === null ? (
               <select
                 aria-label="Selecionar tatuador"
                 value={pickedArtistId}
                 onChange={(e) => setPickedArtistId(e.target.value)}
-                className="ml-1 h-11 max-w-[10rem] shrink-0 rounded-md border border-border bg-card px-2 text-xs font-medium text-foreground"
+                className="h-11 min-w-0 flex-1 rounded-md border border-border bg-card px-2 text-sm font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:max-w-[12rem]"
               >
                 <option value="">Todos</option>
                 {allArtists.filter((a) => !/augusto/i.test(a.name)).map((a) => (
@@ -273,52 +293,51 @@ function AgendaPage() {
             {/* Mobile-only compact view switch */}
             <Popover>
               <PopoverTrigger asChild>
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
+                  size="icon"
                   aria-label={t("agenda.view.week") + " / " + t("agenda.view.month")}
-                  className="ml-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-border bg-card text-muted-foreground hover:border-foreground hover:text-foreground sm:hidden"
+                  className="ml-auto shrink-0 text-muted-foreground sm:hidden"
                 >
                   <MoreHorizontal className="h-4 w-4" />
-                </button>
+                </Button>
               </PopoverTrigger>
               <PopoverContent align="end" className="z-50 w-40 p-1">
                 {view !== "day" ? (
-                  <button
-                    type="button"
+                  <Button
+                    variant="ghost"
                     onClick={() => setView("day")}
-                    className="flex w-full items-center justify-start rounded-sm px-2 py-1.5 text-sm hover:bg-muted"
+                    className="w-full justify-start px-2 font-normal"
                   >
                     {t("agenda.view.day")}
-                  </button>
+                  </Button>
                 ) : null}
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
                   onClick={() => setView("week")}
                   className={cn(
-                    "flex w-full items-center justify-start rounded-sm px-2 py-1.5 text-sm hover:bg-muted",
+                    "w-full justify-start px-2 font-normal",
                     view === "week" && "bg-muted",
                   )}
                 >
                   {t("agenda.view.week")}
-                </button>
-                <button
-                  type="button"
+                </Button>
+                <Button
+                  variant="ghost"
                   onClick={() => setView("month")}
                   className={cn(
-                    "flex w-full items-center justify-start rounded-sm px-2 py-1.5 text-sm hover:bg-muted",
+                    "w-full justify-start px-2 font-normal",
                     view === "month" && "bg-muted",
                   )}
                 >
                   {t("agenda.view.month")}
-                </button>
+                </Button>
               </PopoverContent>
             </Popover>
-          </div>
-
           <Tabs
             value={view}
             onValueChange={(v) => setView(v as View)}
-            className="hidden w-full sm:block sm:w-auto"
+            className="hidden shrink-0 sm:block"
           >
             <TabsList className="h-9 rounded-lg bg-muted p-1">
               <TabsTrigger
@@ -341,13 +360,14 @@ function AgendaPage() {
               </TabsTrigger>
             </TabsList>
           </Tabs>
+          </div>
         </div>
       </header>
 
       {view === "day" ? (
         <DayView
           date={date}
-          restrictArtistId={restrictArtistId}
+          agendas={agendas}
           meReady={Boolean(me)}
           debug={debug}
         />
@@ -374,22 +394,18 @@ function AgendaPage() {
 
 function DayView({
   date,
-  restrictArtistId,
+  agendas,
   meReady,
   debug,
 }: {
   date: Date;
-  restrictArtistId: string | null | undefined;
+  agendas: StaffAgenda[];
   meReady: boolean;
   debug: boolean;
 }) {
   const { t } = useTranslation();
   const daySearch = Route.useSearch() as { novo?: string };
 
-  const { agendas } = useStaffDayAgenda(date, {
-    artistId: restrictArtistId,
-    enabled: meReady,
-  });
   const { map: statusMap } = useDayAppointmentStatuses(date, meReady);
 
   // Mobile: show one artist column at a time (chips selector).
@@ -406,16 +422,6 @@ function DayView({
       : defaultTimeLabels();
 
   const chipAgendas = agendas.filter((a) => !/augusto/i.test(a.staff.shortName) && !/^gf( tattoo)?$/i.test(a.staff.shortName.trim()));
-
-  const totals = useMemo(() => {
-    let booked = 0;
-    let free = 0;
-    for (const a of agendas) {
-      booked += a.bookedCount;
-      free += a.freeCount;
-    }
-    return { booked, free };
-  }, [agendas]);
 
   // "Now" indicator position (px from top of grid body) — visible only when today
   const nowTopPx = useMemo(() => {
@@ -522,27 +528,6 @@ function DayView({
           ))}
         </div>
       ) : null}
-
-      {/* Day summary */}
-      <div className="border-b border-border bg-background">
-        <div className="mx-auto flex w-full max-w-[1400px] items-center gap-4 px-3 py-1.5 text-xs text-muted-foreground sm:px-6 sm:py-2">
-          <p className="tabular-nums">
-            <span className="font-medium text-foreground">{t("agenda.kpi.sessions", { n: totals.booked })}</span>
-            <span aria-hidden> · </span>
-            {totals.free === 0 ? "Nenhum horário vago" : t("agenda.kpi.free", { n: totals.free })}
-          </p>
-          <div className="ml-auto hidden items-center gap-4 text-[11px] text-muted-foreground sm:flex">
-            <span className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-sm border border-border bg-muted" />
-              {t("agenda.kpi.legendReceive")}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-sm bg-foreground" />
-              {t("agenda.kpi.legendPaid")}
-            </span>
-          </div>
-        </div>
-      </div>
 
       {/* Mobile-only artist chip selector */}
       {chipAgendas.length > 1 ? (

@@ -1,5 +1,10 @@
 # Renovação premium
 
+## Agenda no celular — etapa 2 autorizada
+- [ ] Compactar data, resumo e controles sem corte horizontal
+- [ ] Trocar faixa CRM por indicador que abre detalhes, mantendo consulta administrativa somente leitura
+- [ ] Conferir interação no celular/computador e executar regressões sem publicar
+
 ## Revisão final API móvel: completude e homônimos
 - [x] Reproduzir página vazia contraditória, IDs/cursor inválidos e fusão de homônimos
 - [x] Corrigir paginação e agregação por IDs imutáveis CRM/app sem zeros substitutos
