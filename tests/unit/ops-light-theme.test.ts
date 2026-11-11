@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isOpsLightPath } from "./ops-light-theme";
+import { isOpsLightPath } from "@/lib/ops-light-theme";
 
 describe("isOpsLightPath", () => {
   it("activates on the Agenda and the login flow", () => {
