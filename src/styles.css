@@ -256,3 +256,14 @@ html.agenda-no-pull-refresh body {
     margin: 14mm;
   }
 }
+
+/* Agenda 2.0 sheet: 44px close target, scoped to the Agenda sheet only. */
+.agenda-sheet > button.absolute {
+  display: grid;
+  place-items: center;
+  height: 2.75rem;
+  width: 2.75rem;
+  top: 0.5rem;
+  right: 0.5rem;
+  border-radius: 0.375rem;
+}

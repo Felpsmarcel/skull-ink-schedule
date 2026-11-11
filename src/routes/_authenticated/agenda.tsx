@@ -93,7 +93,7 @@ export const Route = createFileRoute("/_authenticated/agenda")({
   component: AgendaPage,
 });
 
-const COL_WIDTH = "w-full sm:w-auto sm:min-w-[140px] sm:basis-0 sm:grow";
+const COL_WIDTH = "w-full sm:w-auto sm:min-w-[168px] sm:basis-0 sm:grow";
 const ROW_HEIGHT = "h-14";
 const ROW_HEIGHT_PX = 56; // must match ROW_HEIGHT (h-14 = 56px)
 
@@ -198,8 +198,8 @@ function AgendaPage() {
   return (
     <div className="agenda-scope flex min-h-dvh flex-col bg-background pb-[calc(env(safe-area-inset-bottom)+6rem)] sm:pb-20">
       {/* Header — editorial monochrome */}
-      <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur">
-        <div className="mx-auto grid w-full max-w-[1400px] gap-1 px-3 pb-2 pt-[calc(env(safe-area-inset-top)+0.25rem)] sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-x-6 sm:px-6 sm:py-3">
+      <header className="sticky top-0 z-30 border-b border-border bg-background">
+        <div className="mx-auto grid w-full max-w-[1400px] gap-1 px-3 pb-2 pt-[calc(env(safe-area-inset-top)+0.25rem)] gap-y-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-x-6 sm:px-6 sm:py-3 lg:grid-cols-[minmax(0,1fr)_auto_auto]">
           <div className="flex min-w-0 items-center gap-2">
             <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
               <PopoverTrigger asChild>
@@ -254,12 +254,12 @@ function AgendaPage() {
           </div>
 
           <div className="flex min-w-0 items-center gap-2">
-            <div className="flex shrink-0 items-center">
+            <div className="flex shrink-0 items-center gap-1">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => shift(-1)}
-              className="shrink-0 text-muted-foreground"
+              className="h-11 w-11 shrink-0 text-muted-foreground"
               aria-label={t("agenda.prev")}
             >
               <ChevronLeft aria-hidden="true" />
@@ -267,7 +267,7 @@ function AgendaPage() {
             <Button
               variant="ghost"
               onClick={() => setDate(new Date())}
-              className="shrink-0 px-2 text-sm font-medium text-primary"
+              className="h-11 shrink-0 rounded-md border border-border px-4 text-sm font-medium text-foreground"
             >
               {t("agenda.today")}
             </Button>
@@ -275,7 +275,7 @@ function AgendaPage() {
               variant="ghost"
               size="icon"
               onClick={() => shift(1)}
-              className="shrink-0 text-muted-foreground"
+              className="h-11 w-11 shrink-0 text-muted-foreground"
               aria-label={t("agenda.next")}
             >
               <ChevronRight aria-hidden="true" />
@@ -297,76 +297,27 @@ function AgendaPage() {
               </select>
             ) : null}
 
-            {/* Mobile-only compact view switch */}
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label={t("agenda.view.week") + " / " + t("agenda.view.month")}
-                  className="ml-auto shrink-0 text-muted-foreground sm:hidden"
-                >
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="end" className="z-50 w-40 p-1">
-                {view !== "day" ? (
-                  <Button
-                    variant="ghost"
-                    onClick={() => setView("day")}
-                    className="w-full justify-start px-2 font-normal"
-                  >
-                    {t("agenda.view.day")}
-                  </Button>
-                ) : null}
-                <Button
-                  variant="ghost"
-                  onClick={() => setView("week")}
-                  className={cn(
-                    "w-full justify-start px-2 font-normal",
-                    view === "week" && "bg-muted",
-                  )}
-                >
-                  {t("agenda.view.week")}
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={() => setView("month")}
-                  className={cn(
-                    "w-full justify-start px-2 font-normal",
-                    view === "month" && "bg-muted",
-                  )}
-                >
-                  {t("agenda.view.month")}
-                </Button>
-              </PopoverContent>
-            </Popover>
-          <Tabs
-            value={view}
-            onValueChange={(v) => setView(v as View)}
-            className="hidden shrink-0 sm:block"
+          </div>
+          <div
+            role="tablist"
+            aria-label="Visualização da agenda"
+            className="grid grid-cols-3 rounded-lg border border-border bg-card p-1 sm:col-span-2 sm:justify-self-end sm:w-auto"
           >
-            <TabsList className="h-9 rounded-lg bg-muted p-1">
-              <TabsTrigger
-                value="day"
-                className="rounded-md px-3 text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+            {(["day", "week", "month"] as const).map((v) => (
+              <button
+                key={v}
+                type="button"
+                role="tab"
+                aria-selected={view === v}
+                onClick={() => setView(v)}
+                className={cn(
+                  "h-11 min-w-[5.5rem] rounded-md px-4 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  view === v ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                )}
               >
-                {t("agenda.view.day")}
-              </TabsTrigger>
-              <TabsTrigger
-                value="week"
-                className="rounded-md px-3 text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-              >
-                {t("agenda.view.week")}
-              </TabsTrigger>
-              <TabsTrigger
-                value="month"
-                className="rounded-md px-3 text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-              >
-                {t("agenda.view.month")}
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+                {t(`agenda.view.${v}`)}
+              </button>
+            ))}
           </div>
         </div>
       </header>
@@ -432,7 +383,7 @@ function DayView({
       ? (agendas.find((a) => a.slots.length === rowCount)?.slots ?? []).map((s) => s.label)
       : defaultTimeLabels();
 
-  const chipAgendas = agendas.filter((a) => !/augusto/i.test(a.staff.shortName) && !/^gf( tattoo)?$/i.test(a.staff.shortName.trim()));
+  const chipAgendas = agendas.filter((a) => !/augusto/i.test(a.staff.shortName));
 
   // "Now" indicator position (px from top of grid body) — visible only when today
   const nowTopPx = useMemo(() => {
@@ -542,7 +493,7 @@ function DayView({
 
       {/* Mobile-only artist chip selector */}
       {chipAgendas.length > 1 ? (
-        <div className="border-b border-border bg-background sm:hidden">
+        <div className="border-b border-border bg-background sm:hidden" role="group" aria-label="Profissional exibido">
           <div className="flex gap-2 overflow-x-auto px-3 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {chipAgendas.map((a) => {
               const active = a.staff.id === effectiveActiveId;
@@ -553,7 +504,7 @@ function DayView({
                   aria-pressed={active}
                   onClick={() => setActiveStaffId(a.staff.id)}
                   className={cn(
-                    "shrink-0 gap-2 rounded-md border px-3 text-sm font-medium",
+                    "h-11 shrink-0 gap-2 rounded-md border px-4 text-sm font-medium",
                     active
                       ? "border-primary/60 bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary"
                       : "border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground",
@@ -588,7 +539,7 @@ function DayView({
                   <div
                     key={label}
                     className={cn(
-                      "flex w-12 items-start justify-center border-b border-border/40 pt-1 text-xs font-medium tabular-nums text-muted-foreground sm:w-14 sm:text-xs",
+                      "flex w-14 items-start justify-end border-b border-border/40 pr-2 pt-1 text-xs font-medium tabular-nums text-muted-foreground sm:w-16 sm:text-sm",
                       ROW_HEIGHT,
                     )}
                   >
@@ -682,9 +633,9 @@ function StaffColumn({
   return (
     <div className={cn("flex flex-col border-l border-border", COL_WIDTH)}>
       {/* Column header — editorial */}
-      <div className="sticky top-0 z-10 flex h-16 flex-col items-center justify-center gap-0.5 border-b border-border bg-muted/40 px-2 py-2 text-center">
+      <div className="sticky top-0 z-10 flex h-16 flex-col items-start justify-center gap-0.5 border-b border-border bg-card px-3 py-2 text-left">
         <span
-          className="truncate text-sm font-medium leading-tight text-foreground"
+          className="max-w-full truncate text-base font-semibold leading-tight text-foreground"
         >
           {staff.shortName}
         </span>
@@ -826,9 +777,13 @@ function SlotCell({
             {t("agenda.next", { defaultValue: "Próximo" })}
           </span>
         ) : null}
+        <div className="text-xs font-semibold tabular-nums text-foreground/80">
+          {startLabel}
+          {endLabel ? ` – ${endLabel}` : ""}
+        </div>
         <div className="flex items-center gap-1">
           <span
-            className={cn("truncate text-sm font-medium leading-tight", isNext && "pr-14")}
+            className={cn("truncate text-sm font-semibold leading-tight", isNext && "pr-16")}
           >
             {slot.contactName ?? t("agenda.booked")}
           </span>
@@ -839,14 +794,10 @@ function SlotCell({
             />
           ) : null}
         </div>
-        {slot.serviceName && cardHeight >= 84 ? (
+        {slot.serviceName && cardHeight >= 100 ? (
           <div className="line-clamp-2 text-xs font-normal leading-tight text-muted-foreground">{slot.serviceName}</div>
         ) : null}
-        <div className="text-xs font-medium tabular-nums text-muted-foreground">
-          {startLabel}
-          {endLabel ? ` – ${endLabel}` : ""}
-        </div>
-        {bucket && cardHeight >= 84 ? (
+        {bucket && cardHeight >= 100 ? (
           <StatusBadge
             variant={bucketToVariant(bucket)}
             className="mt-auto self-start px-1 py-0 text-xs normal-case"
@@ -998,7 +949,7 @@ function WeekView({
               >
                 <span
                   className={cn(
-                    "text-[11px] tracking-wide text-muted-foreground",
+                    "text-xs text-muted-foreground",
                     isToday && "text-primary",
                   )}
                 >
@@ -1042,7 +993,7 @@ function WeekView({
                       {a.staff.initials}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="line-clamp-2 text-center text-[11px] font-semibold tracking-tight leading-tight text-foreground">
+                  <span className="line-clamp-2 text-center text-xs font-semibold leading-tight text-foreground">
                     {a.staff.shortName}
                   </span>
                 </div>
@@ -1084,7 +1035,7 @@ function WeekView({
                         );
                       })}
                       {extra > 0 ? (
-                        <span className="px-1 text-[11px] font-medium text-muted-foreground">
+                        <span className="px-1 text-xs font-medium text-muted-foreground">
                           +{extra}
                         </span>
                       ) : null}
@@ -1116,7 +1067,7 @@ function WeekView({
                 type="button"
                 onClick={() => onPickDay(d)}
                 className={cn(
-                  "flex flex-col items-center gap-0.5 border-r border-border px-1 py-2 text-xs tracking-wide hover:bg-muted",
+                  "flex flex-col items-center gap-0.5 border-r border-border px-1 py-2 text-xs hover:bg-muted",
                   key === todayKey && "bg-primary/10 text-primary",
                 )}
               >
@@ -1359,7 +1310,7 @@ function MonthView({
 
   return (
     <div className="flex-1 overflow-auto p-1 sm:p-2">
-      <div className="grid grid-cols-7 border-b border-border text-[11px] tracking-wide text-muted-foreground sm:text-xs">
+      <div className="grid grid-cols-7 border-b border-border text-xs text-muted-foreground sm:text-xs">
         {headerDays.map((d) => (
           <div key={d} className="px-1 py-1 text-center sm:px-2">
             <span className="sm:hidden">{wdNarrowFmt.format(new Date(d))}</span>
