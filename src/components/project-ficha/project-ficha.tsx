@@ -80,7 +80,6 @@ export function ProjectFicha({
             selected={selectedOpp ?? null}
             onSelect={onSelectOpp}
             contractCents={p.finance.quotedCents}
-            adapter={allocationAdapter}
           />
         </section>
       ) : null}
@@ -170,6 +169,7 @@ export function ProjectFicha({
           <DistributionEditor
             key={p.id}
             projectId={p.id}
+            adapter={allocationAdapter}
             contractCents={p.finance.quotedCents}
             adapter={allocationAdapter}
             sessions={active.map((s) => ({
