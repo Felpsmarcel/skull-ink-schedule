@@ -21,50 +21,41 @@ export function useAgendaSwipe(onShiftDay: (delta: number) => void) {
     } | null = null;
     let suppressClickUntil = 0;
 
-    const begin = (event: TouchEvent) => {
+    const begin = (event: PointerEvent) => {
       start = null;
-      if (event.touches.length !== 1 || !window.matchMedia("(max-width: 639px)").matches) return;
-      const touch = event.touches[0];
-      if (!touch || touch.clientX < 24 || touch.clientX > window.innerWidth - 24) return;
+      if (
+        event.pointerType !== "touch" ||
+        !event.isPrimary ||
+        !window.matchMedia("(max-width: 639px)").matches
+      )
+        return;
+      if (event.clientX < 24 || event.clientX > window.innerWidth - 24) return;
       start = {
-        x: touch.clientX,
-        y: touch.clientY,
+        x: event.clientX,
+        y: event.clientY,
         at: performance.now(),
-        id: touch.identifier,
+        id: event.pointerId,
         axis: null,
       };
+      surface.setPointerCapture(event.pointerId);
     };
-    const move = (event: TouchEvent) => {
-      if (!start) return;
-      if (event.touches.length !== 1) {
-        start = null;
-        return;
-      }
-      const touch = event.touches[0];
-      if (!touch || touch.identifier !== start.id) {
-        start = null;
-        return;
-      }
-      start.axis ??= agendaSwipeAxis(touch.clientX - start.x, touch.clientY - start.y);
+    const move = (event: PointerEvent) => {
+      if (!start || event.pointerId !== start.id) return;
+      start.axis ??= agendaSwipeAxis(event.clientX - start.x, event.clientY - start.y);
       if (start.axis === "vertical") {
         start = null;
         return;
       }
-      if (start.axis === "horizontal") {
-        if (event.cancelable) event.preventDefault();
-        suppressClickUntil = performance.now() + 500;
-      }
+      if (start.axis === "horizontal") suppressClickUntil = performance.now() + 500;
     };
-    const end = (event: TouchEvent) => {
+    const end = (event: PointerEvent) => {
       const gesture = start;
       start = null;
-      if (!gesture || event.touches.length > 0 || gesture.axis !== "horizontal") return;
-      const touch = Array.from(event.changedTouches).find((t) => t.identifier === gesture.id);
-      if (!touch) return;
+      if (!gesture || event.pointerId !== gesture.id || gesture.axis !== "horizontal") return;
       suppressClickUntil = performance.now() + 500;
       const delta = agendaSwipeDayDelta(
-        touch.clientX - gesture.x,
-        touch.clientY - gesture.y,
+        event.clientX - gesture.x,
+        event.clientY - gesture.y,
         performance.now() - gesture.at,
       );
       if (delta) callbackRef.current(delta);
@@ -72,23 +63,27 @@ export function useAgendaSwipe(onShiftDay: (delta: number) => void) {
     const cancel = () => {
       start = null;
     };
+    const multitouch = (event: TouchEvent) => {
+      if (event.touches.length > 1) start = null;
+    };
     const click = (event: MouseEvent) => {
       if (performance.now() < suppressClickUntil && event.detail !== 0) {
         event.preventDefault();
         event.stopPropagation();
       }
     };
-    surface.addEventListener("touchstart", begin, { passive: true });
-    surface.addEventListener("touchmove", move, { passive: false });
-    // A loading row may be replaced mid-gesture; completion must survive its removal.
-    window.addEventListener("touchend", end, true);
-    window.addEventListener("touchcancel", cancel, true);
+    surface.addEventListener("pointerdown", begin);
+    surface.addEventListener("pointermove", move);
+    surface.addEventListener("pointerup", end);
+    surface.addEventListener("pointercancel", cancel);
+    surface.addEventListener("touchstart", multitouch, { passive: true });
     surface.addEventListener("click", click, true);
     return () => {
-      surface.removeEventListener("touchstart", begin);
-      surface.removeEventListener("touchmove", move);
-      window.removeEventListener("touchend", end, true);
-      window.removeEventListener("touchcancel", cancel, true);
+      surface.removeEventListener("pointerdown", begin);
+      surface.removeEventListener("pointermove", move);
+      surface.removeEventListener("pointerup", end);
+      surface.removeEventListener("pointercancel", cancel);
+      surface.removeEventListener("touchstart", multitouch);
       surface.removeEventListener("click", click, true);
     };
   }, []);
