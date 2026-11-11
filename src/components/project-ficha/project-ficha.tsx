@@ -20,14 +20,12 @@ export function ProjectFicha({
   selectedOpp,
   onSelectOpp,
   actions,
-  persistDraft = true,
 }: {
   p: ProjectDetail;
   opps?: OppState;
   selectedOpp?: string | null;
   onSelectOpp?: (id: string | null) => void;
   actions?: ReactNode;
-  persistDraft?: boolean;
 }) {
   const admin = p.role === "admin";
   const next = p.progress.nextStartAt;
@@ -143,9 +141,9 @@ export function ProjectFicha({
             "A apurar" não é zero.
           </p>
           <DistributionEditor
+            key={p.id}
             projectId={p.id}
             contractCents={p.finance.quotedCents}
-            persist={persistDraft}
             sessions={active.map((s) => ({
               id: s.id,
               index: s.index,

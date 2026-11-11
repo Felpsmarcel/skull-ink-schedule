@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { usePortugueseWhileMounted } from "@/hooks/use-portuguese-while-mounted";
 import { ProjectFicha } from "@/components/project-ficha/project-ficha";
 import { SYNTHETIC_PROJECT, SYNTHETIC_OPPS } from "@/lib/project-ficha-fixture";
 
@@ -19,6 +20,7 @@ export const Route = createFileRoute("/_authenticated/_admin/preview/ficha-proje
 });
 
 function PreviewPage() {
+  usePortugueseWhileMounted();
   const [sel, setSel] = useState<string | null>(null);
   return (
     <main className="mx-auto max-w-3xl space-y-4 px-4 pb-16 pt-4">
@@ -26,14 +28,13 @@ function PreviewPage() {
         role="note"
         className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning"
       >
-        Dados fictícios de demonstração. Nada aqui lê ou grava dados reais.
+        Dados fictícios de demonstração, visível só para administradores. Nada aqui lê ou grava dados reais.
       </p>
       <ProjectFicha
         p={SYNTHETIC_PROJECT}
         opps={{ kind: "ready", data: SYNTHETIC_OPPS }}
         selectedOpp={sel}
         onSelectOpp={setSel}
-        persistDraft={false}
       />
     </main>
   );
