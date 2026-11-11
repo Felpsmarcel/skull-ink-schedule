@@ -73,7 +73,7 @@ function ResetPage() {
             />
           </div>
           {error ? <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{error}</p> : null}
-          <Button type="submit" className="h-12 w-full text-base font-semibold" disabled={loading}>
+          <Button type="submit" className="h-12 w-full text-base font-semibold shadow-none" disabled={loading}>
             {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Enviar link
           </Button>
