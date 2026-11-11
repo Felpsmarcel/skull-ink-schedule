@@ -92,8 +92,12 @@ export function resolveSessionCommission(s: SessionCommissionInput): SessionComm
 }
 
 /** Parte do artista sobre a base elegível da sessão; null se base/percentual não apurados. */
-export function sessionArtistShareCents(baseCents: number | null, pct: number | null): number | null {
-  if (baseCents === null || pct === null || !Number.isInteger(baseCents) || baseCents < 0) return null;
+export function sessionArtistShareCents(
+  baseCents: number | null,
+  pct: number | null,
+): number | null {
+  if (baseCents === null || pct === null || !Number.isInteger(baseCents) || baseCents < 0)
+    return null;
   return Math.round((baseCents * pct) / 100);
 }
 
@@ -104,7 +108,10 @@ export interface CommissionViewer {
 }
 
 /** Admin vê todas; artista só a própria; demais negados. */
-export function canViewArtistCommission(viewer: CommissionViewer | null, targetArtistId: string): boolean {
+export function canViewArtistCommission(
+  viewer: CommissionViewer | null,
+  targetArtistId: string,
+): boolean {
   if (!viewer) return false;
   if (viewer.role === "admin") return true;
   return viewer.role === "artist" && !!viewer.artistId && viewer.artistId === targetArtistId;
@@ -123,5 +130,11 @@ export interface RandevuRow {
 export function projectSharedRandevu(rows: RandevuRow[]) {
   return rows
     .filter((r) => r.calendarId === RANDEVU_CALENDAR_ID)
-    .map((r) => ({ id: r.id, startAt: r.startAt, endAt: r.endAt, status: r.status, contactName: r.contactName }));
+    .map((r) => ({
+      id: r.id,
+      startAt: r.startAt,
+      endAt: r.endAt,
+      status: r.status,
+      contactName: r.contactName,
+    }));
 }
