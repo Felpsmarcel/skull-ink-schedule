@@ -189,7 +189,7 @@ function AgendaPage() {
             <button
               type="button"
               onClick={() => shift(-1)}
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
               aria-label={t("agenda.prev")}
             >
               <ChevronLeft className="h-5 w-5" />
@@ -239,7 +239,7 @@ function AgendaPage() {
             <button
               type="button"
               onClick={() => shift(1)}
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
               aria-label={t("agenda.next")}
             >
               <ChevronRight className="h-5 w-5" />
@@ -248,7 +248,7 @@ function AgendaPage() {
             <button
               type="button"
               onClick={() => setDate(new Date())}
-              className="ml-1 inline-flex h-8 shrink-0 items-center rounded-md border border-border bg-card px-3 text-xs font-medium text-muted-foreground hover:border-foreground/50 hover:text-foreground"
+              className="ml-1 inline-flex h-11 shrink-0 items-center rounded-md border border-border bg-card px-3 text-xs font-medium text-muted-foreground hover:border-foreground/50 hover:text-foreground"
             >
               {t("agenda.today")}
             </button>
@@ -259,7 +259,7 @@ function AgendaPage() {
                 aria-label="Selecionar tatuador"
                 value={pickedArtistId}
                 onChange={(e) => setPickedArtistId(e.target.value)}
-                className="ml-1 h-8 max-w-[10rem] shrink-0 rounded-md border border-border bg-card px-2 text-xs font-medium text-foreground"
+                className="ml-1 h-11 max-w-[10rem] shrink-0 rounded-md border border-border bg-card px-2 text-xs font-medium text-foreground"
               >
                 <option value="">Todos</option>
                 {allArtists.filter((a) => !/augusto/i.test(a.name)).map((a) => (
@@ -276,7 +276,7 @@ function AgendaPage() {
                 <button
                   type="button"
                   aria-label={t("agenda.view.week") + " / " + t("agenda.view.month")}
-                  className="ml-1 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-card text-muted-foreground hover:border-foreground hover:text-foreground sm:hidden"
+                  className="ml-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-border bg-card text-muted-foreground hover:border-foreground hover:text-foreground sm:hidden"
                 >
                   <MoreHorizontal className="h-4 w-4" />
                 </button>
@@ -507,7 +507,7 @@ function DayView({
   return (
     <>
       {debug ? (
-        <div className="border-b border-border bg-card/50 p-2 text-[10px] text-muted-foreground">
+        <div className="border-b border-border bg-card/50 p-2 text-xs text-muted-foreground">
           <div className="mb-1 flex items-center gap-1 font-bold text-foreground">
             <Bug className="h-3 w-3" /> DEBUG (?debug=1)
           </div>
@@ -591,7 +591,7 @@ function DayView({
                   <div
                     key={label}
                     className={cn(
-                      "flex w-12 items-start justify-center border-b border-border/40 pt-1 text-[10px] font-medium tabular-nums text-muted-foreground sm:w-14 sm:text-[11px]",
+                      "flex w-12 items-start justify-center border-b border-border/40 pt-1 text-xs font-medium tabular-nums text-muted-foreground sm:w-14 sm:text-xs",
                       ROW_HEIGHT,
                     )}
                   >
@@ -635,7 +635,7 @@ function DayView({
                     style={{ top: `calc(4rem + ${nowTopPx}px)` }}
                     aria-hidden
                   >
-                    <span className="ml-1 rounded-sm bg-foreground px-1 py-[1px] text-[9px] font-black tracking-widest text-background">
+                    <span className="ml-1 rounded-sm bg-foreground px-1 py-[1px] text-[11px] font-black tracking-widest text-background">
                       {nowLabel}
                     </span>
                     <div className="h-px flex-1 bg-foreground" />
@@ -786,7 +786,7 @@ function SlotCell({
           }}
           aria-label={t("agenda.addSlot")}
           title={t("agenda.addSlot")}
-          className="flex h-full w-full items-center justify-center rounded-md bg-transparent text-[10px] font-bold uppercase tracking-widest text-transparent transition-all hover:border hover:border-dashed hover:border-foreground/40 hover:bg-muted/40 hover:text-muted-foreground"
+          className="flex h-full w-full items-center justify-center rounded-md border border-dashed border-border/40 bg-transparent text-xs font-medium text-primary/60 transition-colors active:bg-muted/40 hover:border-primary/50 hover:text-primary"
         >
           + {t("agenda.addSlot")}
         </button>
@@ -830,7 +830,7 @@ function SlotCell({
         ) : null}
         <div className="flex items-center gap-1">
           <span
-            className="truncate text-[11px] leading-tight tracking-tight sm:text-[12px]"
+            className="truncate text-[13px] leading-tight tracking-tight sm:text-sm"
             style={{ fontFamily: "var(--font-display)" }}
           >
             {slot.contactName ?? t("agenda.booked")}
@@ -843,16 +843,16 @@ function SlotCell({
           ) : null}
         </div>
         {slot.serviceName ? (
-          <div className="line-clamp-2 text-[10px] leading-tight text-muted-foreground">{slot.serviceName}</div>
+          <div className="line-clamp-2 text-xs leading-tight text-muted-foreground">{slot.serviceName}</div>
         ) : null}
-        <div className="text-[10px] font-medium tabular-nums text-muted-foreground">
+        <div className="text-xs font-medium tabular-nums text-muted-foreground">
           {startLabel}
           {endLabel ? ` – ${endLabel}` : ""}
         </div>
         {bucket && cardHeight >= 84 ? (
           <StatusBadge
             variant={bucketToVariant(bucket)}
-            className="mt-auto self-start px-1 py-0 text-[9px]"
+            className="mt-auto self-start px-1 py-0 text-[11px]"
           >
             {bucketLabel(bucket)}
           </StatusBadge>
@@ -1001,7 +1001,7 @@ function WeekView({
               >
                 <span
                   className={cn(
-                    "text-[9px] tracking-wide text-muted-foreground",
+                    "text-[11px] tracking-wide text-muted-foreground",
                     isToday && "text-foreground",
                   )}
                 >
@@ -1041,11 +1041,11 @@ function WeekView({
                     {a.staff.avatarUrl ? (
                       <AvatarImage src={a.staff.avatarUrl} alt={a.staff.name} />
                     ) : null}
-                    <AvatarFallback className={cn("text-[9px] text-white", a.staff.color)}>
+                    <AvatarFallback className={cn("text-[11px] text-white", a.staff.color)}>
                       {a.staff.initials}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="line-clamp-2 text-center text-[9px] font-semibold tracking-tight leading-tight text-foreground">
+                  <span className="line-clamp-2 text-center text-[11px] font-semibold tracking-tight leading-tight text-foreground">
                     {a.staff.shortName}
                   </span>
                 </div>
@@ -1078,7 +1078,7 @@ function WeekView({
                             type="button"
                             onClick={() => openFromEvent(ev, a.staff)}
                             title={`${name}${ev.title ? " — " + ev.title : ""}`}
-                            className="flex items-stretch gap-1 overflow-hidden rounded-[3px] bg-muted/60 pr-1 text-[10px] font-semibold tabular-nums leading-none text-foreground shadow-sm active:bg-muted"
+                            className="flex items-stretch gap-1 overflow-hidden rounded-[3px] bg-muted/60 pr-1 text-xs font-semibold tabular-nums leading-none text-foreground shadow-sm active:bg-muted"
                           >
                             <span
                               className={cn("w-[3px] shrink-0", a.staff.color)}
@@ -1089,7 +1089,7 @@ function WeekView({
                         );
                       })}
                       {extra > 0 ? (
-                        <span className="px-1 text-[9px] font-medium text-muted-foreground">
+                        <span className="px-1 text-[11px] font-medium text-muted-foreground">
                           +{extra}
                         </span>
                       ) : null}
@@ -1125,7 +1125,7 @@ function WeekView({
                   key === todayKey && "bg-muted",
                 )}
               >
-                <span className="text-[10px] text-muted-foreground">{dayFmt.format(d)}</span>
+                <span className="text-xs text-muted-foreground">{dayFmt.format(d)}</span>
                 <span className="text-sm font-semibold">{numFmt.format(d)}</span>
               </button>
             );
@@ -1160,7 +1160,7 @@ function WeekView({
                   {a.staff.avatarUrl ? (
                     <AvatarImage src={a.staff.avatarUrl} alt={a.staff.name} />
                   ) : null}
-                  <AvatarFallback className={cn("text-[10px] text-white", a.staff.color)}>
+                  <AvatarFallback className={cn("text-xs text-white", a.staff.color)}>
                     {a.staff.initials}
                   </AvatarFallback>
                 </Avatar>
@@ -1168,7 +1168,7 @@ function WeekView({
                   <span className="truncate text-xs font-semibold text-foreground">
                     {a.staff.shortName}
                   </span>
-                  <span className="text-[10px] tabular-nums text-muted-foreground">
+                  <span className="text-xs tabular-nums text-muted-foreground">
                     {a.events.length} {t("agenda.month.appts")}
                   </span>
                 </div>
@@ -1201,9 +1201,9 @@ function WeekView({
                             <button
                               type="button"
                               onClick={() => openFromEvent(ev, a.staff)}
-                              className="w-full overflow-hidden rounded border-l-2 border-foreground bg-background px-1 py-0.5 text-left text-[10px] shadow-sm hover:bg-muted focus:outline-none focus:ring-1 focus:ring-foreground/40"
+                              className="w-full overflow-hidden rounded border-l-2 border-foreground bg-background px-1 py-0.5 text-left text-xs shadow-sm hover:bg-muted focus:outline-none focus:ring-1 focus:ring-foreground/40"
                             >
-                              <div className="flex items-center gap-1 text-[9px] tabular-nums text-muted-foreground">
+                              <div className="flex items-center gap-1 text-[11px] tabular-nums text-muted-foreground">
                                 <span
                                   className={cn(
                                     "inline-block h-1.5 w-1.5 shrink-0 rounded-full",
@@ -1234,11 +1234,11 @@ function WeekView({
                               </div>
                               <div className="text-[11px]">{name}</div>
                               {ev.title ? (
-                                <div className="text-[10px] opacity-80 line-clamp-2">
+                                <div className="text-xs opacity-80 line-clamp-2">
                                   {ev.title}
                                 </div>
                               ) : null}
-                              <div className="mt-1 text-[9px] tracking-wide opacity-70">
+                              <div className="mt-1 text-[11px] tracking-wide opacity-70">
                                 {a.staff.shortName}
                               </div>
                             </div>
@@ -1363,7 +1363,7 @@ function MonthView({
 
   return (
     <div className="flex-1 overflow-auto p-1 sm:p-2">
-      <div className="grid grid-cols-7 border-b border-border text-[9px] tracking-wide text-muted-foreground sm:text-[10px]">
+      <div className="grid grid-cols-7 border-b border-border text-[11px] tracking-wide text-muted-foreground sm:text-xs">
         {headerDays.map((d) => (
           <div key={d} className="px-1 py-1 text-center sm:px-2">
             <span className="sm:hidden">{wdNarrowFmt.format(new Date(d))}</span>
@@ -1444,7 +1444,7 @@ function MonthView({
                         aria-hidden
                       />
                     ) : null}
-                    <span className="text-[10px] font-semibold tabular-nums text-foreground">
+                    <span className="text-xs font-semibold tabular-nums text-foreground">
                       {evs.length}
                     </span>
                   </span>
@@ -1471,11 +1471,11 @@ function MonthView({
                     ))}
                   </div>
                   {extraArtists > 0 ? (
-                    <span className="text-[9px] font-semibold tabular-nums text-muted-foreground">
+                    <span className="text-[11px] font-semibold tabular-nums text-muted-foreground">
                       +{extraArtists}
                     </span>
                   ) : null}
-                  <span className="ml-1 text-[10px] font-medium tabular-nums text-foreground">
+                  <span className="ml-1 text-xs font-medium tabular-nums text-foreground">
                     {evs.length}
                   </span>
                 </div>
@@ -1483,17 +1483,17 @@ function MonthView({
               {evs.length > 0 ? (
                 <div className="mt-auto hidden flex-wrap gap-1 sm:flex">
                   {buckets.paid > 0 ? (
-                    <StatusBadge variant="success" className="px-1 py-0 text-[9px]">
+                    <StatusBadge variant="success" className="px-1 py-0 text-[11px]">
                       {buckets.paid}
                     </StatusBadge>
                   ) : null}
                   {buckets.pending > 0 ? (
-                    <StatusBadge variant="warning" className="px-1 py-0 text-[9px]">
+                    <StatusBadge variant="warning" className="px-1 py-0 text-[11px]">
                       {buckets.pending}
                     </StatusBadge>
                   ) : null}
                   {buckets.error > 0 ? (
-                    <StatusBadge variant="danger" className="px-1 py-0 text-[9px]">
+                    <StatusBadge variant="danger" className="px-1 py-0 text-[11px]">
                       {buckets.error}
                     </StatusBadge>
                   ) : null}
