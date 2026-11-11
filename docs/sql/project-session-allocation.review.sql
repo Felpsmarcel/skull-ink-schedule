@@ -149,6 +149,7 @@ DECLARE
   v_contract bigint;
   v_kind text;
   v_existing record;
+  v_out jsonb;
 BEGIN
   IF v_uid IS NULL OR public.current_user_role() IS DISTINCT FROM 'admin' THEN RAISE EXCEPTION 'forbidden'; END IF;
   SELECT ghl_contact_id, round(quoted_total_eur * 100)::bigint INTO v_contact, v_contract
@@ -173,8 +174,8 @@ BEGIN
       status_at_link, value_cents_at_link, contract_decision, idempotency_key, created_by)
     VALUES (p_project_id, p_opportunity_id, p_contact_id, v_kind, p_status, p_value_cents,
       CASE WHEN v_kind = 'active' THEN p_contract_decision END, p_idempotency_key, v_uid)
-    RETURNING jsonb_build_object('id', id, 'replayed', false, 'kind', link_kind) INTO v_existing;
-  RETURN to_jsonb(v_existing) -> 'jsonb_build_object';
+    RETURNING jsonb_build_object('id', id, 'replayed', false, 'kind', link_kind) INTO v_out;
+  RETURN v_out;
 END $$;
 
 REVOKE ALL ON FUNCTION public.save_project_allocation_draft(uuid, integer, text, jsonb) FROM PUBLIC, anon;
