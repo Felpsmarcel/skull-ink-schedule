@@ -58,6 +58,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { GhlSyncStatus } from "@/components/ghl-sync-status";
 import { agendaScope } from "@/lib/agenda-scope";
 import { useArtists } from "@/hooks/use-artists";
+import { useAgendaSwipe } from "@/hooks/use-agenda-swipe";
 
 type View = "day" | "week" | "month";
 
@@ -122,6 +123,11 @@ function AgendaPage() {
     });
   const [date, setDate] = useState<Date>(() => new Date());
   const [pickerOpen, setPickerOpen] = useState(false);
+
+  useEffect(() => {
+    document.documentElement.classList.add("agenda-no-pull-refresh");
+    return () => document.documentElement.classList.remove("agenda-no-pull-refresh");
+  }, []);
 
   const { data: me, isPending: mePending } = useCurrentUser();
   const scope = agendaScope(me);
@@ -371,6 +377,7 @@ function AgendaPage() {
           agendas={agendas}
           meReady={Boolean(me)}
           debug={debug}
+          onShiftDay={shift}
         />
       ) : view === "week" ? (
         <WeekView
@@ -398,13 +405,16 @@ function DayView({
   agendas,
   meReady,
   debug,
+  onShiftDay,
 }: {
   date: Date;
   agendas: StaffAgenda[];
   meReady: boolean;
   debug: boolean;
+  onShiftDay: (delta: number) => void;
 }) {
   const { t } = useTranslation();
+  const gestureRef = useAgendaSwipe(onShiftDay);
   const daySearch = Route.useSearch() as { novo?: string };
 
   const { map: statusMap } = useDayAppointmentStatuses(date, meReady);
@@ -567,7 +577,7 @@ function DayView({
       ) : null}
 
       {/* Grid card */}
-      <div className="mx-auto w-full max-w-[1400px] flex-1 px-2 py-4 sm:px-6">
+      <div ref={gestureRef} data-agenda-gesture className="mx-auto w-full max-w-[1400px] flex-1 touch-pan-y touch-pinch-zoom px-2 py-4 sm:px-6">
         <div className="h-full overflow-hidden border-y border-border bg-background">
           <div ref={scrollRef} className="h-full overflow-auto">
             <div className="relative flex w-full min-w-full">

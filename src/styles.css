@@ -228,6 +228,18 @@
   padding-right: env(safe-area-inset-right);
 }
 
+/* Scope the browser refresh boundary to the Agenda; retain scrolling and pinch zoom. */
+html.agenda-no-pull-refresh,
+html.agenda-no-pull-refresh body {
+  overscroll-behavior-y: none;
+}
+.agenda-scope [data-agenda-gesture] * {
+  touch-action: pan-y pinch-zoom;
+}
+.agenda-scope [data-agenda-gesture] [class*="overflow-auto"] {
+  overscroll-behavior-y: none;
+}
+
 @media print {
   .no-print,
   [data-bottom-nav],

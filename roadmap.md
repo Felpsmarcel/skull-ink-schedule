@@ -1,5 +1,10 @@
 # Renovação premium
 
+## Agenda — etapa 4 autorizada
+- [ ] Ajustar menu inferior com espaço adicional à área segura e alvos legíveis
+- [ ] Deslizar na grade diária sem conflitar com rolagem, fichas ou gestos do sistema
+- [ ] Impedir recarga por overscroll apenas na Agenda e verificar celular/computador sem gravar dados ou publicar
+
 ## Agenda — etapa 3 autorizada
 - [x] Aplicar tipografia editorial na data, cartões por status e seleção dourada
 - [x] Neutralizar avatares e manter preto/dourado nas visões dia, semana e mês
