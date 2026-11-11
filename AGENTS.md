@@ -20,3 +20,4 @@
 - Agenda appointment accents use the existing CRM appointment status, independently of payment badges; this prevents visual confirmation of unverified payments or sessions.
 - Finance summaries group by source-specific immutable IDs and expose names only as labels; complete counts are nullable with separate read counts, and contradictory pagination or invalid money invalidates full aggregates to prevent homonym merging and sample-based zeros.
 - Daily Agenda swipe handling is confined to the grid with axis locking, edge/multitouch exclusion and tap suppression; route-scoped overscroll cleanup preserves native scrolling and navigation elsewhere.
+- Booking date edits invalidate only the active session's time when its Brussels civil day differs; selecting another scheduled session restores its own calendar date to prevent stale-day bookings.
