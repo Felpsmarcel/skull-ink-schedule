@@ -1,9 +1,10 @@
-import { opportunityContractDivergence as div, describe, it, expect } from "vitest";
+import { describe, it, expect } from "vitest";
 import {
   summarizeDistribution as sum,
   forecastCommission as fc,
   parseEuroToCents as eur,
   commercialTotals,
+  opportunityContractDivergence as div,
 } from "@/lib/project-distribution-core";
 import { ANDRE_PAREYN_ARTIST_ID as A } from "@/lib/artist-commission-policy";
 
