@@ -200,7 +200,14 @@ export function DistributionEditor({
       </div>
 
       <dl className="grid grid-cols-2 gap-3 text-sm">
-        <Fig label="Parte do tatuador realizada" v={forecast.realizedCents} />
+        {forecast.rows.some((r) => r.recognized) ? (
+          <Fig label="Parte do tatuador realizada" v={forecast.realizedCents} />
+        ) : (
+          <div>
+            <dt className="text-xs text-muted-foreground">Parte do tatuador realizada</dt>
+            <dd className="text-sm">Nenhuma sessão realizada</dd>
+          </div>
+        )}
         <Fig label="Parte do tatuador estimada (futuras)" v={forecast.estimatedCents} />
       </dl>
       <p className="text-xs text-muted-foreground">
