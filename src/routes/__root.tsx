@@ -5,6 +5,7 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
@@ -15,6 +16,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { supabase } from "@/integrations/supabase/client";
 import { ensureI18n } from "@/i18n";
 import { Toaster } from "@/components/ui/sonner";
+import { OPS_LIGHT_BOOT_SCRIPT, OPS_LIGHT_CLASS, isOpsLightPath } from "@/lib/ops-light-theme";
 
 ensureI18n();
 
@@ -122,8 +124,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="pt">
+    <html lang="pt" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: OPS_LIGHT_BOOT_SCRIPT }} />
         <HeadContent />
       </head>
       <body className="min-h-dvh overflow-x-hidden bg-background font-sans text-foreground antialiased">
@@ -137,6 +140,13 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const opsLight = isOpsLightPath(pathname);
+
+  // Light pilot is scoped on <html> so Radix portals inherit it; removed on other routes.
+  useEffect(() => {
+    document.documentElement.classList.toggle(OPS_LIGHT_CLASS, opsLight);
+  }, [opsLight]);
 
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
@@ -154,7 +164,7 @@ function RootComponent() {
         <Outlet />
       </div>
       <Toaster
-        theme="dark"
+        theme={opsLight ? "light" : "dark"}
         position="top-center"
         offset="calc(env(safe-area-inset-top) + 0.5rem)"
         mobileOffset="calc(env(safe-area-inset-top) + 0.5rem)"
