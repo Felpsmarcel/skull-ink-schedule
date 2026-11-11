@@ -288,7 +288,11 @@ export const getProjectFinance = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => z.object({ projectId: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }): Promise<ProjectFinance> => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
+    // Valores brutos: só administrador. Identidade verificada no servidor antes de
+    // qualquer leitura de projeto/movimentações; artista não recebe bruto.
+    const scope = await resolveProjectScope(supabase as never, userId);
+    if (scope.role !== "admin") throw new Error("Acesso negado");
     const { data: proj, error } = await supabase
       .from("tattoo_projects")
       .select("id, title, quoted_total_eur, deposit_eur")
