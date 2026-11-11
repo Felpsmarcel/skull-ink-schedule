@@ -52,6 +52,8 @@ export interface SessionCommissionInput {
   /** Consulta (ex.: Randevu) não é sessão de tatuagem. */
   isConsultation?: boolean;
   calendarId?: string | null;
+  /** Evidência de realização (ex.: fim do check-in). Sem ela, nada é reconhecido. */
+  realizedAt?: string | null;
 }
 
 export type CommissionSource = "policy" | "snapshot" | "frozen" | "not_session";
@@ -59,9 +61,12 @@ export type CommissionSource = "policy" | "snapshot" | "frozen" | "not_session";
 export interface SessionCommission {
   pct: number | null;
   source: CommissionSource;
-  /** true somente para sessão realizada (completed). */
+  /** true somente com status concluído E data de realização comprovada. */
   recognized: boolean;
   effectiveDate: string | null;
+  /** "realized" = data comprovada; "scheduled" = agenda, só para estimativa. */
+  dateSource: "realized" | "scheduled";
+  completedWithoutEvidence: boolean;
 }
 
 function toPct(v: number | string | null): number | null {
@@ -71,24 +76,27 @@ function toPct(v: number | string | null): number | null {
 }
 
 export function resolveSessionCommission(s: SessionCommissionInput): SessionCommission {
-  const effectiveDate = brusselsCivilDate(s.startAt);
+  const realized = s.realizedAt ? brusselsCivilDate(s.realizedAt) : null;
+  const effectiveDate = realized ?? brusselsCivilDate(s.startAt);
+  const dateSource: "realized" | "scheduled" = realized ? "realized" : "scheduled";
+  const base = { effectiveDate, dateSource, completedWithoutEvidence: s.status === "completed" && !realized };
   if (s.isConsultation || (s.calendarId != null && s.calendarId === RANDEVU_CALENDAR_ID)) {
-    return { pct: null, source: "not_session", recognized: false, effectiveDate };
+    return { pct: null, source: "not_session", recognized: false, ...base };
   }
   if (s.status === "cancelled") {
-    return { pct: null, source: "not_session", recognized: false, effectiveDate };
+    return { pct: null, source: "not_session", recognized: false, ...base };
   }
-  const recognized = s.status === "completed";
+  const recognized = s.status === "completed" && realized !== null;
   const snapshot = toPct(s.snapshotPct);
-  if (s.frozen) return { pct: snapshot, source: "frozen", recognized, effectiveDate };
+  if (s.frozen) return { pct: snapshot, source: "frozen", recognized, ...base };
   const schedule = ARTIST_COMMISSION_SCHEDULE[s.artistId];
   if (schedule && effectiveDate) {
     const period = schedule.find(
       (p) => effectiveDate >= p.from && (p.to === null || effectiveDate <= p.to),
     );
-    if (period) return { pct: period.pct, source: "policy", recognized, effectiveDate };
+    if (period) return { pct: period.pct, source: "policy", recognized, ...base };
   }
-  return { pct: snapshot, source: "snapshot", recognized, effectiveDate };
+  return { pct: snapshot, source: "snapshot", recognized, ...base };
 }
 
 /** Parte do artista sobre a base elegível da sessão; null se base/percentual não apurados. */

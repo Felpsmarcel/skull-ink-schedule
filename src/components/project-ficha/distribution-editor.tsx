@@ -1,12 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { formatEurCents } from "@/lib/project-progress-core";
 import {
-  clearDraft,
   forecastCommission,
-  loadDraft,
   parseEuroToCents,
-  saveDraft,
   summarizeDistribution,
   type Allocation,
   type DistributionSession,
@@ -27,35 +24,17 @@ const ISSUE_TEXT: Record<string, string> = {
 };
 
 export function DistributionEditor({
-  projectId,
   contractCents,
   sessions,
-  persist = true,
 }: {
   projectId: string;
   contractCents: number | null;
   sessions: EditorSession[];
-  /** false em fixtures: rascunho só em memória. */
-  persist?: boolean;
 }) {
   const active = sessions.filter((s) => s.status !== "cancelled");
   const [alloc, setAlloc] = useState<Allocation>({});
   const [text, setText] = useState<Record<string, string>>({});
   const [bad, setBad] = useState<Record<string, boolean>>({});
-
-  useEffect(() => {
-    if (!persist) return;
-    const d = loadDraft(projectId);
-    setAlloc(d);
-    setText(
-      Object.fromEntries(
-        Object.entries(d).map(([k, v]) => [
-          k,
-          v === null ? "" : (v / 100).toFixed(2).replace(".", ","),
-        ]),
-      ),
-    );
-  }, [projectId, persist]);
 
   const summary = useMemo(
     () => summarizeDistribution(contractCents, sessions, alloc),
@@ -71,7 +50,6 @@ export function DistributionEditor({
     setBad((b) => ({ ...b, [id]: invalid }));
     const next = { ...alloc, [id]: invalid ? null : c };
     setAlloc(next);
-    if (persist && !invalid) saveDraft(projectId, next);
   };
 
   const splitEven = () => {
@@ -87,14 +65,12 @@ export function DistributionEditor({
       ),
     );
     setBad({});
-    if (persist) saveDraft(projectId, next);
   };
 
   const reset = () => {
     setAlloc({});
     setText({});
     setBad({});
-    if (persist) clearDraft(projectId);
   };
 
   const over = summary.issues.find((i) => i.kind === "exceeds_contract");
@@ -106,7 +82,7 @@ export function DistributionEditor({
           Distribuição por sessão
         </h3>
         <span className="rounded-sm border border-warning/40 bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
-          Rascunho {persist ? "neste aparelho" : "de demonstração"} — não salvo no sistema
+          Rascunho temporário — descartado ao sair ou recarregar; não salvo
         </span>
       </div>
 
@@ -168,6 +144,11 @@ export function DistributionEditor({
                       {f.source === "frozen" ? " · repasse congelado" : ""}
                     </>
                   )}
+                  {f?.completedWithoutEvidence ? (
+                    <span className="ml-1 font-medium text-warning">
+                      · concluída sem data de realização comprovada — não reconhecida
+                    </span>
+                  ) : null}
                   {f?.divergentSnapshot ? (
                     <span className="ml-1 font-medium text-warning">
                       · gravado {s.snapshotPct}% difere da regra (não retificado)
