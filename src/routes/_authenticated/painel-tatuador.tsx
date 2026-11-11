@@ -148,7 +148,9 @@ function ArtistPanelPage() {
         </section>
         <section className="space-y-3">
           <h2 className="font-editorial text-xl">Próximos compromissos</h2>
-          <AppointmentList rows={data.upcoming} empty="Nenhum próximo compromisso neste período." />
+          <div className="max-h-96 overflow-y-auto overscroll-contain pr-2" tabIndex={0} role="region" aria-label="Lista de próximos compromissos">
+            <AppointmentList rows={data.upcoming} empty="Nenhum próximo compromisso neste período." />
+          </div>
         </section>
       </div>
       <section className="space-y-4 border-t border-border pt-6">
