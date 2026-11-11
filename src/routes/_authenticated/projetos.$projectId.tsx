@@ -17,7 +17,10 @@ const searchSchema = z.object({
 });
 
 const detailQuery = (id: string) =>
-  queryOptions({ queryKey: ["artist-project", id], queryFn: () => getProjectDetail({ data: { projectId: id } }) });
+  queryOptions({
+    queryKey: ["artist-project", id],
+    queryFn: () => getProjectDetail({ data: { projectId: id } }),
+  });
 
 export const Route = createFileRoute("/_authenticated/projetos/$projectId")({
   validateSearch: zodValidator(searchSchema),
@@ -54,7 +57,12 @@ function ProjectPage() {
     const d = useAppointmentDraft.getState();
     d.reset();
     if (p.client.ghlContactId) {
-      d.setContact({ id: p.client.ghlContactId, contactName: p.client.name ?? undefined, phone: p.client.phone ?? undefined, email: p.client.email ?? undefined });
+      d.setContact({
+        id: p.client.ghlContactId,
+        contactName: p.client.name ?? undefined,
+        phone: p.client.phone ?? undefined,
+        email: p.client.email ?? undefined,
+      });
     }
     d.setProject({ decision: "reuse", reuseProjectId: p.id, description: p.title });
     navigate({ to: "/appointments/new/agenda" });
@@ -62,28 +70,51 @@ function ProjectPage() {
 
   return (
     <main className="mx-auto max-w-3xl space-y-4 px-4 pb-28 pt-4">
-      <Link to="/projetos" search={search} className="inline-flex min-h-11 items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+      <Link
+        to="/projetos"
+        search={search}
+        className="inline-flex min-h-11 items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+      >
         <ArrowLeft className="h-4 w-4" /> Projetos
       </Link>
 
       <section className="space-y-2 border-b border-border pb-4">
         <h1 className="font-editorial text-2xl">{p.client.name ?? "Cliente sem nome"}</h1>
-        <p className="text-sm">{p.title}{p.bodyPart ? ` · ${p.bodyPart}` : ""}</p>
+        <p className="text-sm">
+          {p.title}
+          {p.bodyPart ? ` · ${p.bodyPart}` : ""}
+        </p>
         <p className="text-xs text-muted-foreground">Tatuador: {p.artistName ?? "Sem tatuador"}</p>
         {admin && (p.client.phone || p.client.email) ? (
-          <p className="text-xs text-muted-foreground break-all">{[p.client.phone, p.client.email].filter(Boolean).join(" · ")}</p>
+          <p className="text-xs text-muted-foreground break-all">
+            {[p.client.phone, p.client.email].filter(Boolean).join(" · ")}
+          </p>
         ) : null}
-        {p.description ? <p className="pt-1 text-sm text-muted-foreground">{p.description}</p> : null}
+        {p.description ? (
+          <p className="pt-1 text-sm text-muted-foreground">{p.description}</p>
+        ) : null}
         <div className="pt-2">
           <div className="h-2 overflow-hidden rounded-full bg-muted" aria-hidden="true">
             <div className="h-full bg-primary" style={{ width: `${pct}%` }} />
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">{p.progress.total} agendamentos vinculados não cancelados · {p.progress.done} conclusões registradas</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {p.progress.total} agendamentos vinculados não cancelados · {p.progress.done} conclusões
+            registradas
+          </p>
         </div>
         <ProjectContinuity nextStartAt={p.progress.nextStartAt} />
-        <p className="text-xs text-muted-foreground">Tipo de atendimento não verificado. Consulta de orçamento não é automaticamente sessão de tatuagem.</p>
-        <p className="text-xs text-muted-foreground">Status comercial não verificado aqui. Datas do espelho local, em Europe/Brussels.</p>
-        <Button className="mt-3 min-h-11 w-full" onClick={scheduleNext} disabled={!p.client.ghlContactId}>
+        <p className="text-xs text-muted-foreground">
+          Tipo de atendimento não verificado. Consulta de orçamento não é automaticamente sessão de
+          tatuagem.
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Status comercial não verificado aqui. Datas do espelho local, em Europe/Brussels.
+        </p>
+        <Button
+          className="mt-3 min-h-11 w-full"
+          onClick={scheduleNext}
+          disabled={!p.client.ghlContactId}
+        >
           <CalendarPlus className="mr-2 h-4 w-4" /> Agendar próxima sessão
         </Button>
       </section>
@@ -91,16 +122,25 @@ function ProjectPage() {
       <section className="border-b border-border pb-4">
         <h2 className="mb-2 text-base font-semibold">Histórico de agendamentos</h2>
         {p.sessions.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhum agendamento vinculado disponível. Continuidade a verificar.</p>
+          <p className="text-sm text-muted-foreground">
+            Nenhum agendamento vinculado disponível. Continuidade a verificar.
+          </p>
         ) : (
           <ol className="space-y-2">
             {p.sessions.map((s) => (
-              <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 border-l-2 border-border py-2 pl-3">
+              <li
+                key={s.id}
+                className="flex flex-wrap items-center justify-between gap-2 border-l-2 border-border py-2 pl-3"
+              >
                 <div className="min-w-0">
                   <p className="text-sm font-medium">Agendamento vinculado</p>
-                  <p className="text-xs tabular-nums text-muted-foreground">{formatProjectDate(s.startAt)}</p>
+                  <p className="text-xs tabular-nums text-muted-foreground">
+                    {formatProjectDate(s.startAt)}
+                  </p>
                 </div>
-                <span className="text-xs text-muted-foreground">{PROJECT_APPOINTMENT_STATUS[s.status] ?? "Status não verificado"}</span>
+                <span className="text-xs text-muted-foreground">
+                  {PROJECT_APPOINTMENT_STATUS[s.status] ?? "Status não verificado"}
+                </span>
               </li>
             ))}
           </ol>
@@ -118,9 +158,15 @@ function ProjectPage() {
               <Money label="Saldo" v={p.finance.balanceCents} strong />
             </>
           ) : null}
-          <Money label="Parte do tatuador (35% do recebido)" v={p.finance.artistShareCents} strong={!admin} />
+          <Money
+            label="Parte do tatuador (35% do recebido)"
+            v={p.finance.artistShareCents}
+            strong={!admin}
+          />
         </dl>
-        <p className="mt-2 text-xs text-muted-foreground">"A apurar" indica valor ainda não confirmado — não é zero.</p>
+        <p className="mt-2 text-xs text-muted-foreground">
+          "A apurar" indica valor ainda não confirmado — não é zero.
+        </p>
       </section>
     </main>
   );
@@ -130,7 +176,9 @@ function Money({ label, v, strong }: { label: string; v: number | null; strong?:
   return (
     <div>
       <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className={`tabular-nums ${strong ? "font-semibold text-primary" : ""}`}>{formatEurCents(v)}</dd>
+      <dd className={`tabular-nums ${strong ? "font-semibold text-primary" : ""}`}>
+        {formatEurCents(v)}
+      </dd>
     </div>
   );
 }
@@ -140,7 +188,9 @@ function ProjectError() {
   return (
     <div role="alert" className="space-y-3 p-6 text-sm">
       <p>Projeto indisponível ou sem acesso.</p>
-      <Button variant="outline" onClick={() => router.invalidate()}>Tentar de novo</Button>
+      <Button variant="outline" onClick={() => router.invalidate()}>
+        Tentar de novo
+      </Button>
     </div>
   );
 }
