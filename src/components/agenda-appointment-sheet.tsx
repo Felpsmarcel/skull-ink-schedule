@@ -105,9 +105,7 @@ export function AgendaAppointmentSheet({
   const durationMin =
     startMs != null && endMs != null ? Math.max(0, Math.round((endMs - startMs) / 60000)) : 0;
 
-  const whenLine = startMs
-    ? formatWhen(locale, startMs, endMs ?? startMs)
-    : "";
+  const whenLine = startMs ? formatWhen(locale, startMs, endMs ?? startMs) : "";
   const durationLine = durationMin > 0 ? formatDuration(durationMin) : "";
 
   const copy = async (value: string) => {
@@ -139,7 +137,12 @@ export function AgendaAppointmentSheet({
         {isMobile ? (
           <div className="mx-auto mb-2 h-1 w-10 shrink-0 rounded-full bg-border" aria-hidden />
         ) : null}
-        <SheetHeader className={cn("shrink-0 border-b border-border pb-4 text-left", isMobile ? "px-4" : "pr-12")}>
+        <SheetHeader
+          className={cn(
+            "shrink-0 border-b border-border pb-4 text-left",
+            isMobile ? "px-4" : "pr-12",
+          )}
+        >
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 pr-10">
             <SheetTitle className="min-w-0 truncate font-editorial text-2xl font-semibold leading-tight">
               {displayName}
@@ -152,18 +155,25 @@ export function AgendaAppointmentSheet({
           </div>
           <SheetDescription className="text-sm tabular-nums text-foreground/80">
             {whenLine}
-            {durationLine ? <span className="text-muted-foreground">{` · ${durationLine}`}</span> : null}
+            {durationLine ? (
+              <span className="text-muted-foreground">{` · ${durationLine}`}</span>
+            ) : null}
           </SheetDescription>
           <p className="text-sm text-muted-foreground">
             {staffName}
             {slot?.appointmentStatus ? (
               <>
                 <span aria-hidden="true"> · </span>
-                <span>Status da agenda: <span className="font-medium text-foreground">{slot.appointmentStatus}</span></span>
+                <span>
+                  Status da agenda:{" "}
+                  <span className="font-medium text-foreground">{slot.appointmentStatus}</span>
+                </span>
               </>
             ) : null}
           </p>
-          <p className="text-xs text-muted-foreground">Status da agenda não comprova presença; presença depende do check-in.</p>
+          <p className="text-xs text-muted-foreground">
+            Status da agenda não comprova presença; presença depende do check-in.
+          </p>
         </SheetHeader>
 
         <div
@@ -258,7 +268,6 @@ export function AgendaAppointmentSheet({
   );
 }
 
-
 /* ====================== Rastreabilidade (admin) ====================== */
 
 function LinkAuditSection({ ghlEventId }: { ghlEventId: string }) {
@@ -294,7 +303,14 @@ function LinkAuditSection({ ghlEventId }: { ghlEventId: string }) {
           <div className="mt-1.5 space-y-0.5 font-mono text-xs text-muted-foreground">
             <div>project: {info.projectId ?? "—"}</div>
             {info.projectId ? (
-              <Link to="/projetos/$projectId" params={{ projectId: info.projectId }} search={{ status: "active" }} className="inline-block py-1 font-sans text-xs text-primary underline">Ver projeto</Link>
+              <Link
+                to="/projetos/$projectId"
+                params={{ projectId: info.projectId }}
+                search={{ status: "active" }}
+                className="inline-block py-1 font-sans text-xs text-primary underline"
+              >
+                Ver projeto
+              </Link>
             ) : null}
             <div>opportunity: {info.ghlOpportunityId ?? "—"}</div>
             <div>appointment: {info.ghlAppointmentId ?? "—"}</div>
@@ -318,13 +334,7 @@ function currency(locale: string, n: number | null | undefined): string {
   }).format(Number(n));
 }
 
-function FinanceSection({
-  ghlEventId,
-  locale,
-}: {
-  ghlEventId: string;
-  locale: string;
-}) {
+function FinanceSection({ ghlEventId, locale }: { ghlEventId: string; locale: string }) {
   const queryClient = useQueryClient();
   const fetchFinance = useServerFn(getAppointmentFinanceByGhlId);
 
@@ -380,8 +390,7 @@ function FinanceSection({
         </div>
       ) : !financeQ.data.visible ? (
         <p className="rounded border border-dashed border-border p-2 text-xs text-muted-foreground">
-          Valores financeiros visíveis apenas para o tatuador responsável e para
-          admin.
+          Valores financeiros visíveis apenas para o tatuador responsável e para admin.
         </p>
       ) : (
         <FinanceBody
@@ -459,27 +468,21 @@ function FinanceBody({
 
       <div className="grid grid-cols-2 gap-2 rounded border border-border bg-muted/30 p-2 text-xs">
         <div>
-          <div className="text-xs text-muted-foreground">
-            Total
-          </div>
+          <div className="text-xs text-muted-foreground">Total</div>
           <div className="text-sm font-semibold tabular-nums">
             {currency(locale, data.totalEur)}
           </div>
         </div>
         {data.depositEur > 0 ? (
           <div>
-            <div className="text-xs text-muted-foreground">
-              Sinal
-            </div>
+            <div className="text-xs text-muted-foreground">Sinal</div>
             <div className="text-sm font-semibold tabular-nums">
               {currency(locale, data.depositEur)}
             </div>
           </div>
         ) : null}
         <div>
-          <div className="text-xs text-muted-foreground">
-            Recebido
-          </div>
+          <div className="text-xs text-muted-foreground">Recebido</div>
           <div className="text-sm font-semibold tabular-nums">
             {currency(locale, data.paidTotalEur)}
           </div>
@@ -504,9 +507,7 @@ function FinanceBody({
           }
           return (
             <div>
-              <div className="text-xs text-muted-foreground">
-                {label}
-              </div>
+              <div className="text-xs text-muted-foreground">{label}</div>
               <div className={cls}>
                 {icon}
                 {currency(locale, bal)}
@@ -536,14 +537,9 @@ function FinanceBody({
 
       {data.services.length > 0 ? (
         <div className="space-y-1">
-          <div className="text-xs text-muted-foreground">
-            Serviços
-          </div>
+          <div className="text-xs text-muted-foreground">Serviços</div>
           {data.services.map((s) => (
-            <div
-              key={s.service_id}
-              className="flex items-center justify-between text-xs"
-            >
+            <div key={s.service_id} className="flex items-center justify-between text-xs">
               <span className="min-w-0 flex-1 truncate">
                 {s.quantity > 1 ? `${s.quantity}× ` : ""}
                 {s.name}
@@ -558,24 +554,13 @@ function FinanceBody({
 
       {data.payments.length > 0 ? (
         <div className="space-y-1">
-          <div className="text-xs text-muted-foreground">
-            Pagamentos
-          </div>
+          <div className="text-xs text-muted-foreground">Pagamentos</div>
           {data.payments.map((p) => (
-            <div
-              key={p.id}
-              className="flex items-center justify-between text-xs"
-            >
+            <div key={p.id} className="flex items-center justify-between text-xs">
               <span className="min-w-0 flex-1 truncate">
-                {p.type === "deposit"
-                  ? "Sinal"
-                  : p.type === "final"
-                    ? "Final"
-                    : "Reembolso"}{" "}
-                · {p.method}
-                {p.paid_at
-                  ? ` · ${new Date(p.paid_at).toLocaleDateString(locale)}`
-                  : ""}
+                {p.type === "deposit" ? "Sinal" : p.type === "final" ? "Final" : "Reembolso"} ·{" "}
+                {p.method}
+                {p.paid_at ? ` · ${new Date(p.paid_at).toLocaleDateString(locale)}` : ""}
               </span>
               <span className="shrink-0 tabular-nums text-muted-foreground">
                 {p.type === "refund" ? "-" : ""}
@@ -587,13 +572,7 @@ function FinanceBody({
       ) : null}
 
       <div className="flex flex-wrap gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="h-11 text-sm"
-          onClick={onEdit}
-        >
+        <Button type="button" variant="outline" size="sm" className="h-11 text-sm" onClick={onEdit}>
           <Euro className="mr-1 h-3 w-3" />
           {data.totalEur == null ? "Registrar valor" : editing ? "Fechar" : "Editar valor"}
         </Button>
@@ -636,9 +615,7 @@ function ValueForm({
     initial.totalEur != null ? String(initial.totalEur) : "",
   );
   const [discountStr, setDiscountStr] = useState(
-    initial.discountEur != null && initial.discountEur > 0
-      ? String(initial.discountEur)
-      : "",
+    initial.discountEur != null && initial.discountEur > 0 ? String(initial.discountEur) : "",
   );
   const [pctStr, setPctStr] = useState(
     initial.commissionPct != null ? String(initial.commissionPct) : "",
@@ -663,8 +640,7 @@ function ValueForm({
   });
 
   const addLine = () => setLines((ls) => [...ls, { serviceId: "", quantity: 1 }]);
-  const removeLine = (i: number) =>
-    setLines((ls) => ls.filter((_, idx) => idx !== i));
+  const removeLine = (i: number) => setLines((ls) => ls.filter((_, idx) => idx !== i));
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -688,10 +664,7 @@ function ValueForm({
   const services = svcQ.data ?? [];
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="mt-3 space-y-3 rounded border border-border p-2"
-    >
+    <form onSubmit={handleSubmit} className="mt-3 space-y-3 rounded border border-border p-2">
       <div className="grid grid-cols-2 gap-2">
         <div>
           <Label className="text-xs">Total (€)</Label>
@@ -749,9 +722,7 @@ function ValueForm({
             <Select
               value={l.serviceId}
               onValueChange={(v) =>
-                setLines((ls) =>
-                  ls.map((x, idx) => (idx === i ? { ...x, serviceId: v } : x)),
-                )
+                setLines((ls) => ls.map((x, idx) => (idx === i ? { ...x, serviceId: v } : x)))
               }
             >
               <SelectTrigger className="h-11 flex-1 text-sm">
@@ -775,9 +746,7 @@ function ValueForm({
               onChange={(e) =>
                 setLines((ls) =>
                   ls.map((x, idx) =>
-                    idx === i
-                      ? { ...x, quantity: Math.max(1, Number(e.target.value) || 1) }
-                      : x,
+                    idx === i ? { ...x, quantity: Math.max(1, Number(e.target.value) || 1) } : x,
                   ),
                 )
               }
@@ -797,24 +766,11 @@ function ValueForm({
       </div>
 
       <div className="flex justify-end gap-2">
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="h-11 text-sm"
-          onClick={onCancel}
-        >
+        <Button type="button" variant="ghost" size="sm" className="h-11 text-sm" onClick={onCancel}>
           Cancelar
         </Button>
-        <Button
-          type="submit"
-          size="sm"
-          className="h-11 text-sm"
-          disabled={mutation.isPending}
-        >
-          {mutation.isPending ? (
-            <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-          ) : null}
+        <Button type="submit" size="sm" className="h-11 text-sm" disabled={mutation.isPending}>
+          {mutation.isPending ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : null}
           Salvar
         </Button>
       </div>
@@ -838,15 +794,12 @@ function PaymentForm({
   const register = useServerFn(registerAppointmentPayment);
   const [amountStr, setAmountStr] = useState("");
   const [type, setType] = useState<"deposit" | "final" | "refund">("final");
-  const [method, setMethod] = useState<
-    "cash" | "card" | "transfer" | "payconiq" | "other"
-  >("cash");
+  const [method, setMethod] = useState<"cash" | "card" | "transfer" | "payconiq" | "other">("cash");
   const [notes, setNotes] = useState("");
   const [confirmOver, setConfirmOver] = useState(false);
 
   const amount = Number(amountStr) || 0;
-  const projectedPaid =
-    type === "refund" ? paidTotalEur - amount : paidTotalEur + amount;
+  const projectedPaid = type === "refund" ? paidTotalEur - amount : paidTotalEur + amount;
   const excess = totalEur > 0 ? projectedPaid - totalEur : 0;
   const overpay = type !== "refund" && amount > 0 && totalEur > 0 && excess > 0.005;
 
@@ -890,10 +843,7 @@ function PaymentForm({
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="mt-3 space-y-3 rounded border border-border p-2"
-    >
+    <form onSubmit={handleSubmit} className="mt-3 space-y-3 rounded border border-border p-2">
       <div className="grid grid-cols-2 gap-2">
         <div>
           <Label className="text-xs">Valor (€)</Label>
@@ -937,11 +887,7 @@ function PaymentForm({
         </div>
         <div className="col-span-2">
           <Label className="text-xs">Notas (opcional)</Label>
-          <Input
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            maxLength={500}
-          />
+          <Input value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={500} />
         </div>
       </div>
       {overpay ? (
@@ -950,8 +896,7 @@ function PaymentForm({
             <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             <div className="space-y-1">
               <div>
-                Este pagamento excede o total em{" "}
-                <strong>€{excess.toFixed(2)}</strong>.
+                Este pagamento excede o total em <strong>€{excess.toFixed(2)}</strong>.
               </div>
               <label className="flex items-center gap-1.5">
                 <input
@@ -966,13 +911,7 @@ function PaymentForm({
         </div>
       ) : null}
       <div className="flex justify-end gap-2">
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="h-11 text-sm"
-          onClick={onCancel}
-        >
+        <Button type="button" variant="ghost" size="sm" className="h-11 text-sm" onClick={onCancel}>
           Cancelar
         </Button>
         <Button
@@ -981,9 +920,7 @@ function PaymentForm({
           className="h-11 text-sm"
           disabled={mutation.isPending || (overpay && !confirmOver)}
         >
-          {mutation.isPending ? (
-            <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-          ) : null}
+          {mutation.isPending ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : null}
           Registrar
         </Button>
       </div>
@@ -994,9 +931,7 @@ function PaymentForm({
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="text-xs font-semibold text-muted-foreground">
-        {label}
-      </div>
+      <div className="text-xs font-semibold text-muted-foreground">{label}</div>
       <div className="text-sm">{value}</div>
     </div>
   );
@@ -1101,9 +1036,7 @@ function PaymentStatusPicker({
   const value = current ?? "auto";
   return (
     <div className="flex items-center gap-2 rounded border border-border bg-muted/20 p-2">
-      <Label className="text-xs text-muted-foreground">
-        Status
-      </Label>
+      <Label className="text-xs text-muted-foreground">Status</Label>
       <Select
         value={value}
         onValueChange={(v) => {
@@ -1147,8 +1080,7 @@ function ArtistPicker({
   const [pendingId, setPendingId] = useState<string | null>(null);
 
   const mut = useMutation({
-    mutationFn: async (newArtistId: string) =>
-      reassign({ data: { ghlEventId, newArtistId } }),
+    mutationFn: async (newArtistId: string) => reassign({ data: { ghlEventId, newArtistId } }),
     onSuccess: () => {
       haptic("success");
       toast.success("Tatuador atualizado");
@@ -1168,9 +1100,7 @@ function ArtistPicker({
 
   return (
     <div>
-      <div className="mb-1 text-xs font-semibold text-muted-foreground">
-        Tatuador
-      </div>
+      <div className="mb-1 text-xs font-semibold text-muted-foreground">Tatuador</div>
       <div className="flex items-center gap-2">
         <Select
           value={currentArtist?.id ?? ""}
@@ -1196,8 +1126,7 @@ function ArtistPicker({
       {pendingId && !mut.isPending ? (
         <div className="mt-2 flex items-center justify-between gap-2 rounded border border-warning/50 bg-warning/10 p-2 text-xs">
           <span>
-            Reatribuir para{" "}
-            <strong>{artists.find((a) => a.id === pendingId)?.name}</strong>?
+            Reatribuir para <strong>{artists.find((a) => a.id === pendingId)?.name}</strong>?
           </span>
           <div className="flex gap-1">
             <Button
@@ -1241,8 +1170,7 @@ function SellerPicker({
     staleTime: 5 * 60_000,
   });
   const mut = useMutation({
-    mutationFn: async (sellerId: string | null) =>
-      setSeller({ data: { ghlEventId, sellerId } }),
+    mutationFn: async (sellerId: string | null) => setSeller({ data: { ghlEventId, sellerId } }),
     onSuccess: () => {
       toast.success("Vendedor atualizado");
       onChanged();
@@ -1256,9 +1184,7 @@ function SellerPicker({
 
   return (
     <div className="flex items-center gap-2 rounded border border-border bg-muted/20 p-2">
-      <Label className="text-xs text-muted-foreground">
-        Vendedor
-      </Label>
+      <Label className="text-xs text-muted-foreground">Vendedor</Label>
       <Select
         value={value}
         onValueChange={(v) => {
