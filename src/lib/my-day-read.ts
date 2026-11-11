@@ -1,5 +1,9 @@
 /** Read each page completely; failures never return misleading partial totals. */
-export async function readMyDayPages<T>(fetchPage: (from: number, to: number) => Promise<{ data: T[] | null; error: unknown }>, pageSize = 250, maxPages = 40): Promise<T[]> {
+export async function readMyDayPages<T>(
+  fetchPage: (from: number, to: number) => Promise<{ data: T[] | null; error: unknown }>,
+  pageSize = 250,
+  maxPages = 40,
+): Promise<T[]> {
   const rows: T[] = [];
   for (let page = 0; page < maxPages; page++) {
     const response = await fetchPage(page * pageSize, page * pageSize + pageSize - 1);

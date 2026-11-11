@@ -27,15 +27,29 @@ const c: DayCheckin = {
 };
 describe("My Day read-only rules", () => {
   it("partial source failures have nullable counts, never fabricated zero", () => {
-    expect(myDaySummary(null, [c])).toEqual({ expected: null, arrived: 1, inProgress: 0, finished: 0, unverified: null });
+    expect(myDaySummary(null, [c])).toEqual({
+      expected: null,
+      arrived: 1,
+      inProgress: 0,
+      finished: 0,
+      unverified: null,
+    });
     expect(myDaySummary([], null).arrived).toBeNull();
   });
   it("two events sharing a client name across artists match only the selected ID", () => {
     const result = correlateMyDay([a, { ...a, id: "b", ghlId: "gb", artist: "B" }], [c]);
-    expect(result.rows.map(r => r.state)).toEqual(["waiting", "unverified"]);
+    expect(result.rows.map((r) => r.state)).toEqual(["waiting", "unverified"]);
   });
-  it.each([["aguardando", "waiting"], ["em_atendimento", "in_progress"], ["concluido", "finished"], ["nao_compareceu", "absent"], ["cancelado", "cancelled"]])("explicit check-in %s remains independent of agenda status", (status, state) => {
-    expect(correlateMyDay([{ ...a, status: "cancelled" }], [{ ...c, status }]).rows[0]?.state).toBe(state);
+  it.each([
+    ["aguardando", "waiting"],
+    ["em_atendimento", "in_progress"],
+    ["concluido", "finished"],
+    ["nao_compareceu", "absent"],
+    ["cancelado", "cancelled"],
+  ])("explicit check-in %s remains independent of agenda status", (status, state) => {
+    expect(correlateMyDay([{ ...a, status: "cancelled" }], [{ ...c, status }]).rows[0]?.state).toBe(
+      state,
+    );
   });
   it("confirmed without check-in is unverified, not arrived or absent", () => {
     expect(correlateMyDay([a], []).rows[0]?.state).toBe("unverified");

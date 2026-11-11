@@ -25,7 +25,13 @@ const filters: { id: "all" | DayState; label: string }[] = [
   { id: "unverified", label: "Não verificados" },
   { id: "conflict", label: "A conferir" },
 ];
-const agendaLabels: Record<string, string> = { pending: "Pendente", confirmed: "Confirmado", completed: "Concluído · registrado", cancelled: "Cancelado · registrado", no_show: "Não compareceu · registrado" };
+const agendaLabels: Record<string, string> = {
+  pending: "Pendente",
+  confirmed: "Confirmado",
+  completed: "Concluído · registrado",
+  cancelled: "Cancelado · registrado",
+  no_show: "Não compareceu · registrado",
+};
 const time = (iso: string | null) => (iso ? formatInTimeZone(iso, MY_DAY_TZ, "HH:mm") : "—");
 export function MyDay() {
   const read = useServerFn(getMyDay);
@@ -77,9 +83,29 @@ export function MyDay() {
       {data ? (
         <>
           <dl className="grid grid-cols-2 gap-x-4 gap-y-3 border-y border-border py-4 sm:grid-cols-5">
-            {[["Previstos", data.summary.expected], ["Chegaram", data.summary.arrived], ["Em atendimento", data.summary.inProgress], ["Concluídos", data.summary.finished], ["Não verificados", data.summary.unverified]].map(([label, value]) => <div key={String(label)}><dt className="text-xs text-muted-foreground">{label}</dt><dd className="mt-1 text-xl font-semibold tabular-nums">{value ?? "Indisponível"}</dd></div>)}
+            {[
+              ["Previstos", data.summary.expected],
+              ["Chegaram", data.summary.arrived],
+              ["Em atendimento", data.summary.inProgress],
+              ["Concluídos", data.summary.finished],
+              ["Não verificados", data.summary.unverified],
+            ].map(([label, value]) => (
+              <div key={String(label)}>
+                <dt className="text-xs text-muted-foreground">{label}</dt>
+                <dd className="mt-1 text-xl font-semibold tabular-nums">
+                  {value ?? "Indisponível"}
+                </dd>
+              </div>
+            ))}
           </dl>
-          {!data.coverage.appointments || !data.coverage.checkins ? <p role="alert" className="text-sm text-destructive">{!data.coverage.appointments ? "Agenda local indisponível. " : ""}{!data.coverage.checkins ? "Chegadas indisponíveis; não é possível verificar comparecimento." : ""}</p> : null}
+          {!data.coverage.appointments || !data.coverage.checkins ? (
+            <p role="alert" className="text-sm text-destructive">
+              {!data.coverage.appointments ? "Agenda local indisponível. " : ""}
+              {!data.coverage.checkins
+                ? "Chegadas indisponíveis; não é possível verificar comparecimento."
+                : ""}
+            </p>
+          ) : null}
           <div className="flex flex-wrap gap-2" aria-label="Filtrar Meu Dia">
             {filters.map((f) => (
               <Button
@@ -94,11 +120,22 @@ export function MyDay() {
             ))}
           </div>
           <p className="text-xs text-muted-foreground">
-            {data.coverage.appointments ? `${data.rows.length} agendamentos no espelho local` : "Cobertura de agenda indisponível"}
+            {data.coverage.appointments
+              ? `${data.rows.length} agendamentos no espelho local`
+              : "Cobertura de agenda indisponível"}
           </p>
           <ul className="divide-y divide-border border-y border-border">
             {data.rows
-              .filter((r) => filter === "all" || r.state === filter || r.state === "conflict" || r.state === "absent" || r.state === "cancelled" || r.appointment.status === "cancelled" || r.appointment.status === "no_show")
+              .filter(
+                (r) =>
+                  filter === "all" ||
+                  r.state === filter ||
+                  r.state === "conflict" ||
+                  r.state === "absent" ||
+                  r.state === "cancelled" ||
+                  r.appointment.status === "cancelled" ||
+                  r.appointment.status === "no_show",
+              )
               .map((r) => (
                 <li key={r.appointment.id} className="py-4">
                   <div className="flex items-start justify-between gap-3">
@@ -123,8 +160,12 @@ export function MyDay() {
                       </Link>
                     </Button>
                   </div>
-                  <p className="mt-2 text-xs text-muted-foreground">Agenda: {agendaLabels[r.appointment.status] ?? "Situação a conferir"}</p>
-                  <p className="mt-2 text-sm">Check-in: {data.coverage.checkins ? labels[r.state] : "Indisponível"}</p>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Agenda: {agendaLabels[r.appointment.status] ?? "Situação a conferir"}
+                  </p>
+                  <p className="mt-2 text-sm">
+                    Check-in: {data.coverage.checkins ? labels[r.state] : "Indisponível"}
+                  </p>
                   <dl className="mt-3 grid grid-cols-3 gap-2 text-xs sm:max-w-lg">
                     {[
                       ["Chegada", r.checkin?.arrived],

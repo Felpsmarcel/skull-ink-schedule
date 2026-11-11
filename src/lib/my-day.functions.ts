@@ -23,18 +23,50 @@ export const getMyDay = createServerFn({ method: "GET" })
     requireMyDayAdmin(error ? null : me?.role);
     const bounds = myDayBounds(new Date());
     const appointmentRead = async (): Promise<DayAppointment[]> => {
-      const rows = await readMyDayPages(async (from, to) => await supabase.from("appointments")
-        .select("id, ghl_appointment_id, contact_name, artists(name), start_at, status")
-        .gte("start_at", bounds.start).lt("start_at", bounds.end)
-        .order("start_at").order("id").range(from, to));
-      return rows.map(a => ({ id: a.id, ghlId: a.ghl_appointment_id, name: a.contact_name || "Cliente sem nome", artist: (a.artists as { name: string } | null)?.name ?? null, start: a.start_at, status: a.status }));
+      const rows = await readMyDayPages(
+        async (from, to) =>
+          await supabase
+            .from("appointments")
+            .select("id, ghl_appointment_id, contact_name, artists(name), start_at, status")
+            .gte("start_at", bounds.start)
+            .lt("start_at", bounds.end)
+            .order("start_at")
+            .order("id")
+            .range(from, to),
+      );
+      return rows.map((a) => ({
+        id: a.id,
+        ghlId: a.ghl_appointment_id,
+        name: a.contact_name || "Cliente sem nome",
+        artist: (a.artists as { name: string } | null)?.name ?? null,
+        start: a.start_at,
+        status: a.status,
+      }));
     };
     const checkinRead = async (): Promise<DayCheckin[]> => {
-      const rows = await readMyDayPages(async (from, to) => await supabase.from("checkins")
-        .select("id, appointment_id, ghl_appointment_id, cliente_nome, status, arrived_at, started_at, finished_at")
-        .gte("arrived_at", bounds.start).lt("arrived_at", bounds.end)
-        .order("arrived_at").order("id").range(from, to));
-      return rows.map(c => ({ id: c.id, appointmentId: c.appointment_id, ghlId: c.ghl_appointment_id, name: c.cliente_nome, status: c.status, arrived: c.arrived_at, started: c.started_at, finished: c.finished_at }));
+      const rows = await readMyDayPages(
+        async (from, to) =>
+          await supabase
+            .from("checkins")
+            .select(
+              "id, appointment_id, ghl_appointment_id, cliente_nome, status, arrived_at, started_at, finished_at",
+            )
+            .gte("arrived_at", bounds.start)
+            .lt("arrived_at", bounds.end)
+            .order("arrived_at")
+            .order("id")
+            .range(from, to),
+      );
+      return rows.map((c) => ({
+        id: c.id,
+        appointmentId: c.appointment_id,
+        ghlId: c.ghl_appointment_id,
+        name: c.cliente_nome,
+        status: c.status,
+        arrived: c.arrived_at,
+        started: c.started_at,
+        finished: c.finished_at,
+      }));
     };
     const [agenda, arrivals] = await Promise.allSettled([appointmentRead(), checkinRead()]);
     const appointments = agenda.status === "fulfilled" ? agenda.value : null;
