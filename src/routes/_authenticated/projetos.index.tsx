@@ -23,7 +23,7 @@ const listQuery = (s: z.infer<typeof searchSchema>) =>
 
 export const Route = createFileRoute("/_authenticated/projetos/")({
   validateSearch: zodValidator(searchSchema),
-  loaderDeps: ({ search }) => search,
+  loaderDeps: ({ search }) => ({ status: search.status ?? "active", artist: search.artist, q: search.q }),
   loader: ({ context, deps }) => context.queryClient.ensureQueryData(listQuery(deps)),
   head: () => ({
     meta: [
@@ -40,11 +40,11 @@ export const Route = createFileRoute("/_authenticated/projetos/")({
   notFoundComponent: () => <p className="p-6 text-sm">Nenhum projeto encontrado.</p>,
 });
 
-function ProjectsError({ error }: { error: Error }) {
+function ProjectsError({ error }: { error: unknown }) {
   const router = useRouter();
   return (
     <div role="alert" className="space-y-3 p-6 text-sm">
-      <p>{error.message}</p>
+      <p>{error instanceof Error ? error.message : String(error)}</p>
       <Button variant="outline" onClick={() => router.invalidate()}>Tentar de novo</Button>
     </div>
   );

@@ -35,15 +35,7 @@ export const Route = createFileRoute("/_authenticated/projetos/$projectId")({
     ],
   }),
   component: ProjectPage,
-  errorComponent: ({ error }) => {
-    const router = useRouter();
-    return (
-      <div role="alert" className="space-y-3 p-6 text-sm">
-        <p>{error.message}</p>
-        <Button variant="outline" onClick={() => router.invalidate()}>Tentar de novo</Button>
-      </div>
-    );
-  },
+  errorComponent: ProjectError,
   notFoundComponent: () => <p className="p-6 text-sm">Projeto não encontrado ou sem acesso.</p>,
 });
 
@@ -139,6 +131,16 @@ function Money({ label, v, strong }: { label: string; v: number | null; strong?:
     <div>
       <dt className="text-xs text-muted-foreground">{label}</dt>
       <dd className={`tabular-nums ${strong ? "font-semibold text-primary" : ""}`}>{formatEurCents(v)}</dd>
+    </div>
+  );
+}
+
+function ProjectError({ error }: { error: unknown }) {
+  const router = useRouter();
+  return (
+    <div role="alert" className="space-y-3 p-6 text-sm">
+      <p>{error instanceof Error ? error.message : String(error)}</p>
+      <Button variant="outline" onClick={() => router.invalidate()}>Tentar de novo</Button>
     </div>
   );
 }
