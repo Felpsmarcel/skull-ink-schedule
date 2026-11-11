@@ -17,4 +17,5 @@
 - Legacy Edge Function replacements are staged under docs/edge-review during no-production tasks because existing supabase/functions files deploy automatically; do not wire or copy them into that directory without deployment authorization.
 - Agenda modes share a fail-closed identity scope and suppress disabled cached staff/results; this prevents broad week/month queries or cached disclosure before identity resolution.
 - The agenda header and day grid share one scoped day-query result; this keeps the compact summary aligned with visible rows without duplicate requests.
+- Agenda appointment accents use the existing CRM appointment status, independently of payment badges; this prevents visual confirmation of unverified payments or sessions.
 - Finance summaries group by source-specific immutable IDs and expose names only as labels; complete counts are nullable with separate read counts, and contradictory pagination or invalid money invalidates full aggregates to prevent homonym merging and sample-based zeros.

@@ -1,9 +1,9 @@
 # Renovação premium
 
 ## Agenda — etapa 3 autorizada
-- [ ] Aplicar tipografia editorial na data, cartões por status e seleção dourada
-- [ ] Neutralizar avatares e manter preto/dourado nas visões dia, semana e mês
-- [ ] Verificar celular/computador, abertura das fichas e regressões sem alterar dados ou publicar
+- [x] Aplicar tipografia editorial na data, cartões por status e seleção dourada
+- [x] Neutralizar avatares e manter preto/dourado nas visões dia, semana e mês
+- [x] Verificar celular/computador, abertura das fichas e regressões sem alterar dados ou publicar (375/393/1280px; 276 testes; compilação OK; isolamento autenticado entre artistas não reexecutado)
 
 ## Agenda no celular — etapa 2 autorizada
 - [x] Compactar data, resumo e controles sem corte horizontal
