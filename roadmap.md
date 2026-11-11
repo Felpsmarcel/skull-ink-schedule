@@ -1,8 +1,8 @@
 # Renovação premium
 
 ## Operação interna — plano aprovado
-- [ ] Fase A: Meu Dia administrativo, leitura completa de agenda × check-ins, sem novas escritas
-- [ ] Verificar correlação, fuso, acesso e celular/computador sem ações reais
+- [x] Fase A: Meu Dia administrativo, leitura paginada do espelho local agenda × check-ins, sem novas escritas
+- [x] Verificar correlação, fuso e acesso em 11 testes; 44 regressões passam, lint dos novos arquivos OK; sessão administrativa em 393/1280px, filtros e abertura da Agenda sem ações reais. Isolamento real entre artistas não homologado.
 - [ ] Fases B/C: ficha e painel privado — dependem de homologação de acesso e direção visual
 - [ ] Segurança RPC/RLS/proxy e novas escritas — dependem de autorização separada
 
