@@ -203,9 +203,6 @@ export function AgendaAppointmentSheet({
             label={t("agenda.details.service")}
             value={slot?.serviceName || t("agenda.booked")}
           />
-          {slot?.appointmentStatus ? (
-            <Row label={t("agenda.details.status")} value={slot.appointmentStatus} />
-          ) : null}
 
           <AppointmentProjectJourney ghlEventId={slot?.ghlEventId ?? null} />
 
