@@ -29,10 +29,15 @@ export interface PanelAppointment {
   ghlId: string | null;
 }
 
-export function projectContinuity(id: string, appointments: PanelAppointment[] | null, now: number) {
+export function projectContinuity(
+  id: string,
+  appointments: PanelAppointment[] | null,
+  now: number,
+) {
   if (appointments === null) return { linked: null, done: null, future: null, next: null };
   const linked = appointments.filter((a) => a.projectId === id);
-  const future = linked.filter((a) => ["confirmed", "pending"].includes(a.status) && Date.parse(a.startAt) >= now)
+  const future = linked
+    .filter((a) => ["confirmed", "pending"].includes(a.status) && Date.parse(a.startAt) >= now)
     .sort((a, b) => a.startAt.localeCompare(b.startAt));
   return {
     linked: linked.length,
@@ -51,8 +56,21 @@ export function commercialPresentation(
   const depositCents = toCents(deposit);
   const cash = movements === null ? null : receivedCents(movements);
   // No bridge between the deposit annotation and cash: never deduct both blindly.
-  const indicativeBalance = movements?.length === 0 && quotedCents !== null && depositCents !== null
-    && depositCents >= 0 && depositCents <= quotedCents ? quotedCents - depositCents : null;
-  return { quotedCents, depositCents, indicativeBalance, cash, cashBalance: balanceCents(quotedCents, cash),
-    needsReconciliation: indicativeBalance === null, movementsCount: movements?.length ?? null };
+  const indicativeBalance =
+    movements?.length === 0 &&
+    quotedCents !== null &&
+    depositCents !== null &&
+    depositCents >= 0 &&
+    depositCents <= quotedCents
+      ? quotedCents - depositCents
+      : null;
+  return {
+    quotedCents,
+    depositCents,
+    indicativeBalance,
+    cash,
+    cashBalance: balanceCents(quotedCents, cash),
+    needsReconciliation: indicativeBalance === null,
+    movementsCount: movements?.length ?? null,
+  };
 }
