@@ -8,6 +8,7 @@ import { formatEurCents } from "@/lib/project-progress-core";
 import { useAppointmentDraft } from "@/stores/appointment-draft";
 import { Button } from "@/components/ui/button";
 import { ProjectContinuity } from "@/components/project-continuity";
+import { ProjectCommercialSummary } from "@/components/project-commercial-summary";
 import { formatProjectDate, PROJECT_APPOINTMENT_STATUS } from "@/lib/project-journey-core";
 
 const searchSchema = z.object({
@@ -149,15 +150,8 @@ function ProjectPage() {
 
       <section className="pb-4">
         <h2 className="mb-2 text-sm font-semibold">Financeiro</h2>
-        <dl className="grid grid-cols-2 gap-3 text-sm">
-          {admin ? (
-            <>
-              <Money label="Valor integral" v={p.finance.quotedCents} />
-              <Money label="Sinal" v={p.finance.depositCents} />
-              <Money label="Recebido" v={p.finance.receivedCents} />
-              <Money label="Saldo" v={p.finance.balanceCents} strong />
-            </>
-          ) : null}
+        {admin ? <ProjectCommercialSummary projectId={p.id} /> : null}
+        <dl className="mt-5 grid grid-cols-2 gap-3 text-sm">
           <Money
             label="Parte do tatuador (35% do recebido)"
             v={p.finance.artistShareCents}
