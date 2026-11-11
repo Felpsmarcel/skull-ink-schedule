@@ -5,9 +5,15 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "GF Tattoo — Acesso à agenda" },
-      { name: "description", content: "Acesso à agenda e à gestão de atendimentos do GF Tattoo Studio." },
+      {
+        name: "description",
+        content: "Acesso à agenda e à gestão de atendimentos do GF Tattoo Studio.",
+      },
       { property: "og:title", content: "GF Tattoo — Acesso à agenda" },
-      { property: "og:description", content: "Acesso à agenda e à gestão de atendimentos do GF Tattoo Studio." },
+      {
+        property: "og:description",
+        content: "Acesso à agenda e à gestão de atendimentos do GF Tattoo Studio.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
