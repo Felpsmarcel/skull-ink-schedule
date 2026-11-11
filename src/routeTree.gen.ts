@@ -22,6 +22,7 @@ import { Route as AuthenticatedFinanceiroRouteImport } from './routes/_authentic
 import { Route as AuthenticatedHomeRouteImport } from './routes/_authenticated/home'
 import { Route as AuthenticatedMenuRouteImport } from './routes/_authenticated/menu'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
+import { Route as AuthenticatedPainelTatuadorRouteImport } from './routes/_authenticated/painel-tatuador'
 import { Route as AuthenticatedReviewsRouteImport } from './routes/_authenticated/reviews'
 import { Route as AuthenticatedServicesRouteImport } from './routes/_authenticated/services'
 import { Route as ATokenRouteImport } from './routes/a.$token'
@@ -136,6 +137,12 @@ const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
   path: '/onboarding',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPainelTatuadorRoute =
+  AuthenticatedPainelTatuadorRouteImport.update({
+    id: '/painel-tatuador',
+    path: '/painel-tatuador',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedReviewsRoute = AuthenticatedReviewsRouteImport.update({
   id: '/reviews',
   path: '/reviews',
@@ -421,6 +428,7 @@ export interface FileRoutesByFullPath {
   '/home': typeof AuthenticatedHomeRoute
   '/menu': typeof AuthenticatedMenuRoute
   '/onboarding': typeof AuthenticatedOnboardingRouteWithChildren
+  '/painel-tatuador': typeof AuthenticatedPainelTatuadorRoute
   '/reviews': typeof AuthenticatedReviewsRoute
   '/services': typeof AuthenticatedServicesRoute
   '/a/$token': typeof ATokenRoute
@@ -482,6 +490,7 @@ export interface FileRoutesByTo {
   '/home': typeof AuthenticatedHomeRoute
   '/menu': typeof AuthenticatedMenuRoute
   '/onboarding': typeof AuthenticatedOnboardingRouteWithChildren
+  '/painel-tatuador': typeof AuthenticatedPainelTatuadorRoute
   '/reviews': typeof AuthenticatedReviewsRoute
   '/services': typeof AuthenticatedServicesRoute
   '/a/$token': typeof ATokenRoute
@@ -545,6 +554,7 @@ export interface FileRoutesById {
   '/_authenticated/home': typeof AuthenticatedHomeRoute
   '/_authenticated/menu': typeof AuthenticatedMenuRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRouteWithChildren
+  '/_authenticated/painel-tatuador': typeof AuthenticatedPainelTatuadorRoute
   '/_authenticated/reviews': typeof AuthenticatedReviewsRoute
   '/_authenticated/services': typeof AuthenticatedServicesRoute
   '/a/$token': typeof ATokenRoute
@@ -608,6 +618,7 @@ export interface FileRouteTypes {
     | '/home'
     | '/menu'
     | '/onboarding'
+    | '/painel-tatuador'
     | '/reviews'
     | '/services'
     | '/a/$token'
@@ -669,6 +680,7 @@ export interface FileRouteTypes {
     | '/home'
     | '/menu'
     | '/onboarding'
+    | '/painel-tatuador'
     | '/reviews'
     | '/services'
     | '/a/$token'
@@ -731,6 +743,7 @@ export interface FileRouteTypes {
     | '/_authenticated/home'
     | '/_authenticated/menu'
     | '/_authenticated/onboarding'
+    | '/_authenticated/painel-tatuador'
     | '/_authenticated/reviews'
     | '/_authenticated/services'
     | '/a/$token'
@@ -901,6 +914,13 @@ declare module '@tanstack/react-router' {
       path: '/onboarding'
       fullPath: '/onboarding'
       preLoaderRoute: typeof AuthenticatedOnboardingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/painel-tatuador': {
+      id: '/_authenticated/painel-tatuador'
+      path: '/painel-tatuador'
+      fullPath: '/painel-tatuador'
+      preLoaderRoute: typeof AuthenticatedPainelTatuadorRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/reviews': {
@@ -1339,6 +1359,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedHomeRoute: typeof AuthenticatedHomeRoute
   AuthenticatedMenuRoute: typeof AuthenticatedMenuRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRouteWithChildren
+  AuthenticatedPainelTatuadorRoute: typeof AuthenticatedPainelTatuadorRoute
   AuthenticatedReviewsRoute: typeof AuthenticatedReviewsRoute
   AuthenticatedServicesRoute: typeof AuthenticatedServicesRoute
   AuthenticatedAppointmentsNewRoute: typeof AuthenticatedAppointmentsNewRouteWithChildren
@@ -1356,6 +1377,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedHomeRoute: AuthenticatedHomeRoute,
   AuthenticatedMenuRoute: AuthenticatedMenuRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRouteWithChildren,
+  AuthenticatedPainelTatuadorRoute: AuthenticatedPainelTatuadorRoute,
   AuthenticatedReviewsRoute: AuthenticatedReviewsRoute,
   AuthenticatedServicesRoute: AuthenticatedServicesRoute,
   AuthenticatedAppointmentsNewRoute:

@@ -63,6 +63,11 @@ function HomePage() {
       />
 
       <div className="mx-auto max-w-md space-y-5 px-4 py-4 sm:max-w-3xl">
+        {me?.role === "admin" ? (
+          <Link to="/painel-tatuador" className="flex min-h-12 items-center justify-between gap-3 rounded-md border border-border px-4 text-sm font-medium">
+            Painel André <ChevronRight className="h-4 w-4" aria-hidden />
+          </Link>
+        ) : null}
         {me?.role === "admin" ? <MyDay /> : null}
         {error ? (
           <p className="rounded-lg border border-border bg-card p-3 text-xs text-muted-foreground">
