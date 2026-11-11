@@ -1,5 +1,10 @@
 # Renovação premium
 
+## Agenda — etapa 4 autorizada
+- [x] Ajustar menu inferior com espaço adicional à área segura e alvos legíveis (48px; área segura de 34px simulada)
+- [x] Deslizar na grade diária sem conflitar com rolagem, fichas ou gestos do sistema (toques reais em Chromium; esquerda/direita, vertical e bordas)
+- [x] Impedir recarga por overscroll apenas na Agenda e verificar celular/computador sem gravar dados ou publicar (375/393/852/1280px, sessão autenticada, 279 testes, lint dos arquivos novos/menu e compilação OK; Safari em iPhone físico não verificado)
+
 ## Agenda — etapa 3 autorizada
 - [x] Aplicar tipografia editorial na data, cartões por status e seleção dourada
 - [x] Neutralizar avatares e manter preto/dourado nas visões dia, semana e mês
