@@ -8,7 +8,9 @@ const fake = vi.hoisted(() => ({
   project: null as Record<string, unknown> | null,
   queries: [] as string[],
 }));
-vi.mock("@/integrations/supabase/auth-middleware", () => ({ requireSupabaseAuth: fake.middleware }));
+vi.mock("@/integrations/supabase/auth-middleware", () => ({
+  requireSupabaseAuth: fake.middleware,
+}));
 vi.mock("@tanstack/react-start", () => ({
   createServerFn: () => {
     let mw: unknown[] = [];
@@ -50,13 +52,23 @@ const run = (projectId = "00000000-0000-4000-8000-000000000001") =>
 
 beforeEach(() => {
   fake.me = { role: "admin", artist_id: null };
-  fake.project = { id: "p1", title: "Projeto sintético", quoted_total_eur: 2700, deposit_eur: 0, artist_id: "artist-A" };
+  fake.project = {
+    id: "p1",
+    title: "Projeto sintético",
+    quoted_total_eur: 2700,
+    deposit_eur: 0,
+    artist_id: "artist-A",
+  };
   fake.queries = [];
 });
 
 describe("getProjectFinance — identidade verificada antes da leitura", () => {
   it("admin mantém o acesso atual", async () => {
-    await expect(run()).resolves.toMatchObject({ quotedTotalEur: 2700, recebidoEur: 450, saldoEur: 2250 });
+    await expect(run()).resolves.toMatchObject({
+      quotedTotalEur: 2700,
+      recebidoEur: 450,
+      saldoEur: 2250,
+    });
     expect(fake.queries).toEqual(["app_users", "tattoo_projects", "movimentacoes"]);
   });
   it.each([
