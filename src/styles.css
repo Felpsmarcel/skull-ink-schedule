@@ -73,6 +73,8 @@
   --color-warning-foreground: var(--warning-foreground);
   --color-info: var(--info);
   --color-info-foreground: var(--info-foreground);
+  --font-editorial: "Cormorant Garamond", Georgia, serif;
+  --color-agenda-warning: var(--agenda-warning);
 }
 
 :root {
@@ -103,6 +105,7 @@
   --success-foreground: oklch(0.95 0.025 155);
   --warning: oklch(0.72 0.105 86);
   --warning-foreground: oklch(0.16 0.008 80);
+  --agenda-warning: oklch(0.8 0.14 65);
   --info: oklch(0.67 0.09 235);
   --info-foreground: oklch(0.96 0.02 235);
   --chart-1: oklch(0.72 0.105 86);
@@ -122,6 +125,36 @@
 
 .dark {
   color-scheme: dark;
+}
+
+/* Appointment status is distinct from payment badges; unknown states stay neutral. */
+.agenda-scope {
+  --warning: var(--agenda-warning);
+  letter-spacing: 0;
+}
+
+.agenda-session {
+  border-left-color: var(--border);
+  background-color: var(--card);
+}
+.agenda-session[data-appointment-status="confirmed"] {
+  border-left-color: var(--primary);
+}
+.agenda-session[data-appointment-status="new"] {
+  border-style: dashed;
+}
+.agenda-session[data-appointment-status="showed"] {
+  border-left-color: var(--success);
+}
+.agenda-session[data-appointment-status="noshow"],
+.agenda-session[data-appointment-status="invalid"] {
+  border-left-color: var(--agenda-warning);
+}
+.agenda-session[data-appointment-status="cancelled"] {
+  background-color: var(--background);
+  color: var(--muted-foreground);
+  border-left-color: var(--muted-foreground);
+  opacity: 0.75;
 }
 
 @layer base {

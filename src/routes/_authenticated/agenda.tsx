@@ -63,6 +63,7 @@ type View = "day" | "week" | "month";
 
 export const Route = createFileRoute("/_authenticated/agenda")({
   head: () => ({
+    links: [{ rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&display=swap" }],
     meta: [
       { title: "Agenda — GF Tattoo Studio" },
       { name: "description", content: "Sua agenda de atendimentos no GF Tattoo Studio." },
@@ -189,7 +190,7 @@ function AgendaPage() {
   if (!scope.allowed) return <div role="status" className="p-6 text-muted-foreground">{mePending ? "A carregar…" : "Acesso à agenda não autorizado: vínculo não verificado."}</div>;
 
   return (
-    <div className="flex min-h-dvh flex-col bg-muted/40 pb-[calc(env(safe-area-inset-bottom)+6rem)] sm:pb-20">
+    <div className="agenda-scope flex min-h-dvh flex-col bg-background pb-[calc(env(safe-area-inset-bottom)+6rem)] sm:pb-20">
       {/* Header — editorial monochrome */}
       <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur">
         <div className="mx-auto grid w-full max-w-[1400px] gap-1 px-3 pb-2 pt-[calc(env(safe-area-inset-top)+0.25rem)] sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-x-6 sm:px-6 sm:py-3">
@@ -204,7 +205,7 @@ function AgendaPage() {
                   <CalendarIcon aria-hidden="true" className="shrink-0 text-muted-foreground" />
                   <span className="min-w-0">
                   <span
-                    className="block text-base font-normal text-foreground first-letter:uppercase sm:text-lg"
+                    className="block font-editorial text-xl font-semibold text-foreground first-letter:uppercase sm:text-2xl"
                   >
                     {dateLabel}
                   </span>
@@ -260,7 +261,7 @@ function AgendaPage() {
             <Button
               variant="ghost"
               onClick={() => setDate(new Date())}
-              className="shrink-0 px-2 text-sm font-medium"
+              className="shrink-0 px-2 text-sm font-medium text-primary"
             >
               {t("agenda.today")}
             </Button>
@@ -536,15 +537,16 @@ function DayView({
             {chipAgendas.map((a) => {
               const active = a.staff.id === effectiveActiveId;
               return (
-                <button
+                <Button
                   key={a.staff.id}
-                  type="button"
+                  variant="ghost"
+                  aria-pressed={active}
                   onClick={() => setActiveStaffId(a.staff.id)}
                   className={cn(
-                    "flex shrink-0 items-center gap-2 rounded-md border px-3 py-1.5 text-sm transition-colors",
+                    "shrink-0 gap-2 rounded-md border px-3 text-sm font-medium",
                     active
-                      ? "border-foreground bg-foreground text-background"
-                      : "border-border bg-card text-muted-foreground hover:border-foreground/40 hover:text-foreground",
+                      ? "border-primary/60 bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary"
+                      : "border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground",
                   )}
                 >
                   <span className="truncate max-w-[140px]">{a.staff.shortName}</span>
@@ -557,7 +559,7 @@ function DayView({
                   >
                     {a.bookedCount}
                   </span>
-                </button>
+                </Button>
               );
             })}
           </div>
@@ -566,7 +568,7 @@ function DayView({
 
       {/* Grid card */}
       <div className="mx-auto w-full max-w-[1400px] flex-1 px-2 py-4 sm:px-6">
-        <div className="h-full overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+        <div className="h-full overflow-hidden border-y border-border bg-background">
           <div ref={scrollRef} className="h-full overflow-auto">
             <div className="relative flex w-full min-w-full">
               {/* Time column */}
@@ -620,10 +622,10 @@ function DayView({
                     style={{ top: `calc(4rem + ${nowTopPx}px)` }}
                     aria-hidden
                   >
-                    <span className="ml-1 rounded-sm bg-foreground px-1 py-[1px] text-[11px] font-black tracking-widest text-background">
+                    <span className="ml-1 rounded-sm bg-primary px-1 py-[1px] text-xs font-semibold tabular-nums text-primary-foreground">
                       {nowLabel}
                     </span>
-                    <div className="h-px flex-1 bg-foreground" />
+                    <div className="h-px flex-1 bg-primary" />
                   </div>
                 ) : null}
               </div>
@@ -672,8 +674,7 @@ function StaffColumn({
       {/* Column header — editorial */}
       <div className="sticky top-0 z-10 flex h-16 flex-col items-center justify-center gap-0.5 border-b border-border bg-muted/40 px-2 py-2 text-center">
         <span
-          className="truncate text-[13px] leading-none tracking-tight text-foreground"
-          style={{ fontFamily: "var(--font-display)" }}
+          className="truncate text-sm font-medium leading-tight text-foreground"
         >
           {staff.shortName}
         </span>
@@ -762,8 +763,8 @@ function SlotCell({
   if (slot.status === "free") {
     return (
       <div className={cn("group border-b border-border/30 p-0.5", ROW_HEIGHT)}>
-        <button
-          type="button"
+        <Button
+          variant="ghost"
           onClick={() => {
             draft.reset();
             draft.setCalendar(calendarId);
@@ -772,10 +773,10 @@ function SlotCell({
           }}
           aria-label={t("agenda.addSlot")}
           title={t("agenda.addSlot")}
-          className="flex h-full w-full items-center justify-center rounded-md border border-dashed border-border/40 bg-transparent text-xs font-medium text-primary/60 transition-colors active:bg-muted/40 hover:border-primary/50 hover:text-primary"
+          className="h-full w-full rounded-md border border-dashed border-primary/30 bg-transparent text-xs font-medium text-primary hover:border-primary/60 hover:bg-primary/5 hover:text-primary"
         >
           + {t("agenda.addSlot")}
-        </button>
+        </Button>
       </div>
     );
   }
@@ -798,38 +799,38 @@ function SlotCell({
       className={cn("relative", ROW_HEIGHT)}
       style={{ overflow: "visible" }}
     >
-      <button
-        type="button"
+      <Button
+        variant="ghost"
+        data-appointment-status={slot.appointmentStatus?.toLowerCase()}
         onClick={() => onOpen(slot)}
         title={`${slot.contactName ?? t("agenda.client")} — ${slot.serviceName ?? t("agenda.booked")}`}
         className={cn(
-          "absolute left-[3px] right-[3px] top-[2px] z-[1] flex flex-col justify-start gap-0.5 overflow-hidden rounded-md border border-border border-l-4 border-l-foreground bg-background px-1.5 py-1 text-left text-foreground shadow-sm transition-all hover:-translate-y-[1px] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-foreground/40 sm:px-2 sm:py-1.5",
+          "agenda-session absolute left-[3px] right-[3px] top-[2px] z-[1] h-auto flex-col items-stretch justify-start gap-0.5 overflow-hidden whitespace-normal rounded-md border border-border border-l-[3px] px-2 py-1 text-left text-foreground hover:bg-accent/40 focus-visible:ring-ring sm:py-1.5",
           isHighlighted && "ring-2 ring-primary ring-offset-2 ring-offset-background",
         )}
 
         style={{ height: cardHeight }}
       >
         {isNext ? (
-          <span className="pointer-events-none absolute right-1 top-1 rounded-sm bg-foreground px-1 py-[1px] text-[8px] font-semibold tracking-normal text-background">
+          <span className="pointer-events-none absolute right-1 top-1 rounded-sm bg-primary/15 px-1 py-[1px] text-xs font-medium text-primary">
             {t("agenda.next", { defaultValue: "Próximo" })}
           </span>
         ) : null}
         <div className="flex items-center gap-1">
           <span
-            className="truncate text-[13px] leading-tight tracking-tight sm:text-sm"
-            style={{ fontFamily: "var(--font-display)" }}
+            className={cn("truncate text-sm font-medium leading-tight", isNext && "pr-14")}
           >
             {slot.contactName ?? t("agenda.booked")}
           </span>
           {slot.hasOverlap ? (
             <AlertTriangleIcon
-              className="h-3 w-3 shrink-0 text-foreground"
+              className="h-3 w-3 shrink-0 text-agenda-warning"
               aria-label={t("agenda.details.overlap")}
             />
           ) : null}
         </div>
-        {slot.serviceName ? (
-          <div className="line-clamp-2 text-xs leading-tight text-muted-foreground">{slot.serviceName}</div>
+        {slot.serviceName && cardHeight >= 84 ? (
+          <div className="line-clamp-2 text-xs font-normal leading-tight text-muted-foreground">{slot.serviceName}</div>
         ) : null}
         <div className="text-xs font-medium tabular-nums text-muted-foreground">
           {startLabel}
@@ -838,12 +839,12 @@ function SlotCell({
         {bucket && cardHeight >= 84 ? (
           <StatusBadge
             variant={bucketToVariant(bucket)}
-            className="mt-auto self-start px-1 py-0 text-[11px]"
+            className="mt-auto self-start px-1 py-0 text-xs normal-case"
           >
             {bucketLabel(bucket)}
           </StatusBadge>
         ) : null}
-      </button>
+      </Button>
     </div>
   );
 }
@@ -982,13 +983,13 @@ function WeekView({
                 key={`h-${key}`}
                 className={cn(
                   "flex flex-col items-center gap-0.5 border-b border-l border-border px-0.5 py-1.5 text-center",
-                  isToday && "bg-foreground/5",
+                  isToday && "bg-primary/10",
                 )}
               >
                 <span
                   className={cn(
                     "text-[11px] tracking-wide text-muted-foreground",
-                    isToday && "text-foreground",
+                    isToday && "text-primary",
                   )}
                 >
                   {dayFmt.format(d).replace(".", "")}
@@ -996,7 +997,7 @@ function WeekView({
                 <span
                   className={cn(
                     "text-[13px] font-semibold tabular-nums leading-none",
-                    isToday ? "text-foreground" : "text-foreground/80",
+                    isToday ? "text-primary" : "text-foreground",
                   )}
                 >
                   {numFmt.format(d)}
@@ -1023,11 +1024,11 @@ function WeekView({
             return (
               <div key={a.staff.id} className="contents">
                 <div className="sticky left-0 z-10 flex flex-col items-center justify-center gap-1 border-b border-r border-border bg-background px-0.5 py-2">
-                  <Avatar className="h-8 w-8 shrink-0 ring-2 ring-offset-1 ring-offset-background" style={{ boxShadow: "none" }}>
+                  <Avatar className="h-8 w-8 shrink-0 border border-border">
                     {a.staff.avatarUrl ? (
                       <AvatarImage src={a.staff.avatarUrl} alt={a.staff.name} />
                     ) : null}
-                    <AvatarFallback className={cn("text-[11px] text-white", a.staff.color)}>
+                    <AvatarFallback className="bg-muted text-xs text-foreground">
                       {a.staff.initials}
                     </AvatarFallback>
                   </Avatar>
@@ -1047,7 +1048,7 @@ function WeekView({
                       key={`${a.staff.id}-${key}`}
                       className={cn(
                         "flex min-h-[64px] flex-col gap-0.5 border-b border-l border-border p-0.5",
-                        isToday && "bg-foreground/[0.03]",
+                        isToday && "bg-primary/5",
                       )}
                     >
                       {visible.map((ev) => {
@@ -1059,19 +1060,17 @@ function WeekView({
                             .join(" ") ||
                           t("agenda.booked");
                         return (
-                          <button
+                          <Button
+                            variant="ghost"
+                            data-appointment-status={ev.appointmentStatus?.toLowerCase()}
                             key={ev.id}
                             type="button"
                             onClick={() => openFromEvent(ev, a.staff)}
                             title={`${name}${ev.title ? " — " + ev.title : ""}`}
-                            className="flex items-stretch gap-1 overflow-hidden rounded-[3px] bg-muted/60 pr-1 text-xs font-semibold tabular-nums leading-none text-foreground shadow-sm active:bg-muted"
+                            className="agenda-session h-11 min-w-0 gap-0 overflow-hidden rounded-sm border border-border border-l-2 px-0 text-xs font-medium tabular-nums text-foreground"
                           >
-                            <span
-                              className={cn("w-[3px] shrink-0", a.staff.color)}
-                              aria-hidden
-                            />
                             <span className="py-1">{fmtHHmm(s)}</span>
-                          </button>
+                          </Button>
                         );
                       })}
                       {extra > 0 ? (
@@ -1108,7 +1107,7 @@ function WeekView({
                 onClick={() => onPickDay(d)}
                 className={cn(
                   "flex flex-col items-center gap-0.5 border-r border-border px-1 py-2 text-xs tracking-wide hover:bg-muted",
-                  key === todayKey && "bg-muted",
+                  key === todayKey && "bg-primary/10 text-primary",
                 )}
               >
                 <span className="text-xs text-muted-foreground">{dayFmt.format(d)}</span>
@@ -1146,7 +1145,7 @@ function WeekView({
                   {a.staff.avatarUrl ? (
                     <AvatarImage src={a.staff.avatarUrl} alt={a.staff.name} />
                   ) : null}
-                  <AvatarFallback className={cn("text-xs text-white", a.staff.color)}>
+                  <AvatarFallback className="bg-muted text-xs text-foreground">
                     {a.staff.initials}
                   </AvatarFallback>
                 </Avatar>
@@ -1168,7 +1167,7 @@ function WeekView({
                     key={dayMs}
                     className={cn(
                       "min-h-[64px] space-y-1 border-r border-border p-1",
-                      key === todayKey && "bg-muted/40",
+                      key === todayKey && "bg-primary/5",
                     )}
                   >
                     {evs.map((ev) => {
@@ -1184,16 +1183,17 @@ function WeekView({
                       return (
                         <Tooltip key={ev.id}>
                           <TooltipTrigger asChild>
-                            <button
-                              type="button"
+                            <Button
+                              variant="ghost"
+                              data-appointment-status={ev.appointmentStatus?.toLowerCase()}
                               onClick={() => openFromEvent(ev, a.staff)}
-                              className="w-full overflow-hidden rounded border-l-2 border-foreground bg-background px-1 py-0.5 text-left text-xs shadow-sm hover:bg-muted focus:outline-none focus:ring-1 focus:ring-foreground/40"
+                              className="agenda-session h-auto min-h-11 w-full flex-col items-stretch gap-1 overflow-hidden whitespace-normal rounded-sm border border-border border-l-2 px-2 py-2 text-left text-xs font-normal hover:bg-accent/40"
                             >
                               <div className="flex items-center gap-1 text-[11px] tabular-nums text-muted-foreground">
                                 <span
                                   className={cn(
                                     "inline-block h-1.5 w-1.5 shrink-0 rounded-full",
-                                    a.staff.color,
+                                    "bg-primary",
                                   )}
                                   aria-hidden
                                 />
@@ -1205,12 +1205,12 @@ function WeekView({
                               {bucket ? (
                                 <StatusBadge
                                   variant={bucketToVariant(bucket)}
-                                  className="mt-0.5 px-1 py-0 text-[8px]"
+                                  className="mt-0.5 self-start px-1 py-0 text-xs normal-case"
                                 >
                                   {bucketLabel(bucket)}
                                 </StatusBadge>
                               ) : null}
-                            </button>
+                            </Button>
                           </TooltipTrigger>
                           <TooltipContent side="top" className="max-w-[240px]">
                             <div className="flex flex-col gap-0.5">
@@ -1385,10 +1385,10 @@ function MonthView({
                   : "paid";
           const dotClass =
             dominant === "paid"
-              ? "bg-emerald-500"
+              ? "bg-success"
               : dominant === "error"
-                ? "bg-red-500"
-                : "bg-amber-500";
+                ? "bg-destructive"
+                : "bg-agenda-warning";
           const sortedEvs = [...evs].sort(
             (x, y) =>
               new Date(x.startTime).getTime() - new Date(y.startTime).getTime(),
@@ -1417,11 +1417,11 @@ function MonthView({
               className={cn(
                 "flex min-h-[56px] flex-col items-start gap-1 border-b border-r border-border p-1 text-left transition-colors hover:bg-muted sm:min-h-[88px] sm:p-1.5",
                 !inMonth && "bg-background/50 text-muted-foreground/60",
-                key === todayKey && "ring-1 ring-foreground/40",
+                key === todayKey && "bg-primary/5 ring-1 ring-inset ring-primary/60",
               )}
             >
               <div className="flex w-full items-center justify-between gap-1">
-                <span className="text-[11px] font-semibold sm:text-xs">{numFmt.format(d)}</span>
+                <span className={cn("text-sm font-semibold tabular-nums", key === todayKey && "text-primary")}>{numFmt.format(d)}</span>
                 {evs.length > 0 ? (
                   <span className="flex items-center gap-1 sm:hidden">
                     {dominant ? (
@@ -1449,7 +1449,7 @@ function MonthView({
                           <AvatarImage src={entry.staff.avatarUrl} alt={entry.staff.name} />
                         ) : null}
                         <AvatarFallback
-                          className={cn("text-[8px] text-white", entry.staff.color)}
+                          className="bg-muted text-[10px] text-foreground"
                         >
                           {entry.staff.initials}
                         </AvatarFallback>
