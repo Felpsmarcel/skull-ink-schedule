@@ -13,11 +13,19 @@ export interface OpportunityLite {
   monetaryValueCents: number | null;
 }
 
-export type FetchOpportunityPage = (page: number) => Promise<
-  { ok: true; rows: Array<Record<string, unknown>>; total: number | null } | { ok: false; status: number }
+export type FetchOpportunityPage = (
+  page: number,
+) => Promise<
+  | { ok: true; rows: Array<Record<string, unknown>>; total: number | null }
+  | { ok: false; status: number }
 >;
 
-export type IncompleteReason = "http_error" | "repeated_page" | "page_limit" | "total_mismatch" | "contact_mismatch";
+export type IncompleteReason =
+  | "http_error"
+  | "repeated_page"
+  | "page_limit"
+  | "total_mismatch"
+  | "contact_mismatch";
 
 export interface OpportunityReadResult {
   items: OpportunityLite[];
@@ -56,7 +64,13 @@ export async function readAllOpportunities(
   let total: number | null = null;
   for (let page = 1; page <= maxPages; page++) {
     const res = await fetchPage(page);
-    if (!res.ok) return { items: [...seen.values()], complete: false, reason: "http_error", pagesRead: page - 1 };
+    if (!res.ok)
+      return {
+        items: [...seen.values()],
+        complete: false,
+        reason: "http_error",
+        pagesRead: page - 1,
+      };
     if (res.total !== null) total = res.total;
     let fresh = 0;
     for (const raw of res.rows) {
@@ -70,11 +84,21 @@ export async function readAllOpportunities(
       fresh++;
     }
     if (res.rows.length > 0 && fresh === 0) {
-      return { items: [...seen.values()], complete: false, reason: "repeated_page", pagesRead: page };
+      return {
+        items: [...seen.values()],
+        complete: false,
+        reason: "repeated_page",
+        pagesRead: page,
+      };
     }
     if (res.rows.length < OPP_PAGE_SIZE) {
       if (total !== null && total !== seen.size) {
-        return { items: [...seen.values()], complete: false, reason: "total_mismatch", pagesRead: page };
+        return {
+          items: [...seen.values()],
+          complete: false,
+          reason: "total_mismatch",
+          pagesRead: page,
+        };
       }
       return { items: [...seen.values()], complete: true, reason: null, pagesRead: page };
     }

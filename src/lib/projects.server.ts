@@ -7,7 +7,13 @@ import {
   readAllOpportunities,
   type OpportunityReadResult,
 } from "@/lib/ghl-opportunities-core";
-import { GF_LOCATION_ID, GF_PIPELINE_ID, normalizeEmail, normalizePhone, samePhone } from "@/lib/linking";
+import {
+  GF_LOCATION_ID,
+  GF_PIPELINE_ID,
+  normalizeEmail,
+  normalizePhone,
+  samePhone,
+} from "@/lib/linking";
 
 const GHL_BASE = "https://services.leadconnectorhq.com";
 
@@ -107,10 +113,10 @@ export async function listContactOpportunities(contactId: string): Promise<Oppor
         limit: String(OPP_PAGE_SIZE),
         page: String(page),
       });
-      const res = await ghl<{ opportunities?: Array<Record<string, unknown>>; meta?: { total?: number } }>(
-        `/opportunities/search?${qs.toString()}`,
-        { method: "GET" },
-      );
+      const res = await ghl<{
+        opportunities?: Array<Record<string, unknown>>;
+        meta?: { total?: number };
+      }>(`/opportunities/search?${qs.toString()}`, { method: "GET" });
       if (!res.ok) return { ok: false, status: res.status };
       const total = res.data?.meta?.total;
       return {

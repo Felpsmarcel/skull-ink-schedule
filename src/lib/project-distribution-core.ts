@@ -51,14 +51,27 @@ export function summarizeDistribution(
   for (const [id, v] of Object.entries(alloc)) {
     if (v === null) continue;
     const s = byId.get(id);
-    if (!s) { issues.push({ kind: "unknown_session", sessionId: id }); continue; }
-    if (s.status === "cancelled") { issues.push({ kind: "cancelled_session", sessionId: id }); continue; }
-    if (!Number.isInteger(v)) { issues.push({ kind: "not_integer", sessionId: id }); continue; }
-    if (v < 0) { issues.push({ kind: "negative", sessionId: id }); continue; }
+    if (!s) {
+      issues.push({ kind: "unknown_session", sessionId: id });
+      continue;
+    }
+    if (s.status === "cancelled") {
+      issues.push({ kind: "cancelled_session", sessionId: id });
+      continue;
+    }
+    if (!Number.isInteger(v)) {
+      issues.push({ kind: "not_integer", sessionId: id });
+      continue;
+    }
+    if (v < 0) {
+      issues.push({ kind: "negative", sessionId: id });
+      continue;
+    }
     sum += v;
   }
   if (contractCents === null || contractCents <= 0) issues.push({ kind: "contract_unknown" });
-  else if (sum > contractCents) issues.push({ kind: "exceeds_contract", overCents: sum - contractCents });
+  else if (sum > contractCents)
+    issues.push({ kind: "exceeds_contract", overCents: sum - contractCents });
   return {
     contractCents,
     distributedCents: sum,
@@ -144,8 +157,16 @@ export function loadDraft(projectId: string): Allocation {
   }
 }
 export function saveDraft(projectId: string, a: Allocation) {
-  try { window.localStorage.setItem(KEY(projectId), JSON.stringify(a)); } catch { /* ignora */ }
+  try {
+    window.localStorage.setItem(KEY(projectId), JSON.stringify(a));
+  } catch {
+    /* ignora */
+  }
 }
 export function clearDraft(projectId: string) {
-  try { window.localStorage.removeItem(KEY(projectId)); } catch { /* ignora */ }
+  try {
+    window.localStorage.removeItem(KEY(projectId));
+  } catch {
+    /* ignora */
+  }
 }

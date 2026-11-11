@@ -33,7 +33,12 @@ export function ProjectFicha({
   const next = p.progress.nextStartAt;
   const active = p.sessions.filter((s) => s.status !== "cancelled");
   const trail = [
-    ...p.consultations.map((c) => ({ kind: "rdv" as const, id: c.id, startAt: c.startAt, status: c.status })),
+    ...p.consultations.map((c) => ({
+      kind: "rdv" as const,
+      id: c.id,
+      startAt: c.startAt,
+      status: c.status,
+    })),
     ...p.sessions.map((s) => ({ kind: "session" as const, ...s })),
   ].sort((a, b) => a.startAt.localeCompare(b.startAt));
 
@@ -41,7 +46,9 @@ export function ProjectFicha({
     <article className="ficha space-y-6">
       <header className="space-y-3 border-b border-border pb-5">
         <p className="text-xs font-medium tracking-wide text-muted-foreground">Ficha de projeto</p>
-        <h1 className="font-editorial text-3xl leading-tight">{p.client.name ?? "Cliente sem nome"}</h1>
+        <h1 className="font-editorial text-3xl leading-tight">
+          {p.client.name ?? "Cliente sem nome"}
+        </h1>
         <p className="text-base">
           {p.title}
           {p.bodyPart ? <span className="text-muted-foreground"> · {p.bodyPart}</span> : null}
@@ -52,7 +59,8 @@ export function ProjectFicha({
             {next ? formatProjectDate(next) : "Sem próxima sessão marcada"}
           </p>
           <p className="text-xs text-muted-foreground">
-            {p.progress.done} de {p.progress.total} sessões com conclusão registrada · horário de Bruxelas
+            {p.progress.done} de {p.progress.total} sessões com conclusão registrada · horário de
+            Bruxelas
           </p>
         </div>
         {actions}
@@ -60,26 +68,36 @@ export function ProjectFicha({
 
       {admin ? (
         <section aria-labelledby="opp-title" className="ficha-panel space-y-3">
-          <h2 id="opp-title" className="font-editorial text-lg">Oportunidade no GHL</h2>
+          <h2 id="opp-title" className="font-editorial text-lg">
+            Oportunidade no GHL
+          </h2>
           <p className="text-sm">
             Vinculada:{" "}
-            <span className="font-medium">{p.opportunityId ? "sim" : "nenhuma oportunidade vinculada"}</span>
+            <span className="font-medium">
+              {p.opportunityId ? "sim" : "nenhuma oportunidade vinculada"}
+            </span>
           </p>
           <OpportunityList opps={opps} selected={selectedOpp ?? null} onSelect={onSelectOpp} />
         </section>
       ) : null}
 
       <section aria-labelledby="trail-title" className="space-y-3">
-        <h2 id="trail-title" className="font-editorial text-lg">Trilha do projeto</h2>
+        <h2 id="trail-title" className="font-editorial text-lg">
+          Trilha do projeto
+        </h2>
         {trail.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhum agendamento vinculado. Continuidade a verificar.</p>
+          <p className="text-sm text-muted-foreground">
+            Nenhum agendamento vinculado. Continuidade a verificar.
+          </p>
         ) : (
           <ol className="ficha-trail">
             {trail.map((t) =>
               t.kind === "rdv" ? (
                 <li key={t.id} className="ficha-step ficha-step--rdv">
                   <p className="text-sm font-medium">Randevu · consulta</p>
-                  <p className="text-xs tabular-nums text-muted-foreground">{formatProjectDate(t.startAt)}</p>
+                  <p className="text-xs tabular-nums text-muted-foreground">
+                    {formatProjectDate(t.startAt)}
+                  </p>
                   <p className="text-xs text-muted-foreground">Não é sessão e não gera comissão.</p>
                 </li>
               ) : (
@@ -88,10 +106,17 @@ export function ProjectFicha({
                   className={`ficha-step ${t.status === "cancelled" ? "ficha-step--off" : ""} ${t.status === "completed" ? "ficha-step--done" : ""}`}
                 >
                   <p className="text-sm font-medium">
-                    {t.status === "cancelled" ? "Sessão cancelada" : `Sessão ${t.index} de ${t.total}`}
-                    <span className="text-muted-foreground"> · {t.artistName ?? "Tatuador a definir"}</span>
+                    {t.status === "cancelled"
+                      ? "Sessão cancelada"
+                      : `Sessão ${t.index} de ${t.total}`}
+                    <span className="text-muted-foreground">
+                      {" "}
+                      · {t.artistName ?? "Tatuador a definir"}
+                    </span>
                   </p>
-                  <p className="text-xs tabular-nums text-muted-foreground">{formatProjectDate(t.startAt)}</p>
+                  <p className="text-xs tabular-nums text-muted-foreground">
+                    {formatProjectDate(t.startAt)}
+                  </p>
                   <p className="text-xs text-muted-foreground">
                     {PROJECT_APPOINTMENT_STATUS[t.status] ?? "Status não verificado"}
                   </p>
@@ -104,7 +129,9 @@ export function ProjectFicha({
 
       {admin ? (
         <section aria-labelledby="fin-title" className="space-y-4">
-          <h2 id="fin-title" className="font-editorial text-lg">Valores do projeto</h2>
+          <h2 id="fin-title" className="font-editorial text-lg">
+            Valores do projeto
+          </h2>
           <dl className="ficha-panel grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
             <Money label="Contratado (uma vez)" v={p.finance.quotedCents} />
             <Money label="Recebimentos registrados" v={p.finance.receivedCents} />
@@ -112,7 +139,8 @@ export function ProjectFicha({
             <Money label="Saldo pelos registros" v={p.finance.balanceCents} />
           </dl>
           <p className="text-xs text-muted-foreground">
-            Recebido vem apenas das movimentações registradas; o sinal anotado não é somado de novo. "A apurar" não é zero.
+            Recebido vem apenas das movimentações registradas; o sinal anotado não é somado de novo.
+            "A apurar" não é zero.
           </p>
           <DistributionEditor
             projectId={p.id}
@@ -131,11 +159,15 @@ export function ProjectFicha({
         </section>
       ) : (
         <section aria-labelledby="fin-title" className="ficha-panel">
-          <h2 id="fin-title" className="font-editorial text-lg">Sua parte</h2>
+          <h2 id="fin-title" className="font-editorial text-lg">
+            Sua parte
+          </h2>
           <p className="mt-1 text-2xl font-semibold tabular-nums text-primary">
             {formatEurCents(p.finance.artistShareCents)}
           </p>
-          <p className="text-xs text-muted-foreground">Sobre o recebido registrado. "A apurar" não é zero.</p>
+          <p className="text-xs text-muted-foreground">
+            Sobre o recebido registrado. "A apurar" não é zero.
+          </p>
         </section>
       )}
     </article>
@@ -151,22 +183,33 @@ function OpportunityList({
   selected: string | null;
   onSelect?: (id: string | null) => void;
 }) {
-  if (!opps || opps.kind === "loading") return <p className="text-sm text-muted-foreground">Lendo oportunidades do contato…</p>;
+  if (!opps || opps.kind === "loading")
+    return <p className="text-sm text-muted-foreground">Lendo oportunidades do contato…</p>;
   if (opps.kind === "error")
-    return <p role="alert" className="text-sm text-destructive">Não foi possível ler o GHL. Nenhuma ação disponível.</p>;
+    return (
+      <p role="alert" className="text-sm text-destructive">
+        Não foi possível ler o GHL. Nenhuma ação disponível.
+      </p>
+    );
   const d = opps.data;
   return (
     <div className="space-y-2">
       {!d.pipelineConfigured ? (
-        <p className="text-sm text-warning">Funil deste tatuador: configuração pendente. Nenhuma oportunidade liberada para seleção.</p>
+        <p className="text-sm text-warning">
+          Funil deste tatuador: configuração pendente. Nenhuma oportunidade liberada para seleção.
+        </p>
       ) : null}
       {!d.complete ? (
         <p role="alert" className="text-sm text-destructive">
-          Leitura incompleta ({d.reason === "no_contact" ? "projeto sem contato GHL" : "paginação não confirmada"}). Seleção bloqueada.
+          Leitura incompleta (
+          {d.reason === "no_contact" ? "projeto sem contato GHL" : "paginação não confirmada"}).
+          Seleção bloqueada.
         </p>
       ) : null}
       {d.items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Nenhuma oportunidade encontrada para o contato.</p>
+        <p className="text-sm text-muted-foreground">
+          Nenhuma oportunidade encontrada para o contato.
+        </p>
       ) : (
         <fieldset disabled={!d.complete || !d.pipelineConfigured} className="space-y-1">
           <legend className="sr-only">Selecionar oportunidade (rascunho)</legend>
@@ -188,7 +231,8 @@ function OpportunityList({
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium">{o.name ?? "Sem nome"}</span>
                   <span className="block text-xs text-muted-foreground">
-                    {OPP_STATUS_LABEL[o.status ?? ""] ?? "Status não verificado"} · {formatEurCents(o.monetaryValueCents)}
+                    {OPP_STATUS_LABEL[o.status ?? ""] ?? "Status não verificado"} ·{" "}
+                    {formatEurCents(o.monetaryValueCents)}
                     {o.linkedHere ? " · vinculada a este projeto" : ""}
                     {o.linkedElsewhereProjectId ? " · já vinculada a outro projeto" : ""}
                     {!o.inArtistPipeline ? " · fora do funil do tatuador" : ""}
@@ -200,7 +244,9 @@ function OpportunityList({
         </fieldset>
       )}
       {selected ? (
-        <p className="text-xs text-warning">Seleção em rascunho — não vinculada nem enviada ao GHL.</p>
+        <p className="text-xs text-warning">
+          Seleção em rascunho — não vinculada nem enviada ao GHL.
+        </p>
       ) : null}
     </div>
   );

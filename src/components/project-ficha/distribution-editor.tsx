@@ -49,7 +49,10 @@ export function DistributionEditor({
     setAlloc(d);
     setText(
       Object.fromEntries(
-        Object.entries(d).map(([k, v]) => [k, v === null ? "" : (v / 100).toFixed(2).replace(".", ",")]),
+        Object.entries(d).map(([k, v]) => [
+          k,
+          v === null ? "" : (v / 100).toFixed(2).replace(".", ","),
+        ]),
       ),
     );
   }, [projectId, persist]);
@@ -78,7 +81,11 @@ export function DistributionEditor({
     const next: Allocation = {};
     active.forEach((s, i) => (next[s.id] = base + (i < rest ? 1 : 0)));
     setAlloc(next);
-    setText(Object.fromEntries(Object.entries(next).map(([k, v]) => [k, ((v ?? 0) / 100).toFixed(2).replace(".", ",")])));
+    setText(
+      Object.fromEntries(
+        Object.entries(next).map(([k, v]) => [k, ((v ?? 0) / 100).toFixed(2).replace(".", ",")]),
+      ),
+    );
     setBad({});
     if (persist) saveDraft(projectId, next);
   };
@@ -95,7 +102,9 @@ export function DistributionEditor({
   return (
     <section aria-labelledby="dist-title" className="ficha-panel space-y-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 id="dist-title" className="font-editorial text-lg">Distribuição por sessão</h3>
+        <h3 id="dist-title" className="font-editorial text-lg">
+          Distribuição por sessão
+        </h3>
         <span className="rounded-sm border border-warning/40 bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
           Rascunho {persist ? "neste aparelho" : "de demonstração"} — não salvo no sistema
         </span>
@@ -105,14 +114,20 @@ export function DistributionEditor({
         <Fig label="Contratado" v={summary.contractCents} />
         <Fig label="Distribuído" v={summary.distributedCents} />
         <Fig
-          label={summary.remainingCents !== null && summary.remainingCents < 0 ? "Excesso" : "A distribuir"}
+          label={
+            summary.remainingCents !== null && summary.remainingCents < 0
+              ? "Excesso"
+              : "A distribuir"
+          }
           v={summary.remainingCents === null ? null : Math.abs(summary.remainingCents)}
           tone={summary.remainingCents !== null && summary.remainingCents < 0 ? "bad" : undefined}
         />
       </dl>
 
       {active.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Nenhuma sessão ativa vinculada para distribuir.</p>
+        <p className="text-sm text-muted-foreground">
+          Nenhuma sessão ativa vinculada para distribuir.
+        </p>
       ) : (
         <ol className="space-y-3">
           {active.map((s) => {
@@ -129,7 +144,9 @@ export function DistributionEditor({
                   </span>
                 </label>
                 <div className="relative">
-                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">€</span>
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                    €
+                  </span>
                   <input
                     id={id}
                     inputMode="decimal"
@@ -146,12 +163,15 @@ export function DistributionEditor({
                     "Percentual a apurar"
                   ) : (
                     <>
-                      {f.recognized ? "Realizada" : "Estimativa"} · {f.pct}% → {formatEurCents(f.shareCents)}
+                      {f.recognized ? "Realizada" : "Estimativa"} · {f.pct}% →{" "}
+                      {formatEurCents(f.shareCents)}
                       {f.source === "frozen" ? " · repasse congelado" : ""}
                     </>
                   )}
                   {f?.divergentSnapshot ? (
-                    <span className="ml-1 font-medium text-warning">· gravado {s.snapshotPct}% difere da regra (não retificado)</span>
+                    <span className="ml-1 font-medium text-warning">
+                      · gravado {s.snapshotPct}% difere da regra (não retificado)
+                    </span>
                   ) : null}
                 </p>
               </li>
@@ -162,10 +182,18 @@ export function DistributionEditor({
 
       <div aria-live="polite" className="space-y-1 text-sm">
         {anyBad ? <p className="text-destructive">Valor inválido em uma sessão.</p> : null}
-        {over ? <p className="text-destructive">Distribuição excede o contrato em {formatEurCents(over.overCents)}.</p> : null}
+        {over ? (
+          <p className="text-destructive">
+            Distribuição excede o contrato em {formatEurCents(over.overCents)}.
+          </p>
+        ) : null}
         {summary.issues
           .filter((i) => i.kind !== "exceeds_contract")
-          .map((i, n) => <p key={n} className="text-destructive">{ISSUE_TEXT[i.kind]}</p>)}
+          .map((i, n) => (
+            <p key={n} className="text-destructive">
+              {ISSUE_TEXT[i.kind]}
+            </p>
+          ))}
         {summary.valid && !anyBad && summary.remainingCents === 0 ? (
           <p className="text-success">Contrato distribuído integralmente.</p>
         ) : null}
@@ -180,7 +208,12 @@ export function DistributionEditor({
       </p>
 
       <div className="flex flex-wrap gap-2">
-        <Button variant="outline" className="min-h-11" onClick={splitEven} disabled={!contractCents || active.length === 0}>
+        <Button
+          variant="outline"
+          className="min-h-11"
+          onClick={splitEven}
+          disabled={!contractCents || active.length === 0}
+        >
           Dividir igualmente
         </Button>
         <Button variant="ghost" className="min-h-11" onClick={reset}>
@@ -195,7 +228,9 @@ function Fig({ label, v, tone }: { label: string; v: number | null; tone?: "bad"
   return (
     <div className="min-w-0">
       <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className={`tabular-nums font-medium ${tone === "bad" ? "text-destructive" : ""}`}>{formatEurCents(v)}</dd>
+      <dd className={`tabular-nums font-medium ${tone === "bad" ? "text-destructive" : ""}`}>
+        {formatEurCents(v)}
+      </dd>
     </div>
   );
 }

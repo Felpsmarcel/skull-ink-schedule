@@ -22,7 +22,10 @@ function PreviewPage() {
   const [sel, setSel] = useState<string | null>(null);
   return (
     <main className="mx-auto max-w-3xl space-y-4 px-4 pb-16 pt-4">
-      <p role="note" className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning">
+      <p
+        role="note"
+        className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning"
+      >
         Dados fictícios de demonstração. Nada aqui lê ou grava dados reais.
       </p>
       <ProjectFicha

@@ -702,7 +702,11 @@ export const getProjectDetail = createServerFn({ method: "POST" })
         .is("project_id", null)
         .order("start_at", { ascending: true })
         .limit(20);
-      consultations = (cons ?? []).map((c) => ({ id: c.id, startAt: c.start_at, status: c.status }));
+      consultations = (cons ?? []).map((c) => ({
+        id: c.id,
+        startAt: c.start_at,
+        status: c.status,
+      }));
     }
     const activeIds = all.filter((s) => s.status !== "cancelled").map((s) => s.id);
     const rec = _received(
@@ -730,7 +734,9 @@ export const getProjectDetail = createServerFn({ method: "POST" })
         total: activeIds.length,
       })),
       consultations,
-      opportunityId: adminView ? ((r as { ghl_opportunity_id?: string | null }).ghl_opportunity_id ?? null) : null,
+      opportunityId: adminView
+        ? ((r as { ghl_opportunity_id?: string | null }).ghl_opportunity_id ?? null)
+        : null,
       progress: _progress(all, Date.now()),
       finance: {
         quotedCents: admin ? _toCents(r.quoted_total_eur) : null,
@@ -788,7 +794,10 @@ export const getProjectOpportunities = createServerFn({ method: "POST" })
     const res = await listContactOpportunities(r.ghl_contact_id);
     const ids = res.items.map((o) => o.id);
     const { data: links } = ids.length
-      ? await supabase.from("tattoo_projects").select("id, ghl_opportunity_id").in("ghl_opportunity_id", ids)
+      ? await supabase
+          .from("tattoo_projects")
+          .select("id, ghl_opportunity_id")
+          .in("ghl_opportunity_id", ids)
       : { data: [] as { id: string; ghl_opportunity_id: string | null }[] };
     const linkMap = new Map((links ?? []).map((l) => [l.ghl_opportunity_id, l.id]));
     return {

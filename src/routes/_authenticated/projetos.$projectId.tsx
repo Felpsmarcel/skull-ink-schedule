@@ -98,14 +98,20 @@ function ProjectPage() {
         selectedOpp={selectedOpp}
         onSelectOpp={setSelectedOpp}
         actions={
-          <Button className="min-h-11 w-full sm:w-auto" onClick={scheduleNext} disabled={!p.client.ghlContactId}>
+          <Button
+            className="min-h-11 w-full sm:w-auto"
+            onClick={scheduleNext}
+            disabled={!p.client.ghlContactId}
+          >
             <CalendarPlus className="mr-2 h-4 w-4" /> Agendar próxima sessão
           </Button>
         }
       />
       {admin ? (
         <details className="ficha-panel">
-          <summary className="min-h-11 cursor-pointer py-2 text-sm font-medium">Conferência comercial detalhada</summary>
+          <summary className="min-h-11 cursor-pointer py-2 text-sm font-medium">
+            Conferência comercial detalhada
+          </summary>
           <ProjectCommercialSummary projectId={p.id} />
         </details>
       ) : null}
