@@ -68,7 +68,12 @@ export const lookupProjectContext = createServerFn({ method: "POST" })
 
     try {
       if (data.ghlContactId) {
-        contact = { id: data.ghlContactId, name: data.name ?? null, phone: data.phone ?? null, email: data.email ?? null };
+        contact = {
+          id: data.ghlContactId,
+          name: data.name ?? null,
+          phone: data.phone ?? null,
+          email: data.email ?? null,
+        };
       } else {
         contact = await findGhlContact({ phone: data.phone, email: data.email, name: data.name });
       }
@@ -113,7 +118,9 @@ export const lookupProjectContext = createServerFn({ method: "POST" })
         artistId: r.artist_id,
       }));
 
-      const byOpp = new Map(projects.filter((p) => p.ghlOpportunityId).map((p) => [p.ghlOpportunityId!, p.id]));
+      const byOpp = new Map(
+        projects.filter((p) => p.ghlOpportunityId).map((p) => [p.ghlOpportunityId!, p.id]),
+      );
       openOpportunities = openOpportunities.map((o) => ({
         ...o,
         localProjectId: byOpp.get(o.id) ?? null,
@@ -288,7 +295,11 @@ export const getProjectFinance = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => z.object({ projectId: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }): Promise<ProjectFinance> => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
+    // Valores brutos: só administrador. Identidade verificada no servidor antes de
+    // qualquer leitura de projeto/movimentações; artista não recebe bruto.
+    const scope = await resolveProjectScope(supabase as never, userId);
+    if (scope.role !== "admin") throw new Error("Acesso negado");
     const { data: proj, error } = await supabase
       .from("tattoo_projects")
       .select("id, title, quoted_total_eur, deposit_eur")
@@ -415,9 +426,7 @@ export interface AppointmentLinkInfo {
 
 export const getAppointmentLinkInfo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) =>
-    z.object({ ghlEventId: z.string().min(3) }).parse(data),
-  )
+  .inputValidator((data: unknown) => z.object({ ghlEventId: z.string().min(3) }).parse(data))
   .handler(async ({ data, context }): Promise<AppointmentLinkInfo> => {
     const { supabase } = context;
     const { data: appt, error } = await supabase
@@ -460,7 +469,6 @@ export const getAppointmentLinkInfo = createServerFn({ method: "POST" })
   });
 
 /* --------------------- 6. Projetos do Tatuador --------------------- */
-
 
 type ProjScope = { role: "admin" } | { role: "artist"; artistId: string };
 
@@ -533,27 +541,38 @@ export const listArtistProjects = createServerFn({ method: "POST" })
     const ids = (rows ?? []).map((r) => r.id);
     const [appts, movs] = ids.length
       ? await Promise.all([
-          supabase.from("appointments").select("id, project_id, start_at, status").in("project_id", ids),
+          supabase
+            .from("appointments")
+            .select("id, project_id, start_at, status")
+            .in("project_id", ids),
           supabase
             .from("movimentacoes")
             .select("project_id, total, tipo_movimento")
             .in("project_id", ids)
             .is("deleted_at", null),
         ])
-      : [{ data: [], error: null }, { data: [], error: null }];
+      : [
+          { data: [], error: null },
+          { data: [], error: null },
+        ];
     if (appts.error || movs.error) throw new Error("Não foi possível carregar as sessões");
 
     const now = Date.now();
     const needle = data.q?.trim().toLowerCase() ?? "";
     const items: ProjectListItem[] = (rows ?? [])
       .map((r) => {
-        const rel = r as unknown as { contacts: { name: string | null } | null; artists: { name: string } | null };
+        const rel = r as unknown as {
+          contacts: { name: string | null } | null;
+          artists: { name: string } | null;
+        };
         const sess = (appts.data ?? [])
           .filter((a) => a.project_id === r.id)
           .map((a) => ({ id: a.id, startAt: a.start_at, status: a.status }));
         const p = _progress(sess, now);
         const rec = _received(
-          (movs.data ?? []).filter((m) => m.project_id === r.id).map((m) => ({ total: m.total, tipo: m.tipo_movimento })),
+          (movs.data ?? [])
+            .filter((m) => m.project_id === r.id)
+            .map((m) => ({ total: m.total, tipo: m.tipo_movimento })),
         );
         return {
           id: r.id,
@@ -588,7 +607,12 @@ export interface ProjectDetail {
   bodyPart: string | null;
   artistId: string | null;
   artistName: string | null;
-  client: { name: string | null; phone: string | null; email: string | null; ghlContactId: string | null };
+  client: {
+    name: string | null;
+    phone: string | null;
+    email: string | null;
+    ghlContactId: string | null;
+  };
   sessions: { id: string; startAt: string; status: string; index: number; total: number }[];
   progress: { total: number; done: number; nextStartAt: string | null };
   finance: {
@@ -622,16 +646,26 @@ export const getProjectDetail = createServerFn({ method: "POST" })
         .select("id, start_at, status")
         .eq("project_id", r.id)
         .order("start_at", { ascending: true }),
-      supabase.from("movimentacoes").select("total, tipo_movimento").eq("project_id", r.id).is("deleted_at", null),
+      supabase
+        .from("movimentacoes")
+        .select("total, tipo_movimento")
+        .eq("project_id", r.id)
+        .is("deleted_at", null),
     ]);
     if (appts.error || movs.error) throw new Error("Não foi possível carregar as sessões");
     const rel = r as unknown as {
       contacts: { name: string | null; phone: string | null; email: string | null } | null;
       artists: { name: string } | null;
     };
-    const all = (appts.data ?? []).map((a) => ({ id: a.id, startAt: a.start_at, status: a.status }));
+    const all = (appts.data ?? []).map((a) => ({
+      id: a.id,
+      startAt: a.start_at,
+      status: a.status,
+    }));
     const activeIds = all.filter((s) => s.status !== "cancelled").map((s) => s.id);
-    const rec = _received((movs.data ?? []).map((m) => ({ total: m.total, tipo: m.tipo_movimento })));
+    const rec = _received(
+      (movs.data ?? []).map((m) => ({ total: m.total, tipo: m.tipo_movimento })),
+    );
     const admin = scope.role === "admin";
     return {
       role: scope.role,
