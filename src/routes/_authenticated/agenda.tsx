@@ -7,7 +7,6 @@ import {
   Calendar as CalendarIcon,
   AlertTriangle,
   Bug,
-  MoreHorizontal,
 } from "lucide-react";
 import "@/i18n";
 
@@ -39,7 +38,6 @@ import {
 } from "@/lib/agenda-grid";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Tooltip,
   TooltipContent,
@@ -301,7 +299,7 @@ function AgendaPage() {
           <div
             role="tablist"
             aria-label="Visualização da agenda"
-            className="grid grid-cols-3 rounded-lg border border-border bg-card p-1 sm:col-span-2 sm:justify-self-end sm:w-auto"
+            className="grid grid-cols-3 rounded-lg border border-border bg-card p-1 sm:col-span-2 sm:justify-self-start lg:col-span-1 lg:justify-self-end"
           >
             {(["day", "week", "month"] as const).map((v) => (
               <button
