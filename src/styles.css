@@ -267,3 +267,91 @@ html.agenda-no-pull-refresh body {
   right: 0.5rem;
   border-radius: 0.375rem;
 }
+
+/*
+ * Pilot: GF Studio OS "Papel & Petróleo" (light operational).
+ * Active only while <html> carries .gf-ops-light (Agenda + Login routes);
+ * lives on <html> so portaled sheets, popovers and tooltips inherit it.
+ */
+html.gf-ops-light {
+  color-scheme: light;
+  --font-display: "Rubik", system-ui, sans-serif;
+
+  --background: oklch(0.973 0.005 95);          /* #F7F6F2 papel */
+  --foreground: oklch(0.269 0.016 224);         /* #1E282C grafite-azulado */
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.269 0.016 224);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.269 0.016 224);
+  --primary: oklch(0.447 0.066 191);            /* #1C605D petróleo */
+  --primary-foreground: oklch(0.99 0.004 95);
+  --secondary: oklch(0.949 0.006 95);
+  --secondary-foreground: oklch(0.269 0.016 224);
+  --muted: oklch(0.945 0.006 95);
+  --muted-foreground: oklch(0.503 0.016 227);   /* #5B666B, 5.9:1 on white */
+  --accent: oklch(0.947 0.014 186);             /* petróleo pálido (seleção) */
+  --accent-foreground: oklch(0.38 0.06 191);
+  --destructive: oklch(0.544 0.144 30);         /* coral sóbrio */
+  --destructive-foreground: oklch(0.99 0.004 95);
+  --border: oklch(0.89 0.009 93);               /* cinza-pedra */
+  --input: oklch(0.84 0.011 92);
+  --ring: oklch(0.447 0.066 191);
+  --success: oklch(0.521 0.101 155);
+  --success-foreground: oklch(0.99 0.004 95);
+  --warning: oklch(0.531 0.119 65);             /* âmbar, 5.4:1 on white */
+  --warning-foreground: oklch(0.99 0.004 95);
+  --agenda-warning: oklch(0.531 0.119 65);
+  --info: oklch(0.471 0.096 250);
+  --info-foreground: oklch(0.99 0.004 95);
+  --brand-gold: oklch(0.655 0.104 82);          /* traço de marca, nunca CTA */
+  --chart-1: oklch(0.447 0.066 191);
+  --chart-2: oklch(0.655 0.104 82);
+  --chart-3: oklch(0.521 0.101 155);
+  --chart-4: oklch(0.471 0.096 250);
+  --chart-5: oklch(0.544 0.144 30);
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.269 0.016 224);
+  --sidebar-primary: oklch(0.447 0.066 191);
+  --sidebar-primary-foreground: oklch(0.99 0.004 95);
+  --sidebar-accent: oklch(0.947 0.014 186);
+  --sidebar-accent-foreground: oklch(0.38 0.06 191);
+  --sidebar-border: oklch(0.89 0.009 93);
+  --sidebar-ring: oklch(0.447 0.066 191);
+}
+html.gf-ops-light body {
+  background-image: none;
+}
+html.gf-ops-light ::selection {
+  background: color-mix(in oklab, var(--primary) 18%, transparent);
+}
+/* Dialog/sheet scrim: soft graphite instead of near-black on paper. */
+html.gf-ops-light .bg-black\/80 {
+  background-color: color-mix(in oklab, var(--foreground) 32%, transparent);
+}
+/* Elevation on paper: hairline + soft shadow, no glow. */
+html.gf-ops-light [data-radix-popper-content-wrapper] > *,
+html.gf-ops-light .agenda-sheet {
+  box-shadow: 0 12px 32px -12px color-mix(in oklab, var(--foreground) 22%, transparent);
+}
+html.gf-ops-light .agenda-session {
+  box-shadow: 0 1px 2px color-mix(in oklab, var(--foreground) 6%, transparent);
+}
+html.gf-ops-light .agenda-session[data-appointment-status="confirmed"] {
+  background-color: color-mix(in oklab, var(--primary) 6%, var(--card));
+}
+html.gf-ops-light .agenda-session[data-appointment-status="showed"] {
+  background-color: color-mix(in oklab, var(--success) 7%, var(--card));
+}
+html.gf-ops-light .agenda-session[data-appointment-status="cancelled"] {
+  background-color: var(--muted);
+}
+
+/* The official mark is dark ink on transparency: invert only on dark surfaces. */
+.gf-logo-ink {
+  filter: brightness(0) invert(1);
+  opacity: 0.9;
+}
+html.gf-ops-light .gf-logo-ink {
+  filter: none;
+  opacity: 1;
+}

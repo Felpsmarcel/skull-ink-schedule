@@ -52,17 +52,23 @@ function ResetPage() {
       {sent ? (
         <div className="space-y-5 text-center">
           <p className="text-sm leading-6 text-muted-foreground">
-            Se este email existe, enviamos um link para redefinir a senha. Verifique sua caixa
-            de entrada.
+            Se este email existe, enviamos um link para redefinir a senha. Verifique sua caixa de
+            entrada.
           </p>
-          <Link to="/auth" search={{ redirect: undefined }} className="text-sm font-semibold text-primary underline-offset-4 hover:underline">
+          <Link
+            to="/auth"
+            search={{ redirect: undefined }}
+            className="text-sm font-semibold text-primary underline-offset-4 hover:underline"
+          >
             Voltar para o login
           </Link>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="space-y-2">
-            <Label htmlFor="email" className="text-xs uppercase text-muted-foreground">Email</Label>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="email" className="text-sm font-medium text-foreground">
+              Email
+            </Label>
             <Input
               id="email"
               type="email"
@@ -72,13 +78,28 @@ function ResetPage() {
               required
             />
           </div>
-          {error ? <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{error}</p> : null}
-          <Button type="submit" className="w-full" disabled={loading}>
+          {error ? (
+            <p
+              role="alert"
+              className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
+            >
+              {error}
+            </p>
+          ) : null}
+          <Button
+            type="submit"
+            className="h-12 w-full text-base font-semibold shadow-none"
+            disabled={loading}
+          >
             {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Enviar link
           </Button>
           <div className="text-center">
-            <Link to="/auth" search={{ redirect: undefined }} className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
+            <Link
+              to="/auth"
+              search={{ redirect: undefined }}
+              className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+            >
               Voltar
             </Link>
           </div>

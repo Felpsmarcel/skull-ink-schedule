@@ -11,16 +11,27 @@ export function AuthFrame({
   children: ReactNode;
 }) {
   return (
-    <main className="relative grid min-h-dvh place-items-center overflow-hidden bg-background px-4 py-10 sm:px-6">
-      <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-primary/60" />
-      <section className="relative w-full max-w-md overflow-hidden rounded-lg border border-border bg-card shadow-[0_24px_80px_color-mix(in_oklab,var(--background)_75%,transparent)]">
-        <div className="border-b border-border bg-accent/40 px-6 py-7 text-center sm:px-8">
-          <img src={gfLockup} alt="GF Tattoo Studio" className="mx-auto h-20 w-auto object-contain brightness-0 invert opacity-90" />
-          <div className="mx-auto mt-5 h-px w-12 bg-primary" />
-          <h1 className="mt-5 font-display text-xl font-bold text-foreground">{title}</h1>
-          <p className="mx-auto mt-2 max-w-xs text-sm leading-6 text-muted-foreground">{description}</p>
+    <main className="relative grid min-h-dvh place-items-start bg-background px-4 pb-8 pt-[max(2rem,env(safe-area-inset-top))] sm:place-items-center sm:px-6 sm:py-10">
+      <section className="relative w-full max-w-sm overflow-hidden rounded-xl border border-border bg-card shadow-[0_16px_40px_-20px_color-mix(in_oklab,var(--foreground)_25%,transparent)] sm:max-w-md">
+        <div aria-hidden className="h-1 w-full bg-primary" />
+        <div className="px-6 pb-2 pt-6 text-center sm:px-8 sm:pt-8">
+          <img
+            src={gfLockup}
+            alt="GF Tattoo Studio"
+            className="gf-logo-ink mx-auto h-14 w-auto object-contain sm:h-16"
+          />
+          <div
+            aria-hidden
+            className="mx-auto mt-4 h-px w-10 bg-[var(--brand-gold,var(--primary))]"
+          />
+          <h1 className="mt-4 font-editorial text-[1.75rem] font-semibold leading-tight text-foreground">
+            {title}
+          </h1>
+          <p className="mx-auto mt-1.5 max-w-xs text-sm leading-6 text-muted-foreground">
+            {description}
+          </p>
         </div>
-        <div className="px-6 py-6 sm:px-8 sm:py-8">{children}</div>
+        <div className="px-6 pb-6 pt-4 sm:px-8 sm:pb-8">{children}</div>
       </section>
     </main>
   );

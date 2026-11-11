@@ -5,6 +5,7 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
@@ -15,6 +16,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { supabase } from "@/integrations/supabase/client";
 import { ensureI18n } from "@/i18n";
 import { Toaster } from "@/components/ui/sonner";
+import { OPS_LIGHT_BOOT_SCRIPT, OPS_LIGHT_CLASS, isOpsLightPath } from "@/lib/ops-light-theme";
 
 ensureI18n();
 
@@ -82,7 +84,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" },
+      {
+        name: "viewport",
+        content: "width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover",
+      },
       { name: "theme-color", content: "#0A0A0A" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
@@ -97,8 +102,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:card", content: "summary" },
       { name: "twitter:title", content: "GF Tattoo Studio" },
       { name: "twitter:description", content: "Estúdio de tatuagem — agendamento online" },
-      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/8193d83e-bff6-48e2-b7fe-113de7165e30" },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/8193d83e-bff6-48e2-b7fe-113de7165e30" },
+      {
+        property: "og:image",
+        content:
+          "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/8193d83e-bff6-48e2-b7fe-113de7165e30",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/8193d83e-bff6-48e2-b7fe-113de7165e30",
+      },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
@@ -110,7 +123,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Rubik:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap",
       },
     ],
   }),
@@ -122,8 +135,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="pt">
+    <html lang="pt" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: OPS_LIGHT_BOOT_SCRIPT }} />
         <HeadContent />
       </head>
       <body className="min-h-dvh overflow-x-hidden bg-background font-sans text-foreground antialiased">
@@ -137,6 +151,13 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const opsLight = isOpsLightPath(pathname);
+
+  // Light pilot is scoped on <html> so Radix portals inherit it; removed on other routes.
+  useEffect(() => {
+    document.documentElement.classList.toggle(OPS_LIGHT_CLASS, opsLight);
+  }, [opsLight]);
 
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
@@ -154,7 +175,7 @@ function RootComponent() {
         <Outlet />
       </div>
       <Toaster
-        theme="dark"
+        theme={opsLight ? "light" : "dark"}
         position="top-center"
         offset="calc(env(safe-area-inset-top) + 0.5rem)"
         mobileOffset="calc(env(safe-area-inset-top) + 0.5rem)"
