@@ -155,9 +155,10 @@ function RootComponent() {
   const opsLight = isOpsLightPath(pathname);
 
   // Application identity lives on <html> so Radix portals inherit the route’s theme.
+  // Reapply on each pathname change, including navigation between two light routes.
   useEffect(() => {
     document.documentElement.classList.toggle(OPS_LIGHT_CLASS, opsLight);
-  }, [opsLight]);
+  }, [opsLight, pathname]);
 
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
