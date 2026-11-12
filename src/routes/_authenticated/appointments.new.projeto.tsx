@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { AlertTriangle, Building2, Check, Loader2, Plus, User } from "lucide-react";
+import { AlertTriangle, Building2, Loader2, Plus, User } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,7 +13,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
+import { ErrorState } from "@/components/ui/error-state";
+import {
+  WizardStepMain,
+  WizardSection,
+  WizardOptionCard as OptionCard,
+} from "@/components/appointment-wizard/wizard-layout";
 import { WizardFooter } from "@/components/appointment-wizard/wizard-footer";
 import { useAppointmentDraft } from "@/stores/appointment-draft";
 import { lookupProjectContext } from "@/lib/projects.functions";
@@ -61,7 +66,7 @@ function ProjetoStep() {
   const p = draft.project;
   const chosen =
     p.decision === "reuse"
-      ? p.reuseProjectId ?? p.reuseOpportunityId ?? null
+      ? (p.reuseProjectId ?? p.reuseOpportunityId ?? null)
       : p.decision === "new"
         ? "new"
         : null;
@@ -89,11 +94,11 @@ function ProjetoStep() {
   if (!contact) {
     return (
       <>
-        <main className="flex-1 p-4">
+        <WizardStepMain title="Escolha um projeto">
           <p className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
             Escolha primeiro o cliente para vermos o contacto e as oportunidades no CRM.
           </p>
-        </main>
+        </WizardStepMain>
         <WizardFooter
           primary="Escolher cliente"
           onPrimary={() => navigate({ to: "/appointments/new/cliente" })}
@@ -104,21 +109,29 @@ function ProjetoStep() {
 
   return (
     <>
-      <main className="flex-1 space-y-4 p-4 pb-0">
-        <section className="rounded-lg border border-border bg-card p-3 text-sm">
-          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Contacto no CRM
-          </h2>
+      <WizardStepMain
+        title="Projeto e oportunidade"
+        description="Associe o agendamento ao projeto do cliente e à oportunidade correspondente."
+      >
+        <WizardSection className="text-sm">
+          <h3 className="mb-3 text-sm font-semibold text-foreground">Contacto no CRM</h3>
           {ctxQ.isLoading ? (
             <p className="flex items-center gap-2 text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" /> A procurar no CRM…
             </p>
+          ) : ctxQ.error ? (
+            <ErrorState
+              description="Não foi possível verificar o contacto e os projetos."
+              onRetry={() => {
+                void ctxQ.refetch();
+              }}
+            />
           ) : ctx?.contact ? (
             <div className="flex items-center gap-2">
               <User className="h-4 w-4 text-muted-foreground" />
               <div className="min-w-0">
-                <div className="truncate font-medium">{ctx.contact.name ?? "Sem nome"}</div>
-                <div className="truncate text-xs text-muted-foreground">
+                <div className="break-words font-medium">{ctx.contact.name ?? "Sem nome"}</div>
+                <div className="break-all text-xs text-muted-foreground">
                   {ctx.contact.phone ?? ctx.contact.email ?? ctx.contact.id}
                 </div>
               </div>
@@ -128,22 +141,20 @@ function ProjetoStep() {
               Contacto novo — será usado o contacto selecionado no passo anterior.
             </p>
           )}
-          <p className="mt-2 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
             <Building2 className="h-3.5 w-3.5" /> Pipeline: GF Tattoo — Jornada Comercial
           </p>
           {ctx?.warning ? (
-            <p className="mt-2 flex items-start gap-1.5 text-[11px] text-amber-500">
+            <p className="mt-3 flex items-start gap-2 rounded-lg bg-muted/50 p-3 text-xs leading-5 text-foreground">
               <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
               {ctx.warning}
             </p>
           ) : null}
-        </section>
+        </WizardSection>
 
         {(ctx?.projects.length ?? 0) > 0 ? (
-          <section className="rounded-lg border border-border bg-card p-3">
-            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Projetos deste cliente
-            </h2>
+          <WizardSection>
+            <h3 className="mb-3 text-sm font-semibold text-foreground">Projetos deste cliente</h3>
             <ul className="space-y-2">
               {ctx!.projects.map((pr) => (
                 <li key={pr.id}>
@@ -159,21 +170,25 @@ function ProjetoStep() {
                 </li>
               ))}
             </ul>
-          </section>
+          </WizardSection>
         ) : null}
 
         {(ctx?.openOpportunities.length ?? 0) > 0 ? (
-          <section className="rounded-lg border border-border bg-card p-3">
-            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <WizardSection>
+            <h3 className="mb-3 text-sm font-semibold text-foreground">
               Oportunidades abertas no pipeline
-            </h2>
+            </h3>
             <ul className="space-y-2">
               {ctx!.openOpportunities.map((o) => (
                 <li key={o.id}>
                   <OptionCard
-                    active={chosen === o.id || (o.localProjectId != null && chosen === o.localProjectId)}
+                    active={
+                      chosen === o.id || (o.localProjectId != null && chosen === o.localProjectId)
+                    }
                     onClick={() =>
-                      o.localProjectId ? chooseProject(o.localProjectId, o.id) : chooseOpportunity(o.id)
+                      o.localProjectId
+                        ? chooseProject(o.localProjectId, o.id)
+                        : chooseOpportunity(o.id)
                     }
                     title={o.name ?? o.id}
                     subtitle={`Usar oportunidade existente${o.localProjectId ? " (projeto já vinculado)" : ""}`}
@@ -182,30 +197,30 @@ function ProjetoStep() {
                 </li>
               ))}
             </ul>
-          </section>
+          </WizardSection>
         ) : null}
 
-        <section className="rounded-lg border border-border bg-card p-3">
-          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Novo projeto
-          </h2>
+        <WizardSection>
+          <h3 className="mb-3 text-sm font-semibold text-foreground">Novo projeto</h3>
           <OptionCard
             active={chosen === "new"}
             onClick={chooseNew}
             icon={<Plus className="h-4 w-4" />}
             title="Criar novo projeto e oportunidade"
-            subtitle="Só será criada uma nova oportunidade no pipeline após esta confirmação."
+            subtitle="A criação acontece ao finalizar o agendamento, depois da revisão."
           />
 
           {chosen === "new" ? (
-            <div className="mt-3 space-y-3">
+            <div className="mt-5 space-y-4 border-t border-border pt-5">
               <div>
-                <Label className="text-[11px] text-muted-foreground">Tipo de projeto</Label>
+                <Label htmlFor="wizard-project-type" className="text-sm text-muted-foreground">
+                  Tipo de projeto
+                </Label>
                 <Select
                   value={p.projectType}
                   onValueChange={(v) => draft.setProject({ projectType: v as ProjectType })}
                 >
-                  <SelectTrigger className="mt-1 h-10 text-sm">
+                  <SelectTrigger id="wizard-project-type" className="mt-2 h-12 rounded-xl text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -218,7 +233,7 @@ function ProjetoStep() {
                 </Select>
               </div>
               <div>
-                <Label htmlFor="bodyPart" className="text-[11px] text-muted-foreground">
+                <Label htmlFor="bodyPart" className="text-xs text-muted-foreground">
                   Zona do corpo
                 </Label>
                 <Input
@@ -226,11 +241,11 @@ function ProjetoStep() {
                   value={p.bodyPart}
                   onChange={(e) => draft.setProject({ bodyPart: e.target.value.slice(0, 120) })}
                   placeholder="Ex.: antebraço direito"
-                  className="mt-1 h-10 text-sm"
+                  className="mt-2 h-12 rounded-xl text-sm"
                 />
               </div>
               <div>
-                <Label htmlFor="projDesc" className="text-[11px] text-muted-foreground">
+                <Label htmlFor="projDesc" className="text-xs text-muted-foreground">
                   Descrição do projeto
                 </Label>
                 <Textarea
@@ -239,13 +254,13 @@ function ProjetoStep() {
                   value={p.description}
                   onChange={(e) => draft.setProject({ description: e.target.value.slice(0, 2000) })}
                   placeholder="Ideia, referências, número de sessões previstas…"
-                  className="mt-1"
+                  className="mt-2 rounded-xl"
                 />
               </div>
             </div>
           ) : null}
-        </section>
-      </main>
+        </WizardSection>
+      </WizardStepMain>
 
       <WizardFooter
         showBack
@@ -254,43 +269,5 @@ function ProjetoStep() {
         onPrimary={() => navigate({ to: "/appointments/new/agenda" })}
       />
     </>
-  );
-}
-
-function OptionCard({
-  active,
-  onClick,
-  title,
-  subtitle,
-  right,
-  icon,
-}: {
-  active: boolean;
-  onClick: () => void;
-  title: string;
-  subtitle?: string;
-  right?: string | undefined;
-  icon?: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "flex w-full items-center gap-2 rounded-lg border p-3 text-left",
-        active ? "border-primary bg-primary/10" : "border-border bg-background hover:bg-muted",
-      )}
-    >
-      <span className="text-muted-foreground">
-        {active ? <Check className="h-4 w-4 text-primary" /> : (icon ?? <Building2 className="h-4 w-4" />)}
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-medium">{title}</span>
-        {subtitle ? (
-          <span className="block truncate text-[11px] text-muted-foreground">{subtitle}</span>
-        ) : null}
-      </span>
-      {right ? <span className="shrink-0 text-sm font-semibold">{right}</span> : null}
-    </button>
   );
 }

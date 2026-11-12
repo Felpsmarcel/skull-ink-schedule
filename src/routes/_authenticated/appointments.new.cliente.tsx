@@ -18,6 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LOCATION_ID } from "@/config/staff";
 import { createContact, sanitizePhone, searchContacts, type GhlContact } from "@/lib/ghl";
 import { useAppointmentDraft } from "@/stores/appointment-draft";
+import { WizardStepMain, WizardSection } from "@/components/appointment-wizard/wizard-layout";
 import { WizardFooter } from "@/components/appointment-wizard/wizard-footer";
 
 export const Route = createFileRoute("/_authenticated/appointments/new/cliente")({
@@ -38,21 +39,18 @@ function ClienteStep() {
 
   return (
     <>
-      <main className="flex-1 space-y-4 p-4 pb-0">
-        <section className="rounded-lg border border-border bg-card p-3">
-          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            {t("appt.client")}
-          </h2>
+      <WizardStepMain
+        title="Quem vamos receber?"
+        description="Encontre um cliente existente ou cadastre um novo contacto para começar."
+      >
+        <WizardSection title={t("appt.client")}>
           {draft.contact ? (
-            <SelectedContactCard
-              contact={draft.contact}
-              onClear={() => draft.setContact(null)}
-            />
+            <SelectedContactCard contact={draft.contact} onClear={() => draft.setContact(null)} />
           ) : (
             <ContactPickerInline onSelect={(c) => draft.setContact(c)} />
           )}
-        </section>
-      </main>
+        </WizardSection>
+      </WizardStepMain>
       <WizardFooter
         primary={canContinue ? t("appt.wizard.next") : t("appt.cta.selectClient")}
         primaryDisabled={!canContinue}
@@ -62,31 +60,24 @@ function ClienteStep() {
   );
 }
 
-function SelectedContactCard({
-  contact,
-  onClear,
-}: {
-  contact: GhlContact;
-  onClear: () => void;
-}) {
+function SelectedContactCard({ contact, onClear }: { contact: GhlContact; onClear: () => void }) {
   return (
-    <div className="flex items-center gap-3 rounded border border-border bg-background p-2">
+    <div className="flex items-center gap-3 rounded-xl border border-primary/25 bg-primary/5 p-4">
       <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-muted text-sm font-semibold text-foreground">
         {(contact.contactName ?? contact.firstName ?? "?").slice(0, 1).toUpperCase()}
       </div>
       <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-medium">
-          {contact.contactName ??
-            [contact.firstName, contact.lastName].filter(Boolean).join(" ")}
+        <div className="break-words text-sm font-semibold">
+          {contact.contactName ?? [contact.firstName, contact.lastName].filter(Boolean).join(" ")}
         </div>
-        <div className="truncate text-xs text-muted-foreground">
+        <div className="break-all text-xs text-muted-foreground">
           {contact.phone ?? contact.email ?? ""}
         </div>
       </div>
       <button
         type="button"
         onClick={onClear}
-        className="grid h-11 w-11 shrink-0 place-items-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+        className="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         aria-label="Trocar cliente"
       >
         <X className="h-4 w-4" />
@@ -99,17 +90,19 @@ function ContactPickerInline({ onSelect }: { onSelect: (c: GhlContact) => void }
   const { t } = useTranslation();
   return (
     <Tabs defaultValue="search" className="w-full">
-      <TabsList className="grid w-full grid-cols-2">
-        <TabsTrigger value="search">
+      <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-xl p-1">
+        <TabsTrigger value="search" className="min-h-11 rounded-lg">
           <UserIcon className="mr-1.5 h-3.5 w-3.5" />
           {t("appt.searchTab")}
         </TabsTrigger>
-        <TabsTrigger value="create">{t("appt.createTab")}</TabsTrigger>
+        <TabsTrigger value="create" className="min-h-11 rounded-lg">
+          {t("appt.createTab")}
+        </TabsTrigger>
       </TabsList>
-      <TabsContent value="search" className="mt-3">
+      <TabsContent value="search" className="mt-4">
         <SearchContactsPanel onPick={onSelect} />
       </TabsContent>
-      <TabsContent value="create" className="mt-3">
+      <TabsContent value="create" className="mt-4">
         <CreateContactPanel onCreated={onSelect} />
       </TabsContent>
     </Tabs>
@@ -131,14 +124,15 @@ function SearchContactsPanel({ onPick }: { onPick: (c: GhlContact) => void }) {
   });
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <div className="relative">
         <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder={t("appt.searchPlaceholder")}
-          className="pl-8"
+          aria-label={t("appt.searchPlaceholder")}
+          className="h-12 rounded-xl pl-9"
         />
       </div>
       {query.isLoading ? (
@@ -158,22 +152,22 @@ function SearchContactsPanel({ onPick }: { onPick: (c: GhlContact) => void }) {
       ) : (query.data ?? []).length === 0 ? (
         <p className="p-3 text-xs text-muted-foreground">{t("appt.noContacts")}</p>
       ) : (
-        <ul className="divide-y divide-border rounded border border-border">
+        <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border">
           {(query.data ?? []).map((c) => (
             <li key={c.id}>
               <button
                 type="button"
                 onClick={() => onPick(c)}
-                className="flex min-h-14 w-full items-center gap-3 px-2 py-2.5 text-left hover:bg-muted"
+                className="flex min-h-18 w-full items-center gap-3 px-4 py-3 text-left hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
               >
-                <div className="grid h-9 w-9 place-items-center rounded-full bg-primary/20 text-sm font-semibold text-primary">
+                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary/20 text-sm font-semibold text-primary">
                   {(c.contactName ?? c.firstName ?? "?").slice(0, 1).toUpperCase()}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm">
+                  <div className="break-words text-sm">
                     {c.contactName ?? [c.firstName, c.lastName].filter(Boolean).join(" ")}
                   </div>
-                  <div className="truncate text-xs text-muted-foreground">
+                  <div className="break-all text-xs text-muted-foreground">
                     {c.phone ?? c.email ?? ""}
                   </div>
                 </div>
@@ -227,12 +221,10 @@ function CreateContactPanel({ onCreated }: { onCreated: (c: GhlContact) => void 
       if (!res.ok) {
         const message =
           typeof (res.data as { message?: unknown })?.message === "string"
-            ? ((res.data as { message: string }).message)
+            ? (res.data as { message: string }).message
             : "";
         if (/invalid country calling code/i.test(message)) {
-          toast.error(
-            "Número de telefone inválido. Verifique o código do país (ex: +32...).",
-          );
+          toast.error("Número de telefone inválido. Verifique o código do país (ex: +32...).");
         } else {
           toast.error(message || `Erro ${res.status} ao criar contato.`);
         }
@@ -253,24 +245,51 @@ function CreateContactPanel({ onCreated }: { onCreated: (c: GhlContact) => void 
   }
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
-      <div>
+    <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 sm:grid-cols-2">
+      <div className="space-y-2">
         <Label htmlFor="firstName">{t("appt.firstName")} *</Label>
-        <Input id="firstName" {...form.register("firstName")} />
+        <Input
+          className="h-12 rounded-xl"
+          autoComplete="given-name"
+          id="firstName"
+          {...form.register("firstName")}
+        />
       </div>
-      <div>
+      <div className="space-y-2">
         <Label htmlFor="lastName">{t("appt.lastName")}</Label>
-        <Input id="lastName" {...form.register("lastName")} />
+        <Input
+          className="h-12 rounded-xl"
+          autoComplete="family-name"
+          id="lastName"
+          {...form.register("lastName")}
+        />
       </div>
-      <div>
+      <div className="space-y-2">
         <Label htmlFor="phone">{t("appt.phone")} *</Label>
-        <Input id="phone" type="tel" {...form.register("phone")} />
+        <Input
+          className="h-12 rounded-xl"
+          autoComplete="tel"
+          id="phone"
+          type="tel"
+          {...form.register("phone")}
+        />
       </div>
-      <div>
+      <div className="space-y-2">
         <Label htmlFor="email">{t("appt.email")}</Label>
-        <Input id="email" type="email" {...form.register("email")} />
+        <Input
+          className="h-12 rounded-xl"
+          autoComplete="email"
+          id="email"
+          type="email"
+          {...form.register("email")}
+        />
       </div>
-      <Button type="submit" className="w-full" disabled={saving}>
+      <Button
+        type="submit"
+        className="min-h-12 w-full rounded-xl sm:col-span-2"
+        disabled={saving}
+        aria-busy={saving || undefined}
+      >
         {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
         {t("appt.createContact")}
       </Button>

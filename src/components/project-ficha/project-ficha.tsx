@@ -1,3 +1,5 @@
+import { ProjectPhotos } from "@/components/project-photos/project-photos";
+import type { ProjectPhotosAdapter } from "@/lib/project-photos-adapter";
 import { OpportunityLink } from "./opportunity-link";
 import type { ReactNode } from "react";
 import type { ProjectDetail, ProjectOpportunitiesResult } from "@/lib/projects.functions";
@@ -24,8 +26,10 @@ export function ProjectFicha({
   onSelectOpp,
   actions,
   allocationAdapter,
+  photosAdapter,
 }: {
   allocationAdapter?: AllocationAdapter;
+  photosAdapter?: ProjectPhotosAdapter;
   p: ProjectDetail;
   opps?: OppState;
   selectedOpp?: string | null;
@@ -160,6 +164,8 @@ export function ProjectFicha({
           </ol>
         )}
       </section>
+
+      <ProjectPhotos projectId={p.id} adapter={photosAdapter} />
 
       {admin ? (
         <section aria-labelledby="fin-title" className="space-y-4">

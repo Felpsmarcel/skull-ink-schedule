@@ -11,3 +11,6 @@ export async function getProjectOpportunityLinks() {
 export async function linkProjectOpportunity() {
   throw new Error("Real writes disabled in visual harness");
 }
+export async function getProjectPhotosAvailability() {
+  return { kind: "disabled" as const, message: "Armazenamento de fotos ainda não ativado." };
+}

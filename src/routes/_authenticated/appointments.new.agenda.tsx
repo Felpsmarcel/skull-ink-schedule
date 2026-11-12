@@ -2,15 +2,9 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
-import { Calendar as CalendarIcon } from "lucide-react";
 import "@/i18n";
 
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { LoadingState } from "@/components/ui/loading-state";
-import { ErrorState } from "@/components/ui/error-state";
 import {
   Select,
   SelectContent,
@@ -18,7 +12,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
 
 import { useArtists } from "@/hooks/use-artists";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -27,20 +20,27 @@ import {
   brusselsDayEndMs,
   brusselsDayKey,
   extractFreeSlotStarts,
-  formatHHmm,
 } from "@/lib/agenda-grid";
 import { getFreeSlots } from "@/lib/ghl";
 import { useAppointmentDraft } from "@/stores/appointment-draft";
 import { WizardFooter } from "@/components/appointment-wizard/wizard-footer";
 import { sessionStartForDay } from "@/lib/appointment-session-date";
+import { AgendaSessionPicker } from "@/components/appointment-wizard/agenda-session-picker";
+import { WizardStepMain, WizardSection } from "@/components/appointment-wizard/wizard-layout";
 
 export const Route = createFileRoute("/_authenticated/appointments/new/agenda")({
   head: () => ({
     meta: [
       { title: "Agenda — Novo agendamento" },
-      { name: "description", content: "Selecione o tatuador, as datas e os horários das sessões no GF Tattoo Studio." },
+      {
+        name: "description",
+        content: "Selecione o tatuador, as datas e os horários das sessões no GF Tattoo Studio.",
+      },
       { property: "og:title", content: "Novo agendamento — Agenda GF Tattoo" },
-      { property: "og:description", content: "Seleção de datas e horários das sessões no GF Tattoo Studio." },
+      {
+        property: "og:description",
+        content: "Seleção de datas e horários das sessões no GF Tattoo Studio.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "robots", content: "noindex,nofollow" },
@@ -105,21 +105,12 @@ function AgendaStep() {
   );
 
   const [activeSession, setActiveSession] = useState(0);
-  const sessionStart = (i: number) => (i === 0 ? draft.startISO : draft.extraStarts[i - 1] ?? null);
+  const sessionStart = (i: number) =>
+    i === 0 ? draft.startISO : (draft.extraStarts[i - 1] ?? null);
   const pickSlot = (iso: string | null) => {
     if (activeSession === 0) draft.setStart(iso);
     else draft.setExtraStart(activeSession - 1, iso);
   };
-  const fmtSession = (iso: string | null) =>
-    iso
-      ? new Intl.DateTimeFormat("pt-PT", {
-          timeZone: "Europe/Brussels",
-          day: "2-digit",
-          month: "short",
-          hour: "2-digit",
-          minute: "2-digit",
-        }).format(new Date(iso))
-      : "Escolher data";
   const canContinue = Boolean(
     draft.calendarId && draft.startISO && draft.extraStarts.every((v) => Boolean(v)),
   );
@@ -131,160 +122,62 @@ function AgendaStep() {
 
   return (
     <>
-      <main className="flex-1 space-y-4 p-4 pb-0">
-        <section className="rounded-lg border border-border bg-card p-3">
-          <Label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+      <WizardStepMain
+        title="Organize as sessões"
+        description="Escolha o tatuador e reserve uma data para cada etapa do projeto."
+      >
+        <WizardSection>
+          <Label htmlFor="wizard-artist" className="mb-3 block text-sm font-semibold">
             {t("appt.staff")}
           </Label>
-          <Select
-            value={draft.calendarId ?? undefined}
-            onValueChange={(v) => {
-              draft.setCalendar(v);
-              draft.setStart(null);
-            }}
-          >
-            <SelectTrigger className="h-11">
+          <Select value={draft.calendarId ?? undefined} onValueChange={draft.setCalendar}>
+            <SelectTrigger id="wizard-artist" className="h-12 rounded-xl">
               <SelectValue placeholder={t("appt.staffPlaceholder")} />
             </SelectTrigger>
             <SelectContent>
               {artists.map((s) => (
-                <SelectItem key={s.id} value={s.calendarId}>
+                <SelectItem key={s.id} value={s.calendarId} className="min-h-11">
                   {s.name}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-        </section>
-
-        <section className="rounded-lg border border-border bg-card p-3">
-          <Label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Sessões do projeto
-          </Label>
-          <div className="flex flex-wrap gap-2">
-            {[1, 2, 3, 4, 5].map((n) => (
-              <button
-                type="button"
-                key={n}
-                onClick={() => {
-                  draft.setSessionCount(n);
-                  if (activeSession >= n) setActiveSession(0);
-                }}
-                className={cn(
-                  "h-9 min-w-9 rounded border px-3 text-sm font-medium",
-                  draft.sessionCount === n
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border bg-background hover:border-primary/60",
-                )}
-              >
-                {n === 1 ? "Sessão única" : n}
-              </button>
-            ))}
-          </div>
-          {draft.sessionCount > 1 ? (
-            <div className="mt-3 space-y-2">
-              <p className="text-xs text-muted-foreground">
-                Escolha a data de cada sessão. Todas usam os mesmos serviços e valor; o projeto
-                entra uma única vez no financeiro pelo valor total.
-              </p>
-              {Array.from({ length: draft.sessionCount }, (_, i) => (
-                <button
-                  type="button"
-                  key={i}
-                  onClick={() => {
-                    setActiveSession(i);
-                    const start = sessionStart(i);
-                    if (start) setDateObj(new Date(start));
-                  }}
-                  className={cn(
-                    "flex h-11 w-full items-center justify-between rounded border px-3 text-sm",
-                    activeSession === i
-                      ? "border-primary bg-primary/10"
-                      : "border-border bg-background",
-                  )}
-                >
-                  <span className="font-medium">
-                    Sessão {i + 1}/{draft.sessionCount}
-                  </span>
-                  <span className={sessionStart(i) ? "" : "text-muted-foreground"}>
-                    {fmtSession(sessionStart(i))}
-                  </span>
-                </button>
-              ))}
-            </div>
-          ) : null}
-        </section>
-
-        <section className="rounded-lg border border-border bg-card p-3">
-          <Label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            {t("appt.dateTime")}
-            {draft.sessionCount > 1 ? ` · Sessão ${activeSession + 1}` : ""}
-          </Label>
-          <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="h-11 w-full justify-start">
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {dateLabel}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent align="start" className="w-auto p-0">
-              <Calendar
-                mode="single"
-                selected={dateObj}
-                onSelect={(d) => {
-                  if (d) {
-                    pickSlot(sessionStartForDay(sessionStart(activeSession), d));
-                    setDateObj(d);
-                    setDatePickerOpen(false);
-                  }
-                }}
-                className="pointer-events-auto"
-              />
-            </PopoverContent>
-          </Popover>
-
-          <div className="mt-3">
-            {!draft.calendarId ? (
-              <p className="text-xs text-muted-foreground">{t("appt.pickStaffFirst")}</p>
-            ) : slotsQuery.isLoading ? (
-              <LoadingState inline size="sm" label={t("appt.loadingSlots")} />
-            ) : slotsQuery.error ? (
-              <ErrorState
-                description="Não foi possível carregar os horários."
-                details={(slotsQuery.error as Error).message}
-                onRetry={() => slotsQuery.refetch()}
-              />
-            ) : (slotsQuery.data ?? []).length === 0 ? (
-              <p className="text-xs text-muted-foreground">{t("appt.noSlots")}</p>
-            ) : (
-              <div className="grid grid-cols-4 gap-2">
-                {(slotsQuery.data ?? []).map((ms) => {
-                  const iso = new Date(ms).toISOString();
-                  const active = sessionStart(activeSession) === iso;
-                  const usedElsewhere = Array.from({ length: draft.sessionCount }, (_, i) =>
-                    sessionStart(i),
-                  ).some((v, i) => i !== activeSession && v === iso);
-                  return (
-                    <button
-                      type="button"
-                      key={ms}
-                      disabled={usedElsewhere}
-                      onClick={() => pickSlot(iso)}
-                      className={cn(
-                        "h-11 rounded border px-2 text-sm font-medium",
-                        active
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-border bg-background hover:border-primary/60",
-                      )}
-                    >
-                      {formatHHmm(ms)}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </section>
-      </main>
+          <p className="mt-3 text-xs leading-5 text-muted-foreground">
+            Ao trocar o tatuador, escolha novamente as datas e os horários de todas as sessões.
+          </p>
+        </WizardSection>
+        <AgendaSessionPicker
+          sessionCount={draft.sessionCount}
+          sessionStarts={Array.from({ length: draft.sessionCount }, (_, i) => sessionStart(i))}
+          activeSession={activeSession}
+          onSessionCountChange={(n) => {
+            draft.setSessionCount(n);
+            if (activeSession >= n) setActiveSession(0);
+          }}
+          onActiveSessionChange={(i) => {
+            setActiveSession(i);
+            const start = sessionStart(i);
+            if (start) setDateObj(new Date(start));
+          }}
+          date={dateObj}
+          dateLabel={dateLabel}
+          pickerOpen={datePickerOpen}
+          onPickerOpenChange={setDatePickerOpen}
+          onDateChange={(d) => {
+            pickSlot(sessionStartForDay(sessionStart(activeSession), d));
+            setDateObj(d);
+            setDatePickerOpen(false);
+          }}
+          calendarSelected={Boolean(draft.calendarId)}
+          slots={slotsQuery.data ?? []}
+          slotsLoading={slotsQuery.isLoading}
+          slotsError={slotsQuery.error ? (slotsQuery.error as Error).message : null}
+          onRetry={() => {
+            void slotsQuery.refetch();
+          }}
+          onPickSlot={pickSlot}
+        />
+      </WizardStepMain>
       <WizardFooter
         showBack
         primary={primary}
