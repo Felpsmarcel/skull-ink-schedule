@@ -28,7 +28,7 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-svh flex-col bg-background [--gf-chrome-offset:0px] sm:[--gf-chrome-offset:7.5rem] xl:[--gf-chrome-offset:4.5rem]">
-      <TopBar />
+      <TopBar showSignOut={pathname !== "/menu"} />
       <div key={pathname} data-route-fade className="flex-1">
         {children}
       </div>
@@ -37,7 +37,7 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
   );
 }
 
-function TopBar() {
+function TopBar({ showSignOut }: { showSignOut: boolean }) {
   const { t } = useTranslation();
   const isAdmin = useIsAdmin();
   const navigate = useNavigate();
@@ -75,7 +75,7 @@ function TopBar() {
         <TopLink
           to="/menu"
           icon={<UserIcon className="h-4 w-4" />}
-          label={t("nav.profile", { defaultValue: "Perfil" })}
+          label={t("nav.profile", { defaultValue: "Conta" })}
         />
         {isAdmin ? (
           <TopLink
@@ -85,16 +85,18 @@ function TopBar() {
           />
         ) : null}
       </nav>
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        onClick={handleSignOut}
-        className="col-start-2 row-start-1 ml-auto flex min-h-11 xl:col-start-3 items-center gap-2 rounded-md px-3 text-xs font-semibold uppercase text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        <LogOut className="h-4 w-4" />
-        Sair
-      </Button>
+      {showSignOut ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={handleSignOut}
+          className="col-start-2 row-start-1 ml-auto flex min-h-11 xl:col-start-3 items-center gap-2 rounded-md px-3 text-xs font-semibold uppercase text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <LogOut className="h-4 w-4" />
+          Sair
+        </Button>
+      ) : null}
     </header>
   );
 }

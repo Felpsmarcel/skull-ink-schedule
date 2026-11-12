@@ -35,7 +35,7 @@ export function BottomNav() {
       <NavLink
         to="/menu"
         icon={<UserIcon className="h-5 w-5" />}
-        label={t("nav.profile", { defaultValue: "Perfil" })}
+        label={t("nav.profile", { defaultValue: "Conta" })}
       />
     </nav>
   );

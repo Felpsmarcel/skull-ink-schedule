@@ -130,7 +130,7 @@ interface FormState {
   nome_cliente: string;
   data_pagamento: string;
   artist_id: string;
-  recebido_por_id: StaffRecebedorId;
+  recebido_por_id: StaffRecebedorId | "";
   registrado_por_id: StaffRecebedorId | "outro";
   registrado_por_nome: string;
   tipo_movimento: MovimentacaoTipo;
@@ -149,14 +149,14 @@ interface FormState {
 
 function initialState(context: SlugContext | undefined, mode: "link" | "manual"): FormState {
   const defaultArtistId = context?.defaultArtistId ?? "";
-  const defaultRecebedorId = context?.defaultRecebedorId ?? STAFF_RECEBEDORES[0].id;
+  const defaultRecebedorId = context?.defaultRecebedorId;
   const remembered = readRememberedRegistrador();
   return {
     nome_cliente: "",
     data_pagamento: todayISO(),
     artist_id: mode === "manual" ? "" : defaultArtistId,
-    recebido_por_id: mode === "manual" ? STAFF_RECEBEDORES[0].id : defaultRecebedorId,
-    registrado_por_id: remembered?.id ?? defaultRecebedorId,
+    recebido_por_id: mode === "manual" ? "" : (defaultRecebedorId ?? ""),
+    registrado_por_id: remembered?.id ?? defaultRecebedorId ?? "outro",
     registrado_por_nome: remembered?.nome ?? "",
     tipo_movimento: "sessao",
     valor_cartao: "",
@@ -238,18 +238,25 @@ export function MovimentacaoForm({ context, artists, artistsLoading, mode = "lin
     appointmentId: form.appointment_id,
     semVinculoJustificativa: form.sem_vinculo_justificativa,
   }).ok;
+  const recebedorValid = STAFF_RECEBEDORES.some((staff) => staff.id === form.recebido_por_id);
   const step1Valid =
-    form.nome_cliente.trim().length >= 2 && !!form.artist_id && registradorValid && vinculoOk;
+    form.nome_cliente.trim().length >= 2 &&
+    !!form.artist_id &&
+    recebedorValid &&
+    registradorValid &&
+    vinculoOk;
   const step2Valid = total > 0 && !exclusivoErro;
   const step3Valid = !sinalErro;
 
   const mutation = useMutation({
     mutationFn: async () => {
+      const recebedor = STAFF_RECEBEDORES.find((staff) => staff.id === form.recebido_por_id);
+      if (!recebedor) throw new Error("Selecione quem recebeu.");
       const base = {
         nome_cliente: form.nome_cliente,
         data_pagamento: form.data_pagamento,
         artist_id: form.artist_id,
-        recebido_por_id: form.recebido_por_id,
+        recebido_por_id: recebedor.id,
         tipo_movimento: form.tipo_movimento,
         valor_cartao: parseAmount(form.valor_cartao),
         valor_dinheiro: parseAmount(form.valor_dinheiro),
@@ -476,7 +483,14 @@ export function MovimentacaoForm({ context, artists, artistsLoading, mode = "lin
         onNext={nextStep}
         onSubmit={() => mutation.mutate()}
         canNext={(step === 1 && step1Valid) || (step === 2 && step2Valid) || false}
-        canSubmit={step === 3 && step3Valid && total > 0 && !exclusivoErro && !mutation.isPending}
+        canSubmit={
+          step === 3 &&
+          step1Valid &&
+          step3Valid &&
+          total > 0 &&
+          !exclusivoErro &&
+          !mutation.isPending
+        }
         isSubmitting={mutation.isPending}
       />
     </div>
@@ -564,10 +578,12 @@ function StepOne({
         <Label htmlFor="recebido_por_id">Recebido por *</Label>
         <Select
           value={form.recebido_por_id}
-          onValueChange={(v) => set("recebido_por_id", v as StaffRecebedorId)}
+          onValueChange={(v) =>
+            set("recebido_por_id", STAFF_RECEBEDORES.find((staff) => staff.id === v)?.id ?? "")
+          }
         >
           <SelectTrigger id="recebido_por_id" className="h-14 text-base">
-            <SelectValue />
+            <SelectValue placeholder="Selecione quem recebeu" />
           </SelectTrigger>
           <SelectContent>
             {recebedores.map((r) => (
