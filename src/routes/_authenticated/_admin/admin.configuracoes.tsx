@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import {
@@ -144,13 +145,18 @@ function Configuracoes() {
   });
 
   return (
-    <div className="mx-auto max-w-3xl space-y-5 p-4 pb-24">
-      <Link to="/menu" className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-        <ArrowLeft className="h-4 w-4" />
-        Voltar
-      </Link>
-      <h1 className="text-xl font-semibold">Recebimentos e integração</h1>
-      <section className="space-y-4 rounded-lg border border-border bg-card p-4">
+    <div className="min-h-dvh bg-background pb-24 text-foreground">
+      <PageHeader
+        title="Recebimentos e integração"
+        description="Preparação da conexão com o CRM e conferência de recebimentos."
+        leading={
+          <Button asChild variant="outline" size="icon" className="min-h-11 min-w-11 rounded-xl">
+            <Link to="/menu" aria-label="Voltar para conta e gestão"><ArrowLeft className="h-4 w-4" /></Link>
+          </Button>
+        }
+      />
+      <main className="mx-auto w-full max-w-3xl space-y-5 px-4 py-6 sm:px-6 sm:py-8">
+      <section className="space-y-4 rounded-2xl border border-border bg-card p-4 sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-medium">Recebimentos nas faturas do CRM</h2>
           {q.data && (
@@ -186,8 +192,8 @@ function Configuracoes() {
               <ul className="mt-3 space-y-2 text-sm">
                 {Object.entries(q.data.gates).map(([k, v]) => (
                   <li key={k} className="flex justify-between gap-3">
-                    <span>{GATE_LABEL[k]}</span>
-                    <span className={v ? "text-primary" : "text-muted-foreground"}>
+                    <span className="min-w-0 break-words">{GATE_LABEL[k]}</span>
+                    <span className={`shrink-0 ${v ? "text-primary" : "text-muted-foreground"}`}>
                       {v ? "OK" : "Pendente"}
                     </span>
                   </li>
@@ -229,7 +235,7 @@ function Configuracoes() {
             </Button>
           </div>
           <form
-            className="space-y-3 rounded-lg border border-border bg-card p-4"
+            className="space-y-3 rounded-2xl border border-border bg-card p-4 sm:p-5"
             onSubmit={(event) => {
               event.preventDefault();
               setSelected(null);
@@ -322,7 +328,7 @@ function Configuracoes() {
                   return (
                     <li
                       key={`${row.source}:${row.sourceId}`}
-                      className="min-w-0 space-y-3 rounded-lg border border-border bg-card p-4"
+                      className="min-w-0 space-y-3 rounded-2xl border border-border bg-card p-4 sm:p-5"
                     >
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <div className="min-w-0 flex-1">
@@ -382,6 +388,8 @@ function Configuracoes() {
           )}
         </section>
       )}
+
+      </main>
 
       <AlertDialog
         open={active && selected !== null}
@@ -483,7 +491,7 @@ function VerificarConexaoGhl() {
   const results = check.data;
   return (
     <section
-      className="space-y-3 rounded-lg border border-border bg-card p-4"
+      className="space-y-3 rounded-2xl border border-border bg-card p-4 sm:p-5"
       aria-labelledby="connection-check-title"
       aria-busy={check.isPending}
     >

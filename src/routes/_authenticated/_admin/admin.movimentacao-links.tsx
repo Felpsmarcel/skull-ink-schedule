@@ -1,10 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Loader2, Send, Link2, Copy, CheckCircle2, RefreshCw, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Loader2, Send, Link2, Copy, CheckCircle2, RefreshCw, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
 import { Input } from "@/components/ui/input";
 import { Toaster } from "@/components/ui/sonner";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -58,13 +59,22 @@ function MovimentacaoLinksPage() {
   });
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-6 pb-24">
+    <div className="min-h-dvh bg-background pb-24 text-foreground">
       <Toaster position="top-center" />
-      <header className="mb-4">
-        <h1 className="text-xl font-bold uppercase tracking-wider">Links de pagamento</h1>
-        <p className="mt-1 text-xs text-muted-foreground">
+      <PageHeader
+        title="Links de pagamento"
+        description="Vínculos de acesso aos formulários de registro."
+        leading={
+          <Button asChild variant="outline" size="icon" className="min-h-11 min-w-11 rounded-xl">
+            <Link to="/menu" aria-label="Voltar para conta e gestão"><ArrowLeft className="h-4 w-4" /></Link>
+          </Button>
+        }
+      />
+      <main className="mx-auto w-full max-w-3xl space-y-5 px-4 py-6 sm:px-6 sm:py-8">
+      <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
+        <p className="text-sm text-muted-foreground">
           Cada tatuador (e a Nívia) precisa de um usuário vinculado para que o link
-          <code className="mx-1 rounded bg-muted px-1">/movimentacao/&lt;slug&gt;</code>
+          <code className="mx-1 break-all rounded bg-muted px-1">/movimentacao/&lt;slug&gt;</code>
           funcione.
         </p>
         {q.data && (
@@ -73,9 +83,9 @@ function MovimentacaoLinksPage() {
           </p>
         )}
         {totalFailed > 0 && (
-          <div className="mt-3 flex items-center justify-between gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3">
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-warning/30 bg-warning/10 p-3">
             <div className="flex items-center gap-2 text-xs">
-              <AlertTriangle className="h-4 w-4 text-amber-500" />
+              <AlertTriangle className="h-4 w-4 shrink-0 text-warning" />
               <span>
                 <strong>{totalFailed}</strong> registro(s) com sync HighLevel falhado.
               </span>
@@ -95,7 +105,7 @@ function MovimentacaoLinksPage() {
             </Button>
           </div>
         )}
-      </header>
+      </section>
 
       {q.isLoading ? (
         <LoadingState label="Verificando vínculos…" />
@@ -111,6 +121,7 @@ function MovimentacaoLinksPage() {
           ))}
         </ul>
       )}
+      </main>
     </div>
   );
 }
@@ -218,11 +229,11 @@ function LinkCard({
   const linkedEmails = row.linkedUsers.map((u) => u.email ?? u.id.slice(0, 8));
 
   return (
-    <li className="rounded-lg border border-border bg-card p-4">
+    <li className="rounded-2xl border border-border bg-card p-4 sm:p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-sm font-semibold">{row.displayName}</p>
+            <p className="min-w-0 max-w-full break-words text-sm font-semibold">{row.displayName}</p>
             {statusBadge(row)}
             <StatusBadge variant="neutral">{row.kind === "artist" ? "tatuador" : "vendedor"}</StatusBadge>
             {row.failedSyncCount > 0 && (
@@ -232,11 +243,12 @@ function LinkCard({
             )}
           </div>
           <div className="mt-2 flex items-center gap-1">
-            <code className="truncate rounded bg-muted px-1.5 py-0.5 text-[11px]">{url}</code>
+            <code className="min-w-0 break-all rounded bg-muted px-2 py-1 text-xs">{url}</code>
             <Button
               size="sm"
               variant="ghost"
-              className="h-6 w-6 p-0"
+              className="h-9 w-9 shrink-0 p-0"
+              aria-label={`Copiar link de ${row.displayName}`}
               onClick={() => {
                 void navigator.clipboard.writeText(url);
                 toast.success("Link copiado.");
@@ -246,7 +258,7 @@ function LinkCard({
             </Button>
           </div>
           {linkedEmails.length > 0 && (
-            <p className="mt-1 text-[11px] text-muted-foreground">
+            <p className="mt-1 break-words text-xs text-muted-foreground">
               Vinculado: {linkedEmails.join(", ")}
             </p>
           )}
@@ -272,7 +284,7 @@ function LinkCard({
             onChange={(e) => setEmail(e.target.value)}
             className="sm:max-w-xs"
           />
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button
               size="sm"
               onClick={() => {
@@ -309,7 +321,7 @@ function LinkCard({
       )}
 
       {row.failedSyncCount > 0 && (
-        <div className="mt-3 flex items-center justify-between gap-2 rounded border border-dashed border-amber-500/40 p-2">
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-dashed border-warning/30 bg-warning/10 p-3">
           <p className="text-[11px] text-muted-foreground">
             {row.failedSyncCount} pagamento(s) não sincronizado(s) com o HighLevel.
           </p>

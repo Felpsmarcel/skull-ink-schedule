@@ -1,8 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Check, Copy, ExternalLink } from "lucide-react";
+import { ArrowLeft, Check, Copy, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import gfMark from "@/assets/gf-mark.png";
+import { PageHeader } from "@/components/ui/page-header";
 
 const APP_NAME = "GF Tattoo Studio";
 const SLUG = "gf-tattoo-studio";
@@ -69,24 +69,29 @@ function ConnectPage() {
 
   return (
     <div className="min-h-svh bg-background pb-16 text-foreground">
-      <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-border bg-background/95 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] backdrop-blur">
-        <img src={gfMark} alt="" className="h-7 w-7 object-contain" />
-        <h1 className="text-base font-bold uppercase tracking-wider">Ligar assistente de IA</h1>
-      </header>
+      <PageHeader
+        title="Ligar assistente de IA"
+        description="Instruções para conectar seu assistente ao aplicativo."
+        leading={
+          <Button asChild variant="outline" size="icon" className="min-h-11 min-w-11 rounded-xl">
+            <Link to="/menu" aria-label="Voltar para conta e gestão"><ArrowLeft className="h-4 w-4" /></Link>
+          </Button>
+        }
+      />
 
-      <main className="mx-auto max-w-2xl space-y-6 px-4 py-6">
+      <main className="mx-auto w-full max-w-3xl space-y-6 px-4 py-6 sm:px-6 sm:py-8">
         <p className="text-sm text-muted-foreground">
           Ligue o ChatGPT, o Claude ou outro assistente de IA a este aplicativo para consultar a
           agenda, os pagamentos registados e os tatuadores por conversa. Ao ligar, é pedido que
           inicie sessão nesta conta — o assistente vê apenas o que você já pode ver.
         </p>
 
-        <section className="space-y-2 rounded-lg border border-border bg-card p-4">
-          <h2 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+        <section className="space-y-3 rounded-2xl border border-border bg-card p-4 sm:p-5">
+          <h2 className="text-sm font-semibold">
             Endereço do aplicativo
           </h2>
           <div className="flex items-center gap-2">
-            <code className="min-w-0 flex-1 truncate rounded-md bg-muted px-3 py-2 font-mono text-sm">
+            <code className="min-w-0 flex-1 break-all rounded-md bg-muted px-3 py-2 font-mono text-sm">
               {mcpUrl}
             </code>
             <CopyButton value={mcpUrl} />
@@ -147,7 +152,7 @@ function ConnectPage() {
               <>
                 Corra este comando num terminal:
                 <div className="mt-2 flex items-center gap-2">
-                  <code className="min-w-0 flex-1 overflow-x-auto whitespace-pre rounded-md bg-muted px-3 py-2 font-mono text-xs">
+                  <code className="min-w-0 flex-1 whitespace-pre-wrap break-all rounded-md bg-muted px-3 py-2 font-mono text-xs">
                     {installCmd}
                   </code>
                   <CopyButton value={installCmd} />
@@ -179,7 +184,7 @@ function ConnectPage() {
             O assistente guarda em cache o que o aplicativo sabe fazer. Depois de publicarmos
             novidades, atualize a ligação:
           </p>
-          <h3 className="mb-1 text-xs font-bold uppercase tracking-wider">ChatGPT</h3>
+          <h3 className="mb-2 text-sm font-semibold">ChatGPT</h3>
           <Steps
             items={[
               <>Abra a página Plugins e escolha este aplicativo.</>,
@@ -193,7 +198,7 @@ function ConnectPage() {
               <>Comece uma conversa nova e peça ao ChatGPT para usar o aplicativo.</>,
             ]}
           />
-          <h3 className="mb-1 mt-4 text-xs font-bold uppercase tracking-wider">Claude</h3>
+          <h3 className="mb-2 mt-4 text-sm font-semibold">Claude</h3>
           <Steps
             items={[
               <>Abra a página Connectors e escolha este conector.</>,
@@ -205,7 +210,7 @@ function ConnectPage() {
               <>Peça ao Claude para usar o aplicativo.</>,
             ]}
           />
-          <h3 className="mb-1 mt-4 text-xs font-bold uppercase tracking-wider">Claude Code</h3>
+          <h3 className="mb-2 mt-4 text-sm font-semibold">Claude Code</h3>
           <Steps
             items={[
               <>Comece uma sessão nova — ela carrega a versão mais recente ao ligar.</>,
@@ -217,7 +222,7 @@ function ConnectPage() {
               <>Peça ao Claude Code para usar o aplicativo.</>,
             ]}
           />
-          <h3 className="mb-1 mt-4 text-xs font-bold uppercase tracking-wider">
+          <h3 className="mb-2 mt-4 text-sm font-semibold">
             Outros assistentes
           </h3>
           <Steps
@@ -237,8 +242,8 @@ function ConnectPage() {
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-lg border border-border bg-card p-4">
-      <h2 className="mb-2 text-sm font-bold uppercase tracking-wider">{title}</h2>
+    <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
+      <h2 className="mb-3 text-base font-semibold">{title}</h2>
       {children}
     </section>
   );
@@ -248,7 +253,7 @@ function Steps({ items }: { items: React.ReactNode[] }) {
   return (
     <ol className="ml-4 list-decimal space-y-2 text-sm">
       {items.map((item, i) => (
-        <li key={i} className="pl-1">
+        <li key={i} className="min-w-0 break-words pl-1">
           {item}
         </li>
       ))}
@@ -262,10 +267,10 @@ function A({ href, children }: { href: string; children: React.ReactNode }) {
       href={href}
       target="_blank"
       rel="noreferrer"
-      className="inline-flex items-center gap-1 font-semibold underline underline-offset-2"
+      className="inline-flex max-w-full items-center gap-1 break-words font-semibold underline underline-offset-2"
     >
       {children}
-      <ExternalLink className="h-3 w-3" />
+      <ExternalLink className="h-3 w-3 shrink-0" />
     </a>
   );
 }

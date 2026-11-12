@@ -269,8 +269,8 @@ html.agenda-no-pull-refresh body {
 }
 
 /*
- * Pilot: GF Studio OS "Papel & Petróleo" (light operational).
- * Active only while <html> carries .gf-ops-light (Agenda + Login routes);
+ * GF Studio OS "Papel & Petróleo" (shared application identity).
+ * Active while <html> carries .gf-ops-light (see ops-light-theme.ts);
  * lives on <html> so portaled sheets, popovers and tooltips inherit it.
  */
 html.gf-ops-light {

@@ -4,6 +4,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { ArrowLeft, Trash2, RefreshCw, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
 import {
   getMovimentacaoForEdit,
   updateMovimentacao,
@@ -15,9 +17,7 @@ import {
   type MovimentacaoTipo,
 } from "@/lib/movimentacao.functions";
 
-export const Route = createFileRoute(
-  "/_authenticated/movimentacao/historico/$id/editar",
-)({
+export const Route = createFileRoute("/_authenticated/movimentacao/historico/$id/editar")({
   head: () => ({
     meta: [
       { title: "Editar pagamento — GF Tattoo" },
@@ -208,21 +208,28 @@ function EditarPage() {
   const busy = updateMut.isPending || deleteMut.isPending || resyncMut.isPending;
 
   return (
-    <div className="mx-auto flex min-h-svh max-w-2xl flex-col bg-card pb-[calc(env(safe-area-inset-bottom)+7rem)] text-foreground">
-      <header className="sticky top-0 z-30 border-b border-border bg-background/95 px-4 py-3 backdrop-blur">
-        <div className="flex items-center gap-2">
-          <button
+    <div className="flex min-h-svh flex-col bg-background pb-[calc(env(safe-area-inset-bottom)+7rem)] text-foreground">
+      <PageHeader
+        eyebrow="Registro de recebimento"
+        title="Editar pagamento"
+        leading={
+          <Button
             type="button"
+            variant="outline"
+            size="icon"
             onClick={backToList}
-            className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-sm text-muted-foreground hover:bg-muted"
+            aria-label="Voltar ao histórico de pagamentos"
+            className="h-11 w-11 rounded-xl"
           >
-            <ArrowLeft className="size-4" /> Voltar
-          </button>
-          <h1 className="ml-1 text-base font-bold">Editar pagamento</h1>
-        </div>
-      </header>
+            <ArrowLeft aria-hidden="true" className="size-5" />
+          </Button>
+        }
+      />
 
-      <form onSubmit={submit} className="flex flex-1 flex-col gap-4 px-4 py-4">
+      <form
+        onSubmit={submit}
+        className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4 px-4 py-6 sm:px-6"
+      >
         <Field label="Nome do cliente">
           <input
             type="text"
@@ -329,7 +336,9 @@ function EditarPage() {
             type="button"
             disabled={busy}
             onClick={() => {
-              if (window.confirm("Apagar este registo? Esta ação pode ser revertida por um admin.")) {
+              if (
+                window.confirm("Apagar este registo? Esta ação pode ser revertida por um admin.")
+              ) {
                 deleteMut.mutate();
               }
             }}
@@ -340,7 +349,7 @@ function EditarPage() {
         </div>
       </form>
 
-      <section className="px-4 pb-6">
+      <section className="mx-auto w-full max-w-3xl px-4 pb-6 sm:px-6">
         <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Histórico de alterações
         </h2>
@@ -360,7 +369,7 @@ function EditarPage() {
           <ul className="space-y-2">
             {auditQ.data!.map((entry) => (
               <li key={entry.id} className="rounded-lg border border-border bg-card p-3">
-                <div className="flex items-baseline justify-between gap-2">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <span className="text-sm font-medium text-foreground">
                     {entry.acao === "insert"
                       ? "Criado"
@@ -377,8 +386,7 @@ function EditarPage() {
                   <ul className="mt-1.5 space-y-0.5 text-xs text-muted-foreground">
                     {entry.changes.map((c, i) => (
                       <li key={`${entry.id}-${i}`}>
-                        <span className="font-medium">{c.campo}:</span>{" "}
-                        {c.de ? `${c.de} → ` : ""}
+                        <span className="font-medium">{c.campo}:</span> {c.de ? `${c.de} → ` : ""}
                         {c.para}
                       </li>
                     ))}
@@ -395,7 +403,7 @@ function EditarPage() {
           type="button"
           disabled={busy}
           onClick={submit}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+          className="mx-auto flex min-h-11 w-full max-w-3xl items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
         >
           {updateMut.isPending && <Loader2 className="size-4 animate-spin" />}
           Guardar alterações

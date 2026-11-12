@@ -1,10 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Download, ExternalLink, FileText } from "lucide-react";
+import { ArrowLeft, Download, ExternalLink, FileText } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
 import { LoadingState } from "@/components/ui/loading-state";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
@@ -116,18 +117,24 @@ function MonthlyReportPage() {
   const years = Array.from({ length: 5 }, (_, i) => now.getFullYear() - 2 + i);
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="font-display text-xl uppercase tracking-wider">Relatório mensal</h1>
-          <p className="text-xs text-muted-foreground">Agendamentos do período selecionado</p>
-        </div>
-        <Button onClick={handleExport} disabled={!rows || rows.length === 0}>
-          <Download className="h-4 w-4" /> Exportar CSV
-        </Button>
-      </header>
+    <div className="min-h-dvh bg-background pb-24 text-foreground">
+      <PageHeader
+        title="Relatório mensal"
+        description="Agendamentos do período selecionado."
+        leading={
+          <Button asChild variant="outline" size="icon" className="min-h-11 min-w-11 rounded-xl">
+            <Link to="/menu" aria-label="Voltar para conta e gestão"><ArrowLeft className="h-4 w-4" /></Link>
+          </Button>
+        }
+        actions={
+          <Button onClick={handleExport} disabled={!rows || rows.length === 0}>
+            <Download className="h-4 w-4" /> Exportar CSV
+          </Button>
+        }
+      />
 
-      <div className="grid grid-cols-2 gap-3 rounded-lg border border-border bg-card p-4 sm:grid-cols-5">
+      <main className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 sm:px-6 sm:py-8">
+      <div className="grid grid-cols-2 gap-3 rounded-2xl border border-border bg-card p-4 sm:grid-cols-3 lg:grid-cols-5">
         <LabeledSelect label="Mês" value={String(month)} onChange={(v) => setMonth(Number(v))}>
           {MONTHS.map((m, i) => (
             <option key={m} value={i + 1}>{m}</option>
@@ -147,15 +154,15 @@ function MonthlyReportPage() {
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </LabeledSelect>
-        <div className="space-y-1">
-          <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <div className="min-w-0 space-y-1">
+          <label className="text-xs font-medium text-muted-foreground">
             Estilo
           </label>
           <Input
             value={style}
             onChange={(e) => setStyle(e.target.value)}
             placeholder="ex.: blackwork"
-            className="h-9"
+            className="h-11"
           />
         </div>
       </div>
@@ -171,7 +178,7 @@ function MonthlyReportPage() {
           description="Nenhum registro para os filtros selecionados."
         />
       ) : (
-        <div className="overflow-hidden rounded-lg border border-border bg-card">
+        <div className="min-w-0 overflow-hidden rounded-2xl border border-border bg-card">
           <Table>
             <TableHeader>
               <TableRow>
@@ -222,6 +229,7 @@ function MonthlyReportPage() {
           </Table>
         </div>
       )}
+      </main>
 
       <GhlContactSheet
         contactId={selectedContact}
@@ -240,14 +248,14 @@ function LabeledSelect({
   children: React.ReactNode;
 }) {
   return (
-    <div className="space-y-1">
-      <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+    <div className="min-w-0 space-y-1">
+      <label className="text-xs font-medium text-muted-foreground">
         {label}
       </label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+        className="h-11 w-full min-w-0 rounded-md border border-input bg-background px-2 text-sm"
       >
         {children}
       </select>
@@ -271,10 +279,10 @@ function GhlContactSheet({
 
   return (
     <Sheet open={!!contactId} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent side="right" className="w-full sm:max-w-md">
+      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-md">
         <SheetHeader>
           <SheetTitle>Contato GHL</SheetTitle>
-          <SheetDescription className="text-xs">{contactId}</SheetDescription>
+          <SheetDescription className="break-all text-xs">{contactId}</SheetDescription>
         </SheetHeader>
         <div className="mt-6 space-y-3 text-sm">
           {isLoading ? (
@@ -305,8 +313,8 @@ function GhlContactSheet({
 function Field({ label, value }: { label: string; value?: string | null }) {
   return (
     <div className="flex justify-between gap-3 border-b border-border pb-1">
-      <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</dt>
-      <dd className="text-right">{value || "—"}</dd>
+      <dt className="shrink-0 text-xs text-muted-foreground">{label}</dt>
+      <dd className="min-w-0 break-words text-right">{value || "—"}</dd>
     </div>
   );
 }

@@ -1,10 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Loader2, UserPlus, Send, Link2, Pencil, RefreshCw } from "lucide-react";
+import { ArrowLeft, Loader2, UserPlus, Send, Link2, Pencil, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Toaster } from "@/components/ui/sonner";
@@ -109,24 +110,25 @@ function EquipePage() {
   const artists = (q.data?.artists ?? []) as ArtistRow[];
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-6 pb-24">
+    <div className="min-h-dvh bg-background pb-24 text-foreground">
       <Toaster position="top-center" />
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold uppercase tracking-wider">Equipe</h1>
-          <p className="text-xs text-muted-foreground">
-            Cadastre, edite e convide tatuadores.
-          </p>
-        </div>
-        <Button onClick={openNew}>
-          <UserPlus className="mr-2 h-4 w-4" /> Novo
-        </Button>
-      </div>
+      <PageHeader
+        title="Equipe"
+        description="Cadastre, edite e convide tatuadores."
+        leading={
+          <Button asChild variant="outline" size="icon" className="min-h-11 min-w-11 rounded-xl">
+            <Link to="/menu" aria-label="Voltar para conta e gestão"><ArrowLeft className="h-4 w-4" /></Link>
+          </Button>
+        }
+        actions={<Button onClick={openNew}><UserPlus className="mr-2 h-4 w-4" /> Novo</Button>}
+      />
+
+      <main className="mx-auto w-full max-w-3xl space-y-6 px-4 py-6 sm:px-6 sm:py-8">
 
       <CronStatusCard />
 
       <section>
-        <h2 className="mb-2 text-sm font-bold uppercase tracking-wider">Tatuadores</h2>
+        <h2 className="mb-3 text-base font-semibold">Tatuadores</h2>
         {q.isLoading ? (
           <LoadingState label="Carregando equipe…" />
         ) : q.isError ? (
@@ -153,6 +155,7 @@ function EquipePage() {
           </ul>
         )}
       </section>
+      </main>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
@@ -281,11 +284,11 @@ function ArtistCard({
   const linkedEmails = artist.users.map((u) => u.email ?? u.id.slice(0, 8));
 
   return (
-    <li className="rounded-lg border border-border bg-card p-4">
+    <li className="rounded-2xl border border-border bg-card p-4 sm:p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <p className="text-sm font-semibold">{artist.name}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="min-w-0 max-w-full break-words text-sm font-semibold">{artist.name}</p>
             <StatusBadge variant={artist.active ? "info" : "neutral"}>
               {artist.active ? "ativo" : "inativo"}
             </StatusBadge>
@@ -296,15 +299,15 @@ function ArtistCard({
               <StatusBadge variant="warning">sem calendário GHL</StatusBadge>
             )}
           </div>
-          <p className="mt-1 text-[11px] text-muted-foreground">
+          <p className="mt-1 break-words text-xs text-muted-foreground">
             cal: {artist.calendarId ?? "—"} · comissão {artist.commissionPct}%
             {artist.phone ? ` · ${artist.phone}` : ""}
           </p>
-          <p className="text-[11px] text-muted-foreground">
+          <p className="break-words text-xs text-muted-foreground">
             {linkedEmails.length === 0 ? "Nenhum usuário vinculado" : linkedEmails.join(", ")}
           </p>
         </div>
-        <Button size="sm" variant="outline" onClick={onEdit}>
+        <Button size="sm" variant="outline" onClick={onEdit} aria-label={`Editar ${artist.name}`}>
           <Pencil className="h-3.5 w-3.5" />
         </Button>
       </div>
@@ -318,7 +321,7 @@ function ArtistCard({
           onChange={(e) => setEmail(e.target.value)}
           className="sm:max-w-xs"
         />
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             size="sm"
             onClick={() => {
@@ -364,10 +367,10 @@ function CronStatusCard() {
   const vaultOk = q.data?.vault_ok;
 
   return (
-    <section className="mb-6 rounded-lg border border-border bg-card p-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-sm font-bold uppercase tracking-wider">Sync GHL</h2>
+    <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-base font-semibold">Sync GHL</h2>
           <p className="text-[11px] text-muted-foreground">
             {q.isLoading
               ? "Carregando…"
@@ -384,7 +387,7 @@ function CronStatusCard() {
           )}
         </div>
         <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" onClick={() => q.refetch()} disabled={q.isFetching}>
+          <Button size="sm" variant="outline" onClick={() => q.refetch()} disabled={q.isFetching} aria-label="Atualizar estado da sincronização">
             <RefreshCw className={`h-3.5 w-3.5 ${q.isFetching ? "animate-spin" : ""}`} />
           </Button>
           <Button size="sm" onClick={() => m.mutate()} disabled={m.isPending || !vaultOk || q.isError}>
