@@ -9,6 +9,8 @@ export default defineConfig({
   plugins: [react(), tailwind()],
   resolve: {
     alias: [
+      { find: "@/hooks/use-current-user", replacement: at("./identity-stub.ts") },
+      { find: "@/integrations/supabase/client", replacement: at("./auth-stub.ts") },
       { find: "@/lib/project-allocation.functions", replacement: at("./server-stub.ts") },
       { find: "@tanstack/react-start", replacement: at("./start-stub.ts") },
       { find: "@", replacement: at("../../src") },

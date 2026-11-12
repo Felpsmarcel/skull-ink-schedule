@@ -125,7 +125,7 @@ function ArtistPanelPage() {
         </p>
       </header>
 
-      <dl className="grid grid-cols-2 gap-y-5 border-b border-border pb-6 sm:grid-cols-4">
+      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Metric label="Agendamentos hoje" value={data.today?.length ?? null} />
         <Metric label={`Próximos ${search.days} dias`} value={data.upcoming?.length ?? null} />
         <Metric label="Projetos ativos" value={projects?.length ?? null} />
@@ -264,9 +264,11 @@ function AppointmentList({
 }
 function Metric({ label, value }: { label: string; value: number | null }) {
   return (
-    <div>
-      <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className="mt-1 text-2xl font-semibold tabular-nums">{value ?? "Indisponível"}</dd>
+    <div className="min-w-0 rounded-xl border border-border bg-card p-4 shadow-sm">
+      <dt className="text-xs leading-5 text-muted-foreground">{label}</dt>
+      <dd className="mt-2 break-words text-xl font-semibold tabular-nums sm:text-2xl">
+        {value ?? "Indisponível"}
+      </dd>
     </div>
   );
 }
