@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { OPP_STATUS_LABEL } from "@/lib/ghl-opportunities-core";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { formatEurCents } from "@/lib/project-progress-core";
@@ -33,6 +34,7 @@ export function OpportunityLink({
   const [message, setMessage] = useState("");
   const [linked, setLinked] = useState<string[]>([]);
   const pending = useRef(false);
+  const trigger = useRef<HTMLButtonElement>(null);
   const key = useRef("");
   useEffect(() => {
     if (fixture) return;
@@ -108,6 +110,7 @@ export function OpportunityLink({
         <p className="text-xs text-muted-foreground">Vínculo com ativação pendente.</p>
       ) : (
         <Button
+          ref={trigger}
           className="min-h-11"
           disabled={!usable}
           onClick={() => {
@@ -136,14 +139,24 @@ export function OpportunityLink({
           if (!busy) setOpen(v);
         }}
       >
-        <DialogContent>
+        <DialogContent
+          closeLabel="Fechar"
+          className="max-h-[90dvh] overflow-y-auto"
+          onCloseAutoFocus={(event) => {
+            if (trigger.current && !trigger.current.disabled) {
+              event.preventDefault();
+              trigger.current.focus();
+            }
+          }}
+        >
           <DialogTitle>Vincular oportunidade</DialogTitle>
           <DialogDescription>
             Relaciona a contratação ao projeto. Não registra pagamento nem altera o contrato ou o
             GHL.
           </DialogDescription>
           <p>
-            {opportunity?.name ?? "Sem nome"} · {opportunity?.status}
+            {opportunity?.name ?? "Sem nome"} ·{" "}
+            {OPP_STATUS_LABEL[opportunity?.status ?? ""] ?? "Status não verificado"}
           </p>
           <dl className="grid grid-cols-2 gap-2 text-sm">
             <dt>Oportunidade</dt>

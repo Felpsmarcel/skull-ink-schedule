@@ -16,7 +16,19 @@ A RPC de vínculo antes permitia execução por authenticated com snapshot GHL f
 
 ## Limites
 
-Vínculos são aditivos e únicos por oportunidade; a RPC não substitui contrato nem vínculo anterior. Distribuição tem controle de versão próprio. Ainda falta uma revisão comum entre decisões de vínculo e mudanças concorrentes de contrato, e a fixture não simula recarga durável de vínculos. Homologação visual desktop/mobile e autenticação real pendentes. Nenhum SQL ou mudança de CRM foi executado.
+Vínculos são aditivos e únicos por oportunidade; a RPC não substitui contrato nem vínculo anterior. Distribuição tem controle de versão próprio. Ainda falta uma revisão comum entre decisões de vínculo e mudanças concorrentes de contrato, e a fixture não simula recarga durável de vínculos. A interface foi verificada com dados sintéticos; autenticação real e homologação integrada em staging continuam pendentes. Nenhum SQL ou mudança de CRM foi executado.
+
+## Verificação visual em 12/11/2026
+
+- Harness isolado em tests/visual: componentes reais, dados fictícios e funções de servidor substituídas por bloqueios explícitos. Sem autenticação ou conexão com CRM.
+- Mobile 393 × 852 e desktop 1280 × 900: diálogo legível, sem transbordamento horizontal (scrollWidth igual à largura).
+- Divergência 900/3000: confirmar desabilitado até a decisão explícita de preservar contrato; cancelar e reabrir mantém a decisão desmarcada.
+- Confirmação simulada mantém contrato 3000 e recebimentos 450; novo envio da mesma oportunidade fica desabilitado. Recarga descarta o vínculo simulado.
+- Valores iguais: confirmação disponível sem decisão de divergência. Escape fecha e devolve foco ao botão de abertura.
+- Status e botão acessível de fechar em português; diálogo limita altura e permite rolagem interna.
+- Vitest novamente 435/435 (38 arquivos); TypeScript, ESLint dos arquivos alterados e build aprovados. Avisos de inputValidator preexistentes permanecem.
+
+As capturas desta verificação ficam no diretório local de outputs/gf-studio-mvp-2026-11-11, arquivos opportunity-link-mobile-20261112.png e opportunity-link-desktop-20261112.png. Elas não comprovam integração ou persistência real.
 
 ## Verificação local em 11/11/2026
 

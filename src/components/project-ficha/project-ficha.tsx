@@ -71,7 +71,7 @@ export function ProjectFicha({
             Oportunidade no GHL
           </h2>
           <p className="text-sm">
-            Vinculada:{" "}
+            Vínculo original do cadastro:{" "}
             <span className="font-medium">
               {p.opportunityId ? "sim" : "nenhuma oportunidade vinculada"}
             </span>
@@ -289,9 +289,7 @@ function OpportunityList({
         </fieldset>
       )}
       {selected ? (
-        <p className="text-xs text-warning">
-          Seleção em rascunho — não vinculada nem enviada ao GHL.
-        </p>
+        <p className="text-xs text-warning">Seleção para revisão — não altera o GHL.</p>
       ) : null}
     </div>
   );
