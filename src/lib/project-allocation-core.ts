@@ -31,6 +31,7 @@ export const LinkOppSchema = z.object({
   projectId: z.string().uuid(),
   opportunityId: z.string().min(3).max(64),
   keepContract: z.boolean(),
+  expectedContractCents: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).nullable(),
   idempotencyKey: z.string().min(16).max(100),
 });
 
@@ -63,6 +64,7 @@ export type AllocationError =
   | "contract_unknown"
   | "contact_mismatch"
   | "linked_elsewhere"
+  | "contract_changed"
   | "decision_required"
   | "ghl_incomplete"
   | "opportunity_not_found"
@@ -79,6 +81,7 @@ const KNOWN: AllocationError[] = [
   "contract_unknown",
   "contact_mismatch",
   "linked_elsewhere",
+  "contract_changed",
   "decision_required",
 ];
 
@@ -102,6 +105,8 @@ export const ALLOCATION_ERROR_TEXT: Record<AllocationError, string> = {
   contract_unknown: "Valor contratado a apurar.",
   contact_mismatch: "A oportunidade é de outro contato.",
   linked_elsewhere: "A oportunidade já pertence a outro projeto.",
+  contract_changed:
+    "O contrato mudou desde a abertura da ficha. Recarregue e revise antes de vincular.",
   decision_required: "Valor da oportunidade difere do contrato: confirme manter o contrato.",
   ghl_incomplete: "Leitura completa do CRM indisponível; vínculo não confirmado.",
   opportunity_not_found: "Oportunidade não encontrada neste contato.",

@@ -80,6 +80,7 @@ export function OpportunityLink({
               projectId,
               opportunityId: opportunity.id,
               keepContract: keep,
+              expectedContractCents: contractCents,
               idempotencyKey: key.current,
             },
           });

@@ -143,7 +143,7 @@ END $$;
 -- Erros: forbidden | project_not_found | contact_mismatch | linked_elsewhere | decision_required
 CREATE OR REPLACE FUNCTION public.link_project_opportunity(
   p_project_id uuid, p_opportunity_id text, p_contact_id text, p_status text,
-  p_value_cents bigint, p_contract_decision text, p_idempotency_key text, p_actor uuid)
+  p_value_cents bigint, p_contract_decision text, p_idempotency_key text, p_actor uuid, p_expected_contract_cents bigint)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE
   v_uid uuid := p_actor;
@@ -169,6 +169,8 @@ BEGIN
   PERFORM 1 FROM tattoo_projects WHERE ghl_opportunity_id = p_opportunity_id AND id <> p_project_id;
   IF FOUND THEN RAISE EXCEPTION 'linked_elsewhere'; END IF;
 
+  IF v_contract IS DISTINCT FROM p_expected_contract_cents THEN RAISE EXCEPTION 'contract_changed'; END IF;
+
   v_kind := CASE WHEN lower(p_status) IN ('lost','abandoned') THEN 'historical' ELSE 'active' END;
   IF v_kind = 'active' AND (p_value_cents IS NULL OR v_contract IS NULL OR p_value_cents <> v_contract)
      AND p_contract_decision IS DISTINCT FROM 'keep_contract' THEN
@@ -183,6 +185,6 @@ BEGIN
 END $$;
 
 REVOKE ALL ON FUNCTION public.save_project_allocation_draft(uuid, integer, text, jsonb) FROM PUBLIC, anon;
-REVOKE ALL ON FUNCTION public.link_project_opportunity(uuid, text, text, text, bigint, text, text, uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.link_project_opportunity(uuid, text, text, text, bigint, text, text, uuid, bigint) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.save_project_allocation_draft(uuid, integer, text, jsonb) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.link_project_opportunity(uuid, text, text, text, bigint, text, text, uuid) TO service_role;
+GRANT EXECUTE ON FUNCTION public.link_project_opportunity(uuid, text, text, text, bigint, text, text, uuid, bigint) TO service_role;

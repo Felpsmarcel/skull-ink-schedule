@@ -37,6 +37,7 @@ function run(extra = {}) {
       projectId: "p1",
       opportunityId: "opp1",
       keepContract: true,
+      expectedContractCents: 270000,
       idempotencyKey: "test-key-0123456789",
       ...extra,
     },
@@ -90,4 +91,20 @@ it("divergência sem decisão não grava", async () => {
     reason: "decision_required",
   });
   expect(f.rpc).not.toHaveBeenCalled();
+});
+
+it("recusa contrato diferente do mostrado mesmo com manter contrato marcado", async () => {
+  expect(await run({ expectedContractCents: 300000 })).toEqual({
+    state: "rejected",
+    reason: "contract_changed",
+  });
+  expect(f.rpc).not.toHaveBeenCalled();
+});
+it("envia o valor observado para verificação atômica e preserva conflito da RPC", async () => {
+  f.rpc.mockResolvedValue({ data: null, error: { message: "contract_changed" } });
+  expect(await run()).toEqual({ state: "rejected", reason: "contract_changed" });
+  expect(f.rpc).toHaveBeenCalledWith(
+    "link_project_opportunity",
+    expect.objectContaining({ p_expected_contract_cents: 270000 }),
+  );
 });

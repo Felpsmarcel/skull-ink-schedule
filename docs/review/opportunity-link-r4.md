@@ -16,7 +16,7 @@ A RPC de vínculo antes permitia execução por authenticated com snapshot GHL f
 
 ## Limites
 
-Vínculos são aditivos e únicos por oportunidade; a RPC não substitui contrato nem vínculo anterior. Distribuição tem controle de versão próprio. Ainda falta uma revisão comum entre decisões de vínculo e mudanças concorrentes de contrato, e a fixture não simula recarga durável de vínculos. A interface foi verificada com dados sintéticos; autenticação real e homologação integrada em staging continuam pendentes. Nenhum SQL ou mudança de CRM foi executado.
+Vínculos são aditivos e únicos por oportunidade; a RPC não substitui contrato nem vínculo anterior. Distribuição tem controle de versão próprio. O vínculo agora compara o contrato exibido com o atual, no handler e sob bloqueio da linha no banco, antes de inserir. Isso rejeita decisão baseada em valor desatualizado; não impede alterações posteriores do contrato nem detecta alterações intermediárias que retornem ao mesmo valor. A fixture não simula recarga durável de vínculos. A interface foi verificada com dados sintéticos; autenticação real e homologação integrada em staging continuam pendentes. Nenhum SQL ou mudança de CRM foi executado.
 
 ## Verificação visual em 12/11/2026
 
@@ -38,3 +38,18 @@ As capturas desta verificação ficam no diretório local de outputs/gf-studio-m
 - ESLint dos arquivos alterados: formatação corrigida, exit 0.
 - Build: exit 0; avisos de inputValidator depreciado existentes no projeto. Build não é deploy.
 - SQL SHA-256: 2fb3ecb190fbda012e28d4a21bd269de0c43693e7125457133f37c38dd5d7f45.
+
+## Proteção do contrato observado — 12/11/2026
+
+O navegador envia expectedContractCents obrigatório (inclusive null explícito); esse campo é uma pré-condição, nunca o valor a gravar. A RPC compara com IS DISTINCT FROM após SELECT FOR UPDATE e retorna contract_changed. Marcar “manter contrato” não dispensa essa conferência. O erro orienta recarregar e revisar. A assinatura agora tem nove parâmetros; versões anteriores de sete/oito parâmetros precisam ser inventariadas e revogadas antes da ativação.
+
+Testes novos: valor alterado após leitura, decisão keep_contract desatualizada, zero diferente de desconhecido e propagação do conflito da RPC pelo handler. SQL permanece exclusivamente para revisão. SHA-256 atual: 956db90df0c8f3b6f0dda9fc38ca646638960ff370ebd5c952ecd71d43ed2c95.
+
+### Roteiro para homologação integrada
+
+1. Identificar banco de staging separado e confirmar esquema real, sem importar clientes reais para testes públicos.
+2. Inventariar assinaturas existentes da RPC; aplicar revisão em staging e verificar ausência de EXECUTE para anon/authenticated em todas as assinaturas de snapshot.
+3. Usar contas de teste administrador e tatuador; administrador pode vincular, tatuador não pode ler/gravar vínculo administrativo nem obter valores brutos.
+4. Abrir duas fichas do mesmo projeto; alterar o contrato na segunda e tentar vincular pela primeira. Deve retornar contract_changed sem inserir vínculo. Recarregar e revisar deve permitir nova decisão.
+5. Conferir repetição, oportunidade em outro projeto, contato incorreto, leitura CRM incompleta e recarga de vínculos persistidos.
+6. Conferir no banco contrato, recebimentos e repasses intactos. Registrar evidências antes de propor ativação. Ainda não executado em staging.

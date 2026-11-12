@@ -123,6 +123,8 @@ export const linkProjectOpportunity = createServerFn({ method: "POST" })
       return { state: "rejected", reason: "invalid_line" };
     const contractCents =
       p.quoted_total_eur == null ? null : Math.round(Number(p.quoted_total_eur) * 100);
+    if (contractCents !== data.expectedContractCents)
+      return { state: "rejected", reason: "contract_changed" };
     const ev = evaluateOpportunityLink({
       status: opp.status,
       valueCents: opp.monetaryValueCents,
@@ -135,6 +137,7 @@ export const linkProjectOpportunity = createServerFn({ method: "POST" })
       supabaseAdmin as unknown as { rpc: (n: string, a: unknown) => Loose }
     ).rpc("link_project_opportunity", {
       p_actor: context.userId,
+      p_expected_contract_cents: data.expectedContractCents,
       p_project_id: p.id,
       p_opportunity_id: opp.id,
       p_contact_id: p.ghl_contact_id,

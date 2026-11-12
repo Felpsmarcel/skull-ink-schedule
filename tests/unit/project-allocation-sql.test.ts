@@ -41,10 +41,11 @@ async function link(
   decision: string | null,
   k: string,
   project = P1,
+  expectedContract: number | null = 270000,
 ) {
   const r = await db.query<{ r: { kind: string; replayed: boolean } }>(
-    "SELECT public.link_project_opportunity($1,$2,$3,$4,$5,$6,$7,$8) AS r",
-    [project, opp, contact, status, cents, decision, k, currentActor],
+    "SELECT public.link_project_opportunity($1,$2,$3,$4,$5,$6,$7,$8,$9) AS r",
+    [project, opp, contact, status, cents, decision, k, currentActor, expectedContract],
   );
   return r.rows[0].r;
 }
@@ -286,5 +287,27 @@ describe("fronteira de confiança do vínculo", () => {
       "SELECT created_by FROM project_opportunity_links",
     );
     expect(r.rows[0].created_by).toBe(ADMIN);
+  });
+});
+
+describe("contrato observado no vínculo", () => {
+  it("bloqueia decisão obsoleta após mudança do contrato", async () => {
+    await db.query("UPDATE tattoo_projects SET quoted_total_eur=3000 WHERE id=$1", [P1]);
+    await expect(link("stale", "gA", "won", 90000, "keep_contract", key("stale"))).rejects.toThrow(
+      /contract_changed/,
+    );
+    expect((await db.query("SELECT * FROM project_opportunity_links")).rows).toHaveLength(0);
+    expect(
+      (await link("fresh", "gA", "won", 90000, "keep_contract", key("fresh"), P1, 300000)).kind,
+    ).toBe("active");
+  });
+  it("distingue contrato desconhecido de zero", async () => {
+    await db.query("UPDATE tattoo_projects SET quoted_total_eur=0 WHERE id=$1", [P1]);
+    await expect(
+      link("null", "gA", "won", 0, "keep_contract", key("null"), P1, null),
+    ).rejects.toThrow(/contract_changed/);
+    expect((await link("null", "gA", "won", 0, "keep_contract", key("null"), P1, 0)).kind).toBe(
+      "active",
+    );
   });
 });
