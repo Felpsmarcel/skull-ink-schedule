@@ -40,6 +40,22 @@ export interface AppointmentDraft {
   sessionCount: number;
   /** Datas das sessões 2..N (ISO), mesma duração/valor da sessão 1. */
   extraStarts: (string | null)[];
+  /** Confirmed writes survive a partial flow; never silently resend this draft. */
+  bookingCheckpoint?: {
+    sessions: ConfirmedDraftSession[];
+    pendingSession: number | null;
+    reason: string;
+  } | null;
+}
+
+export interface ConfirmedDraftSession {
+  session: number;
+  startISO: string;
+  idempotencyKey: string;
+  appointmentId: string;
+  ghlEventId: string | null;
+  projectId: string | null;
+  ghlOpportunityId: string | null;
 }
 
 interface State extends AppointmentDraft {
@@ -56,6 +72,7 @@ interface State extends AppointmentDraft {
   setProject: (patch: Partial<DraftProject>) => void;
   setSessionCount: (n: number) => void;
   setExtraStart: (index: number, iso: string | null) => void;
+  setBookingCheckpoint: (checkpoint: AppointmentDraft["bookingCheckpoint"]) => void;
   reset: () => void;
 }
 
@@ -86,8 +103,8 @@ const initial: AppointmentDraft = {
   idempotencyKey: newKey(),
   sessionCount: 1,
   extraStarts: [],
+  bookingCheckpoint: null,
 };
-
 
 export const useAppointmentDraft = create<State>()(
   persist(
@@ -97,21 +114,27 @@ export const useAppointmentDraft = create<State>()(
         set((st) => ({
           contact,
           // Trocar de cliente invalida a decisão de projeto/oportunidade.
-          project:
-            st.contact?.id === contact?.id ? st.project : { ...initialProject },
+          project: st.contact?.id === contact?.id ? st.project : { ...initialProject },
         })),
 
-      setCalendar: (calendarId) => set({ calendarId }),
+      setCalendar: (calendarId) =>
+        set((st) =>
+          st.calendarId === calendarId
+            ? st
+            : {
+                calendarId,
+                // Availability belongs to a calendar; every session must be selected again.
+                startISO: null,
+                extraStarts: st.extraStarts.map(() => null),
+              },
+        ),
       setStart: (startISO) => set({ startISO }),
       addService: (s) =>
         set((st) =>
           st.services.some((l) => l.service.id === s.id)
             ? st
             : {
-                services: [
-                  ...st.services,
-                  { service: s, discountPct: 0, overridePriceEur: null },
-                ],
+                services: [...st.services, { service: s, discountPct: 0, overridePriceEur: null }],
               },
         ),
       removeService: (id) =>
@@ -119,9 +142,7 @@ export const useAppointmentDraft = create<State>()(
       setDiscount: (serviceId, pct) =>
         set((st) => ({
           services: st.services.map((l) =>
-            l.service.id === serviceId
-              ? { ...l, discountPct: Math.max(0, Math.min(100, pct)) }
-              : l,
+            l.service.id === serviceId ? { ...l, discountPct: Math.max(0, Math.min(100, pct)) } : l,
           ),
         })),
       setOverridePrice: (serviceId, eur) =>
@@ -130,16 +151,14 @@ export const useAppointmentDraft = create<State>()(
             l.service.id === serviceId
               ? {
                   ...l,
-                  overridePriceEur:
-                    eur == null || Number.isNaN(eur) ? null : Math.max(0, eur),
+                  overridePriceEur: eur == null || Number.isNaN(eur) ? null : Math.max(0, eur),
                 }
               : l,
           ),
         })),
       setNotes: (notes) => set({ notes: notes.slice(0, 1000) }),
       setSeller: (sellerId) => set({ sellerId }),
-      setDeposit: (eur) =>
-        set({ depositEur: Number.isFinite(eur) ? Math.max(0, eur) : 0 }),
+      setDeposit: (eur) => set({ depositEur: Number.isFinite(eur) ? Math.max(0, eur) : 0 }),
       setSessionCount: (n) =>
         set((st) => {
           const count = Math.max(1, Math.min(10, Math.round(n) || 1));
@@ -150,6 +169,7 @@ export const useAppointmentDraft = create<State>()(
         set((st) => ({
           extraStarts: st.extraStarts.map((v, i) => (i === index ? iso : v)),
         })),
+      setBookingCheckpoint: (bookingCheckpoint) => set({ bookingCheckpoint }),
       setProject: (patch) => set((st) => ({ project: { ...st.project, ...patch } })),
       reset: () => set({ ...initial, project: { ...initialProject }, idempotencyKey: newKey() }),
     }),
@@ -177,17 +197,12 @@ export function linePriceEur(line: DraftServiceLine): number {
 }
 
 export function totalOriginalEur(draft: AppointmentDraft): number {
-  return round2(
-    draft.services.reduce((acc, l) => acc + linePriceEur(l), 0),
-  );
+  return round2(draft.services.reduce((acc, l) => acc + linePriceEur(l), 0));
 }
 
 export function totalFinalEur(draft: AppointmentDraft): number {
   return round2(
-    draft.services.reduce(
-      (acc, l) => acc + linePriceEur(l) * (1 - l.discountPct / 100),
-      0,
-    ),
+    draft.services.reduce((acc, l) => acc + linePriceEur(l) * (1 - l.discountPct / 100), 0),
   );
 }
 
@@ -197,9 +212,7 @@ export function balanceEur(draft: AppointmentDraft): number {
 
 /** True when every "sob consulta" line has a value entered. */
 export function draftValuesComplete(draft: AppointmentDraft): boolean {
-  return draft.services.every(
-    (l) => !l.service.price_on_request || (l.overridePriceEur ?? 0) > 0,
-  );
+  return draft.services.every((l) => !l.service.price_on_request || (l.overridePriceEur ?? 0) > 0);
 }
 
 function round2(n: number): number {
@@ -212,5 +225,10 @@ export function projectTotalEur(draft: AppointmentDraft): number {
 }
 
 export function allSessionsScheduled(draft: AppointmentDraft): boolean {
-  return (draft.sessionCount || 1) <= 1 || draft.extraStarts.every((v) => Boolean(v));
+  const count = Math.max(1, draft.sessionCount || 1);
+  return Boolean(
+    draft.startISO &&
+    draft.extraStarts.length === count - 1 &&
+    draft.extraStarts.every((v) => Boolean(v)),
+  );
 }

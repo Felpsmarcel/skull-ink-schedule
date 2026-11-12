@@ -1,13 +1,9 @@
+import { AgendaBookingCard } from "@/components/agenda/agenda-booking-card";
+import { AgendaToolbar } from "@/components/agenda/agenda-toolbar";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Calendar as CalendarIcon,
-  AlertTriangle,
-  Bug,
-} from "lucide-react";
+import { AlertTriangle, Bug } from "lucide-react";
 import "@/i18n";
 
 import { useStaffDayAgenda, type StaffAgenda } from "@/hooks/use-agenda";
@@ -29,8 +25,6 @@ import {
   brusselsWeekStartMs,
   enumerateBrusselsDays,
 } from "@/lib/agenda-grid";
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -39,12 +33,12 @@ import { useAppointmentDraft } from "@/stores/appointment-draft";
 import type { GhlEvent } from "@/lib/ghl";
 import { AgendaAppointmentSheet } from "@/components/agenda-appointment-sheet";
 import type { GridSlot } from "@/lib/agenda-grid";
-import { AlertTriangle as AlertTriangleIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { GhlSyncStatus } from "@/components/ghl-sync-status";
 import { agendaScope } from "@/lib/agenda-scope";
 import { useArtists } from "@/hooks/use-artists";
 import { useAgendaSwipe } from "@/hooks/use-agenda-swipe";
+import { agendaLinkDay, parseAgendaLinkDate } from "@/lib/agenda-link-date";
 
 type View = "day" | "week" | "month";
 
@@ -77,10 +71,11 @@ export const Route = createFileRoute("/_authenticated/agenda")({
         ? (rawView as View)
         : undefined;
     const novo = typeof s.novo === "string" && s.novo.length > 2 ? s.novo : undefined;
-    const out: { debug?: boolean; view?: View; novo?: string } = {};
+    const out: { debug?: boolean; view?: View; novo?: string; date?: string } = {};
     if (on) out.debug = true;
     if (view && view !== "day") out.view = view;
     if (novo) out.novo = novo;
+    if (typeof s.date === "string" && parseAgendaLinkDate(s.date)) out.date = s.date;
     return out;
   },
 
@@ -102,9 +97,9 @@ function defaultTimeLabels(): string[] {
 }
 
 function AgendaPage() {
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
   const navigate = useNavigate({ from: "/agenda" });
-  const search = Route.useSearch() as { debug?: boolean; view?: View; novo?: string };
+  const search = Route.useSearch();
   const debug = search.debug === true;
   const view: View = search.view ?? "day";
   const setView = (v: View) =>
@@ -115,8 +110,23 @@ function AgendaPage() {
       }),
       replace: true,
     });
-  const [date, setDate] = useState<Date>(() => new Date());
+  const [date, setDateState] = useState<Date>(() => parseAgendaLinkDate(search.date) ?? new Date());
   const [pickerOpen, setPickerOpen] = useState(false);
+  useEffect(() => {
+    setDateState(parseAgendaLinkDate(search.date) ?? new Date());
+  }, [search.date]);
+  const setDate = (nextDate: Date, nextView?: View) => {
+    setDateState(nextDate);
+    navigate({
+      search: (prev) => ({
+        ...prev,
+        date: agendaLinkDay(nextDate.toISOString()),
+        novo: undefined,
+        view: nextView === "day" ? undefined : (nextView ?? prev.view),
+      }),
+      replace: true,
+    });
+  };
 
   useEffect(() => {
     document.documentElement.classList.add("agenda-no-pull-refresh");
@@ -146,8 +156,7 @@ function AgendaPage() {
     const d = new Date(date);
     d.setDate(1);
     d.setMonth(d.getMonth() - 1);
-    setDate(d);
-    setView("month");
+    setDate(d, "month");
   }
 
   const dateLabel = useMemo(() => {
@@ -187,8 +196,7 @@ function AgendaPage() {
   }
 
   const goToDay = (d: Date) => {
-    setDate(d);
-    setView("day");
+    setDate(d, "day");
   };
 
   if (!scope.allowed)
@@ -200,133 +208,31 @@ function AgendaPage() {
 
   return (
     <div className="agenda-scope flex min-h-dvh flex-col bg-background pb-[calc(env(safe-area-inset-bottom)+6rem)] sm:pb-20">
-      {/* Header — editorial monochrome */}
-      <header className="sticky top-0 z-30 border-b border-border bg-background">
-        <div className="mx-auto grid w-full max-w-[1400px] gap-1 px-3 pb-2 pt-[calc(env(safe-area-inset-top)+0.25rem)] gap-y-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-x-6 sm:px-6 sm:py-3 lg:grid-cols-[minmax(0,1fr)_auto_auto]">
-          <div className="flex min-w-0 items-center gap-2">
-            <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="ghost"
-                  aria-label={`Escolher data: ${dateLabel}`}
-                  className="min-w-0 flex-1 justify-start gap-2 px-0 text-left sm:flex-none sm:px-2"
-                >
-                  <CalendarIcon aria-hidden="true" className="shrink-0 text-muted-foreground" />
-                  <span className="min-w-0">
-                    <span className="block font-editorial text-xl font-semibold text-foreground first-letter:uppercase sm:text-2xl">
-                      {dateLabel}
-                    </span>
-                    {view === "day" ? (
-                      <span className="block text-xs font-normal tabular-nums text-muted-foreground">
-                        {t("agenda.kpi.sessions", { n: totals.booked })}
-                        <span aria-hidden="true"> · </span>
-                        {totals.free === 0
-                          ? "Nenhum horário vago"
-                          : t("agenda.kpi.free", { n: totals.free })}
-                      </span>
-                    ) : null}
-                  </span>
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="center" className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={date}
-                  onSelect={(d) => {
-                    if (d) {
-                      setDate(d);
-                      setPickerOpen(false);
-                    }
-                  }}
-                />
-                <div className="border-t border-border p-2">
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      goPrevMonth();
-                      setPickerOpen(false);
-                    }}
-                    className="w-full justify-start px-2 text-sm text-muted-foreground"
-                  >
-                    Ir para o mês anterior
-                  </Button>
-                </div>
-              </PopoverContent>
-            </Popover>
-            {me?.role === "admin" ? <GhlSyncStatus /> : null}
-          </div>
-
-          <div className="flex min-w-0 items-center gap-2">
-            <div className="flex shrink-0 items-center gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => shift(-1)}
-                className="h-11 w-11 shrink-0 text-muted-foreground"
-                aria-label={t("agenda.prev")}
-              >
-                <ChevronLeft aria-hidden="true" />
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => setDate(new Date())}
-                className="h-11 shrink-0 rounded-md border border-border px-4 text-sm font-medium text-foreground"
-              >
-                {t("agenda.today")}
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => shift(1)}
-                className="h-11 w-11 shrink-0 text-muted-foreground"
-                aria-label={t("agenda.next")}
-              >
-                <ChevronRight aria-hidden="true" />
-              </Button>
-            </div>
-            {scope.artistId === null ? (
-              <select
-                aria-label="Selecionar tatuador"
-                value={pickedArtistId}
-                onChange={(e) => setPickedArtistId(e.target.value)}
-                className="h-11 min-w-0 flex-1 rounded-md border border-border bg-card px-2 text-sm font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:max-w-[12rem]"
-              >
-                <option value="">Todos</option>
-                {allArtists
-                  .filter((a) => !/augusto/i.test(a.name))
-                  .map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name}
-                    </option>
-                  ))}
-              </select>
-            ) : null}
-          </div>
-          <div
-            role="tablist"
-            aria-label="Visualização da agenda"
-            className="grid grid-cols-3 rounded-lg border border-border bg-card p-1 sm:col-span-2 sm:justify-self-start lg:col-span-1 lg:justify-self-end"
-          >
-            {(["day", "week", "month"] as const).map((v) => (
-              <button
-                key={v}
-                type="button"
-                role="tab"
-                aria-selected={view === v}
-                onClick={() => setView(v)}
-                className={cn(
-                  "h-11 min-w-[5.5rem] rounded-md px-4 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  view === v
-                    ? "bg-primary/15 text-primary"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                )}
-              >
-                {t(`agenda.view.${v}`)}
-              </button>
-            ))}
-          </div>
-        </div>
-      </header>
+      <AgendaToolbar
+        date={date}
+        dateLabel={dateLabel}
+        view={view}
+        setView={setView}
+        pickerOpen={pickerOpen}
+        setPickerOpen={setPickerOpen}
+        setDate={setDate}
+        goPrevMonth={goPrevMonth}
+        shift={shift}
+        booked={totals.booked}
+        free={totals.free}
+        summaryState={
+          agendas.some((a) => a.isLoading)
+            ? "loading"
+            : agendas.some((a) => a.error)
+              ? "partial"
+              : "ready"
+        }
+        syncStatus={me?.role === "admin" ? <GhlSyncStatus /> : null}
+        allowArtistFilter={scope.artistId === null}
+        pickedArtistId={pickedArtistId}
+        setPickedArtistId={setPickedArtistId}
+        allArtists={allArtists}
+      />
 
       {view === "day" ? (
         <DayView
@@ -525,7 +431,7 @@ function DayView({
                       "text-xs tabular-nums",
                       active ? "opacity-80" : a.bookedCount === 0 ? "opacity-40" : "",
                     )}
-                    aria-label={`${a.bookedCount} sessões`}
+                    aria-label={`${a.bookedCount} agendamentos`}
                   >
                     {a.bookedCount}
                   </span>
@@ -542,7 +448,7 @@ function DayView({
         data-agenda-gesture
         className="mx-auto w-full max-w-[1400px] flex-1 touch-pan-y touch-pinch-zoom px-2 py-4 sm:px-6"
       >
-        <div className="h-full overflow-hidden border-y border-border bg-background">
+        <div className="h-full overflow-hidden rounded-xl border border-border bg-card shadow-sm">
           <div ref={scrollRef} className="h-full overflow-auto">
             <div className="relative flex w-full min-w-full">
               {/* Time column */}
@@ -743,60 +649,14 @@ function SlotCell({
     return <div className={cn(ROW_HEIGHT)} aria-hidden="true" />;
   }
 
-  const bucket = slot.ghlEventId ? statusMap.get(slot.ghlEventId) : undefined;
-  const span = Math.max(1, slot.spanSlots ?? 1);
-  const cardHeight = span * ROW_HEIGHT_PX - 4; // 2px inset top/bottom
-  const startLabel = fmtHHmm(slot.eventStartMs ?? slot.startMs);
-  const endLabel = slot.eventEndMs ? fmtHHmm(slot.eventEndMs) : null;
-
   return (
-    <div className={cn("relative", ROW_HEIGHT)} style={{ overflow: "visible" }}>
-      <Button
-        variant="ghost"
-        data-appointment-status={slot.appointmentStatus?.toLowerCase()}
-        onClick={() => onOpen(slot)}
-        title={`${slot.contactName ?? t("agenda.client")} — ${slot.serviceName ?? t("agenda.booked")}`}
-        className={cn(
-          "agenda-session absolute left-[3px] right-[3px] top-[2px] z-[1] h-auto flex-col items-stretch justify-start gap-0.5 overflow-hidden whitespace-normal rounded-md border border-border border-l-[3px] px-2 py-1 text-left text-foreground hover:bg-accent/40 focus-visible:ring-ring sm:py-1.5",
-          isHighlighted && "ring-2 ring-primary ring-offset-2 ring-offset-background",
-        )}
-        style={{ height: cardHeight }}
-      >
-        {isNext ? (
-          <span className="pointer-events-none absolute right-1 top-1 rounded-sm bg-primary/15 px-1 py-[1px] text-xs font-medium text-primary">
-            {t("agenda.next", { defaultValue: "Próximo" })}
-          </span>
-        ) : null}
-        <div className="text-xs font-semibold tabular-nums text-foreground/80">
-          {startLabel}
-          {endLabel ? ` – ${endLabel}` : ""}
-        </div>
-        <div className="flex items-center gap-1">
-          <span className={cn("truncate text-sm font-semibold leading-tight", isNext && "pr-16")}>
-            {slot.contactName ?? t("agenda.booked")}
-          </span>
-          {slot.hasOverlap ? (
-            <AlertTriangleIcon
-              className="h-3 w-3 shrink-0 text-agenda-warning"
-              aria-label={t("agenda.details.overlap")}
-            />
-          ) : null}
-        </div>
-        {slot.serviceName && cardHeight >= 100 ? (
-          <div className="line-clamp-2 text-xs font-normal leading-tight text-muted-foreground">
-            {slot.serviceName}
-          </div>
-        ) : null}
-        {bucket && cardHeight >= 100 ? (
-          <StatusBadge
-            variant={bucketToVariant(bucket)}
-            className="mt-auto self-start px-1 py-0 text-xs normal-case"
-          >
-            {bucketLabel(bucket)}
-          </StatusBadge>
-        ) : null}
-      </Button>
-    </div>
+    <AgendaBookingCard
+      slot={slot}
+      bucket={slot.ghlEventId ? statusMap.get(slot.ghlEventId) : undefined}
+      isNext={isNext}
+      isHighlighted={isHighlighted}
+      onOpen={onOpen}
+    />
   );
 }
 
@@ -857,6 +717,7 @@ function WeekView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startMs, endMs]);
   const [mobileDayKey, setMobileDayKey] = useState<string>(initialMobileKey);
+  const [expandedCells, setExpandedCells] = useState<Set<string>>(() => new Set());
   const activeMobileKey = days.some((d) => brusselsDayKey(new Date(d)) === mobileDayKey)
     ? mobileDayKey
     : initialMobileKey;
@@ -980,7 +841,9 @@ function WeekView({
                     const key = brusselsDayKey(d);
                     const isToday = key === todayKey;
                     const evs = byDay.get(key) ?? [];
-                    const visible = evs.slice(0, 3);
+                    const cellKey = `${a.staff.id}-${key}`;
+                    const expanded = expandedCells.has(cellKey);
+                    const visible = expanded ? evs : evs.slice(0, 3);
                     const extra = evs.length - visible.length;
                     return (
                       <div
@@ -1006,16 +869,30 @@ function WeekView({
                               type="button"
                               onClick={() => openFromEvent(ev, a.staff)}
                               title={`${name}${ev.title ? " — " + ev.title : ""}`}
+                              aria-label={`${name}, ${fmtHHmm(s)}${ev.title ? ", " + ev.title : ""}`}
                               className="agenda-session h-11 min-w-0 gap-0 overflow-hidden rounded-sm border border-border border-l-2 px-0 text-xs font-medium tabular-nums text-foreground"
                             >
                               <span className="py-1">{fmtHHmm(s)}</span>
                             </Button>
                           );
                         })}
-                        {extra > 0 ? (
-                          <span className="px-1 text-xs font-medium text-muted-foreground">
-                            +{extra}
-                          </span>
+                        {evs.length > 3 ? (
+                          <button
+                            type="button"
+                            aria-expanded={expanded}
+                            onClick={() =>
+                              setExpandedCells((current) => {
+                                const next = new Set(current);
+                                if (expanded) next.delete(cellKey);
+                                else next.add(cellKey);
+                                return next;
+                              })
+                            }
+                            aria-label={`${expanded ? "Recolher" : "Ver todos os " + evs.length} agendamentos de ${a.staff.shortName} em ${dayLongFmt.format(d)}`}
+                            className="min-h-11 rounded border border-border bg-card px-1 text-xs font-medium text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          >
+                            {expanded ? "−" : `+${extra}`}
+                          </button>
                         ) : null}
                       </div>
                     );
@@ -1025,8 +902,8 @@ function WeekView({
             })}
           </div>
           {agendas.length === 0 && !isFetching ? (
-            <div className="p-4 text-center text-xs text-muted-foreground">
-              {t("common.loading")}
+            <div role="status" className="p-4 text-center text-sm text-muted-foreground">
+              Nenhum calendário disponível para esta visualização.
             </div>
           ) : null}
         </div>
@@ -1170,8 +1047,8 @@ function WeekView({
             );
           })}
           {agendas.length === 0 && !isFetching ? (
-            <div className="p-4 text-center text-xs text-muted-foreground">
-              {t("common.loading")}
+            <div role="status" className="p-4 text-center text-sm text-muted-foreground">
+              Nenhum calendário disponível para esta visualização.
             </div>
           ) : null}
         </div>
@@ -1330,6 +1207,7 @@ function MonthView({
               type="button"
               onClick={() => onPickDay(d)}
               title={dayTitle}
+              aria-label={`${new Intl.DateTimeFormat(locale, { timeZone: "Europe/Brussels", dateStyle: "full" }).format(d)} · ${evs.length} agendamentos na leitura atual`}
               className={cn(
                 "flex min-h-[56px] flex-col items-start gap-1 border-b border-r border-border p-1 text-left transition-colors hover:bg-muted sm:min-h-[88px] sm:p-1.5",
                 !inMonth && "bg-background/50 text-muted-foreground/60",
@@ -1391,12 +1269,12 @@ function MonthView({
                 <div className="mt-auto hidden flex-wrap gap-1 sm:flex">
                   {buckets.paid > 0 ? (
                     <StatusBadge variant="success" className="px-1 py-0 text-[11px]">
-                      {buckets.paid}
+                      {buckets.paid} pagos
                     </StatusBadge>
                   ) : null}
                   {buckets.pending > 0 ? (
                     <StatusBadge variant="warning" className="px-1 py-0 text-[11px]">
-                      {buckets.pending}
+                      {buckets.pending} pendentes
                     </StatusBadge>
                   ) : null}
                   {buckets.error > 0 ? (

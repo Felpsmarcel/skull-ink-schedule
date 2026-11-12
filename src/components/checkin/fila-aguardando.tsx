@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { AlertTriangle, Clock, Loader2, PlayCircle, UserX, CheckCheck } from "lucide-react";
+import { QueueView } from "@/components/checkin/queue-view";
 import {
   getFilaHoje,
   setCheckinStatus,
@@ -10,19 +10,6 @@ import {
 } from "@/lib/checkin.functions";
 import { haptic } from "@/lib/haptics";
 import { useCurrentUser } from "@/hooks/use-current-user";
-
-function hora(iso: string | null) {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleTimeString("pt-PT", {
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "Europe/Brussels",
-  });
-}
-
-function esperaMin(iso: string) {
-  return Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
-}
 
 export function useFilaHoje() {
   const fetchFila = useServerFn(getFilaHoje);
@@ -35,12 +22,11 @@ export function useFilaHoje() {
 }
 
 export function FilaAguardando({ showConcluidos = false }: { showConcluidos?: boolean }) {
-  const { data, isLoading, error } = useFilaHoje();
+  const { data, isLoading, error, refetch } = useFilaHoje();
   const { data: me } = useCurrentUser();
   const qc = useQueryClient();
-  // Só o admin ou o tatuador da própria linha pode mudar o estado da fila.
-  const podeAgir = (row: FilaRow) =>
-    me?.role === "admin" || (me?.role === "artist" && !!row.artistId && row.artistId === me?.artistId);
+  // Queue operation stays reception-only until artist RLS and row scopes are separately validated.
+  const podeAgir = () => me?.role === "admin";
   const updateStatus = useServerFn(setCheckinStatus);
 
   const mutation = useMutation({
@@ -57,104 +43,19 @@ export function FilaAguardando({ showConcluidos = false }: { showConcluidos?: bo
     showConcluidos ? true : r.status === "aguardando" || r.status === "em_atendimento",
   );
 
-  if (isLoading) {
-    return (
-      <div className="grid place-items-center rounded-lg border border-border bg-card py-10">
-        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
-        Não foi possível carregar a fila agora.
-      </div>
-    );
-  }
-
-  if (rows.length === 0) {
-    return (
-      <div className="rounded-lg border border-dashed border-border bg-card p-6 text-center text-sm text-muted-foreground">
-        Ninguém aguardando neste momento.
-      </div>
-    );
-  }
-
   return (
-    <ul className="space-y-2">
-      {rows.map((r) => (
-        <li
-          key={r.id}
-          data-testid="fila-item"
-          className="rounded-lg border border-border bg-card p-3"
-        >
-          <div className="flex items-start gap-3">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <span data-testid="fila-nome" className="truncate text-sm font-semibold">
-                  {r.clienteNome}
-                </span>
-                <span
-                  data-testid="fila-codigo"
-                  className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-bold tracking-wider"
-                >
-                  {r.codigo}
-                </span>
-                {r.syncStatus === "failed" ? (
-                  <span title="Sincronização com o CRM falhou">
-                    <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
-                  </span>
-                ) : null}
-              </div>
-              <p className="mt-0.5 flex items-center gap-1 text-[11px] text-muted-foreground">
-                <Clock className="h-3 w-3" />
-                chegou {hora(r.arrivedAtISO)} · espera {esperaMin(r.arrivedAtISO)} min
-                {r.scheduledAtISO ? ` · agendado ${hora(r.scheduledAtISO)}` : ""}
-                {r.tatuador ? ` · ${r.tatuador}` : ""}
-              </p>
-            </div>
-
-            <div className="flex shrink-0 gap-1.5">
-              {!podeAgir(r) ? null : r.status === "aguardando" ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      haptic("tap");
-                      mutation.mutate({ id: r.id, status: "em_atendimento" });
-                    }}
-                    disabled={mutation.isPending}
-                    className="flex h-11 items-center gap-1.5 rounded-md bg-primary px-3 text-xs font-bold uppercase tracking-wider text-primary-foreground disabled:opacity-50"
-                  >
-                    <PlayCircle className="h-4 w-4" />
-                    Iniciar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => mutation.mutate({ id: r.id, status: "nao_compareceu" })}
-                    disabled={mutation.isPending}
-                    className="grid h-11 w-11 place-items-center rounded-md border border-border text-muted-foreground disabled:opacity-50"
-                    aria-label="Não compareceu"
-                  >
-                    <UserX className="h-4 w-4" />
-                  </button>
-                </>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => mutation.mutate({ id: r.id, status: "concluido" })}
-                  disabled={mutation.isPending}
-                  className="flex h-11 items-center gap-1.5 rounded-md border border-border px-3 text-xs font-bold uppercase tracking-wider disabled:opacity-50"
-                >
-                  <CheckCheck className="h-4 w-4" />
-                  Concluir
-                </button>
-              )}
-            </div>
-          </div>
-        </li>
-      ))}
-    </ul>
+    <QueueView
+      rows={rows}
+      loading={isLoading}
+      error={Boolean(error)}
+      showAll={showConcluidos}
+      pending={mutation.isPending}
+      canAct={podeAgir}
+      onRetry={() => void refetch()}
+      onStatusChange={(row, status) => {
+        if (status === "em_atendimento") haptic("tap");
+        mutation.mutate({ id: row.id, status });
+      }}
+    />
   );
 }

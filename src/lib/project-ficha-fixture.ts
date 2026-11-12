@@ -67,6 +67,16 @@ export const SYNTHETIC_OPPS: ProjectOpportunitiesResult = {
   linkedOpportunityId: null,
   items: [
     {
+      id: "divergente-ficticia",
+      name: "Sessão parcial (fictícia)",
+      status: "open",
+      inArtistPipeline: true,
+      monetaryValueCents: 90000,
+      linkedHere: false,
+      linkedElsewhereProjectId: null,
+    },
+
+    {
       id: "o1",
       name: "Projeto braço (fictício)",
       status: "won",

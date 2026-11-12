@@ -1,13 +1,13 @@
 // Server-only. Sincroniza um check-in do totem com o HighLevel.
 // Best-effort: qualquer falha aqui NÃO desfaz o registo local do check-in.
 //
-// Ordem: contacto → agendamento do dia → oportunidade → tag → campos → workflow.
+// IDs de agendamento vêm da leitura canônica do servidor. Não inferir primeiro evento ou oportunidade.
+// Tag/campos são sincronização operacional; workflow explícito exige consentimento.
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const GHL_BASE = "https://services.leadconnectorhq.com";
 const V_CONTACTS = "2021-07-28";
-const V_CALENDARS = "2021-04-15";
 export const CHECKIN_LOCATION_ID = "9iqrKUVPDddINb9S4Iwd";
 export const CHECKIN_TAG = "check-in-totem-gf";
 export const STATUS_AGUARDANDO = "Aguardando atendimento";
@@ -18,6 +18,9 @@ export interface CheckinSyncInput {
   clienteTelefone: string | null;
   clienteEmail?: string | null;
   ghlContactId: string | null;
+  /** ID observado no agendamento local selecionado e validado, nunca buscado por dia/nome. */
+  ghlAppointmentId: string | null;
+  consentimento: boolean;
   codigoAtendimento: string;
   qrUrl: string;
   arrivedAtISO: string;
@@ -28,7 +31,7 @@ export interface CheckinSyncResult {
   ghlContactId?: string;
   ghlAppointmentId?: string;
   ghlOpportunityId?: string;
-  /** Workflow de confirmação acionado (é ele que envia WhatsApp/SMS ao cliente). */
+  /** Solicitação de workflow aceita; não comprova envio nem entrega ao cliente. */
   workflowTriggered?: boolean;
   error?: string;
   steps: string[];
@@ -64,105 +67,14 @@ async function call(
 }
 
 async function getSetting(key: string): Promise<string | null> {
-  const { data } = await supabaseAdmin
+  const { data, error } = await supabaseAdmin
     .from("app_settings" as never)
     .select("value")
     .eq("key", key)
     .maybeSingle();
+  if (error) throw new Error("Não foi possível verificar a configuração do workflow de check-in.");
   const value = (data as { value?: { id?: string } } | null)?.value;
   return value?.id ?? null;
-}
-
-/** Localiza contacto por telefone; cria apenas se não existir. */
-async function findOrCreateContact(
-  token: string,
-  input: CheckinSyncInput,
-  steps: string[],
-): Promise<string | null> {
-  if (input.ghlContactId) {
-    steps.push("contacto: já conhecido");
-    return input.ghlContactId;
-  }
-
-  if (input.clienteTelefone) {
-    const search = await call(
-      "/contacts/search",
-      {
-        method: "POST",
-        body: JSON.stringify({
-          locationId: CHECKIN_LOCATION_ID,
-          pageLimit: 5,
-          query: input.clienteTelefone,
-        }),
-      },
-      token,
-    );
-    const found = (search.body as { contacts?: Array<{ id?: string }> } | null)?.contacts?.[0]?.id;
-    if (found) {
-      steps.push("contacto: encontrado por telefone");
-      return found;
-    }
-  }
-
-  const parts = input.clienteNome.trim().split(/\s+/);
-  const created = await call(
-    "/contacts/",
-    {
-      method: "POST",
-      body: JSON.stringify({
-        locationId: CHECKIN_LOCATION_ID,
-        firstName: parts[0] ?? input.clienteNome,
-        lastName: parts.slice(1).join(" ") || undefined,
-        phone: input.clienteTelefone || undefined,
-        email: input.clienteEmail || undefined,
-        source: "Totem GF",
-      }),
-    },
-    token,
-  );
-  const id = (created.body as { contact?: { id?: string } } | null)?.contact?.id ?? null;
-  steps.push(id ? "contacto: criado" : `contacto: falhou (${created.status})`);
-  return id;
-}
-
-/** Agendamento do contacto para hoje (fuso de Bruxelas). */
-async function findTodayAppointment(
-  token: string,
-  contactId: string,
-  steps: string[],
-): Promise<{ id: string; startTime?: string; calendarId?: string } | null> {
-  const res = await call(`/contacts/${contactId}/appointments`, { method: "GET" }, token, V_CALENDARS);
-  const events = (res.body as { events?: Array<Record<string, unknown>> } | null)?.events ?? [];
-  const todayKey = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Brussels" });
-  const match = events.find((e) => {
-    const start = typeof e.startTime === "string" ? e.startTime : null;
-    if (!start) return false;
-    return new Date(start).toLocaleDateString("en-CA", { timeZone: "Europe/Brussels" }) === todayKey;
-  });
-  steps.push(match ? "agendamento: encontrado para hoje" : "agendamento: nenhum hoje");
-  if (!match) return null;
-  return {
-    id: String(match.id),
-    startTime: typeof match.startTime === "string" ? match.startTime : undefined,
-    calendarId: typeof match.calendarId === "string" ? match.calendarId : undefined,
-  };
-}
-
-/** Reutiliza a oportunidade aberta do contacto; não cria duplicados. */
-async function findOpportunity(
-  token: string,
-  contactId: string,
-  steps: string[],
-): Promise<string | null> {
-  const res = await call(
-    `/opportunities/search?location_id=${CHECKIN_LOCATION_ID}&contact_id=${contactId}&limit=5`,
-    { method: "GET" },
-    token,
-  );
-  const list = (res.body as { opportunities?: Array<{ id?: string }> } | null)?.opportunities ?? [];
-  const id = list[0]?.id ?? null;
-  steps.push(id ? "oportunidade: reutilizada" : "oportunidade: nenhuma encontrada");
-  return id;
 }
 
 export async function syncCheckinToGhl(input: CheckinSyncInput): Promise<CheckinSyncResult> {
@@ -171,11 +83,27 @@ export async function syncCheckinToGhl(input: CheckinSyncInput): Promise<Checkin
   if (!token) return { ok: false, error: "GHL_TOKEN ausente", steps };
 
   try {
-    const contactId = await findOrCreateContact(token, input, steps);
-    if (!contactId) return { ok: false, error: steps.join(" | "), steps };
+    const contactId = input.ghlContactId?.trim();
+    if (!contactId) {
+      steps.push("contacto: sem vínculo GHL confirmado; revisão necessária");
+      return {
+        ok: false,
+        error:
+          "Chegada local preservada. Confirme o vínculo do contato antes de sincronizar com o GHL.",
+        steps,
+      };
+    }
+    steps.push("contacto: vínculo canônico preservado");
 
-    const appointment = await findTodayAppointment(token, contactId, steps);
-    const opportunityId = await findOpportunity(token, contactId, steps);
+    const appointmentId = input.ghlAppointmentId || undefined;
+    steps.push(
+      appointmentId
+        ? "agendamento: ID canônico preservado"
+        : "agendamento: sem vínculo GHL confirmado",
+    );
+    // No explicit validated project/opportunity correlation exists in this flow.
+    // Do not select a contact's first opportunity from any pipeline.
+    steps.push("oportunidade: sem vínculo confirmado; não associada");
 
     // Tag
     const tagRes = await call(
@@ -204,26 +132,39 @@ export async function syncCheckinToGhl(input: CheckinSyncInput): Promise<Checkin
     );
     steps.push(fieldsRes.ok ? "campos: atualizados" : `campos: falhou (${fieldsRes.status})`);
 
-    // Workflow de confirmação (opcional; só corre se o ID estiver configurado)
-    const workflowId = await getSetting("ghl_checkin_workflow_id");
+    // Consent is optional for arrival registration, mandatory for this explicit communication trigger.
+    // External automations on tags/fields still require a separate staging review.
     let workflowTriggered = false;
-    if (workflowId) {
-      const wf = await call(
-        `/contacts/${contactId}/workflow/${workflowId}`,
-        { method: "POST", body: JSON.stringify({ eventStartTime: input.arrivedAtISO }) },
-        token,
-      );
-      workflowTriggered = wf.ok;
-      steps.push(wf.ok ? "workflow: acionado" : `workflow: falhou (${wf.status})`);
+    let workflowFailed = false;
+    if (input.consentimento === true) {
+      const workflowId = await getSetting("ghl_checkin_workflow_id");
+      if (workflowId) {
+        const wf = await call(
+          `/contacts/${contactId}/workflow/${workflowId}`,
+          { method: "POST", body: JSON.stringify({ eventStartTime: input.arrivedAtISO }) },
+          token,
+        );
+        workflowTriggered = wf.ok;
+        workflowFailed = !wf.ok;
+        steps.push(
+          wf.ok
+            ? "workflow: solicitação aceita; entrega não comprovada"
+            : `workflow: falhou (${wf.status})`,
+        );
+      } else {
+        steps.push("workflow: não configurado");
+      }
     } else {
-      steps.push("workflow: não configurado");
+      steps.push("workflow: não acionado; sem consentimento");
     }
+    const ok = tagRes.ok && fieldsRes.ok && !workflowFailed;
 
     return {
-      ok: true,
+      ok,
       ghlContactId: contactId,
-      ghlAppointmentId: appointment?.id,
-      ghlOpportunityId: opportunityId ?? undefined,
+      ghlAppointmentId: appointmentId,
+      ghlOpportunityId: undefined,
+      error: ok ? undefined : "Sincronização parcial: revise os passos que falharam.",
       workflowTriggered,
       steps,
     };

@@ -1,4 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { WIZARD_STEPS, type WizardStep } from "@/lib/appointment-draft-validate";
@@ -27,20 +28,46 @@ const LABELS: Record<WizardStep, string> = {
 export function WizardStepper({ completed }: StepperProps) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const current = currentStep(pathname);
+  return (
+    <WizardStepperView
+      current={current}
+      completed={completed}
+      renderLink={(step, content, className, active) => (
+        <Link to={STEP_PATH[step]} className={className} aria-current={active ? "step" : undefined}>
+          {content}
+        </Link>
+      )}
+    />
+  );
+}
+
+export function WizardStepperView({
+  current,
+  completed,
+  renderLink,
+}: StepperProps & {
+  current: WizardStep;
+  renderLink: (
+    step: WizardStep,
+    content: ReactNode,
+    className: string,
+    active: boolean,
+  ) => ReactNode;
+}) {
   const currentIdx = WIZARD_STEPS.indexOf(current);
 
   return (
     <nav
       aria-label="Progresso do agendamento"
-      className="border-b border-border bg-card/40 px-3 py-2.5"
+      className="border-b border-border bg-card/60 px-3 py-3 sm:px-6"
     >
-      <ol className="flex items-center gap-1.5">
+      <ol className="mx-auto grid w-full max-w-4xl grid-cols-5 gap-1 sm:gap-3">
         {WIZARD_STEPS.map((step, i) => {
           const active = step === current;
           const done = completed[step] && !active;
           const reachable = done || active || i <= currentIdx;
           const cls = cn(
-            "flex min-h-9 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full border px-2 py-1.5 text-[11px] uppercase tracking-wider transition",
+            "flex min-h-16 min-w-0 flex-col items-center justify-center gap-1.5 rounded-xl border px-1 py-2 text-[11px] font-medium transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:min-h-12 sm:flex-row sm:gap-2 sm:px-3 sm:text-xs",
             active
               ? "border-primary bg-primary/10 text-foreground"
               : done
@@ -51,7 +78,7 @@ export function WizardStepper({ completed }: StepperProps) {
             <>
               <span
                 className={cn(
-                  "grid h-4 w-4 shrink-0 place-items-center rounded-full text-[10px] font-bold",
+                  "grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-semibold",
                   active
                     ? "bg-primary text-primary-foreground"
                     : done
@@ -59,21 +86,24 @@ export function WizardStepper({ completed }: StepperProps) {
                       : "bg-muted text-muted-foreground",
                 )}
               >
-                {done ? <Check className="h-2.5 w-2.5" /> : i + 1}
+                {done ? (
+                  <Check aria-hidden="true" className="h-3.5 w-3.5" />
+                ) : (
+                  <span aria-hidden="true">{i + 1}</span>
+                )}
               </span>
-              <span className="hidden truncate [@media(min-width:360px)]:inline">
-                {LABELS[step]}
-              </span>
+              <span className="break-words text-center">{LABELS[step]}</span>
+              {done ? <span className="sr-only">, preenchido</span> : null}
             </>
           );
           return (
             <li key={step} className="min-w-0 flex-1">
               {reachable ? (
-                <Link to={STEP_PATH[step]} className={cls}>
-                  {inner}
-                </Link>
+                renderLink(step, inner, cls, active)
               ) : (
-                <span className={cn(cls, "cursor-not-allowed opacity-60")}>{inner}</span>
+                <span aria-disabled="true" className={cn(cls, "text-muted-foreground")}>
+                  {inner}
+                </span>
               )}
             </li>
           );

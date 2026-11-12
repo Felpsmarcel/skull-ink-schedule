@@ -119,7 +119,12 @@ export const linkProjectOpportunity = createServerFn({ method: "POST" })
     if (!opp) return { state: "rejected", reason: "opportunity_not_found" };
     if (opp.contactId !== p.ghl_contact_id)
       return { state: "rejected", reason: "contact_mismatch" };
-    const contractCents = Math.round(Number(p.quoted_total_eur) * 100);
+    if (!opp.status || !["open", "won", "lost", "abandoned"].includes(opp.status.toLowerCase()))
+      return { state: "rejected", reason: "invalid_line" };
+    const contractCents =
+      p.quoted_total_eur == null ? null : Math.round(Number(p.quoted_total_eur) * 100);
+    if (contractCents !== data.expectedContractCents)
+      return { state: "rejected", reason: "contract_changed" };
     const ev = evaluateOpportunityLink({
       status: opp.status,
       valueCents: opp.monetaryValueCents,
@@ -127,9 +132,12 @@ export const linkProjectOpportunity = createServerFn({ method: "POST" })
       keepContract: data.keepContract,
     });
     if (ev.needsDecision) return { state: "rejected", reason: "decision_required" };
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: r, error: e2 } = await (
-      context.supabase as unknown as { rpc: (n: string, a: unknown) => Loose }
+      supabaseAdmin as unknown as { rpc: (n: string, a: unknown) => Loose }
     ).rpc("link_project_opportunity", {
+      p_actor: context.userId,
+      p_expected_contract_cents: data.expectedContractCents,
       p_project_id: p.id,
       p_opportunity_id: opp.id,
       p_contact_id: p.ghl_contact_id,
@@ -143,4 +151,24 @@ export const linkProjectOpportunity = createServerFn({ method: "POST" })
       return { state: "rejected", reason: c === "version_conflict" ? "unknown" : c };
     }
     return { state: "linked", kind: r.kind, replayed: Boolean(r.replayed) };
+  });
+
+/** Recarrega vínculos confirmados, sem expor valores comerciais a artistas. */
+export const getProjectOpportunityLinks = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ projectId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }): Promise<{ enabled: boolean; ids: string[] }> => {
+    await requireAdmin(context.supabase, context.userId);
+    if (!enabled()) return { enabled: false, ids: [] };
+    const { data: rows, error } = await (
+      context.supabase as unknown as { from: (t: string) => Loose }
+    )
+      .from("project_opportunity_links")
+      .select("ghl_opportunity_id")
+      .eq("project_id", data.projectId);
+    if (error) throw new Error("Não foi possível carregar os vínculos");
+    return {
+      enabled: true,
+      ids: (rows ?? []).map((r: { ghl_opportunity_id: string }) => r.ghl_opportunity_id),
+    };
   });

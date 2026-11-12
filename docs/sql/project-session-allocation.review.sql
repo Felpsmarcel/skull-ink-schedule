@@ -137,21 +137,25 @@ BEGIN
 END $$;
 
 -- 4. Vínculo de oportunidade. Valores/status chegam do servidor APÓS releitura GHL completa;
--- a RPC revalida contato, unicidade e decisão de divergência. Nunca altera o contrato.
+-- RPC exclusiva service_role: navegador não pode fornecer snapshots GHL diretamente.
+-- p_actor vem da identidade autenticada verificada no servidor, nunca do payload do navegador.
+-- A RPC revalida papel admin, contato, unicidade e divergência. Nunca altera o contrato.
 -- Erros: forbidden | project_not_found | contact_mismatch | linked_elsewhere | decision_required
 CREATE OR REPLACE FUNCTION public.link_project_opportunity(
   p_project_id uuid, p_opportunity_id text, p_contact_id text, p_status text,
-  p_value_cents bigint, p_contract_decision text, p_idempotency_key text)
+  p_value_cents bigint, p_contract_decision text, p_idempotency_key text, p_actor uuid, p_expected_contract_cents bigint)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE
-  v_uid uuid := auth.uid();
+  v_uid uuid := p_actor;
   v_contact text;
   v_contract bigint;
   v_kind text;
   v_existing record;
   v_out jsonb;
 BEGIN
-  IF v_uid IS NULL OR public.current_user_role() IS DISTINCT FROM 'admin' THEN RAISE EXCEPTION 'forbidden'; END IF;
+  IF v_uid IS NULL OR NOT EXISTS (SELECT 1 FROM public.app_users WHERE id = v_uid AND role::text = 'admin') THEN RAISE EXCEPTION 'forbidden'; END IF;
+  IF p_status IS NULL OR lower(p_status) NOT IN ('open','won','lost','abandoned') OR p_value_cents < 0
+     OR p_idempotency_key IS NULL OR length(p_idempotency_key) < 16 THEN RAISE EXCEPTION 'invalid_line'; END IF;
   SELECT ghl_contact_id, round(quoted_total_eur * 100)::bigint INTO v_contact, v_contract
     FROM tattoo_projects WHERE id = p_project_id FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'project_not_found'; END IF;
@@ -164,6 +168,8 @@ BEGIN
   END IF;
   PERFORM 1 FROM tattoo_projects WHERE ghl_opportunity_id = p_opportunity_id AND id <> p_project_id;
   IF FOUND THEN RAISE EXCEPTION 'linked_elsewhere'; END IF;
+
+  IF v_contract IS DISTINCT FROM p_expected_contract_cents THEN RAISE EXCEPTION 'contract_changed'; END IF;
 
   v_kind := CASE WHEN lower(p_status) IN ('lost','abandoned') THEN 'historical' ELSE 'active' END;
   IF v_kind = 'active' AND (p_value_cents IS NULL OR v_contract IS NULL OR p_value_cents <> v_contract)
@@ -179,6 +185,6 @@ BEGIN
 END $$;
 
 REVOKE ALL ON FUNCTION public.save_project_allocation_draft(uuid, integer, text, jsonb) FROM PUBLIC, anon;
-REVOKE ALL ON FUNCTION public.link_project_opportunity(uuid, text, text, text, bigint, text, text) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.link_project_opportunity(uuid, text, text, text, bigint, text, text, uuid, bigint) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.save_project_allocation_draft(uuid, integer, text, jsonb) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.link_project_opportunity(uuid, text, text, text, bigint, text, text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.link_project_opportunity(uuid, text, text, text, bigint, text, text, uuid, bigint) TO service_role;

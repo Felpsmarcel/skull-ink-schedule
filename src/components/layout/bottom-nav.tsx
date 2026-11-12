@@ -11,7 +11,7 @@ export function BottomNav() {
     <nav
       aria-label="Navegação principal"
       data-bottom-nav
-      className="fixed inset-x-0 bottom-0 z-40 mx-auto grid max-w-md grid-cols-5 items-end gap-1 border-t border-border/80 bg-background/92 pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] shadow-[0_-12px_30px_color-mix(in_oklab,var(--background)_70%,transparent)] backdrop-blur-xl sm:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 mx-auto grid max-w-none grid-cols-5 items-end gap-1 border-t border-border/80 bg-background/92 pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] shadow-[0_-12px_30px_color-mix(in_oklab,var(--background)_70%,transparent)] backdrop-blur-xl sm:hidden"
     >
       <NavLink to="/home" icon={<Home className="h-5 w-5" />} label="Hoje" />
       <NavLink to="/agenda" icon={<CalendarDays className="h-5 w-5" />} label={t("nav.agenda")} />

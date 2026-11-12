@@ -1,3 +1,6 @@
+import { ProjectPhotos } from "@/components/project-photos/project-photos";
+import type { ProjectPhotosAdapter } from "@/lib/project-photos-adapter";
+import { OpportunityLink } from "./opportunity-link";
 import type { ReactNode } from "react";
 import type { ProjectDetail, ProjectOpportunitiesResult } from "@/lib/projects.functions";
 import { formatEurCents } from "@/lib/project-progress-core";
@@ -23,8 +26,10 @@ export function ProjectFicha({
   onSelectOpp,
   actions,
   allocationAdapter,
+  photosAdapter,
 }: {
   allocationAdapter?: AllocationAdapter;
+  photosAdapter?: ProjectPhotosAdapter;
   p: ProjectDetail;
   opps?: OppState;
   selectedOpp?: string | null;
@@ -70,7 +75,7 @@ export function ProjectFicha({
             Oportunidade no GHL
           </h2>
           <p className="text-sm">
-            Vinculada:{" "}
+            Vínculo original do cadastro:{" "}
             <span className="font-medium">
               {p.opportunityId ? "sim" : "nenhuma oportunidade vinculada"}
             </span>
@@ -81,6 +86,15 @@ export function ProjectFicha({
             onSelect={onSelectOpp}
             contractCents={p.finance.quotedCents}
           />
+          {opps?.kind === "ready" && opps.data.complete && opps.data.pipelineConfigured ? (
+            <OpportunityLink
+              key={p.id}
+              projectId={p.id}
+              opportunity={opps.data.items.find((o) => o.id === selectedOpp)}
+              contractCents={p.finance.quotedCents}
+              fixture={allocationAdapter?.environment === "fixture"}
+            />
+          ) : null}
         </section>
       ) : null}
 
@@ -150,6 +164,8 @@ export function ProjectFicha({
           </ol>
         )}
       </section>
+
+      <ProjectPhotos projectId={p.id} adapter={photosAdapter} />
 
       {admin ? (
         <section aria-labelledby="fin-title" className="space-y-4">
@@ -279,9 +295,7 @@ function OpportunityList({
         </fieldset>
       )}
       {selected ? (
-        <p className="text-xs text-warning">
-          Seleção em rascunho — não vinculada nem enviada ao GHL.
-        </p>
+        <p className="text-xs text-warning">Seleção para revisão — não altera o GHL.</p>
       ) : null}
     </div>
   );

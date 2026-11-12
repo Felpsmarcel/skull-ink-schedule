@@ -12,15 +12,15 @@ import {
   totalDurationMin,
   totalFinalEur,
   projectTotalEur,
+  allSessionsScheduled,
+  type ConfirmedDraftSession,
 } from "@/stores/appointment-draft";
-import { finalizeBooking } from "@/lib/booking.functions";
-import {
-  validateAppointmentDraft,
-  reasonToI18nKey,
-} from "@/lib/appointment-draft-validate";
+import { finalizeBooking, type FinalizeBookingSuccess } from "@/lib/booking.functions";
+import { validateAppointmentDraft, reasonToI18nKey } from "@/lib/appointment-draft-validate";
 import { formatPrice } from "@/lib/services";
 import { sendTransactionalEmail } from "@/lib/email/send";
 import { haptic } from "@/lib/haptics";
+import { agendaLinkDay } from "@/lib/agenda-link-date";
 
 export function useFinalizeAppointment() {
   const { t } = useTranslation();
@@ -33,12 +33,51 @@ export function useFinalizeAppointment() {
 
   async function run() {
     if (saving) return;
+    if (draft.bookingCheckpoint?.sessions.length) {
+      toast.warning(
+        "Este rascunho já possui sessões confirmadas. É necessária revisão administrativa antes de continuar; nenhum agendamento foi reenviado.",
+      );
+      navigate({ to: "/appointments/new/revisao" });
+      return;
+    }
     const v = validateAppointmentDraft(draft, artists);
     if (!v.ok) {
       toast.error(t(reasonToI18nKey(v.reason)));
       return;
     }
     const { contact, staff, startISO, services, notes } = v.data;
+    const confirmedSessions: ConfirmedDraftSession[] = [];
+    const rememberSession = (
+      session: number,
+      sessionStart: string,
+      result: FinalizeBookingSuccess,
+    ) => {
+      confirmedSessions.push({
+        session,
+        startISO: sessionStart,
+        idempotencyKey: `appt-${draft.idempotencyKey}${session > 1 ? `-s${session}` : ""}`,
+        appointmentId: result.appointmentId,
+        ghlEventId: result.ghlEventId,
+        projectId: result.projectId,
+        ghlOpportunityId: result.ghlOpportunityId,
+      });
+      draft.setBookingCheckpoint({
+        sessions: [...confirmedSessions],
+        pendingSession: session < draft.sessionCount ? session + 1 : null,
+        reason:
+          "Finalização em andamento. Se o fluxo foi interrompido, confira os registros antes de continuar.",
+      });
+    };
+    const stopPartial = (session: number | null, reason: string) => {
+      const message = `${confirmedSessions.length} sessão(ões) confirmada(s). ${reason} Revisão administrativa necessária; o rascunho e os IDs foram preservados. Nenhuma sessão foi desfeita ou reenviada.`;
+      draft.setBookingCheckpoint({
+        sessions: [...confirmedSessions],
+        pendingSession: session,
+        reason: message,
+      });
+      toast.warning(message);
+      navigate({ to: "/appointments/new/revisao" });
+    };
     setSaving(true);
     try {
       const startMs = new Date(startISO).getTime();
@@ -46,7 +85,7 @@ export function useFinalizeAppointment() {
       const endISO = new Date(startMs + durationMin * 60_000).toISOString();
       const baseTitle = services.map((l) => l.service.name).join(" + ");
       const sessionCount = Math.max(1, draft.sessionCount || 1);
-      if (sessionCount > 1 && draft.extraStarts.some((v) => !v)) {
+      if (!allSessionsScheduled(draft)) {
         toast.error("Escolha a data de todas as sessões do projeto.");
         navigate({ to: "/appointments/new/agenda" });
         return;
@@ -100,17 +139,20 @@ export function useFinalizeAppointment() {
         navigate({ to: "/appointments/new/cliente" });
         return;
       }
+      rememberSession(1, startISO, res);
+      for (const warning of res.warnings) toast.warning(warning);
 
       // Sessões 2..N: mesmo projeto/oportunidade, sem sinal, chave própria por sessão.
       if (sessionCount > 1) {
         if (!res.projectId) {
-          toast.error("Sessão 1 criada, mas o projeto não foi vinculado. Crie as demais sessões pela agenda.");
+          stopPartial(2, "A sessão 1 foi criada, mas o projeto não foi vinculado.");
+          return;
         } else {
           for (let i = 0; i < draft.extraStarts.length; i++) {
             const sIso = draft.extraStarts[i]!;
             const sMs = new Date(sIso).getTime();
             try {
-              await book({
+              const extraResult = await book({
                 data: {
                   artistId: staff.id,
                   calendarId: staff.calendarId,
@@ -144,10 +186,18 @@ export function useFinalizeAppointment() {
                   idempotencyKey: `appt-${draft.idempotencyKey}-s${i + 2}`,
                 },
               });
+              if (extraResult.kind === "contact_conflict") {
+                stopPartial(
+                  i + 2,
+                  `Sessão ${i + 2}/${sessionCount} não confirmada: ${extraResult.reason}`,
+                );
+                return;
+              }
+              rememberSession(i + 2, sIso, extraResult);
+              for (const warning of extraResult.warnings) toast.warning(warning);
             } catch (e) {
               const msg = e instanceof Error ? e.message : String(e);
-              toast.error(`Sessão ${i + 2}/${sessionCount} não foi criada: ${msg}`);
-              navigate({ to: "/appointments/new/agenda" });
+              stopPartial(i + 2, `Sessão ${i + 2}/${sessionCount} não confirmada: ${msg}`);
               return;
             }
           }
@@ -160,8 +210,6 @@ export function useFinalizeAppointment() {
       const final = totalFinalEur(draft);
       haptic("success");
       toast.success(`${t("appt.created")} · ${formatPrice(final)}`);
-      for (const w of res.warnings) toast.warning(w);
-
 
       // Fire-and-forget notification emails. Failures never abort the flow.
       const whenLabel = new Intl.DateTimeFormat("pt-PT", {
@@ -218,9 +266,16 @@ export function useFinalizeAppointment() {
 
       const created = res.ghlEventId;
       draft.reset();
-      navigate({ to: "/agenda", search: created ? { novo: created } : {} });
+      navigate({
+        to: "/agenda",
+        search: { date: agendaLinkDay(startISO), ...(created ? { novo: created } : {}) },
+      });
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
+      if (confirmedSessions.length) {
+        stopPartial(null, `O fluxo de finalização foi interrompido: ${msg}`);
+        return;
+      }
       const slotTaken =
         /slot.*(no longer|not).*available|no longer available|deixou de estar disponível|neste horário/i.test(
           msg,
@@ -232,7 +287,6 @@ export function useFinalizeAppointment() {
       } else {
         toast.error(msg);
       }
-
     } finally {
       setSaving(false);
     }

@@ -118,7 +118,9 @@ export const finalizeBooking = createServerFn({ method: "POST" })
     /* 0. Idempotência ------------------------------------------------- */
     const { data: existingAppt } = await supabase
       .from("appointments")
-      .select("id, ghl_appointment_id, project_id, ghl_opportunity_id, ghl_contact_id, total_eur, commission_pct")
+      .select(
+        "id, ghl_appointment_id, project_id, ghl_opportunity_id, ghl_contact_id, total_eur, commission_pct",
+      )
       .eq("chave_idempotencia", data.idempotencyKey)
       .maybeSingle();
     if (existingAppt) {
@@ -293,12 +295,11 @@ export const finalizeBooking = createServerFn({ method: "POST" })
     /* 3. Projeto / oportunidade --------------------------------------- */
     step = "project";
     if (!projectId) {
-      const { findOpenOpportunities, createOpportunity, firstPipelineStageId } = await import(
-        "@/lib/projects.server"
-      );
+      const { findOpenOpportunities, createOpportunity, firstPipelineStageId } =
+        await import("@/lib/projects.server");
 
       if (data.project.decision === "reuse") {
-        let oppId = data.project.reuseOpportunityId ?? null;
+        const oppId = data.project.reuseOpportunityId ?? null;
         if (data.project.reuseProjectId) {
           const { data: proj } = await supabase
             .from("tattoo_projects")
@@ -503,25 +504,32 @@ export const finalizeBooking = createServerFn({ method: "POST" })
     // Sinal pago no ato → registra pagamento parcial.
     if (depositEur > 0 && localContactId) {
       try {
-        const { data: dep } = await supabaseAdmin.from("payments").insert({
-          appointment_id: ins!.id,
-          contact_id: localContactId,
-          amount_eur: depositEur,
-          type: "deposit",
-          method: "other",
-          status: "paid",
-          paid_at: new Date().toISOString(),
-          notes: "Sinal registrado no agendamento",
-          created_by: userId,
-        }).select("id").maybeSingle();
-        if (dep?.id) {
-          // Mirror hook: no-op while disabled.
-          const { runReceiptHook } = await import("./payment-mirror-hook.server");
-          await runReceiptHook(supabase, [{ source: "booking_deposit", id: dep.id }]);
+        const { data: dep, error: depErr } = await supabaseAdmin
+          .from("payments")
+          .insert({
+            appointment_id: ins!.id,
+            contact_id: localContactId,
+            amount_eur: depositEur,
+            type: "deposit",
+            method: "other",
+            status: "paid",
+            paid_at: new Date().toISOString(),
+            notes: "Sinal registrado no agendamento",
+            created_by: userId,
+          })
+          .select("id")
+          .maybeSingle();
+        if (depErr || !dep?.id) {
+          throw new Error(depErr?.message ?? "Pagamento sem confirmação de gravação");
         }
+        // Mirror hook: no-op while disabled.
+        const { runReceiptHook } = await import("./payment-mirror-hook.server");
+        await runReceiptHook(supabase, [{ source: "booking_deposit", id: dep.id }]);
       } catch (e) {
         console.error("[finalizeBooking] deposit registration failed", e);
-        warnings.push("Sinal não foi registrado automaticamente.");
+        warnings.push(
+          "Agendamento criado, pagamento do sinal não confirmado. Confira o registro no financeiro antes de lançar o sinal novamente.",
+        );
       }
     }
 
@@ -559,9 +567,7 @@ export interface BookingOperationRow {
 export const listBookingOperations = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) =>
-    z
-      .object({ onlyPending: z.boolean().default(false) })
-      .parse(data ?? {}),
+    z.object({ onlyPending: z.boolean().default(false) }).parse(data ?? {}),
   )
   .handler(async ({ data, context }): Promise<BookingOperationRow[]> => {
     const { supabase } = context;
@@ -598,9 +604,7 @@ export const listBookingOperations = createServerFn({ method: "POST" })
  */
 export const reconcileBookingOperation = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) =>
-    z.object({ operationId: z.string().uuid() }).parse(data),
-  )
+  .inputValidator((data: unknown) => z.object({ operationId: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }): Promise<{ appointmentId: string; reused: boolean }> => {
     const { supabase, userId } = context;
     const { data: role } = await supabase.rpc("current_user_role");

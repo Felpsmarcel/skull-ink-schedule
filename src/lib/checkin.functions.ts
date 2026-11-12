@@ -1,4 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
+import { z } from "zod";
+import {
+  canonicalCheckinInput,
+  checkinTransitionPatch,
+  checkinDayBounds,
+  requireReceptionRole,
+} from "@/lib/checkin-policy";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export const PROD_ORIGIN = "https://www.gftattoocalendar.com";
@@ -32,6 +41,7 @@ export interface TotemSession {
   telefone: string | null;
   ghlContactId: string | null;
   agendamentoHoje: TotemCandidate["agendamentoHoje"];
+  agendamentosHoje: NonNullable<TotemCandidate["agendamentoHoje"]>[];
 }
 
 export interface CheckinCreated {
@@ -63,7 +73,7 @@ export interface FilaRow {
   artistId: string | null;
   tatuador: string | null;
   appointmentId: string | null;
-  syncStatus: "pending" | "synced" | "failed";
+  syncStatus: "pending" | "synced" | "failed" | null;
 }
 
 // ------------------------- helpers ---------------------------------------
@@ -81,24 +91,23 @@ function maskNome(nome: string) {
 }
 
 function maskTelefone(telefone: string | null) {
-  if (!telefone) return null;
-  const digits = onlyDigits(telefone);
-  if (digits.length < 4) return "••••";
-  return `•••• ${digits.slice(-4)}`;
+  return telefone ? "Telefone cadastrado" : null;
 }
 
-function endOfBrusselsDayISO(): string {
-  const now = new Date();
-  const key = now.toLocaleDateString("en-CA", { timeZone: "Europe/Brussels" });
-  return new Date(`${key}T23:59:59+02:00`).toISOString();
+async function requireCheckinReception(supabase: SupabaseClient<Database>, userId: string) {
+  const { data, error } = await supabase
+    .from("app_users")
+    .select("role")
+    .eq("id", userId)
+    .maybeSingle();
+  requireReceptionRole(error ? null : data);
 }
 
 function brusselsDayBoundsISO() {
-  const key = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Brussels" });
-  return {
-    startISO: new Date(`${key}T00:00:00+02:00`).toISOString(),
-    endISO: new Date(`${key}T23:59:59+02:00`).toISOString(),
-  };
+  return checkinDayBounds();
+}
+function endOfBrusselsDayISO() {
+  return checkinDayBounds().endISO;
 }
 
 function randomToken() {
@@ -110,8 +119,10 @@ function randomToken() {
 // ------------------------- totem: busca ----------------------------------
 
 export const searchTotemClientes = createServerFn({ method: "POST" })
-  .inputValidator((input: { query: string }) => input)
-  .handler(async ({ data }): Promise<TotemCandidate[]> => {
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ query: z.string().trim().max(120) }).parse(input))
+  .handler(async ({ data, context }): Promise<TotemCandidate[]> => {
+    await requireCheckinReception(context.supabase, context.userId);
     const raw = (data.query ?? "").trim();
     if (raw.length < 3) return [];
 
@@ -133,8 +144,7 @@ export const searchTotemClientes = createServerFn({ method: "POST" })
 
     const { data: rows, error } = await query;
     if (error) {
-      console.warn("totem search failed", error.message);
-      return [];
+      throw new Error("Não foi possível consultar os clientes.");
     }
 
     const contacts = (rows ?? []) as Array<{
@@ -147,7 +157,7 @@ export const searchTotemClientes = createServerFn({ method: "POST" })
 
     const { startISO, endISO } = brusselsDayBoundsISO();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: appts } = await (supabaseAdmin as any)
+    const { data: appts, error: appointmentsError } = await (supabaseAdmin as any)
       .from("appointments")
       .select("id, contact_id, start_at, artist_id, artists(name)")
       .in(
@@ -155,12 +165,19 @@ export const searchTotemClientes = createServerFn({ method: "POST" })
         contacts.map((c) => c.id),
       )
       .gte("start_at", startISO)
-      .lte("start_at", endISO)
+      .lt("start_at", endISO)
+      .in("status", ["pending", "confirmed"])
       .order("start_at", { ascending: true });
 
+    if (appointmentsError) throw new Error("Não foi possível consultar os agendamentos.");
     const byContact = new Map<
       string,
-      { appointmentId: string; scheduledAtISO: string; artistId: string | null; artistNome: string | null }
+      {
+        appointmentId: string;
+        scheduledAtISO: string;
+        artistId: string | null;
+        artistNome: string | null;
+      }
     >();
     for (const a of (appts ?? []) as Array<{
       id: string;
@@ -190,19 +207,24 @@ export const searchTotemClientes = createServerFn({ method: "POST" })
 
 /** Confirma os 4 últimos dígitos antes de liberar os dados do atendimento. */
 export const validateTotemTelefone = createServerFn({ method: "POST" })
-  .inputValidator((input: { contactId: string; last4: string }) => input)
-  .handler(async ({ data }): Promise<{ ok: boolean; session?: TotemSession }> => {
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ contactId: z.string().uuid(), last4: z.string().regex(/^\d{4}$/) }).parse(input),
+  )
+  .handler(async ({ data, context }): Promise<{ ok: boolean; session?: TotemSession }> => {
+    await requireCheckinReception(context.supabase, context.userId);
     const last4 = onlyDigits(data.last4 ?? "");
     if (last4.length !== 4) return { ok: false };
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: row } = await (supabaseAdmin as any)
+    const { data: row, error: contactError } = await (supabaseAdmin as any)
       .from("contacts")
       .select("id, ghl_contact_id, name, phone")
       .eq("id", data.contactId)
       .maybeSingle();
 
+    if (contactError) throw new Error("Não foi possível verificar o cliente.");
     const contact = row as {
       id: string;
       ghl_contact_id: string | null;
@@ -216,22 +238,31 @@ export const validateTotemTelefone = createServerFn({ method: "POST" })
 
     const { startISO, endISO } = brusselsDayBoundsISO();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: appt } = await (supabaseAdmin as any)
+    const { data: appts, error: appointmentError } = await (supabaseAdmin as any)
       .from("appointments")
       .select("id, start_at, artist_id, artists(name)")
       .eq("contact_id", contact.id)
       .gte("start_at", startISO)
-      .lte("start_at", endISO)
+      .lt("start_at", endISO)
+      .in("status", ["pending", "confirmed"])
       .order("start_at", { ascending: true })
-      .limit(1)
-      .maybeSingle();
+      .range(0, 99);
 
-    const a = appt as {
+    if (appointmentError) throw new Error("Não foi possível verificar o agendamento.");
+    const appointments = (appts ?? []) as {
       id: string;
       start_at: string;
       artist_id: string | null;
       artists: { name: string | null } | null;
-    } | null;
+    }[];
+    if (appointments.length >= 100)
+      throw new Error("Lista de agendamentos excedeu o limite de revisão da recepção.");
+    const agendamentosHoje = appointments.map((a) => ({
+      appointmentId: a.id,
+      scheduledAtISO: a.start_at,
+      artistId: a.artist_id,
+      artistNome: a.artists?.name ?? null,
+    }));
 
     return {
       ok: true,
@@ -240,14 +271,8 @@ export const validateTotemTelefone = createServerFn({ method: "POST" })
         nome: contact.name ?? "—",
         telefone: contact.phone ?? null,
         ghlContactId: contact.ghl_contact_id,
-        agendamentoHoje: a
-          ? {
-              appointmentId: a.id,
-              scheduledAtISO: a.start_at,
-              artistId: a.artist_id,
-              artistNome: a.artists?.name ?? null,
-            }
-          : null,
+        agendamentoHoje: agendamentosHoje.length === 1 ? agendamentosHoje[0] : null,
+        agendamentosHoje,
       },
     };
   });
@@ -255,22 +280,23 @@ export const validateTotemTelefone = createServerFn({ method: "POST" })
 // ------------------------- totem: check-in -------------------------------
 
 export const confirmarChegada = createServerFn({ method: "POST" })
-  .inputValidator(
-    (input: {
-      nome: string;
-      telefone?: string | null;
-      contactId?: string | null;
-      ghlContactId?: string | null;
-      appointmentId?: string | null;
-      artistId?: string | null;
-      scheduledAtISO?: string | null;
-      consentimento?: boolean;
-    }) => input,
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        nome: z.string().trim().min(2).max(160),
+        telefone: z.string().max(40).nullish(),
+        contactId: z.string().uuid().nullish(),
+        ghlContactId: z.string().max(100).nullish(),
+        appointmentId: z.string().uuid().nullish(),
+        artistId: z.string().uuid().nullish(),
+        scheduledAtISO: z.string().max(40).nullish(),
+        consentimento: z.boolean().optional(),
+      })
+      .parse(input),
   )
-  .handler(async ({ data }): Promise<CheckinCreated> => {
-    const nome = (data.nome ?? "").trim();
-    if (nome.length < 2) throw new Error("Nome inválido");
-
+  .handler(async ({ data: input, context }): Promise<CheckinCreated> => {
+    await requireCheckinReception(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const db = supabaseAdmin as unknown as {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -278,8 +304,26 @@ export const confirmarChegada = createServerFn({ method: "POST" })
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       rpc: (fn: string, args?: Record<string, unknown>) => any;
     };
+    const contact = input.contactId
+      ? await db
+          .from("contacts")
+          .select("id,name,phone,ghl_contact_id")
+          .eq("id", input.contactId)
+          .maybeSingle()
+      : { data: null, error: null };
+    const appointment = input.appointmentId
+      ? await db
+          .from("appointments")
+          .select("id,contact_id,artist_id,start_at,status,ghl_appointment_id")
+          .eq("id", input.appointmentId)
+          .maybeSingle()
+      : { data: null, error: null };
+    if (contact.error || appointment.error)
+      throw new Error("Não foi possível verificar os dados da chegada.");
+    const data = canonicalCheckinInput(input, contact.data, appointment.data);
+    const nome = data.nome;
 
-    const chave = data.ghlContactId ?? data.contactId ?? (data.telefone ?? null);
+    const chave = data.ghlContactId ?? data.contactId ?? data.telefone ?? null;
 
     // Já existe um check-in ativo hoje? Devolve o mesmo QR em vez de duplicar.
     if (chave) {
@@ -289,7 +333,7 @@ export const confirmarChegada = createServerFn({ method: "POST" })
         .select("qr_token, codigo_atendimento, qr_url, scheduled_at, artist_id")
         .in("status", ["aguardando", "em_atendimento"])
         .gte("arrived_at", startISO)
-        .lte("arrived_at", endISO)
+        .lt("arrived_at", endISO)
         .limit(1);
       existing =
         data.ghlContactId != null
@@ -297,7 +341,11 @@ export const confirmarChegada = createServerFn({ method: "POST" })
           : data.contactId != null
             ? existing.eq("contact_id", data.contactId)
             : existing.eq("cliente_telefone", data.telefone);
-      const { data: found } = await existing.maybeSingle();
+      existing = data.appointmentId
+        ? existing.eq("appointment_id", data.appointmentId)
+        : existing.is("appointment_id", null);
+      const { data: found, error: existingError } = await existing.maybeSingle();
+      if (existingError) throw new Error("Não foi possível verificar chegadas anteriores.");
       const hit = found as {
         qr_token: string;
         codigo_atendimento: string;
@@ -345,7 +393,13 @@ export const confirmarChegada = createServerFn({ method: "POST" })
       .select("id, codigo_atendimento, qr_token, qr_url, scheduled_at")
       .single();
 
-    if (error) throw new Error(`Não foi possível registar o check-in: ${error.message}`);
+    if (error) {
+      if (error.code === "23505")
+        throw new Error(
+          "Já existe um registro de chegada conflitante. Confira a fila com a recepção antes de tentar novamente.",
+        );
+      throw new Error("Não foi possível registrar o check-in. Confira a fila com a recepção.");
+    }
 
     const row = inserted as {
       id: string;
@@ -363,6 +417,11 @@ export const confirmarChegada = createServerFn({ method: "POST" })
         clienteNome: nome,
         clienteTelefone: data.telefone ?? null,
         ghlContactId: data.ghlContactId ?? null,
+        ghlAppointmentId:
+          data.appointmentId && typeof appointment.data?.ghl_appointment_id === "string"
+            ? appointment.data.ghl_appointment_id
+            : null,
+        consentimento: data.consentimento === true,
         codigoAtendimento: row.codigo_atendimento,
         qrUrl,
         arrivedAtISO: arrivedAt,
@@ -377,9 +436,8 @@ export const confirmarChegada = createServerFn({ method: "POST" })
           ghl_contact_id: result.ghlContactId ?? data.ghlContactId ?? null,
           ghl_appointment_id: result.ghlAppointmentId ?? null,
           ghl_opportunity_id: result.ghlOpportunityId ?? null,
-          // O envio ao cliente é feito pelo workflow do CRM, e só com consentimento.
-          notificado_em:
-            data.consentimento && result.workflowTriggered ? new Date().toISOString() : null,
+          // Workflow acceptance is not delivery evidence. Keep notificado_em untouched/null.
+          // A delivery-confirmation integration must own that field.
         })
         .eq("id", row.id);
     } catch (syncError) {
@@ -418,8 +476,7 @@ export const getCheckinByToken = createServerFn({ method: "GET" })
       p_token: token,
     });
     if (error) {
-      console.warn("get_checkin_by_token failed", error.message);
-      return null;
+      throw new Error("Não foi possível consultar o atendimento.");
     }
     const row = (Array.isArray(rows) ? rows[0] : rows) as
       | {
@@ -448,11 +505,11 @@ export const getCheckinByToken = createServerFn({ method: "GET" })
 export const getFilaHoje = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<FilaRow[]> => {
+    await requireCheckinReception(context.supabase, context.userId);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (context.supabase as any).rpc("list_checkins_hoje");
     if (error) {
-      console.warn("list_checkins_hoje failed", error.message);
-      return [];
+      throw new Error("Não foi possível consultar a fila.");
     }
     return ((data ?? []) as Array<Record<string, unknown>>).map((r) => ({
       id: String(r.id),
@@ -465,23 +522,56 @@ export const getFilaHoje = createServerFn({ method: "GET" })
       artistId: (r.artist_id as string | null) ?? null,
       tatuador: (r.tatuador as string | null) ?? null,
       appointmentId: (r.appointment_id as string | null) ?? null,
-      syncStatus: (r.ghl_sync_status as "pending" | "synced" | "failed") ?? "pending",
+      syncStatus:
+        r.ghl_sync_status === "pending" ||
+        r.ghl_sync_status === "synced" ||
+        r.ghl_sync_status === "failed"
+          ? r.ghl_sync_status
+          : null,
     }));
   });
 
 export const setCheckinStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string; status: CheckinStatus }) => input)
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        status: z.enum([
+          "aguardando",
+          "em_atendimento",
+          "concluido",
+          "nao_compareceu",
+          "cancelado",
+        ]),
+      })
+      .strict()
+      .parse(input),
+  )
   .handler(async ({ data, context }): Promise<{ ok: true }> => {
-    const patch: Record<string, unknown> = { status: data.status };
-    if (data.status === "em_atendimento") patch.started_at = new Date().toISOString();
-    if (data.status === "concluido") patch.finished_at = new Date().toISOString();
-
+    await requireCheckinReception(context.supabase, context.userId);
+    // The authenticated client retains RLS. Do not use the service client for queue transitions.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (context.supabase as any)
+    const db = context.supabase as any;
+    const { data: current, error: readError } = await db
+      .from("checkins")
+      .select("id,status")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (readError) throw new Error("Não foi possível verificar o estado atual da fila.");
+    if (!current || current.id !== data.id)
+      throw new Error("Check-in não encontrado ou indisponível.");
+    const patch = checkinTransitionPatch(current.status as CheckinStatus, data.status);
+    const { data: updated, error } = await db
       .from("checkins")
       .update(patch)
-      .eq("id", data.id);
-    if (error) throw new Error(error.message);
+      .eq("id", data.id)
+      .eq("status", current.status)
+      .select("id,status")
+      .maybeSingle();
+    if (error) throw new Error("Não foi possível atualizar a fila.");
+    if (!updated || updated.id !== data.id || updated.status !== data.status) {
+      throw new Error("A fila foi alterada por outra pessoa. Atualize antes de tentar novamente.");
+    }
     return { ok: true };
   });
