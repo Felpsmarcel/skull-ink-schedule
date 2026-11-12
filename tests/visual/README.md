@@ -19,3 +19,11 @@ Checklist: 360/390/768/1440 px; filtro de tatuador, data, Dia/Semana/Mês; estad
 ## Shell de navegação
 
 Abra /chrome.html no mesmo servidor para testar AuthShell, BottomNav e PageHeader reais. Router em memória, identidade administrativa fictícia e autenticação bloqueada. Os cartões de conteúdo são ilustrativos e não representam telas conectadas. Verifique 360, 640, 768 e 1440 px, foco por teclado e cabeçalhos durante a rolagem. Nenhum cliente ou chamada de CRM é usado.
+
+## Financeiro e painel administrativo do tatuador
+
+Abra /management.html. Usa FinanceView e ArtistPanelView reais, em router de memória e somente com dados fictícios. A data de referência financeira é 12/11/2026 em Bruxelas; a sessão de dezembro deve ficar fora de Hoje, Semana e Mês. O resumo mantém o conjunto retornado pela fonte; os filtros alteram somente a lista. A ação real de sincronização não é importada neste harness.
+
+Checklist: 360/390/768/1440 px; filtros por período, status, tatuador e vendedor; limpar filtros; visões de comissão de tatuador/vendedor; estado vazio, carregando, erro com nova tentativa e fonte indisponível; checkbox de nomes indisponíveis mantém os IDs e a comissão. No painel: 30/60/90 dias, artista sem registros, null diferente de zero, projetos separados, próxima data e navegação por teclado. O clique de um compromisso informa o dia e ID demonstrativos; não abre registros reais. Voltar à agenda abre /operations.html.
+
+A troca de visão financeira altera o modelo de apresentação; o AuthShell permanece com identidade administrativa fictícia. Não comprova autenticação, permissões de outros perfis, completude do GHL ou aplicação da comissão por data. Somente Financeiro e Painel possuem telas neste harness; demais links do shell não representam fluxos conectados.

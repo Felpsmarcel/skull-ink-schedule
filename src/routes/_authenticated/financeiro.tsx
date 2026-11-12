@@ -1,99 +1,17 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { AlertTriangle, ArrowLeft, Wallet, Lock } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
 import { useFinanceSummary } from "@/hooks/use-finance";
 import { useIsAdmin } from "@/hooks/use-current-user";
-import { formatCurrency, formatDateTime } from "@/lib/format";
-import { LoadingState } from "@/components/ui/loading-state";
-import { ErrorState } from "@/components/ui/error-state";
-import { StatusBadge, bucketToVariant, bucketLabel } from "@/components/ui/status-badge";
 import { SyncGhlButton } from "@/components/sync-ghl-button";
-import type { PaymentBucket } from "@/lib/finance.functions";
-import { Button } from "@/components/ui/button";
-import { PageHeader } from "@/components/ui/page-header";
-import { StatCard as SharedStatCard } from "@/components/ui/stat-card";
-
-type Period = "today" | "week" | "month" | "all";
-type BucketFilter = "all" | PaymentBucket;
-
-function filterRows<
-  T extends {
-    startAt: string;
-    bucket: PaymentBucket;
-    artistId?: string;
-    sellerId?: string | null;
-  },
->(
-  rows: T[],
-  period: Period,
-  bucket: BucketFilter,
-  artistId: string,
-  sellerId: string,
-): T[] {
-  const now = new Date();
-  const startOfToday = new Date(now);
-  startOfToday.setHours(0, 0, 0, 0);
-  const startOfWeek = new Date(startOfToday);
-  const dow = (startOfToday.getDay() + 6) % 7;
-  startOfWeek.setDate(startOfToday.getDate() - dow);
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const from =
-    period === "today"
-      ? startOfToday.getTime()
-      : period === "week"
-        ? startOfWeek.getTime()
-        : period === "month"
-          ? startOfMonth.getTime()
-          : null;
-  return rows.filter((r) => {
-    if (bucket !== "all" && r.bucket !== bucket) return false;
-    if (from !== null && new Date(r.startAt).getTime() < from) return false;
-    if (artistId !== "all" && r.artistId !== artistId) return false;
-    if (sellerId !== "all") {
-      if (sellerId === "none") {
-        if (r.sellerId) return false;
-      } else if (r.sellerId !== sellerId) return false;
-    }
-    return true;
-  });
-}
-
-function FilterRow<V extends string>({
-  label,
-  value,
-  onChange,
-  options,
-}: {
-  label: string;
-  value: V;
-  onChange: (v: V) => void;
-  options: ReadonlyArray<{ v: V; l: string }>;
-}) {
-  return (
-    <div>
-      <div className="mb-2 text-xs font-semibold uppercase text-muted-foreground">{label}</div>
-      <div className="flex flex-wrap gap-2">
-        {options.map((o) => {
-          const active = o.v === value;
-          return (
-            <Button
-              key={o.v}
-              type="button"
-              aria-pressed={active}
-              onClick={() => onChange(o.v)}
-              variant={active ? "default" : "outline"}
-              size="sm"
-              className="rounded-md"
-            >
-              {o.l}
-            </Button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
+import {
+  FinanceView,
+  type FinanceViewModel,
+  type FinancePeriod as Period,
+  type FinanceBucketFilter as BucketFilter,
+} from "@/components/finance/finance-view";
+import { filterFinanceRows } from "@/lib/finance-list-filters";
 
 const financeSearchSchema = z.object({
   period: fallback(z.string(), "all").default("all"),
@@ -132,458 +50,54 @@ function FinanceiroPage() {
   const artistId = search.artist || "all";
   const sellerId = search.seller || "all";
 
-  const setSearch = (patch: Partial<{ period: string; bucket: string; artist: string; seller: string }>) => {
+  const setSearch = (
+    patch: Partial<{ period: string; bucket: string; artist: string; seller: string }>,
+  ) => {
     navigate({
       to: "/financeiro",
       search: (prev: Record<string, unknown>) => ({ ...prev, ...patch }),
       replace: true,
     });
   };
-  const setPeriod = (v: Period) => setSearch({ period: v });
-  const setBucket = (v: BucketFilter) => setSearch({ bucket: v });
-  const setArtist = (v: string) => setSearch({ artist: v });
-  const setSeller = (v: string) => setSearch({ seller: v });
-
-  const filtersActive = period !== "all" || bucket !== "all";
-  const anyFilter = filtersActive || artistId !== "all" || sellerId !== "all";
-  const emptyMsg = anyFilter
-    ? "Nenhum agendamento com os filtros aplicados."
-    : "Sem agendamentos.";
+  const model: FinanceViewModel | null = !data
+    ? null
+    : data.role === "admin"
+      ? {
+          role: "admin",
+          data,
+          rows: filterFinanceRows(data.rows, period, bucket, artistId, sellerId),
+        }
+      : data.role === "artist"
+        ? { role: "artist", data, rows: filterFinanceRows(data.rows, period, bucket, "all", "all") }
+        : {
+            role: "seller",
+            data,
+            rows: filterFinanceRows(data.rows, period, bucket, "all", "all"),
+          };
 
   return (
-    <div className="flex min-h-dvh flex-col bg-background pb-[calc(env(safe-area-inset-bottom)+6rem)] sm:pb-20">
-      <PageHeader
-        eyebrow="Visão financeira"
-        title="Financeiro"
-        leading={<Button type="button" variant="ghost" size="icon" onClick={() => navigate({ to: "/agenda" })} aria-label="Voltar"><ArrowLeft className="h-5 w-5" /></Button>}
-        actions={<div className="flex items-center gap-2">
-          {isAdmin ? (
-            <>
-              <SyncGhlButton />
-              <Link
-                to="/reconciliar"
-                className="grid h-9 w-9 place-items-center rounded-md hover:bg-muted"
-                aria-label="Reconciliar"
-              >
-                <AlertTriangle className="h-4 w-4" />
-              </Link>
-            </>
-          ) : null}
-        </div>}
-      />
-
-      <main className="flex-1 space-y-4 p-4">
-        {isLoading ? (
-          <LoadingState />
-        ) : error ? (
-          <ErrorState
-            description="Não foi possível carregar o financeiro."
-            details={(error as Error).message}
-            onRetry={() => refetch()}
-          />
-        ) : !data ? null : (
-          <>
-            <section className="flex flex-col gap-4 rounded-lg border border-border bg-card p-4">
-              <FilterRow
-                label="Período"
-                value={period}
-                onChange={setPeriod}
-                options={[
-                  { v: "today", l: "Hoje" },
-                  { v: "week", l: "Semana" },
-                  { v: "month", l: "Mês" },
-                  { v: "all", l: "Todos" },
-                ]}
-              />
-              <FilterRow
-                label="Status"
-                value={bucket}
-                onChange={setBucket}
-                options={[
-                  { v: "all", l: "Todos" },
-                  { v: "pago", l: "Pago" },
-                  { v: "pendente", l: "Pendente" },
-                  { v: "a_receber", l: "A receber" },
-                ]}
-              />
-              {data.role === "admin" ? (
-                <>
-                  <FilterRow
-                    label="Artista"
-                    value={artistId}
-                    onChange={setArtist}
-                    options={[
-                      { v: "all", l: "Todos" },
-                      ...data.artists.map((a) => ({ v: a.id, l: a.name })),
-                    ]}
-                  />
-                  <FilterRow
-                    label="Vendedor"
-                    value={sellerId}
-                    onChange={setSeller}
-                    options={[
-                      { v: "all", l: "Todos" },
-                      { v: "none", l: "Sem vendedor" },
-                      ...data.sellers.map((s) => ({ v: s.id, l: s.name })),
-                    ]}
-                  />
-                </>
-              ) : null}
-              {anyFilter ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() =>
-                    setSearch({ period: "all", bucket: "all", artist: "all", seller: "all" })
-                  }
-                  className="self-start text-muted-foreground"
-                >
-                  Limpar filtros
-                </Button>
-              ) : null}
-            </section>
-            {data.role === "artist" ? (
-              <ArtistView
-                data={data}
-                rows={filterRows(data.rows, period, bucket, "all", "all")}
-                emptyMsg={emptyMsg}
-              />
-            ) : data.role === "seller" ? (
-              <SellerView
-                data={data}
-                rows={filterRows(data.rows, period, bucket, "all", "all")}
-                emptyMsg={emptyMsg}
-              />
-            ) : (
-              <AdminView
-                data={data}
-                rows={filterRows(data.rows, period, bucket, artistId, sellerId)}
-                emptyMsg={emptyMsg}
-              />
-            )}
-          </>
-        )}
-      </main>
-    </div>
-  );
-}
-
-function StatCard({ label, value, tone }: { label: string; value: string; tone?: "good" | "warn" | "muted" }) {
-  return (
-    <SharedStatCard label={label} value={value} emphasis={tone === "warn"} className={tone === "good" ? "border-success/30" : undefined} />
-  );
-}
-
-function ArtistView({
-  data,
-  rows,
-  emptyMsg,
-}: {
-  data: Extract<ReturnType<typeof useFinanceSummary>["data"], { role: "artist" }>;
-  rows: Extract<ReturnType<typeof useFinanceSummary>["data"], { role: "artist" }>["rows"];
-  emptyMsg: string;
-}) {
-  return (
-    <>
-      <section className="grid grid-cols-3 gap-2">
-        <StatCard label="A receber" value={formatCurrency(data.aReceber)} />
-        <StatCard label="Pendente" value={formatCurrency(data.pendente)} tone="warn" />
-        <StatCard label="Pago" value={formatCurrency(data.pago)} tone="good" />
-      </section>
-      <p className="text-[11px] text-muted-foreground">
-        Valores exibidos são a sua comissão (40%).
-      </p>
-
-      {rows.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground sm:hidden">
-          {emptyMsg}
-        </div>
-      ) : (
-        <section className="space-y-2 sm:hidden">
-          {rows.map((r) => (
-            <article key={r.id} className="rounded-lg border border-border bg-card p-3">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-medium">
-                    {r.servicesSummary || r.contactName || "—"}
-                  </div>
-                  <div className="text-[11px] text-muted-foreground">{formatDateTime(r.startAt)}</div>
-                </div>
-                <StatusBadge variant={bucketToVariant(r.bucket)} className="shrink-0">
-                  {r.manualOverride ? <Lock className="h-3 w-3" /> : null}
-                  {bucketLabel(r.bucket)}
-                </StatusBadge>
-              </div>
-              <div className="mt-2 flex items-baseline justify-between">
-                <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Comissão</span>
-                <span className="text-sm font-semibold">{formatCurrency(r.commissionEur)}</span>
-              </div>
-            </article>
-          ))}
-        </section>
-      )}
-
-      <section className="hidden overflow-hidden rounded-lg border border-border sm:block">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/50 text-[10px] uppercase tracking-wider text-muted-foreground">
-            <tr>
-              <th className="px-3 py-2 text-left">Data</th>
-              <th className="px-3 py-2 text-left">Serviço</th>
-              <th className="px-3 py-2 text-right">Comissão</th>
-              <th className="px-3 py-2 text-right">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="px-3 py-6 text-center text-muted-foreground">
-                  {emptyMsg}
-                </td>
-              </tr>
-            ) : (
-              rows.map((r) => (
-                <tr key={r.id} className="border-t border-border">
-                  <td className="px-3 py-2">{formatDateTime(r.startAt)}</td>
-                  <td className="px-3 py-2">{r.servicesSummary || r.contactName || "—"}</td>
-                  <td className="px-3 py-2 text-right font-semibold">
-                    {formatCurrency(r.commissionEur)}
-                  </td>
-                  <td className="px-3 py-2 text-right">
-                    <StatusBadge variant={bucketToVariant(r.bucket)}>
-                      {r.manualOverride ? <Lock className="h-3 w-3" /> : null}
-                      {bucketLabel(r.bucket)}
-                    </StatusBadge>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </section>
-    </>
-  );
-}
-
-function AdminView({
-  data,
-  rows,
-  emptyMsg,
-}: {
-  data: Extract<ReturnType<typeof useFinanceSummary>["data"], { role: "admin" }>;
-  rows: Extract<ReturnType<typeof useFinanceSummary>["data"], { role: "admin" }>["rows"];
-  emptyMsg: string;
-}) {
-  return (
-    <>
-      <section className="grid grid-cols-3 gap-2">
-        <StatCard label="Total bruto" value={formatCurrency(data.totalBruto)} />
-        <StatCard label="Comissão (40%)" value={formatCurrency(data.comissaoTotal)} tone="warn" />
-        <StatCard label="Estúdio (60%)" value={formatCurrency(data.estudioTotal)} tone="good" />
-      </section>
-      <section className="grid grid-cols-3 gap-2">
-        <StatCard label="Pago" value={formatCurrency(data.pago)} tone="good" />
-        <StatCard label="Pendente" value={formatCurrency(data.pendente)} tone="warn" />
-        <StatCard label="A receber" value={formatCurrency(data.aReceber)} />
-      </section>
-      {data.vendedorComissaoTotal > 0 ? (
-        <section className="grid grid-cols-1 gap-2">
-          <StatCard
-            label="Comissão vendedores"
-            value={formatCurrency(data.vendedorComissaoTotal)}
-            tone="warn"
-          />
-        </section>
-      ) : null}
-
-      {rows.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground sm:hidden">
-          {emptyMsg}
-        </div>
-      ) : (
-        <section className="space-y-2 sm:hidden">
-          {rows.map((r) => (
-            <article key={r.id} className="space-y-2 rounded-lg border border-border bg-card p-3">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-medium">{r.contactName ?? "—"}</div>
-                  <div className="truncate text-[11px] text-muted-foreground">{r.servicesSummary}</div>
-                  <div className="text-[11px] text-muted-foreground">{formatDateTime(r.startAt)}</div>
-                </div>
-                <StatusBadge variant={bucketToVariant(r.bucket)} className="shrink-0">
-                  {r.manualOverride ? <Lock className="h-3 w-3" /> : null}
-                  {bucketLabel(r.bucket)}
-                </StatusBadge>
-              </div>
-              <div className="grid grid-cols-3 gap-2 border-t border-border pt-2 text-right">
-                <div>
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Total</div>
-                  <div className="text-sm font-semibold">{formatCurrency(r.totalEur)}</div>
-                </div>
-                <div>
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Comissão</div>
-                  <div className="text-sm font-semibold text-warning">{formatCurrency(r.commissionEur)}</div>
-                </div>
-                <div>
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Estúdio</div>
-                  <div className="text-sm font-semibold text-success">{formatCurrency(r.studioEur)}</div>
-                </div>
-              </div>
-              {r.sellerName ? (
-                <div className="flex items-center justify-between border-t border-border pt-2 text-[11px]">
-                  <span className="text-muted-foreground">Vendedor · {r.sellerName}</span>
-                  <span className="font-semibold text-warning">
-                    {formatCurrency(r.sellerCommissionEur)}
-                  </span>
-                </div>
-              ) : null}
-            </article>
-          ))}
-        </section>
-      )}
-
-      <section className="hidden overflow-hidden rounded-lg border border-border sm:block">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/50 text-[10px] uppercase tracking-wider text-muted-foreground">
-            <tr>
-              <th className="px-3 py-2 text-left">Data</th>
-              <th className="px-3 py-2 text-left">Cliente / Serviço</th>
-              <th className="px-3 py-2 text-right">Total</th>
-              <th className="px-3 py-2 text-right">Comissão 40%</th>
-              <th className="px-3 py-2 text-right">Estúdio 60%</th>
-              <th className="px-3 py-2 text-left">Vendedor</th>
-              <th className="px-3 py-2 text-right">Com. vend.</th>
-              <th className="px-3 py-2 text-right">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 ? (
-              <tr>
-                <td colSpan={8} className="px-3 py-6 text-center text-muted-foreground">
-                  {emptyMsg}
-                </td>
-              </tr>
-            ) : (
-              rows.map((r) => (
-                <tr key={r.id} className="border-t border-border">
-                  <td className="px-3 py-2">{formatDateTime(r.startAt)}</td>
-                  <td className="px-3 py-2">
-                    <div className="font-medium">{r.contactName ?? "—"}</div>
-                    <div className="text-[11px] text-muted-foreground">{r.servicesSummary}</div>
-                  </td>
-                  <td className="px-3 py-2 text-right">{formatCurrency(r.totalEur)}</td>
-                  <td className="px-3 py-2 text-right text-warning">
-                    {formatCurrency(r.commissionEur)}
-                  </td>
-                  <td className="px-3 py-2 text-right text-success">
-                    {formatCurrency(r.studioEur)}
-                  </td>
-                  <td className="px-3 py-2 text-muted-foreground">{r.sellerName ?? "—"}</td>
-                  <td className="px-3 py-2 text-right text-warning">
-                    {r.sellerName ? formatCurrency(r.sellerCommissionEur) : "—"}
-                  </td>
-                  <td className="px-3 py-2 text-right">
-                    <StatusBadge variant={bucketToVariant(r.bucket)}>
-                      {r.manualOverride ? <Lock className="h-3 w-3" /> : null}
-                      {bucketLabel(r.bucket)}
-                    </StatusBadge>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </section>
-    </>
-  );
-}
-
-function SellerView({
-  data,
-  rows,
-  emptyMsg,
-}: {
-  data: Extract<ReturnType<typeof useFinanceSummary>["data"], { role: "seller" }>;
-  rows: Extract<ReturnType<typeof useFinanceSummary>["data"], { role: "seller" }>["rows"];
-  emptyMsg: string;
-}) {
-  return (
-    <>
-      <section className="grid grid-cols-3 gap-2">
-        <StatCard label="A receber" value={formatCurrency(data.aReceber)} />
-        <StatCard label="Pendente" value={formatCurrency(data.pendente)} tone="warn" />
-        <StatCard label="Pago" value={formatCurrency(data.pago)} tone="good" />
-      </section>
-      <p className="text-[11px] text-muted-foreground">
-        Valores exibidos são a sua comissão como vendedor sobre os agendamentos que você vendeu.
-      </p>
-
-      {rows.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground sm:hidden">
-          {emptyMsg}
-        </div>
-      ) : (
-        <section className="space-y-2 sm:hidden">
-          {rows.map((r) => (
-            <article key={r.id} className="rounded-lg border border-border bg-card p-3">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-medium">
-                    {r.servicesSummary || r.contactName || "—"}
-                  </div>
-                  <div className="text-[11px] text-muted-foreground">{formatDateTime(r.startAt)}</div>
-                </div>
-                <StatusBadge variant={bucketToVariant(r.bucket)} className="shrink-0">
-                  {r.manualOverride ? <Lock className="h-3 w-3" /> : null}
-                  {bucketLabel(r.bucket)}
-                </StatusBadge>
-              </div>
-              <div className="mt-2 flex items-baseline justify-between">
-                <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Minha comissão</span>
-                <span className="text-sm font-semibold">{formatCurrency(r.commissionEur)}</span>
-              </div>
-            </article>
-          ))}
-        </section>
-      )}
-
-      <section className="hidden overflow-hidden rounded-lg border border-border sm:block">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/50 text-[10px] uppercase tracking-wider text-muted-foreground">
-            <tr>
-              <th className="px-3 py-2 text-left">Data</th>
-              <th className="px-3 py-2 text-left">Cliente / Serviço</th>
-              <th className="px-3 py-2 text-right">Minha comissão</th>
-              <th className="px-3 py-2 text-right">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="px-3 py-6 text-center text-muted-foreground">
-                  {emptyMsg}
-                </td>
-              </tr>
-            ) : (
-              rows.map((r) => (
-                <tr key={r.id} className="border-t border-border">
-                  <td className="px-3 py-2">{formatDateTime(r.startAt)}</td>
-                  <td className="px-3 py-2">{r.servicesSummary || r.contactName || "—"}</td>
-                  <td className="px-3 py-2 text-right font-semibold">
-                    {formatCurrency(r.commissionEur)}
-                  </td>
-                  <td className="px-3 py-2 text-right">
-                    <StatusBadge variant={bucketToVariant(r.bucket)}>
-                      {r.manualOverride ? <Lock className="h-3 w-3" /> : null}
-                      {bucketLabel(r.bucket)}
-                    </StatusBadge>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </section>
-    </>
+    <FinanceView
+      model={model}
+      filters={{ period, bucket, artist: artistId, seller: sellerId }}
+      isLoading={isLoading}
+      error={error ? (error as Error).message : null}
+      onRetry={() => void refetch()}
+      onBack={() => navigate({ to: "/agenda" })}
+      onFiltersChange={setSearch}
+      actions={
+        isAdmin ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <SyncGhlButton />
+            <Link
+              to="/reconciliar"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border bg-card px-3 text-xs font-medium hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+              Reconciliar
+            </Link>
+          </div>
+        ) : undefined
+      }
+    />
   );
 }

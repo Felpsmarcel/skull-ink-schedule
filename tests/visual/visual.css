@@ -2,3 +2,4 @@
 @source './chrome.tsx';
 
 @source "./operations.tsx";
+@source "./management.tsx";

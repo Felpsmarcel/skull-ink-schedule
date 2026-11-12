@@ -38,6 +38,7 @@ import { GhlSyncStatus } from "@/components/ghl-sync-status";
 import { agendaScope } from "@/lib/agenda-scope";
 import { useArtists } from "@/hooks/use-artists";
 import { useAgendaSwipe } from "@/hooks/use-agenda-swipe";
+import { agendaLinkDay, parseAgendaLinkDate } from "@/lib/agenda-link-date";
 
 type View = "day" | "week" | "month";
 
@@ -70,10 +71,11 @@ export const Route = createFileRoute("/_authenticated/agenda")({
         ? (rawView as View)
         : undefined;
     const novo = typeof s.novo === "string" && s.novo.length > 2 ? s.novo : undefined;
-    const out: { debug?: boolean; view?: View; novo?: string } = {};
+    const out: { debug?: boolean; view?: View; novo?: string; date?: string } = {};
     if (on) out.debug = true;
     if (view && view !== "day") out.view = view;
     if (novo) out.novo = novo;
+    if (typeof s.date === "string" && parseAgendaLinkDate(s.date)) out.date = s.date;
     return out;
   },
 
@@ -97,7 +99,7 @@ function defaultTimeLabels(): string[] {
 function AgendaPage() {
   const { i18n } = useTranslation();
   const navigate = useNavigate({ from: "/agenda" });
-  const search = Route.useSearch() as { debug?: boolean; view?: View; novo?: string };
+  const search = Route.useSearch();
   const debug = search.debug === true;
   const view: View = search.view ?? "day";
   const setView = (v: View) =>
@@ -108,8 +110,23 @@ function AgendaPage() {
       }),
       replace: true,
     });
-  const [date, setDate] = useState<Date>(() => new Date());
+  const [date, setDateState] = useState<Date>(() => parseAgendaLinkDate(search.date) ?? new Date());
   const [pickerOpen, setPickerOpen] = useState(false);
+  useEffect(() => {
+    setDateState(parseAgendaLinkDate(search.date) ?? new Date());
+  }, [search.date]);
+  const setDate = (nextDate: Date, nextView?: View) => {
+    setDateState(nextDate);
+    navigate({
+      search: (prev) => ({
+        ...prev,
+        date: agendaLinkDay(nextDate.toISOString()),
+        novo: undefined,
+        view: nextView === "day" ? undefined : (nextView ?? prev.view),
+      }),
+      replace: true,
+    });
+  };
 
   useEffect(() => {
     document.documentElement.classList.add("agenda-no-pull-refresh");
@@ -139,8 +156,7 @@ function AgendaPage() {
     const d = new Date(date);
     d.setDate(1);
     d.setMonth(d.getMonth() - 1);
-    setDate(d);
-    setView("month");
+    setDate(d, "month");
   }
 
   const dateLabel = useMemo(() => {
@@ -180,8 +196,7 @@ function AgendaPage() {
   }
 
   const goToDay = (d: Date) => {
-    setDate(d);
-    setView("day");
+    setDate(d, "day");
   };
 
   if (!scope.allowed)
