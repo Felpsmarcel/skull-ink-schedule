@@ -47,7 +47,8 @@ function FinanceiroPage() {
     staleTime: 60_000,
     retry: false,
   });
-  const filters: WorkspaceFilters = financeSearchSchema.parse(Route.useSearch());
+  // The router adapter erases this schema's inferred shape; runtime parsing remains mandatory.
+  const filters = financeSearchSchema.parse(Route.useSearch()) as WorkspaceFilters;
   const onChange = (patch: Partial<WorkspaceFilters>) => {
     void navigate({ to: "/financeiro", search: (prev) => ({ ...prev, ...patch }), replace: true });
   };
