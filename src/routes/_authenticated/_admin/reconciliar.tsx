@@ -16,6 +16,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -119,26 +120,27 @@ function ReconciliarPage() {
 
   return (
     <div className="flex min-h-dvh flex-col bg-background pb-20">
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-background/95 px-4 py-3 backdrop-blur">
-        <div className="flex items-center gap-2">
-          <button
+      <PageHeader
+        title="Reconciliar GHL"
+        description="Confira as pendências de sincronização com o CRM."
+        leading={
+          <Button
             type="button"
+            variant="outline"
+            size="icon"
             onClick={() => navigate({ to: "/financeiro" })}
-            className="grid h-9 w-9 place-items-center rounded-md hover:bg-muted"
-            aria-label="Voltar"
+            className="min-h-11 min-w-11 rounded-xl"
+            aria-label="Voltar ao financeiro"
           >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <h1 className="flex items-center gap-2 text-base font-semibold">
-            <AlertTriangle className="h-4 w-4" /> Reconciliar GHL
-          </h1>
-        </div>
-        <SyncGhlButton>Sincronizar agora</SyncGhlButton>
-      </header>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        }
+        actions={<SyncGhlButton>Sincronizar agora</SyncGhlButton>}
+      />
 
-      <main className="flex-1 space-y-3 p-4">
-        <div className="rounded-lg border border-border bg-card p-4">
-          <div className="flex items-start justify-between gap-3">
+      <main className="mx-auto w-full max-w-4xl flex-1 space-y-5 px-4 py-6 sm:px-6 sm:py-8">
+        <div className="rounded-2xl border border-border bg-card p-4 sm:p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="flex items-center gap-2 text-sm font-semibold">
                 <Users className="h-4 w-4" /> Nomes de clientes
@@ -223,14 +225,14 @@ function FailureCard({
   const action = recommendedAction(failure.reason);
 
   return (
-    <li className="rounded-lg border border-border bg-card p-4 text-sm">
-      <div className="flex items-start justify-between gap-3">
+    <li className="rounded-2xl border border-border bg-card p-4 text-sm sm:p-5">
+      <div className="flex flex-col items-start justify-between gap-3 sm:flex-row">
         <div className="min-w-0 flex-1 space-y-2">
           <div className="flex items-start gap-2">
             <StatusBadge variant="warning" className="mt-0.5 shrink-0">
               Pendente
             </StatusBadge>
-            <div className="font-medium leading-snug">{failure.reason}</div>
+            <div className="min-w-0 break-words font-medium leading-snug">{failure.reason}</div>
           </div>
           <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
             <span className="inline-flex items-center gap-1">
@@ -238,8 +240,8 @@ function FailureCard({
               {new Date(failure.created_at).toLocaleString("pt-PT")}
             </span>
             {failure.ghl_event_id ? (
-              <span className="inline-flex items-center gap-1 font-mono">
-                <Hash className="h-3 w-3" />
+              <span className="inline-flex min-w-0 items-center gap-1 break-all font-mono">
+                <Hash className="h-3 w-3 shrink-0" />
                 {failure.ghl_event_id}
               </span>
             ) : (
@@ -293,7 +295,7 @@ function FailureCard({
             </button>
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <pre className="mt-2 max-h-48 overflow-auto rounded bg-muted/50 p-2 text-[10px]">
+            <pre className="mt-2 max-h-48 max-w-full overflow-auto whitespace-pre-wrap break-words rounded-xl bg-muted/50 p-3 text-xs">
               {failure.payload}
             </pre>
           </CollapsibleContent>
@@ -331,7 +333,7 @@ function BookingOperationsCard() {
   const rows = opsQ.data ?? [];
 
   return (
-    <div className="rounded-lg border border-border bg-card p-4">
+    <div className="rounded-2xl border border-border bg-card p-4 sm:p-5">
       <p className="flex items-center gap-2 text-sm font-semibold">
         <Hash className="h-4 w-4" /> Operações de agendamento
       </p>
@@ -350,7 +352,7 @@ function BookingOperationsCard() {
         <ul className="mt-3 space-y-2">
           {rows.map((op) => (
             <li key={op.id} className="rounded-md border border-border p-2 text-xs">
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <StatusBadge variant={op.status === "reconciliation_required" ? "danger" : "warning"}>
                   {op.status} · {op.step}
                 </StatusBadge>
@@ -370,7 +372,7 @@ function BookingOperationsCard() {
                 contato {op.ghlContactId ?? "—"} · oportunidade {op.ghlOpportunityId ?? "—"} ·
                 evento {op.ghlAppointmentId ?? "—"}
               </p>
-              {op.error ? <p className="mt-1 text-destructive">{op.error}</p> : null}
+              {op.error ? <p className="mt-1 break-words text-destructive">{op.error}</p> : null}
             </li>
           ))}
         </ul>

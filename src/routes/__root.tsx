@@ -154,7 +154,7 @@ function RootComponent() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const opsLight = isOpsLightPath(pathname);
 
-  // Light pilot is scoped on <html> so Radix portals inherit it; removed on other routes.
+  // Application identity lives on <html> so Radix portals inherit the route’s theme.
   useEffect(() => {
     document.documentElement.classList.toggle(OPS_LIGHT_CLASS, opsLight);
   }, [opsLight]);

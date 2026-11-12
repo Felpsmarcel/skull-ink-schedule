@@ -828,7 +828,7 @@ function StepTwo({
           <span className="text-sm uppercase tracking-wider text-muted-foreground">Total</span>
           <span
             className="text-3xl font-bold tabular-nums"
-            style={{ color: total > 0 ? "#E11D2A" : undefined }}
+            style={{ color: total > 0 ? "var(--primary)" : undefined }}
           >
             {fmtEur(total)}
           </span>
@@ -925,7 +925,7 @@ function StepThree({ form, set, total, isSinal, sinalErro, artists }: StepThreeP
           <dt className="text-muted-foreground">Total</dt>
           <dd
             className="font-bold tabular-nums"
-            style={{ color: total > 0 ? "#E11D2A" : undefined }}
+            style={{ color: total > 0 ? "var(--primary)" : undefined }}
           >
             {fmtEur(total)}
           </dd>
@@ -1009,7 +1009,7 @@ function ConfirmationScreen({
   historyHref: string;
 }) {
   const ok = data.synced;
-  const color = ok ? "#16a34a" : "#d97706";
+  const color = ok ? "var(--success)" : "var(--warning)";
   const dateStr = new Intl.DateTimeFormat("pt-PT", {
     day: "2-digit",
     month: "2-digit",
@@ -1046,7 +1046,10 @@ function ConfirmationScreen({
       <Badge
         variant={ok ? "default" : "secondary"}
         className="mb-4"
-        style={{ backgroundColor: ok ? color : undefined }}
+        style={{
+          backgroundColor: ok ? color : undefined,
+          color: ok ? "var(--success-foreground)" : undefined,
+        }}
       >
         {ok ? "Sincronizado com GHL" : "Sync GHL pendente"}
       </Badge>

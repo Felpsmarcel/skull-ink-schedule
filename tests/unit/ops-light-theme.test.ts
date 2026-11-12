@@ -1,49 +1,63 @@
 import { describe, expect, it } from "vitest";
 import { runInNewContext } from "node:vm";
+import { readFileSync, readdirSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import { isOpsLightPath, OPS_LIGHT_BOOT_SCRIPT } from "@/lib/ops-light-theme";
 
-describe("isOpsLightPath", () => {
-  it("activates on the Agenda and the login flow", () => {
-    expect(isOpsLightPath("/agenda")).toBe(true);
-    expect(isOpsLightPath("/menu")).toBe(true);
-    expect(isOpsLightPath("/auth")).toBe(true);
-    expect(isOpsLightPath("/auth/recover")).toBe(true);
-    expect(isOpsLightPath("/projetos")).toBe(true);
-    expect(isOpsLightPath("/projetos/abc")).toBe(true);
-    expect(isOpsLightPath("/preview/ficha-projeto")).toBe(true);
-    expect(isOpsLightPath("/financeiro")).toBe(true);
-    expect(isOpsLightPath("/painel-tatuador")).toBe(true);
-    expect(isOpsLightPath("/appointments/new")).toBe(true);
-    expect(isOpsLightPath("/appointments/new/agenda")).toBe(true);
-    expect(isOpsLightPath("/totem")).toBe(true);
-    expect(isOpsLightPath("/totem/confirmar")).toBe(true);
-    expect(isOpsLightPath("/a/token")).toBe(true);
-    expect(isOpsLightPath("/admin/fila")).toBe(true);
+// Inspect actual UI registrations so a forgotten screen fails here instead of
+// silently returning to the old identity when reached from Conta e gestão.
+function uiPaths(directory: string): string[] {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(directory, entry.name);
+    if (entry.isDirectory()) return uiPaths(path);
+    if (!entry.name.endsWith(".tsx") || entry.name.startsWith("[")) return [];
+    const source = readFileSync(path, "utf8");
+    if (!/component:/.test(source)) return [];
+    const id = source.match(/createFileRoute\(\s*["']([^"']+)["']\)/)?.[1];
+    if (!id) return [];
+    return [
+      "/" +
+        id
+          .split("/")
+          .filter((part) => part && !part.startsWith("_"))
+          .map((part) => (part.startsWith("$") ? "example" : part.replace(/_$/, "")))
+          .join("/"),
+    ];
   });
-  it("keeps every other screen on the current theme", () => {
-    expect(isOpsLightPath("/home")).toBe(false);
-    expect(isOpsLightPath("/menu-extra")).toBe(false);
-    expect(isOpsLightPath("/appointments/newer")).toBe(false);
-    expect(isOpsLightPath("/totem-extra")).toBe(false);
-    expect(isOpsLightPath("/admin/equipe")).toBe(false);
-    expect(isOpsLightPath("/agendamentos")).toBe(false);
-    expect(isOpsLightPath("/financeiro-extra")).toBe(false);
-    expect(isOpsLightPath("/authx")).toBe(false);
+}
+const applicationPaths = uiPaths(fileURLToPath(new URL("../../src/routes", import.meta.url)));
+const outsidePaths = [
+  "/menu-extra",
+  "/appointments/newer",
+  "/totem-extra",
+  "/admin/other-tool",
+  "/agendamentos",
+  "/financeiro-extra",
+  "/authx",
+  "/.lovable/oauth/consent",
+  "/api/public/mobile-dashboard",
+  "/mcp",
+  "/lovable/email/auth/preview",
+];
+
+describe("application theme coverage", () => {
+  it("covers every registered application screen, including administrative destinations", () => {
+    expect(applicationPaths.length).toBeGreaterThan(40);
+    for (const pathname of applicationPaths) {
+      expect(isOpsLightPath(pathname), pathname).toBe(true);
+      expect(isOpsLightPath(`${pathname.replace(/\/$/, "")}/`), pathname).toBe(true);
+    }
+  });
+
+  it("does not match unrelated prefixes, API endpoints or external consent screens", () => {
+    for (const pathname of outsidePaths) expect(isOpsLightPath(pathname), pathname).toBe(false);
   });
 });
 
 describe("pre-paint theme parity", () => {
-  it("keeps the initial paint consistent with runtime route changes", () => {
-    for (const pathname of [
-      "/menu",
-      "/menu-extra",
-      "/agenda",
-      "/home",
-      "/financeiro",
-      "/admin/equipe",
-      "/appointments/new/agenda",
-      "/totem",
-    ]) {
+  it("keeps direct loads consistent with route navigation across the entire UI", () => {
+    for (const pathname of [...applicationPaths, ...outsidePaths]) {
       const classes: string[] = [];
       runInNewContext(OPS_LIGHT_BOOT_SCRIPT, {
         location: { pathname },

@@ -12,10 +12,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { formatServicePrice, type ServiceModality } from "@/lib/services";
-import { listAllServices, createService, updateService, toggleServiceActive } from "@/lib/services.functions";
+import {
+  listAllServices,
+  createService,
+  updateService,
+  toggleServiceActive,
+} from "@/lib/services.functions";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/services")({
@@ -66,51 +72,57 @@ function ServicesPage() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
-  const togglingId =
-    toggleMut.isPending ? (toggleMut.variables as { id: string } | undefined)?.id : undefined;
+  const togglingId = toggleMut.isPending
+    ? (toggleMut.variables as { id: string } | undefined)?.id
+    : undefined;
 
   return (
-    <div className="min-h-svh bg-background pb-24 text-foreground">
+    <div className="min-h-svh bg-background pb-[calc(env(safe-area-inset-bottom)+7rem)] text-foreground sm:pb-24">
       <Toaster position="top-center" />
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-background/95 px-4 py-3 backdrop-blur">
-        <h1 className="text-base font-bold uppercase tracking-wider">Serviços</h1>
-        {isAdmin && (
-          <Sheet
-            open={open}
-            onOpenChange={(o) => {
-              setOpen(o);
-              if (!o) setEditing(null);
-            }}
-          >
-            <SheetTrigger asChild>
-              <Button
-                size="sm"
-                onClick={() => {
-                  setEditing(null);
-                  setOpen(true);
-                }}
-              >
-                <Plus className="mr-1 h-4 w-4" /> Novo
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="bottom" className="max-h-[92svh] overflow-y-auto">
-              <SheetHeader>
-                <SheetTitle>{editing ? "Editar serviço" : "Novo serviço"}</SheetTitle>
-              </SheetHeader>
-              <ServiceForm
-                initial={editing}
-                onDone={async () => {
-                  await qc.invalidateQueries({ queryKey: ["services"] });
-                  setOpen(false);
-                  setEditing(null);
-                }}
-              />
-            </SheetContent>
-          </Sheet>
-        )}
-      </header>
+      <PageHeader
+        eyebrow="Catálogo do estúdio"
+        title="Serviços"
+        description="Consulte os serviços, os valores e a duração de cada atendimento."
+        actions={
+          isAdmin && (
+            <Sheet
+              open={open}
+              onOpenChange={(o) => {
+                setOpen(o);
+                if (!o) setEditing(null);
+              }}
+            >
+              <SheetTrigger asChild>
+                <Button
+                  size="sm"
+                  className="min-h-11 rounded-xl"
+                  onClick={() => {
+                    setEditing(null);
+                    setOpen(true);
+                  }}
+                >
+                  <Plus className="mr-1 h-4 w-4" /> Novo
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="bottom" className="max-h-[92svh] overflow-y-auto">
+                <SheetHeader>
+                  <SheetTitle>{editing ? "Editar serviço" : "Novo serviço"}</SheetTitle>
+                </SheetHeader>
+                <ServiceForm
+                  initial={editing}
+                  onDone={async () => {
+                    await qc.invalidateQueries({ queryKey: ["services"] });
+                    setOpen(false);
+                    setEditing(null);
+                  }}
+                />
+              </SheetContent>
+            </Sheet>
+          )
+        }
+      />
 
-      <div className="mx-auto max-w-md px-4 py-4">
+      <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">
         {q.isLoading ? (
           <div className="flex justify-center py-12">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -121,22 +133,22 @@ function ServicesPage() {
           <div className="space-y-6">
             {grouped.map(([cat, items]) => (
               <section key={cat}>
-                <h2 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                <h2 className="mb-3 font-editorial text-2xl font-semibold text-foreground">
                   {cat}
                 </h2>
-                <ul className="space-y-2">
+                <ul className="grid gap-3 md:grid-cols-2">
                   {items.map((s) => (
                     <li
                       key={s.id}
                       className={cn(
-                        "rounded-lg border border-border bg-card p-3",
+                        "rounded-2xl border border-border bg-card p-4 shadow-sm",
                         !s.active && "opacity-60",
                       )}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="truncate text-sm font-semibold">{s.name}</p>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="break-words text-sm font-semibold">{s.name}</p>
                             {!s.active && (
                               <span className="rounded bg-muted px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-muted-foreground">
                                 Inativo
@@ -163,21 +175,21 @@ function ServicesPage() {
                           <div className="flex shrink-0 flex-col gap-1">
                             <button
                               type="button"
-                              aria-label="Editar"
+                              aria-label={`Editar ${s.name}`}
                               onClick={() => {
                                 setEditing(s);
                                 setOpen(true);
                               }}
-                              className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                              className="grid h-11 w-11 place-items-center rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                             >
                               <Pencil className="h-4 w-4" />
                             </button>
                             <button
                               type="button"
-                              aria-label={s.active ? "Desativar" : "Ativar"}
+                              aria-label={`${s.active ? "Desativar" : "Ativar"} ${s.name}`}
                               disabled={togglingId === s.id}
                               onClick={() => toggleMut.mutate({ id: s.id, active: !s.active })}
-                              className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
+                              className="grid h-11 w-11 place-items-center rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
                             >
                               {togglingId === s.id ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -195,13 +207,18 @@ function ServicesPage() {
             ))}
           </div>
         )}
-      </div>
-
+      </main>
     </div>
   );
 }
 
-function ServiceForm({ initial, onDone }: { initial: Row | null; onDone: () => void | Promise<void> }) {
+function ServiceForm({
+  initial,
+  onDone,
+}: {
+  initial: Row | null;
+  onDone: () => void | Promise<void>;
+}) {
   const create = useServerFn(createService);
   const update = useServerFn(updateService);
   const [name, setName] = useState(initial?.name ?? "");
@@ -215,9 +232,7 @@ function ServiceForm({ initial, onDone }: { initial: Row | null; onDone: () => v
   const [descShort, setDescShort] = useState(initial?.description_short ?? "");
   const [desc, setDesc] = useState(initial?.description ?? "");
   const [active, setActive] = useState(initial?.active ?? true);
-  const [priceOnRequest, setPriceOnRequest] = useState(
-    Boolean(initial?.price_on_request),
-  );
+  const [priceOnRequest, setPriceOnRequest] = useState(Boolean(initial?.price_on_request));
 
   const saveMut = useMutation({
     mutationFn: async () => {
@@ -227,11 +242,7 @@ function ServiceForm({ initial, onDone }: { initial: Row | null; onDone: () => v
         duration_min: Number(duration) || 0,
         modality,
         price_eur: priceOnRequest ? 0 : Number(priceMin) || 0,
-        price_max_eur: priceOnRequest
-          ? null
-          : priceMax.trim() === ""
-            ? null
-            : Number(priceMax),
+        price_max_eur: priceOnRequest ? null : priceMax.trim() === "" ? null : Number(priceMax),
         description: desc.trim() || null,
         description_short: descShort.trim() || null,
         active,
@@ -265,11 +276,22 @@ function ServiceForm({ initial, onDone }: { initial: Row | null; onDone: () => v
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label htmlFor="sf-cat">Categoria</Label>
-          <Input id="sf-cat" value={category} onChange={(e) => setCategory(e.target.value)} required />
+          <Input
+            id="sf-cat"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            required
+          />
         </div>
         <div>
           <Label htmlFor="sf-dur">Duração (min)</Label>
-          <Input id="sf-dur" type="number" value={duration} onChange={(e) => setDuration(e.target.value)} required />
+          <Input
+            id="sf-dur"
+            type="number"
+            value={duration}
+            onChange={(e) => setDuration(e.target.value)}
+            required
+          />
         </div>
       </div>
       <div>
@@ -290,11 +312,27 @@ function ServiceForm({ initial, onDone }: { initial: Row | null; onDone: () => v
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label htmlFor="sf-pmin">Preço (€)</Label>
-          <Input id="sf-pmin" type="number" step="0.01" value={priceMin} onChange={(e) => setPriceMin(e.target.value)} required={!priceOnRequest} disabled={priceOnRequest} />
+          <Input
+            id="sf-pmin"
+            type="number"
+            step="0.01"
+            value={priceMin}
+            onChange={(e) => setPriceMin(e.target.value)}
+            required={!priceOnRequest}
+            disabled={priceOnRequest}
+          />
         </div>
         <div>
           <Label htmlFor="sf-pmax">Preço máx (€)</Label>
-          <Input id="sf-pmax" type="number" step="0.01" value={priceMax} onChange={(e) => setPriceMax(e.target.value)} placeholder="—" disabled={priceOnRequest} />
+          <Input
+            id="sf-pmax"
+            type="number"
+            step="0.01"
+            value={priceMax}
+            onChange={(e) => setPriceMax(e.target.value)}
+            placeholder="—"
+            disabled={priceOnRequest}
+          />
         </div>
       </div>
       <label className="flex items-center gap-2 text-sm">
@@ -307,7 +345,12 @@ function ServiceForm({ initial, onDone }: { initial: Row | null; onDone: () => v
       </label>
       <div>
         <Label htmlFor="sf-ds">Descrição curta</Label>
-        <Input id="sf-ds" value={descShort ?? ""} onChange={(e) => setDescShort(e.target.value)} maxLength={200} />
+        <Input
+          id="sf-ds"
+          value={descShort ?? ""}
+          onChange={(e) => setDescShort(e.target.value)}
+          maxLength={200}
+        />
       </div>
       <div>
         <Label htmlFor="sf-d">Descrição</Label>
