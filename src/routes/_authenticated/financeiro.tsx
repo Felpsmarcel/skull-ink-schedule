@@ -1,103 +1,68 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { AlertTriangle } from "lucide-react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
-import { useFinanceSummary } from "@/hooks/use-finance";
-import { useIsAdmin } from "@/hooks/use-current-user";
-import { SyncGhlButton } from "@/components/sync-ghl-button";
-import {
-  FinanceView,
-  type FinanceViewModel,
-  type FinancePeriod as Period,
-  type FinanceBucketFilter as BucketFilter,
-} from "@/components/finance/finance-view";
-import { filterFinanceRows } from "@/lib/finance-list-filters";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { getFinanceWorkspace } from "@/lib/finance-workspace.functions";
+import { FinanceWorkspace } from "@/components/finance/finance-workspace";
+import type { WorkspaceFilters } from "@/lib/finance-workspace-types";
 
 const financeSearchSchema = z.object({
-  period: fallback(z.string(), "all").default("all"),
-  bucket: fallback(z.string(), "all").default("all"),
-  artist: fallback(z.string(), "all").default("all"),
-  seller: fallback(z.string(), "all").default("all"),
+  area: fallback(z.enum(["projects", "receipts", "sessions", "payouts"]), "receipts").default(
+    "receipts",
+  ),
+  period: fallback(z.enum(["today", "week", "month", "all", "custom"]), "month").default("month"),
+  from: fallback(z.string().max(10), "").default(""),
+  to: fallback(z.string().max(10), "").default(""),
+  artist: fallback(z.string().max(100), "all").default("all"),
 });
-
 export const Route = createFileRoute("/_authenticated/financeiro")({
   validateSearch: zodValidator(financeSearchSchema),
   head: () => ({
     meta: [
       { title: "Financeiro — GF Tattoo Studio" },
-      { name: "description", content: "Painel financeiro do GF Tattoo Studio." },
+      {
+        name: "description",
+        content: "Projetos, recebimentos, sessões e repasses da GF Tattoo Studio.",
+      },
       { name: "robots", content: "noindex,nofollow" },
     ],
   }),
   component: FinanceiroPage,
 });
-
-const ALLOWED_PERIODS: Period[] = ["today", "week", "month", "all"];
-const ALLOWED_BUCKETS: BucketFilter[] = ["all", "pago", "pendente", "a_receber"];
-
 function FinanceiroPage() {
   const navigate = useNavigate();
-  const { data, isLoading, error, refetch } = useFinanceSummary();
-  const isAdmin = useIsAdmin();
-
-  const search = Route.useSearch();
-  const period: Period = (ALLOWED_PERIODS as string[]).includes(search.period)
-    ? (search.period as Period)
-    : "all";
-  const bucket: BucketFilter = (ALLOWED_BUCKETS as string[]).includes(search.bucket)
-    ? (search.bucket as BucketFilter)
-    : "all";
-  const artistId = search.artist || "all";
-  const sellerId = search.seller || "all";
-
-  const setSearch = (
-    patch: Partial<{ period: string; bucket: string; artist: string; seller: string }>,
-  ) => {
-    navigate({
-      to: "/financeiro",
-      search: (prev: Record<string, unknown>) => ({ ...prev, ...patch }),
-      replace: true,
-    });
+  const identity = useCurrentUser();
+  const me = identity.data;
+  const allowed =
+    me?.role === "admin" ||
+    (me?.role === "artist" && !!me.artistId) ||
+    (me?.role === "seller" && !!me.sellerId);
+  const fetcher = useServerFn(getFinanceWorkspace);
+  const query = useQuery({
+    queryKey: ["finance-workspace", me?.userId, me?.role, me?.artistId, me?.sellerId],
+    queryFn: () => fetcher(),
+    enabled: !!allowed,
+    staleTime: 60_000,
+    retry: false,
+  });
+  const filters: WorkspaceFilters = financeSearchSchema.parse(Route.useSearch());
+  const onChange = (patch: Partial<WorkspaceFilters>) => {
+    void navigate({ to: "/financeiro", search: (prev) => ({ ...prev, ...patch }), replace: true });
   };
-  const model: FinanceViewModel | null = !data
-    ? null
-    : data.role === "admin"
-      ? {
-          role: "admin",
-          data,
-          rows: filterFinanceRows(data.rows, period, bucket, artistId, sellerId),
-        }
-      : data.role === "artist"
-        ? { role: "artist", data, rows: filterFinanceRows(data.rows, period, bucket, "all", "all") }
-        : {
-            role: "seller",
-            data,
-            rows: filterFinanceRows(data.rows, period, bucket, "all", "all"),
-          };
-
   return (
-    <FinanceView
-      model={model}
-      filters={{ period, bucket, artist: artistId, seller: sellerId }}
-      isLoading={isLoading}
-      error={error ? (error as Error).message : null}
-      onRetry={() => void refetch()}
-      onBack={() => navigate({ to: "/agenda" })}
-      onFiltersChange={setSearch}
-      actions={
-        isAdmin ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <SyncGhlButton />
-            <Link
-              to="/reconciliar"
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border bg-card px-3 text-xs font-medium hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <AlertTriangle className="h-4 w-4" aria-hidden="true" />
-              Reconciliar
-            </Link>
-          </div>
-        ) : undefined
-      }
+    <FinanceWorkspace
+      data={allowed && query.data?.role === me?.role ? query.data : undefined}
+      filters={filters}
+      loading={identity.isPending || (!!allowed && query.isPending)}
+      fetching={query.isFetching}
+      error={identity.isError || query.isError || (!identity.isPending && !allowed)}
+      onChange={onChange}
+      onRefresh={() => {
+        if (allowed) void query.refetch();
+        else void identity.refetch();
+      }}
     />
   );
 }
