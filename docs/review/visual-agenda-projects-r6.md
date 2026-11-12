@@ -20,6 +20,7 @@ O harness `tests/visual/operations.html` renderiza os componentes reais com dado
 - Escape fecha o diálogo sintético e foco retorna ao cartão. Tab mostra anel visível. Movimento reduzido global preservado; não foi emulado nesta rodada.
 - TypeScript, ESLint dos arquivos alterados e build passaram. 439 testes passaram em 38 arquivos. O build mantém avisos preexistentes de APIs depreciadas e configuração de paths.
 - Revisão independente encontrou três regressões potenciais de acessibilidade/navegação; corrigidas e reavaliadas antes do commit.
+- A prévia registrou erros transitórios durante a troca de módulos do Vite; o entrypoint agora desmonta a raiz ao ser descartado. Após recarga limpa e navegação Agenda → Projetos, nenhum erro novo no console.
 
 Capturas locais em `outputs/gf-studio-mvp-2026-11-11/`: `agenda-review-mobile-20261112.png`, `agenda-review-desktop-full-20261112.png`, `projects-review-mobile-20261112.png`, `projects-review-desktop-20261112.png`.
 

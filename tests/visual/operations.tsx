@@ -336,8 +336,12 @@ const router = createRouter({
   routeTree: root.addChildren([agenda, projects]),
   history: createMemoryHistory({ initialEntries: ["/agenda"] }),
 });
-createRoot(document.getElementById("root")!).render(
+const reactRoot = createRoot(document.getElementById("root")!);
+reactRoot.render(
   <QueryClientProvider client={new QueryClient()}>
     <RouterProvider router={router} />
   </QueryClientProvider>,
 );
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => reactRoot.unmount());
+}
