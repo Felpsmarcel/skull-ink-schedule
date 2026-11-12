@@ -1,70 +1,55 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Link } from "@tanstack/react-router";
-import { Banknote, Copy, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { getMySlug } from "@/lib/movimentacao.functions";
-import { MOVIMENTACAO_PROD_ORIGIN } from "@/config/movimentacao-slugs";
-
-const PROD_ORIGIN = MOVIMENTACAO_PROD_ORIGIN;
+import { getMovimentacaoLinkAddress } from "@/lib/my-movimentacao-link";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { PaymentLinkCardView, type PaymentLinkCardState } from "./payment-link-card-view";
 
 export function PaymentLinkCard() {
   const fetchSlug = useServerFn(getMySlug);
-  const { data } = useQuery({
-    queryKey: ["my-movimentacao-slug"],
+  const profile = useCurrentUser();
+  const me = profile.data;
+  const knownRole = me?.role === "admin" || me?.role === "artist" || me?.role === "seller";
+  const { data, isPending, isError, refetch } = useQuery({
+    queryKey: ["my-movimentacao-slug", me?.userId, me?.role, me?.artistId, me?.sellerId],
     queryFn: () => fetchSlug(),
+    enabled: Boolean(me?.userId && knownRole && !profile.isError),
     staleTime: 60_000,
+    retry: false,
   });
 
-  const slug = data?.slug;
-  const [origin, setOrigin] = useState<string>(PROD_ORIGIN);
+  const [origin, setOrigin] = useState<string | null>(null);
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const host = window.location.hostname;
-    if (host === "localhost" || host.endsWith(".lovable.app")) {
-      setOrigin(window.location.origin);
-    }
+    setOrigin(window.location.origin);
   }, []);
 
-  if (!slug) return null;
-
-  const url = `${origin}/movimentacao/${slug}`;
-  const displayUrl = url.replace(/^https?:\/\//, "");
+  const address = data?.slug ? getMovimentacaoLinkAddress(data.slug, origin) : null;
+  let state: PaymentLinkCardState;
+  if (profile.isError || (knownRole && isError)) state = { kind: "error" };
+  else if (profile.isPending) state = { kind: "loading" };
+  else if (!knownRole) state = { kind: "no_link" };
+  else if (isPending || (data?.slug && !origin)) state = { kind: "loading" };
+  else if (!data?.slug) state = { kind: "no_link" };
+  else if (!address) state = { kind: "error" };
+  else state = { kind: "ready", displayName: data.displayName, address };
 
   async function handleCopy() {
+    if (state.kind !== "ready") return;
     try {
-      await navigator.clipboard.writeText(url);
-      toast.success("Link copiado");
+      await navigator.clipboard.writeText(state.address.url);
+      toast.success(state.address.isTest ? "Link da prévia copiado" : "Link do formulário copiado");
     } catch {
       toast.error("Não foi possível copiar");
     }
   }
 
   return (
-    <div className="rounded-lg border border-primary/40 bg-primary/5 p-4">
-      <div className="mb-3 flex items-center gap-2">
-        <Banknote className="h-4 w-4 text-primary" />
-        <h2 className="text-sm font-bold uppercase tracking-wider">Seu link de pagamento</h2>
-      </div>
-      <p className="mb-3 break-all font-mono text-xs text-muted-foreground">{displayUrl}</p>
-      <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={handleCopy}
-          aria-label="Copiar link de pagamento"
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-md border border-border bg-background px-3 py-2 text-xs font-semibold hover:bg-muted"
-        >
-          <Copy className="h-3.5 w-3.5" /> Copiar
-        </button>
-        <Link
-          to="/movimentacao/$slug"
-          params={{ slug }}
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-md bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
-        >
-          <ExternalLink className="h-3.5 w-3.5" /> Abrir
-        </Link>
-      </div>
-    </div>
+    <PaymentLinkCardView
+      state={state}
+      onCopy={handleCopy}
+      onRetry={() => void (profile.isError ? profile.refetch() : refetch())}
+    />
   );
 }

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { validatePaymentLink } from "@/lib/linking";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { ReportRow } from "@/lib/report-html";
+import { resolveMyMovimentacaoLink, type MySlugResult } from "@/lib/my-movimentacao-link";
 import {
   MOVIMENTACAO_SLUGS,
   isMovimentacaoSlug,
@@ -175,32 +176,14 @@ export const listRecentClients = createServerFn({ method: "GET" })
 
 // ---------------- getMySlug ---------------------------------------------
 
-
-export interface MySlugResult {
-  slug: MovimentacaoSlug | null;
-  reason?: "no_link";
-}
+export type { MySlugResult } from "@/lib/my-movimentacao-link";
 
 export const getMySlug = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<MySlugResult> => {
     const me = await getAppUserRow(context.supabase, context.userId);
 
-    if (me.artist_id) {
-      const hit = (Object.values(MOVIMENTACAO_SLUGS) as SlugTarget[]).find(
-        (t) => t.kind === "artist" && t.artistId === me.artist_id,
-      );
-      if (hit) return { slug: hit.slug as MovimentacaoSlug };
-    }
-    if (me.seller_id) {
-      const hit = (Object.values(MOVIMENTACAO_SLUGS) as SlugTarget[]).find(
-        (t) => t.kind === "seller" && t.sellerId === me.seller_id,
-      );
-      if (hit) return { slug: hit.slug as MovimentacaoSlug };
-    }
-    // admin sem link: cai no primeiro (gabriel) apenas para navegar; UI trata.
-    if (me.role === "admin") return { slug: "gabriel" };
-    return { slug: null, reason: "no_link" };
+    return resolveMyMovimentacaoLink(me);
   });
 
 // ---------------- listArtistsForSelect ----------------------------------

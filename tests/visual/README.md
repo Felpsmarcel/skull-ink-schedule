@@ -27,3 +27,9 @@ Abra /management.html. Usa FinanceView e ArtistPanelView reais, em router de mem
 Checklist: 360/390/768/1440 px; filtros por período, status, tatuador e vendedor; limpar filtros; visões de comissão de tatuador/vendedor; estado vazio, carregando, erro com nova tentativa e fonte indisponível; checkbox de nomes indisponíveis mantém os IDs e a comissão. No painel: 30/60/90 dias, artista sem registros, null diferente de zero, projetos separados, próxima data e navegação por teclado. O clique de um compromisso informa o dia e ID demonstrativos; não abre registros reais. Voltar à agenda abre /operations.html.
 
 A troca de visão financeira altera o modelo de apresentação; o AuthShell permanece com identidade administrativa fictícia. Não comprova autenticação, permissões de outros perfis, completude do GHL ou aplicação da comissão por data. Somente Financeiro e Painel possuem telas neste harness; demais links do shell não representam fluxos conectados.
+
+## Conta e gestão
+
+Abra /account.html. AccountView e PaymentLinkCardView são os componentes reais com identidades fictícias; não há importação das consultas de conta ou recebimentos. Os atalhos usam um router em memória com páginas de destino demonstrativas. Sair e copiar apenas mostram confirmação local; não encerram sessões nem copiam links reais. O seletor de perfil altera o conteúdo da conta; o shell permanece administrativo como indicado no aviso.
+
+Verifique admin/tatuador/vendedor, vínculo ausente, identidade em erro ou carregamento (sem reutilizar o menu admin), link ausente/erro/carregando, abertura do endereço, retry, navegação e teclado; larguras 360/390/768/1440. Não comprova acesso autenticado como tatuador, RLS ou qualquer lançamento financeiro.
