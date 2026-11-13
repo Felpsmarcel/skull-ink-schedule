@@ -67,6 +67,7 @@ import {
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onCloseAutoFocus?: React.ComponentProps<typeof SheetContent>["onCloseAutoFocus"];
   slot: GridSlot | null;
   staffName: string;
   calendarId: string;
@@ -77,6 +78,7 @@ interface Props {
 export function AgendaAppointmentSheet({
   open,
   onOpenChange,
+  onCloseAutoFocus,
   slot,
   staffName,
   calendarId,
@@ -128,6 +130,7 @@ export function AgendaAppointmentSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side={isMobile ? "bottom" : "right"}
+        onCloseAutoFocus={onCloseAutoFocus}
         className={
           isMobile
             ? "agenda-scope agenda-sheet flex h-[92dvh] w-full flex-col rounded-t-xl p-0 pt-3 pb-[env(safe-area-inset-bottom)]"
@@ -357,6 +360,7 @@ function FinanceSection({ ghlEventId, locale }: { ghlEventId: string; locale: st
     queryClient.invalidateQueries({ queryKey: ["appointment-finance", ghlEventId] });
     queryClient.invalidateQueries({ queryKey: ["finance"] });
     queryClient.invalidateQueries({ queryKey: ["agenda-status"] });
+    queryClient.invalidateQueries({ queryKey: ["agenda-values"] });
   };
 
   return (
@@ -1085,6 +1089,7 @@ function ArtistPicker({
       queryClient.invalidateQueries({ queryKey: ["agenda"] });
       queryClient.invalidateQueries({ queryKey: ["agenda-status"] });
       queryClient.invalidateQueries({ queryKey: ["agenda-range"] });
+      queryClient.invalidateQueries({ queryKey: ["agenda-values"] });
       queryClient.invalidateQueries({ queryKey: ["agenda-status-range"] });
       queryClient.invalidateQueries({ queryKey: ["finance-summary"] });
       queryClient.invalidateQueries({ queryKey: ["appointment-finance", ghlEventId] });
