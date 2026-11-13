@@ -9,6 +9,18 @@ export function requirePanelAdmin(identity: { role: unknown; artist_id?: unknown
   if (identity?.role !== "admin") throw new Response("Forbidden", { status: 403 });
 }
 
+/** Admin may choose any artist; an artist is always forced to its own validated artist_id. */
+export function resolvePanelArtist(
+  identity: { role: unknown; artist_id?: unknown } | null,
+  requested: string | undefined,
+  fallback: string,
+): { role: "admin" | "artist"; artistId: string } {
+  if (identity?.role === "admin") return { role: "admin", artistId: requested ?? fallback };
+  if (identity?.role === "artist" && typeof identity.artist_id === "string" && identity.artist_id)
+    return { role: "artist", artistId: identity.artist_id };
+  throw new Response("Forbidden", { status: 403 });
+}
+
 export function panelBounds(now: Date, horizon: 30 | 60 | 90) {
   const day = formatInTimeZone(now, PANEL_TZ, "yyyy-MM-dd");
   const shift = (days: number) => {
