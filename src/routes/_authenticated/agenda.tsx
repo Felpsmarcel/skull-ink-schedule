@@ -741,6 +741,7 @@ function WeekView({
   const startMs = brusselsWeekStartMs(date);
   const days = enumerateBrusselsDays(startMs, brusselsAddDays(startMs, 7));
   const [opened, setOpened] = useState<AgendaEntry | null>(null);
+  const opener = useRef<HTMLElement | null>(null);
   return (
     <>
       <AgendaWeekBoard
@@ -749,13 +750,24 @@ function WeekView({
         state={state}
         source={source}
         showValues={showValues}
-        onOpen={setOpened}
+        onOpen={(entry) => {
+          opener.current =
+            document.activeElement instanceof HTMLElement ? document.activeElement : null;
+          setOpened(entry);
+        }}
         onPickDay={onPickDay}
         onNew={onPickDay}
         onRetry={onRetry}
       />
       <AgendaAppointmentSheet
         open={Boolean(opened)}
+        onCloseAutoFocus={(event) => {
+          const target = opener.current;
+          if (target?.isConnected) {
+            event.preventDefault();
+            target.focus();
+          }
+        }}
         onOpenChange={(open) => {
           if (!open) setOpened(null);
         }}
