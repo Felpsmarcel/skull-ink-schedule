@@ -205,12 +205,17 @@ export const completeOnboarding = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
     const appUser = await loadArtistContext(supabase, userId);
-    if (!appUser?.artist_id) throw new Error("Nenhum tatuador vinculado.");
-    const { error } = await supabase
+    if (appUser?.role !== "artist" || !appUser.artist_id) throw new Error("Nenhum tatuador vinculado.");
+    // A tabela artists só aceita escrita de admin; após verificar a identidade
+    // no servidor, marcamos apenas onboarded_at do próprio tatuador.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: updated, error } = await supabaseAdmin
       .from("artists")
       .update({ onboarded_at: new Date().toISOString() })
-      .eq("id", appUser.artist_id);
+      .eq("id", appUser.artist_id)
+      .select("id");
     if (error) throw new Error(error.message);
+    if (!updated || updated.length !== 1) throw new Error("Não foi possível concluir a configuração.");
     return { ok: true as const };
   });
 
