@@ -104,7 +104,7 @@ beforeEach(() => {
 });
 
 describe("panel server authorization and projections", () => {
-  it.each(["artist", "seller", "unknown", null])(
+  it.each(["seller", "unknown", null])(
     "rejects %s before any private query, including forged selected artist",
     async (role) => {
       fake.role = role;
@@ -114,6 +114,12 @@ describe("panel server authorization and projections", () => {
       expect(fake.queries).toEqual(["app_users"]);
     },
   );
+  it("artist with forged artistId never reads another artist's agenda", async () => {
+    fake.role = "artist";
+    fake.artistId = "own-artist";
+    await run(getArtistPanel, { artistId: DEFAULT_PANEL_ARTIST_ID, horizon: 60 }).catch(() => null);
+    expect(fake.filters).not.toContainEqual(expect.objectContaining({ value: DEFAULT_PANEL_ARTIST_ID }));
+  });
   it("rejects artist without identity link", async () => {
     fake.role = "artist";
     fake.artistId = null;
