@@ -82,8 +82,9 @@ export const updateArtistProfile = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const appUser = await loadArtistContext(supabase, userId);
-    if (!appUser?.artist_id) throw new Error("Nenhum tatuador vinculado.");
-    const { error } = await supabase
+    if (appUser?.role !== "artist" || !appUser.artist_id) throw new Error("Nenhum tatuador vinculado.");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
       .from("artists")
       .update({
         name: data.name,
