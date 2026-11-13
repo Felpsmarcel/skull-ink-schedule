@@ -30,6 +30,7 @@ describe("account menu follows destination capabilities", () => {
   });
   it("shows an artist's destinations without reception or management shortcuts", () => {
     expect(paths(profile({ role: "artist", artistId: "artist-a" }))).toEqual([
+      "/painel-tatuador",
       "/projetos",
       "/financeiro",
       "/relatorios/movimentacoes",
