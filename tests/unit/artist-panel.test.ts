@@ -4,6 +4,7 @@ import {
   panelBounds,
   projectContinuity,
   requirePanelAdmin,
+  resolvePanelArtist,
   type PanelAppointment,
 } from "../../src/lib/artist-panel-core";
 
@@ -124,4 +125,19 @@ describe("Brussels civil dates and horizons", () => {
     const b = panelBounds(new Date("2026-11-11T03:19Z"), 60);
     expect("2026-12-20T09:00:00.000Z" < b.end).toBe(true);
   });
+});
+
+describe("panel scope: artist forced to own artist_id", () => {
+  it("admin chooses requested artist", () =>
+    expect(resolvePanelArtist({ role: "admin" }, "x", "d")).toEqual({ role: "admin", artistId: "x" }));
+  it("artist ignores requested id and gets own", () =>
+    expect(resolvePanelArtist({ role: "artist", artist_id: "own" }, "other", "d")).toEqual({
+      role: "artist",
+      artistId: "own",
+    }));
+  for (const identity of [{ role: "artist" }, { role: "seller" }, null]) {
+    it(`rejects ${JSON.stringify(identity)}`, () => {
+      expect(() => resolvePanelArtist(identity, "x", "d")).toThrow();
+    });
+  }
 });
