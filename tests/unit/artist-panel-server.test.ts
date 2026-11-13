@@ -118,7 +118,7 @@ describe("panel server authorization and projections", () => {
     fake.role = "artist";
     fake.artistId = "own-artist";
     await run(getArtistPanel, { artistId: DEFAULT_PANEL_ARTIST_ID, horizon: 60 }).catch(() => null);
-    expect(fake.filters).not.toContainEqual(expect.objectContaining({ value: DEFAULT_PANEL_ARTIST_ID }));
+    expect(fake.filters.some((f) => (f as unknown[])[2] === DEFAULT_PANEL_ARTIST_ID)).toBe(false);
   });
   it("rejects artist without identity link", async () => {
     fake.role = "artist";
