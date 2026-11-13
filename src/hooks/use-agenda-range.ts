@@ -3,6 +3,7 @@ import { LOCATION_ID, type StaffMember } from "@/config/staff";
 import { useArtists } from "@/hooks/use-artists";
 import { scopedAgendaStaff } from "@/lib/agenda-scope";
 import { getEvents, type GhlEvent } from "@/lib/ghl";
+import { parseAgendaEventsResponse } from "@/lib/agenda-events-response";
 
 export interface StaffRangeAgenda {
   staff: StaffMember;
@@ -27,7 +28,11 @@ export function useStaffRangeAgenda(
 ) {
   const enabled = options.enabled ?? true;
   const artistsQuery = useArtists();
-  const staffList: StaffMember[] = scopedAgendaStaff(artistsQuery.data ?? [], options.artistId, enabled);
+  const staffList: StaffMember[] = scopedAgendaStaff(
+    artistsQuery.data ?? [],
+    options.artistId,
+    enabled,
+  );
 
   const queries = useQueries({
     queries: staffList.map((staff) => ({
@@ -36,8 +41,7 @@ export function useStaffRangeAgenda(
       queryFn: async () => {
         const res = await getEvents(staff.calendarId, startMs, endMs, LOCATION_ID);
         if (!res.ok) throw new Error(`events ${res.status}`);
-        const data = res.data as { events?: GhlEvent[] };
-        return Array.isArray(data?.events) ? data.events : [];
+        return parseAgendaEventsResponse(res.data, staff.calendarId);
       },
       staleTime: 60_000,
       refetchInterval: 120_000,
@@ -58,5 +62,8 @@ export function useStaffRangeAgenda(
   return {
     agendas,
     isFetching: artistsQuery.isLoading || queries.some((q) => q.isFetching),
+    isLoading: enabled && (artistsQuery.isLoading || agendas.some((a) => a.isLoading)),
+    hasError: artistsQuery.isError || agendas.some((a) => Boolean(a.error)),
+    refetch: () => Promise.all([artistsQuery.refetch(), ...queries.map((q) => q.refetch())]),
   };
 }
