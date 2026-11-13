@@ -3,6 +3,7 @@ import { LOCATION_ID, type StaffMember } from "@/config/staff";
 import { useArtists } from "@/hooks/use-artists";
 import { scopedAgendaStaff } from "@/lib/agenda-scope";
 import { getFreeSlots, getEvents, type GhlEvent } from "@/lib/ghl";
+import { parseAgendaEventsResponse } from "@/lib/agenda-events-response";
 import {
   brusselsDayStartMs,
   brusselsDayEndMs,
@@ -15,6 +16,7 @@ import {
 export interface StaffAgenda {
   staff: StaffMember;
   slots: GridSlot[];
+  events: GhlEvent[];
   isLoading: boolean;
   error?: string;
   freeCount: number;
@@ -39,7 +41,11 @@ export function useStaffDayAgenda(date: Date, options: UseStaffDayAgendaOptions 
   const enabled = options.enabled ?? true;
 
   const artistsQuery = useArtists();
-  const staffList: StaffMember[] = scopedAgendaStaff(artistsQuery.data ?? [], options.artistId, enabled);
+  const staffList: StaffMember[] = scopedAgendaStaff(
+    artistsQuery.data ?? [],
+    options.artistId,
+    enabled,
+  );
 
   const queries = useQueries({
     queries: staffList.map((staff) => ({
@@ -53,7 +59,7 @@ export function useStaffDayAgenda(date: Date, options: UseStaffDayAgendaOptions 
 
         let freeStarts: number[] = [];
         let events: GhlEvent[] = [];
-        let errorParts: string[] = [];
+        const errorParts: string[] = [];
 
         if (slotsRes.status === "fulfilled") {
           if (!slotsRes.value.ok) {
@@ -73,8 +79,11 @@ export function useStaffDayAgenda(date: Date, options: UseStaffDayAgendaOptions 
               `events ${eventsRes.value.status}: ${JSON.stringify(eventsRes.value.data)}`,
             );
           } else {
-            const data = eventsRes.value.data as { events?: GhlEvent[] };
-            events = Array.isArray(data?.events) ? data.events : [];
+            try {
+              events = parseAgendaEventsResponse(eventsRes.value.data, staff.calendarId);
+            } catch {
+              errorParts.push("events: resposta inválida ou vínculo divergente");
+            }
           }
         } else {
           errorParts.push(`events: ${eventsRes.reason?.message ?? eventsRes.reason}`);
@@ -103,7 +112,8 @@ export function useStaffDayAgenda(date: Date, options: UseStaffDayAgendaOptions 
       return {
         staff,
         slots: [],
-        isLoading: true,
+        events: [],
+        isLoading: !q?.isError,
         freeCount: 0,
         bookedCount: 0,
         error: q?.error instanceof Error ? q.error.message : undefined,
@@ -112,13 +122,14 @@ export function useStaffDayAgenda(date: Date, options: UseStaffDayAgendaOptions 
     const debug = {
       freeStartsCount: q.data.freeStarts.length,
       eventsCount: q.data.events.length,
-      slotsSample: JSON.stringify(q.data.slotsRaw).slice(0, 240),
-      eventsSample: JSON.stringify(q.data.eventsRaw).slice(0, 240),
+      slotsSample: JSON.stringify(q.data.slotsRaw ?? null).slice(0, 240),
+      eventsSample: JSON.stringify(q.data.eventsRaw ?? null).slice(0, 240),
     };
     if (q.data.error) {
       return {
         staff,
         slots: [],
+        events: [],
         isLoading: false,
         freeCount: 0,
         bookedCount: 0,
@@ -134,10 +145,11 @@ export function useStaffDayAgenda(date: Date, options: UseStaffDayAgendaOptions 
     return {
       staff,
       slots,
+      events: q.data.events,
       isLoading: false,
       error: q.data.partialError,
       freeCount: slots.filter((s) => s.status === "free").length,
-      bookedCount: slots.filter((s) => s.status === "booked").length,
+      bookedCount: new Set(q.data.events.map((event) => event.id)).size,
       debug,
     };
   });
@@ -147,5 +159,8 @@ export function useStaffDayAgenda(date: Date, options: UseStaffDayAgendaOptions 
     dayStartMs,
     dayEndMs,
     isFetching: artistsQuery.isLoading || queries.some((q) => q.isFetching),
+    isLoading: enabled && (artistsQuery.isLoading || result.some((a) => a.isLoading)),
+    hasError: artistsQuery.isError || result.some((a) => Boolean(a.error)),
+    refetch: () => Promise.all([artistsQuery.refetch(), ...queries.map((q) => q.refetch())]),
   };
 }

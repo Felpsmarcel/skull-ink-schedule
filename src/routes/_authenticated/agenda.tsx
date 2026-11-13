@@ -1,5 +1,15 @@
 import { AgendaBookingCard } from "@/components/agenda/agenda-booking-card";
 import { AgendaToolbar } from "@/components/agenda/agenda-toolbar";
+import { AgendaWeekBoard } from "@/components/agenda/agenda-week-board";
+import { AgendaPeriodSummary } from "@/components/agenda/agenda-period-summary";
+import {
+  readAgendaEntries,
+  eventGridSlot,
+  type AgendaEntry,
+  type AgendaReadState,
+} from "@/lib/agenda-presentation";
+import { useAgendaValues } from "@/hooks/use-agenda-values";
+import type { AgendaValuesSource } from "@/lib/agenda-values-core";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -11,7 +21,7 @@ import { Button } from "@/components/ui/button";
 import { useStaffRangeAgenda } from "@/hooks/use-agenda-range";
 import { useDayAppointmentStatuses, useRangeAppointmentStatuses } from "@/hooks/use-agenda-status";
 import type { PaymentBucket } from "@/lib/finance.functions";
-import { StatusBadge, bucketToVariant, bucketLabel } from "@/components/ui/status-badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import {
   DEFAULT_START_HOUR,
   DEFAULT_END_HOUR,
@@ -25,7 +35,7 @@ import {
   brusselsWeekStartMs,
   enumerateBrusselsDays,
 } from "@/lib/agenda-grid";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { resolveIntlLocale } from "@/lib/locale";
@@ -139,10 +149,40 @@ function AgendaPage() {
   const [pickedArtistId, setPickedArtistId] = useState<string>("");
   // Admin may narrow to one artist; artist scope is never widened.
   const restrictArtistId = scope.artistId ?? (pickedArtistId || null);
-  const { agendas } = useStaffDayAgenda(date, {
+  const dayQuery = useStaffDayAgenda(date, {
     artistId: restrictArtistId,
     enabled: scope.allowed && Boolean(me) && view === "day",
   });
+  const { agendas } = dayQuery;
+  const periodStart = view === "week" ? brusselsWeekStartMs(date) : brusselsDayStartMs(date);
+  const periodEnd =
+    view === "week" ? brusselsAddDays(periodStart, 7) : brusselsAddDays(periodStart, 1);
+  const weekQuery = useStaffRangeAgenda(periodStart, periodEnd - 1, {
+    artistId: restrictArtistId,
+    enabled: scope.allowed && Boolean(me) && view === "week",
+  });
+  const activeQuery = view === "week" ? weekQuery : dayQuery;
+  const entryRead = readAgendaEntries(
+    view === "week" ? weekQuery.agendas : agendas,
+    periodStart,
+    periodEnd,
+  );
+  const entries = entryRead.entries;
+  const readState: AgendaReadState = activeQuery.isLoading
+    ? "loading"
+    : activeQuery.hasError || entryRead.hasIssues
+      ? "partial"
+      : "ready";
+  const valuesQuery = useAgendaValues(
+    periodStart,
+    periodEnd,
+    me,
+    scope.allowed && view !== "month",
+  );
+  const refresh = () => {
+    void activeQuery.refetch();
+    void valuesQuery.refetch();
+  };
   const totals = useMemo(
     () =>
       agendas.reduce(
@@ -172,7 +212,7 @@ function AgendaPage() {
     }
     if (view === "week") {
       const start = new Date(brusselsWeekStartMs(date));
-      const end = new Date(brusselsWeekStartMs(date) + 6 * 24 * 3600 * 1000);
+      const end = new Date(brusselsAddDays(brusselsWeekStartMs(date), 6));
       const f = new Intl.DateTimeFormat(locale, {
         timeZone: "Europe/Brussels",
         day: "2-digit",
@@ -188,11 +228,16 @@ function AgendaPage() {
   }, [date, view, i18n.language]);
 
   function shift(delta: number) {
-    const d = new Date(date);
-    if (view === "day") d.setDate(d.getDate() + delta);
-    else if (view === "week") d.setDate(d.getDate() + delta * 7);
-    else d.setMonth(d.getMonth() + delta);
-    setDate(d);
+    if (view === "day" || view === "week") {
+      setDate(
+        new Date(brusselsAddDays(brusselsDayStartMs(date), delta * (view === "week" ? 7 : 1))),
+      );
+    } else {
+      const key = brusselsDayKey(date);
+      const d = new Date(`${key.slice(0, 7)}-01T12:00:00Z`);
+      d.setUTCMonth(d.getUTCMonth() + delta);
+      setDate(d);
+    }
   }
 
   const goToDay = (d: Date) => {
@@ -232,7 +277,18 @@ function AgendaPage() {
         pickedArtistId={pickedArtistId}
         setPickedArtistId={setPickedArtistId}
         allArtists={allArtists}
+        onNew={() => void navigate({ to: "/appointments/new" })}
+        onRefresh={view !== "month" ? refresh : undefined}
+        refreshing={activeQuery.isFetching || valuesQuery.isFetching}
       />
+      {view !== "month" && (
+        <AgendaPeriodSummary
+          entries={entries}
+          state={readState}
+          source={valuesQuery.source}
+          showValues={me?.role === "admin"}
+        />
+      )}
 
       {view === "day" ? (
         <DayView
@@ -245,8 +301,11 @@ function AgendaPage() {
       ) : view === "week" ? (
         <WeekView
           date={date}
-          restrictArtistId={restrictArtistId}
-          meReady={Boolean(me)}
+          entries={entries}
+          state={readState}
+          source={valuesQuery.source}
+          showValues={me?.role === "admin"}
+          onRetry={refresh}
           onPickDay={goToDay}
         />
       ) : (
@@ -295,7 +354,7 @@ function DayView({
       ? (agendas.find((a) => a.slots.length === rowCount)?.slots ?? []).map((s) => s.label)
       : defaultTimeLabels();
 
-  const chipAgendas = agendas.filter((a) => !/augusto/i.test(a.staff.shortName));
+  const chipAgendas = agendas;
 
   // "Now" indicator position (px from top of grid body) — visible only when today
   const nowTopPx = useMemo(() => {
@@ -660,410 +719,51 @@ function SlotCell({
   );
 }
 
-const _hhmmFmt = new Intl.DateTimeFormat("en-GB", {
-  timeZone: "Europe/Brussels",
-  hour: "2-digit",
-  minute: "2-digit",
-  hour12: false,
-});
-function fmtHHmm(ms: number): string {
-  return _hhmmFmt.format(new Date(ms));
-}
-
 /* ============================ WEEK VIEW ============================ */
 
 function WeekView({
   date,
-  restrictArtistId,
-  meReady,
+  entries,
+  state,
+  source,
+  showValues,
+  onRetry,
   onPickDay,
 }: {
   date: Date;
-  restrictArtistId: string | null | undefined;
-  meReady: boolean;
-  onPickDay: (d: Date) => void;
+  entries: AgendaEntry[];
+  state: AgendaReadState;
+  source: AgendaValuesSource;
+  showValues: boolean;
+  onRetry: () => void;
+  onPickDay: (date: Date) => void;
 }) {
-  const { t, i18n } = useTranslation();
-  const locale = resolveIntlLocale(i18n.language);
   const startMs = brusselsWeekStartMs(date);
-  const endMs = brusselsWeekEndMs(date);
-  const days = enumerateBrusselsDays(startMs, endMs + 1);
-
-  // Same verified artist scope in all three modes.
-  const { agendas, isFetching } = useStaffRangeAgenda(startMs, endMs, {
-    artistId: restrictArtistId,
-    enabled: meReady,
-  });
-  const { map: statusMap } = useRangeAppointmentStatuses(startMs, endMs, meReady);
-
-  const totalEvents = useMemo(() => agendas.reduce((n, a) => n + a.events.length, 0), [agendas]);
-
-  const dayFmt = new Intl.DateTimeFormat(locale, {
-    timeZone: "Europe/Brussels",
-    weekday: "short",
-  });
-  const numFmt = new Intl.DateTimeFormat(locale, {
-    timeZone: "Europe/Brussels",
-    day: "2-digit",
-  });
-
-  const todayKey = brusselsDayKey(new Date());
-
-  // Mobile: which day is expanded/visible in the day-picker view.
-  const initialMobileKey = useMemo(() => {
-    const tKey = brusselsDayKey(new Date());
-    const inWeek = days.some((d) => brusselsDayKey(new Date(d)) === tKey);
-    return inWeek ? tKey : brusselsDayKey(new Date(days[0] ?? startMs));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [startMs, endMs]);
-  const [mobileDayKey, setMobileDayKey] = useState<string>(initialMobileKey);
-  const [expandedCells, setExpandedCells] = useState<Set<string>>(() => new Set());
-  const activeMobileKey = days.some((d) => brusselsDayKey(new Date(d)) === mobileDayKey)
-    ? mobileDayKey
-    : initialMobileKey;
-  const dayLongFmt = new Intl.DateTimeFormat(locale, {
-    timeZone: "Europe/Brussels",
-    weekday: "long",
-    day: "2-digit",
-    month: "short",
-  });
-
-  const [openEvent, setOpenEvent] = useState<{
-    slot: GridSlot;
-    staffName: string;
-    calendarId: string;
-  } | null>(null);
-
-  const openFromEvent = (ev: GhlEvent, staff: (typeof agendas)[number]["staff"]) => {
-    const s = new Date(ev.startTime).getTime();
-    const e = new Date(ev.endTime).getTime();
-    const name =
-      ev.contact?.name ||
-      [ev.contact?.firstName, ev.contact?.lastName].filter(Boolean).join(" ") ||
-      undefined;
-    const slot: GridSlot = {
-      startMs: s,
-      label: fmtHHmm(s),
-      status: "booked",
-      contactName: name,
-      contactId: ev.contactId ?? ev.contact?.id,
-      ghlEventId: ev.id,
-      appointmentStatus: ev.appointmentStatus,
-      eventStartMs: s,
-      eventEndMs: e,
-      isFirstSlot: true,
-      spanSlots: 1,
-      serviceName: ev.title,
-    };
-    setOpenEvent({ slot, staffName: staff.name, calendarId: staff.calendarId });
-  };
-
-  const tooltipTimeFmt = new Intl.DateTimeFormat(locale, {
-    timeZone: "Europe/Brussels",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
-
+  const days = enumerateBrusselsDays(startMs, brusselsAddDays(startMs, 7));
+  const [opened, setOpened] = useState<AgendaEntry | null>(null);
   return (
-    <TooltipProvider delayDuration={200}>
-      <div className="flex-1 overflow-auto">
-        {isFetching && totalEvents === 0 ? (
-          <div className="p-4 text-xs text-muted-foreground">{t("common.loading")}</div>
-        ) : null}
-
-        {/* ============== MOBILE: artists × 7 days grid ============== */}
-        <div className="sm:hidden">
-          <div
-            className="grid border-b border-border bg-background"
-            style={{ gridTemplateColumns: "44px repeat(7, minmax(0, 1fr))" }}
-          >
-            {/* header row */}
-            <div className="sticky left-0 z-10 border-b border-r border-border bg-background" />
-            {days.map((dayMs) => {
-              const d = new Date(dayMs);
-              const key = brusselsDayKey(d);
-              const isToday = key === todayKey;
-              return (
-                <div
-                  key={`h-${key}`}
-                  className={cn(
-                    "flex flex-col items-center gap-0.5 border-b border-l border-border px-0.5 py-1.5 text-center",
-                    isToday && "bg-primary/10",
-                  )}
-                >
-                  <span className={cn("text-xs text-muted-foreground", isToday && "text-primary")}>
-                    {dayFmt.format(d).replace(".", "")}
-                  </span>
-                  <span
-                    className={cn(
-                      "text-[13px] font-semibold tabular-nums leading-none",
-                      isToday ? "text-primary" : "text-foreground",
-                    )}
-                  >
-                    {numFmt.format(d)}
-                  </span>
-                </div>
-              );
-            })}
-
-            {/* artist rows */}
-            {agendas.map((a) => {
-              const byDay = new Map<string, GhlEvent[]>();
-              for (const ev of a.events) {
-                const k = brusselsDayKey(new Date(ev.startTime));
-                const list = byDay.get(k);
-                if (list) list.push(ev);
-                else byDay.set(k, [ev]);
-              }
-              for (const list of byDay.values()) {
-                list.sort(
-                  (x, y) => new Date(x.startTime).getTime() - new Date(y.startTime).getTime(),
-                );
-              }
-              return (
-                <div key={a.staff.id} className="contents">
-                  <div className="sticky left-0 z-10 flex flex-col items-center justify-center gap-1 border-b border-r border-border bg-background px-0.5 py-2">
-                    <Avatar className="h-8 w-8 shrink-0 border border-border">
-                      {a.staff.avatarUrl ? (
-                        <AvatarImage src={a.staff.avatarUrl} alt={a.staff.name} />
-                      ) : null}
-                      <AvatarFallback className="bg-muted text-xs text-foreground">
-                        {a.staff.initials}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="line-clamp-2 text-center text-xs font-semibold leading-tight text-foreground">
-                      {a.staff.shortName}
-                    </span>
-                  </div>
-                  {days.map((dayMs) => {
-                    const d = new Date(dayMs);
-                    const key = brusselsDayKey(d);
-                    const isToday = key === todayKey;
-                    const evs = byDay.get(key) ?? [];
-                    const cellKey = `${a.staff.id}-${key}`;
-                    const expanded = expandedCells.has(cellKey);
-                    const visible = expanded ? evs : evs.slice(0, 3);
-                    const extra = evs.length - visible.length;
-                    return (
-                      <div
-                        key={`${a.staff.id}-${key}`}
-                        className={cn(
-                          "flex min-h-[64px] flex-col gap-0.5 border-b border-l border-border p-0.5",
-                          isToday && "bg-primary/5",
-                        )}
-                      >
-                        {visible.map((ev) => {
-                          const s = new Date(ev.startTime).getTime();
-                          const name =
-                            ev.contact?.name ||
-                            [ev.contact?.firstName, ev.contact?.lastName]
-                              .filter(Boolean)
-                              .join(" ") ||
-                            t("agenda.booked");
-                          return (
-                            <Button
-                              variant="ghost"
-                              data-appointment-status={ev.appointmentStatus?.toLowerCase()}
-                              key={ev.id}
-                              type="button"
-                              onClick={() => openFromEvent(ev, a.staff)}
-                              title={`${name}${ev.title ? " — " + ev.title : ""}`}
-                              aria-label={`${name}, ${fmtHHmm(s)}${ev.title ? ", " + ev.title : ""}`}
-                              className="agenda-session h-11 min-w-0 gap-0 overflow-hidden rounded-sm border border-border border-l-2 px-0 text-xs font-medium tabular-nums text-foreground"
-                            >
-                              <span className="py-1">{fmtHHmm(s)}</span>
-                            </Button>
-                          );
-                        })}
-                        {evs.length > 3 ? (
-                          <button
-                            type="button"
-                            aria-expanded={expanded}
-                            onClick={() =>
-                              setExpandedCells((current) => {
-                                const next = new Set(current);
-                                if (expanded) next.delete(cellKey);
-                                else next.add(cellKey);
-                                return next;
-                              })
-                            }
-                            aria-label={`${expanded ? "Recolher" : "Ver todos os " + evs.length} agendamentos de ${a.staff.shortName} em ${dayLongFmt.format(d)}`}
-                            className="min-h-11 rounded border border-border bg-card px-1 text-xs font-medium text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                          >
-                            {expanded ? "−" : `+${extra}`}
-                          </button>
-                        ) : null}
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })}
-          </div>
-          {agendas.length === 0 && !isFetching ? (
-            <div role="status" className="p-4 text-center text-sm text-muted-foreground">
-              Nenhum calendário disponível para esta visualização.
-            </div>
-          ) : null}
-        </div>
-
-        {/* ============== DESKTOP: full 7-day grid ============== */}
-        <div className="hidden min-w-[720px] sm:block">
-          {/* Header row: sidebar spacer + 7 day headers */}
-          <div className="sticky top-0 z-10 grid grid-cols-[160px_repeat(7,minmax(0,1fr))] border-b border-border bg-background">
-            <div className="border-r border-border" />
-            {days.map((dayMs) => {
-              const d = new Date(dayMs);
-              const key = brusselsDayKey(d);
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => onPickDay(d)}
-                  className={cn(
-                    "flex flex-col items-center gap-0.5 border-r border-border px-1 py-2 text-xs hover:bg-muted",
-                    key === todayKey && "bg-primary/10 text-primary",
-                  )}
-                >
-                  <span className="text-xs text-muted-foreground">{dayFmt.format(d)}</span>
-                  <span className="text-sm font-semibold">{numFmt.format(d)}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Artist rows */}
-          {agendas.map((a) => {
-            const eventsByDay = new Map<string, GhlEvent[]>();
-            for (const ev of a.events) {
-              const k = brusselsDayKey(new Date(ev.startTime));
-              const arr = eventsByDay.get(k) ?? [];
-              arr.push(ev);
-              eventsByDay.set(k, arr);
-            }
-            for (const arr of eventsByDay.values()) {
-              arr.sort((x, y) => new Date(x.startTime).getTime() - new Date(y.startTime).getTime());
-            }
-            return (
-              <div
-                key={a.staff.id}
-                className="grid grid-cols-[160px_repeat(7,minmax(0,1fr))] border-b border-border"
-              >
-                {/* Sidebar */}
-                <div
-                  className="flex items-center gap-2 border-r border-border bg-muted/30 px-3 py-2"
-                  title={a.staff.name}
-                >
-                  <Avatar className="h-8 w-8 shrink-0">
-                    {a.staff.avatarUrl ? (
-                      <AvatarImage src={a.staff.avatarUrl} alt={a.staff.name} />
-                    ) : null}
-                    <AvatarFallback className="bg-muted text-xs text-foreground">
-                      {a.staff.initials}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex min-w-0 flex-col">
-                    <span className="truncate text-xs font-semibold text-foreground">
-                      {a.staff.shortName}
-                    </span>
-                    <span className="text-xs tabular-nums text-muted-foreground">
-                      {a.events.length} {t("agenda.month.appts")}
-                    </span>
-                  </div>
-                </div>
-                {/* Day cells */}
-                {days.map((dayMs) => {
-                  const key = brusselsDayKey(new Date(dayMs));
-                  const evs = eventsByDay.get(key) ?? [];
-                  return (
-                    <div
-                      key={dayMs}
-                      className={cn(
-                        "min-h-[64px] space-y-1 border-r border-border p-1",
-                        key === todayKey && "bg-primary/5",
-                      )}
-                    >
-                      {evs.map((ev) => {
-                        const bucket = statusMap.get(ev.id);
-                        const name =
-                          ev.contact?.name ||
-                          [ev.contact?.firstName, ev.contact?.lastName].filter(Boolean).join(" ") ||
-                          t("agenda.booked");
-                        const s = new Date(ev.startTime).getTime();
-                        const e = new Date(ev.endTime).getTime();
-                        return (
-                          <Tooltip key={ev.id}>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                data-appointment-status={ev.appointmentStatus?.toLowerCase()}
-                                onClick={() => openFromEvent(ev, a.staff)}
-                                className="agenda-session h-auto min-h-11 w-full flex-col items-stretch gap-1 overflow-hidden whitespace-normal rounded-sm border border-border border-l-2 px-2 py-2 text-left text-xs font-normal hover:bg-accent/40"
-                              >
-                                <div className="flex items-center gap-1 text-[11px] tabular-nums text-muted-foreground">
-                                  <span
-                                    className={cn(
-                                      "inline-block h-1.5 w-1.5 shrink-0 rounded-full",
-                                      "bg-primary",
-                                    )}
-                                    aria-hidden
-                                  />
-                                  <span className="truncate">{fmtHHmm(s)}</span>
-                                </div>
-                                <div className="truncate font-semibold text-foreground">{name}</div>
-                                {bucket ? (
-                                  <StatusBadge
-                                    variant={bucketToVariant(bucket)}
-                                    className="mt-0.5 self-start px-1 py-0 text-xs normal-case"
-                                  >
-                                    {bucketLabel(bucket)}
-                                  </StatusBadge>
-                                ) : null}
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent side="top" className="max-w-[240px]">
-                              <div className="flex flex-col gap-0.5">
-                                <div className="text-[11px] font-semibold">
-                                  {tooltipTimeFmt.format(new Date(s))}–
-                                  {tooltipTimeFmt.format(new Date(e))}
-                                </div>
-                                <div className="text-[11px]">{name}</div>
-                                {ev.title ? (
-                                  <div className="text-xs opacity-80 line-clamp-2">{ev.title}</div>
-                                ) : null}
-                                <div className="mt-1 text-[11px] tracking-wide opacity-70">
-                                  {a.staff.shortName}
-                                </div>
-                              </div>
-                            </TooltipContent>
-                          </Tooltip>
-                        );
-                      })}
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })}
-          {agendas.length === 0 && !isFetching ? (
-            <div role="status" className="p-4 text-center text-sm text-muted-foreground">
-              Nenhum calendário disponível para esta visualização.
-            </div>
-          ) : null}
-        </div>
-      </div>
-      <AgendaAppointmentSheet
-        open={Boolean(openEvent)}
-        onOpenChange={(o) => {
-          if (!o) setOpenEvent(null);
-        }}
-        slot={openEvent?.slot ?? null}
-        staffName={openEvent?.staffName ?? ""}
-        calendarId={openEvent?.calendarId ?? ""}
-        bucket={openEvent?.slot.ghlEventId ? statusMap.get(openEvent.slot.ghlEventId) : undefined}
+    <>
+      <AgendaWeekBoard
+        days={days}
+        entries={entries}
+        state={state}
+        source={source}
+        showValues={showValues}
+        onOpen={setOpened}
+        onPickDay={onPickDay}
+        onNew={onPickDay}
+        onRetry={onRetry}
       />
-    </TooltipProvider>
+      <AgendaAppointmentSheet
+        open={Boolean(opened)}
+        onOpenChange={(open) => {
+          if (!open) setOpened(null);
+        }}
+        slot={opened ? eventGridSlot(opened) : null}
+        staffName={opened?.staff.name ?? ""}
+        calendarId={opened?.staff.calendarId ?? ""}
+      />
+    </>
   );
 }
 

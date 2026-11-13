@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { enGB, fr, ptBR } from "react-day-picker/locale";
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -26,6 +26,9 @@ type Props = {
   pickedArtistId: string;
   setPickedArtistId: (id: string) => void;
   allArtists: { id: string; name: string }[];
+  onNew?: () => void;
+  onRefresh?: () => void;
+  refreshing?: boolean;
 };
 export function AgendaToolbar({
   date,
@@ -45,6 +48,9 @@ export function AgendaToolbar({
   pickedArtistId,
   setPickedArtistId,
   allArtists,
+  onNew,
+  onRefresh,
+  refreshing,
 }: Props) {
   const { t, i18n } = useTranslation();
   const calendarLocale = { "pt-PT": ptBR, "fr-FR": fr, "en-GB": enGB }[
@@ -53,8 +59,40 @@ export function AgendaToolbar({
   return (
     <header
       aria-label="Agenda e filtros"
-      className="sticky top-0 z-30 sm:top-[var(--gf-chrome-offset,0px)] border-b border-border bg-background"
+      className="relative z-30 lg:sticky lg:top-[var(--gf-chrome-offset,0px)] border-b border-border bg-background"
     >
+      <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-3 px-3 pt-4 sm:px-6">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Agenda</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Orçamentos, sessões e a próxima etapa de cada projeto.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {onRefresh && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onRefresh}
+              disabled={refreshing}
+              className="min-h-11 gap-2 rounded-xl"
+            >
+              <RefreshCw
+                aria-hidden="true"
+                className={cn("h-4 w-4", refreshing && "motion-safe:animate-spin")}
+              />
+              <span className="hidden sm:inline">Atualizar leitura</span>
+              <span className="sr-only sm:hidden">Atualizar leitura</span>
+            </Button>
+          )}
+          {onNew && (
+            <Button type="button" onClick={onNew} className="min-h-11 gap-2 rounded-xl">
+              <Plus aria-hidden="true" className="h-4 w-4" />
+              Novo agendamento
+            </Button>
+          )}
+        </div>
+      </div>
       <div className="mx-auto grid w-full max-w-[1400px] gap-3 px-3 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:px-6 xl:grid-cols-[minmax(0,1fr)_auto_auto]">
         <div className="flex min-w-0 items-center gap-2">
           <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
@@ -69,6 +107,9 @@ export function AgendaToolbar({
                   <span className="block whitespace-normal font-editorial text-xl font-semibold text-foreground first-letter:uppercase sm:text-2xl">
                     {dateLabel}
                   </span>
+                  <span className="block text-xs font-normal tabular-nums text-muted-foreground">
+                    Horário de Bruxelas
+                  </span>
                   {view === "day" ? (
                     <span className="block text-xs font-normal tabular-nums text-muted-foreground">
                       {summaryState === "loading"
@@ -76,7 +117,6 @@ export function AgendaToolbar({
                         : summaryState === "partial"
                           ? "Agenda parcial · confira os calendários"
                           : `${booked} agendamentos · ${free} horários livres`}
-                      <span className="block mt-0.5">Horário de Bruxelas</span>
                     </span>
                   ) : null}
                 </span>
@@ -148,13 +188,11 @@ export function AgendaToolbar({
               className="h-11 min-w-0 flex-1 rounded-md border border-border bg-card px-2 text-sm font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:max-w-[12rem]"
             >
               <option value="">Todos os tatuadores</option>
-              {allArtists
-                .filter((a) => !/augusto/i.test(a.name))
-                .map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name}
-                  </option>
-                ))}
+              {allArtists.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
             </select>
           ) : null}
         </div>
