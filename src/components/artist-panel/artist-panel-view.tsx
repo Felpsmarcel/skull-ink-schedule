@@ -57,7 +57,8 @@ export function ArtistPanelView({
         description="Agenda e continuidade dos projetos"
         actions={
           <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-2 text-xs font-medium text-muted-foreground">
-            <Eye aria-hidden="true" className="h-3.5 w-3.5" /> Visão administrativa
+            <Eye aria-hidden="true" className="h-3.5 w-3.5" />{" "}
+            {data.role === "admin" ? "Visão administrativa" : "Meu painel"}
           </span>
         }
       />
@@ -77,7 +78,9 @@ export function ArtistPanelView({
           aria-label="Selecionar tatuador e período"
           className="grid gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm sm:grid-cols-[minmax(0,1fr)_minmax(12rem,18rem)] sm:p-5"
         >
-          <label className="min-w-0 space-y-2 text-xs font-medium text-muted-foreground">
+          <label
+            className={`min-w-0 space-y-2 text-xs font-medium text-muted-foreground ${data.role === "admin" ? "" : "hidden"}`}
+          >
             <span className="block">Tatuador</span>
             <select
               aria-label="Tatuador"
@@ -117,12 +120,11 @@ export function ArtistPanelView({
           className="rounded-xl border border-border bg-muted/35 px-4 py-3 text-xs leading-5 text-muted-foreground"
         >
           <p className="font-medium text-foreground">
-            Espelho local · acesso exclusivo do administrador
+            {data.role === "admin"
+              ? "Espelho local · visão do administrador"
+              : "Espelho local · somente os seus agendamentos e projetos"}
           </p>
-          <p className="mt-1">
-            Não é a lista integral do GHL. Acesso do artista bloqueado até revisão das permissões e
-            homologação.
-          </p>
+          <p className="mt-1">Não é a lista integral do GHL. Valores financeiros não aparecem aqui.</p>
           <p className="mt-1">Atualizado {formatProjectDate(data.updatedAt)} · Europe/Brussels.</p>
         </aside>
 
@@ -462,8 +464,8 @@ export function ArtistPanelError({
           </span>
           <h2 className="mt-4 font-editorial text-2xl">Painel indisponível</h2>
           <p className="mt-3 text-sm leading-6 text-muted-foreground">
-            Acesso exclusivo do administrador nesta prévia. Outros perfis não recebem dados; falhas
-            de leitura também podem impedir a abertura.
+            Disponível para administrador e para tatuadores com conta vinculada. Falhas de leitura
+            também podem impedir a abertura.
           </p>
           <div className="mt-5 flex flex-wrap items-center gap-3">
             {onRetry ? (

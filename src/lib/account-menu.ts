@@ -147,6 +147,12 @@ export function getAccountMenu(profile: MyProfile | null | undefined): AccountMe
         description: "A continuidade de cada projeto.",
         items: [
           {
+            to: "/painel-tatuador",
+            label: "Meu painel",
+            description: "Hoje, próximas sessões e projetos em andamento.",
+            icon: "projects",
+          },
+          {
             to: "/projetos",
             label: "Meus projetos",
             description: "Consultar projetos, sessões e fotos disponíveis.",

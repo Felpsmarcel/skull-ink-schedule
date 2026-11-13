@@ -8,6 +8,7 @@ import {
   panelBounds,
   projectContinuity,
   requirePanelAdmin,
+  resolvePanelArtist,
   type PanelAppointment,
 } from "@/lib/artist-panel-core";
 
@@ -28,9 +29,13 @@ export const getArtistPanel = createServerFn({ method: "GET" })
       .select("role, artist_id")
       .eq("id", userId)
       .maybeSingle();
-    requirePanelAdmin(identity.error ? null : identity.data);
-    const artistId = data.artistId ?? DEFAULT_PANEL_ARTIST_ID;
-    const artists = await readMyDayPages(
+    const scope = resolvePanelArtist(
+      identity.error ? null : identity.data,
+      data.artistId,
+      DEFAULT_PANEL_ARTIST_ID,
+    );
+    const artistId = scope.artistId;
+    const allArtists = await readMyDayPages(
       async (from, to) =>
         await supabase
           .from("artists")
@@ -39,6 +44,8 @@ export const getArtistPanel = createServerFn({ method: "GET" })
           .order("id")
           .range(from, to),
     );
+    const artists =
+      scope.role === "admin" ? allArtists : allArtists.filter((a) => a.id === artistId);
     const artist = artists.find((a) => a.id === artistId);
     if (!artist) throw new Response("Forbidden", { status: 403 });
     const now = new Date();
@@ -88,6 +95,7 @@ export const getArtistPanel = createServerFn({ method: "GET" })
           }))
         : null;
     return {
+      role: scope.role,
       artist,
       artists,
       bounds,
